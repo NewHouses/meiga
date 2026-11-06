@@ -1,0 +1,14 @@
+# Build output
+/target/
+/dist/
+
+# Local performance results (they contain machine-specific data)
+/.perf/
+
+# Editors and operating system
+.vs/
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
