@@ -18,7 +18,10 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $root = Resolve-Path (Join-Path $PSScriptRoot '..')
-$OutFile = [System.IO.Path]::GetFullPath($OutFile)
+# Resolve a relative path against the current PowerShell location. .NET APIs
+# such as [System.IO.Path]::GetFullPath use the process working directory,
+# which PowerShell does not update on Set-Location.
+$OutFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutFile)
 New-Item -ItemType Directory -Force -Path (Split-Path $OutFile) | Out-Null
 
 Push-Location $root
