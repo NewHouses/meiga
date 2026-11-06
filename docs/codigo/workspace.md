@@ -1,6 +1,6 @@
 # Código › configuración do workspace
 
-> Estado: subfase 0.3.
+> Estado: subfase 0.4.
 
 Os arquivos da raíz do repositorio configuran como se compila e se revisa todo o proxecto. Neste documento explícanse un a un.
 
@@ -149,6 +149,6 @@ Explicados en [Tecnoloxías › Git e GitHub](../tecnoloxias.md#12-git-e-github)
 
 ## `README.md`, `LICENSE` e `SECURITY.md`
 
-- `README.md` (en inglés): que é meiga, estado, obxectivos, como compilalo e as comprobacións que debe pasar cada cambio. Ligazón a esta documentación.
+- `README.md` (en inglés): que é meiga, estado, obxectivos, como compilalo e empaquetalo, e as comprobacións que debe pasar cada cambio. Leva unha insignia (*badge*) co estado da CI en `main` e unha ligazón a esta documentación.
 - `LICENSE`: todos os dereitos reservados. O código vese en GitHub, pero non se concede permiso para usalo, copialo nin distribuílo. A única excepción son os dereitos que os termos de servizo de GitHub dan a calquera usuario: ver o repositorio e facer un *fork* dentro de GitHub. O último parágrafo lembra que os compoñentes de terceiros manteñen as súas propias licenzas, e que os seus avisos se distribúen cos binarios en `THIRD-PARTY-NOTICES.txt`.
 - `SECURITY.md`: como informar dun problema de seguridade de forma privada.

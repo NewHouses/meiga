@@ -1,5 +1,7 @@
 # meiga
 
+[![CI](https://github.com/NewHouses/meiga/actions/workflows/ci.yml/badge.svg)](https://github.com/NewHouses/meiga/actions/workflows/ci.yml)
+
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
 > **Status:** early development. There is nothing usable yet.
@@ -24,14 +26,23 @@ Requirements:
 cargo build --release
 ```
 
-Every change must pass these checks ([cargo-deny](https://github.com/EmbarkStudios/cargo-deny) is installed with `cargo install --locked cargo-deny`):
+To build the zip file that is distributed (`dist\meiga-<version>-x86_64-pc-windows-msvc.zip`), install [cargo-about](https://github.com/EmbarkStudios/cargo-about) with `cargo install --locked cargo-about --features cli` and run:
+
+```powershell
+.\tools\package.ps1
+```
+
+Every change must pass these checks ([cargo-deny](https://github.com/EmbarkStudios/cargo-deny) is installed with `cargo install --locked cargo-deny`). CI runs them on every pull request:
 
 ```powershell
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo deny check
+.\tools\check-imports.ps1
 ```
+
+The latest build of each pull request can be downloaded from the artifacts of its CI run.
 
 ## Documentation
 
