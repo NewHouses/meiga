@@ -300,3 +300,6 @@ Os PR de Dependabot pasan pola mesma CI e pola mesma revisión que calquera outr
 | Sen *force push* | Ninguén pode reescribir o historial de `main`. |
 | Sen borrado | Ninguén pode borrar `main`. |
 | Sen excepcións | As regras aplícanse tamén aos administradores. |
+| Aprobación extra para PR de Copilot | Valor por defecto de GitHub: se o axente de Copilot abre un PR coa súa propia identidade, e non en nome dunha persoa, esíxese unha aprobación máis. Non afecta aos PR que abre a conta propietaria. |
+
+Comprobación: un *push* directo a `main` é rexeitado con `GH013: Repository rule violations found for refs/heads/main`, indicando que os cambios deben entrar por un PR e que faltan os dous *checks* obrigatorios.
