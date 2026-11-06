@@ -33,6 +33,10 @@ cargo test --workspace
 cargo deny check
 ```
 
+## Documentation
+
+Detailed documentation of the architecture, the technologies and the code, written in Galician, is in [docs/](docs/README.md).
+
 ## Contributing
 
 This is a personal project and external contributions are not accepted at the moment.
