@@ -1,0 +1,15 @@
+[package]
+name = "meiga-render"
+description = "CPU renderer of meiga: glyph cache, compositor and presentation of the changed regions."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+meiga-core.workspace = true
+
+[lints]
+workspace = true

@@ -12,6 +12,27 @@ A lightweight terminal for Windows, written in Rust, with performance as the top
 - Restore the previous session on start.
 - Stay light: no work while idle, and a CPU renderer that only redraws what changed, so it runs well over Remote Desktop and on machines without a GPU.
 
+## Building
+
+Requirements:
+
+- Windows 10 version 1809 or later.
+- [rustup](https://rustup.rs/). The Rust version is pinned in `rust-toolchain.toml`, and rustup installs it automatically.
+- The MSVC build tools (Visual Studio or the Build Tools with the "Desktop development with C++" workload).
+
+```powershell
+cargo build --release
+```
+
+Every change must pass these checks ([cargo-deny](https://github.com/EmbarkStudios/cargo-deny) is installed with `cargo install --locked cargo-deny`):
+
+```powershell
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo deny check
+```
+
 ## Contributing
 
 This is a personal project and external contributions are not accepted at the moment.

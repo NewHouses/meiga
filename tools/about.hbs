@@ -1,0 +1,16 @@
+THIRD-PARTY SOFTWARE NOTICES
+
+meiga uses the third-party components listed below. Each component is
+distributed under the license reproduced with it.
+{{#each licenses}}
+
+================================================================================
+{{{name}}} ({{{id}}})
+
+Used by:
+{{#each used_by}}
+- {{{crate.name}}} {{{crate.version}}}{{#if crate.repository}} <{{{crate.repository}}}>{{/if}}
+{{/each}}
+
+{{{text}}}
+{{/each}}
