@@ -1,0 +1,17 @@
+[package]
+name = "meiga"
+description = "A lightweight terminal for Windows, with performance as the top priority."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+meiga-core.workspace = true
+meiga-render.workspace = true
+meiga-win.workspace = true
+
+[lints]
+workspace = true

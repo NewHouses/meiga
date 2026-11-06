@@ -1,0 +1,15 @@
+[package]
+name = "meiga-win"
+description = "Windows platform layer of meiga: ConPTY, shell profiles, file system, clipboard and Win32 windowing."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+meiga-core.workspace = true
+
+[lints]
+workspace = true

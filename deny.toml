@@ -1,0 +1,43 @@
+# cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
+#
+# meiga must stay commercially distributable, so only permissive licenses are
+# allowed. Every check runs in CI and blocks the pull request when it fails.
+
+[graph]
+targets = ["x86_64-pc-windows-msvc"]
+
+[advisories]
+yanked = "deny"
+ignore = []
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.93
+# The allow list is a policy, not an inventory: do not warn about licenses
+# that no dependency uses yet.
+unused-allowed-license = "allow"
+
+# The workspace crates are proprietary and never published.
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
