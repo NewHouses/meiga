@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 0.7.
+> Estado: subfase 1.1.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -9,6 +9,7 @@ Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non f
 | [`measure.ps1`](#toolsperfmeasureps1) | Medir un terminal e as partes de Windows que o poñen na pantalla, e gardar o resultado en CSV. |
 | [`ProcessSnapshot.cs`](#toolsperfprocesssnapshotcs) | Ler dunha vez todos os procesos e fíos do sistema e facer as contas de cada grupo. Cárgao `measure.ps1`. |
 | [`test-measure.ps1`](#toolsperftest-measureps1) | Comprobar que `measure.ps1` mide ben, con procesos que consomen unha cantidade coñecida. |
+| [`measure-startup.ps1`](#toolsperfmeasure-startupps1) | Medir canto tarda meiga en abrir a súa xanela. |
 
 Os escenarios de carga (`scenarios/`) e os scripts que os usan (`run-scenario.ps1`, `gen-bigfile.ps1` e `test-scenarios.ps1`) explícanse en [Código › escenarios de carga](escenarios.md).
 
@@ -670,3 +671,119 @@ Pase o que pase, os procesos de proba detéñense e bórrase o cartafol temporal
 **Comprobación da proba.** Cunha copia de `ProcessSnapshot.cs` con dúas posicións cambiadas a propósito (os cambios de contexto lidos en 0x44 e o tempo de usuario en 0x20), a proba falla en tres comprobacións: `busy: CPU`, `busy: CPU, Get-Process` e `sleep: wakeups per second`.
 
 A CI executa esta proba en cada PR (ver [Código › .github](github.md#comprobar-o-arnés-de-medición)).
+
+## `tools/perf/measure-startup.ps1`
+
+Mide canto tarda meiga en abrir a súa xanela: desde que se crea o proceso ata que a xanela está pintada e meiga agarda mensaxes. É o **tempo ata o primeiro fotograma** (ver [Tecnoloxías › Tempo ata o primeiro fotograma](../tecnoloxias.md#tempo-ata-o-primeiro-fotograma)).
+
+```powershell
+.\tools\perf\measure-startup.ps1                            # 2 + 20 arranques de target\release\meiga.exe
+.\tools\perf\measure-startup.ps1 -Runs 50 -Label meiga-1.1
+.\tools\perf\measure-startup.ps1 -Runs 3 -Warmup 1          # como na CI
+```
+
+Saída:
+
+```text
+Starting meiga.exe 2 + 20 times...
+
+runs min_ms median_ms p95_ms max_ms
+---- ------ --------- ------ ------
+  20      …         …      …      …
+
+Time from starting meiga.exe until its window is painted and waits for input.
+Saved …\.perf\startup-20261107-192244-meiga.csv
+```
+
+O CSV ten unha fila por arranque, co seu número (`run`) e os milisegundos (`ms`), co punto como separador decimal, como en [`measure.ps1`](#o-resultado). Gárdase en `.perf\`, fóra de Git, porque os tempos dependen da máquina.
+
+| Parámetro | Por defecto | Que fai |
+|---|---|---|
+| `-Path` | `target\release\meiga.exe` | O executábel que se mide. |
+| `-Runs` | 20 | Os arranques que contan. |
+| `-Warmup` | 2 | Os arranques de antes, que non contan. |
+| `-Label` | o nome do executábel | O nome da medición, para o CSV. |
+| `-OutDir` | `.perf\` | O cartafol do CSV. |
+| `-TimeoutSeconds` | 10 | O tempo máximo de cada espera. |
+
+Explicación por partes:
+
+```powershell
+function Measure-Start {
+    $info = [Diagnostics.ProcessStartInfo]::new($Path)
+    $info.UseShellExecute = $false
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    $process = [Diagnostics.Process]::Start($info)
+    try {
+        $idle = try { $process.WaitForInputIdle($TimeoutSeconds * 1000) } catch { $false }
+        $clock.Stop()
+```
+
+- `Stopwatch` é o cronómetro de alta resolución de .NET. Ponse en marcha xusto antes de crear o proceso, así que o tempo inclúe todo o arranque: que Windows cree o proceso e cargue `meiga.exe` e as súas DLL, e que meiga rexistre a clase, cree a xanela e a pinte.
+- `WaitForInputIdle` volta cando meiga quedou esperando mensaxes coa xanela xa pintada, como en [`check-window.ps1`](ferramentas.md#toolscheck-windowps1), e o cronómetro párase.
+- O que non se conta: despois, o DWM compón a pantalla co fotograma novo e, por Escritorio remoto, envíao. Iso pasa fóra de meiga e mídeo `measure.ps1` cos grupos `dwm` e `termservice`.
+
+```powershell
+        if (-not $process.CloseMainWindow()) {
+            throw "Could not ask the window of $exe to close."
+        }
+        if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+            throw "$exe was still running $TimeoutSeconds s after its window was asked to close."
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "$exe ended with exit code $($process.ExitCode) instead of 0."
+        }
+    }
+    finally {
+        if (-not $process.HasExited) {
+            $process.Kill()
+        }
+        $process.Dispose()
+    }
+    # Let the closed window disappear before the next start.
+    Start-Sleep -Milliseconds 500
+    $clock.Elapsed.TotalMilliseconds
+}
+```
+
+- Cada arranque pecha a xanela e comproba que meiga remata co código 0, como `check-window.ps1`: o tempo dun programa que non funciona non vale de nada. Se falla, o script detense co erro.
+- `Start-Sleep -Milliseconds 500`: deixa que a xanela pechada desapareza antes do seguinte arranque, para que a súa animación non se mesture coa medición.
+- A última liña devolve os milisegundos: en PowerShell, o valor dunha expresión solta é o resultado da función.
+
+```powershell
+for ($run = 1; $run -le $Warmup; $run++) {
+    $null = Measure-Start
+}
+$start = Get-Date
+$times = for ($run = 1; $run -le $Runs; $run++) {
+    [pscustomobject]@{ run = $run; ms = Measure-Start }
+}
+```
+
+- O **quecemento**: o primeiro arranque despois de compilar ou de reiniciar le o executábel do disco, e o antivirus analiza o arquivo novo. Os seguintes atópano xa na memoria (a caché de arquivos de Windows). Os arranques de quecemento fanse pero non contan.
+- `$times` recolle un obxecto por arranque.
+
+```powershell
+# Nearest-rank percentile of the sorted times.
+$sorted = @($times.ms | Sort-Object)
+function Get-Percentile([double]$Percent) {
+    $sorted[[int][math]::Max(0, [math]::Ceiling($Percent / 100 * $sorted.Count) - 1)]
+}
+$middle = [int][math]::Floor($sorted.Count / 2)
+$median = if ($sorted.Count % 2) { $sorted[$middle] } else { ($sorted[$middle - 1] + $sorted[$middle]) / 2 }
+```
+
+- `$times.ms` colle a propiedade `ms` de todos os obxectos, e `Sort-Object` ordénaos de menor a maior. `@(…)` garante un array aínda que só haxa un arranque.
+- A **mediana** é o valor do medio: a metade dos arranques foi máis rápida e a outra metade máis lenta. Cun número par de arranques, a media dos dous do medio.
+- O **percentil 95** (`p95`) é o tempo que non superou o 95 % dos arranques. Calcúlase polo método do rango máis próximo: na lista ordenada, o elemento da posición ⌈0,95 · n⌉, contando desde 1 (de aí o `- 1`, porque os arrays empezan en 0).
+- Por que a mediana e o p95, e non a media: un só arranque lento, porque o antivirus ou outro programa colleron a CPU nese momento, moveríaa moito. A mediana di como é un arranque normal, e o p95, como son os lentos.
+
+```powershell
+$times | ForEach-Object {
+    [pscustomobject]@{ run = $_.run; ms = $_.ms.ToString('0.000', $invariant) }
+} | Export-Csv -LiteralPath $file -NoTypeInformation -Encoding utf8NoBOM
+```
+
+Os milisegundos escríbense con tres decimais e coa cultura invariante, para que o CSV leve sempre un punto decimal.
+
+A CI executa o script con `-Runs 3 -Warmup 1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)), só para comprobar que segue funcionando: os tempos dunha máquina compartida non se comparan con nada.

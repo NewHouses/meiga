@@ -18,3 +18,5 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 0.5 | ADR | [PR #3](https://github.com/NewHouses/meiga/pull/3) | [0.5-adr.md](0.5-adr.md) |
 | 0.6 | Arnés de medición | [PR #4](https://github.com/NewHouses/meiga/pull/4) | [0.6-medicion.md](0.6-medicion.md) |
 | 0.7 | Escenarios de carga | [PR #5](https://github.com/NewHouses/meiga/pull/5) | [0.7-escenarios.md](0.7-escenarios.md) |
+| 0.8 | Liña base | Local, sen cambios no repositorio | As medicións do Warp e do Windows Terminal e os orzamentos de rendemento quedan fóra do repositorio, porque describen unha máquina concreta. |
+| 1.1 | Xanela baleira | [PR #7](https://github.com/NewHouses/meiga/pull/7) | [1.1-xanela.md](1.1-xanela.md) |

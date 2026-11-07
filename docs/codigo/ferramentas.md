@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 0.7.
+> Estado: subfase 1.1.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -8,6 +8,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 |---|---|
 | [`package.ps1`](#toolspackageps1) | Compilar en modo *release* e crear o `.zip` que se distribúe. |
 | [`check-imports.ps1`](#toolscheck-importsps1) | Comprobar que `meiga.exe` non depende do *runtime* de Visual C++. |
+| [`check-window.ps1`](#toolscheck-windowps1) | Comprobar que `meiga.exe` abre a súa xanela e se pecha ben. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
 | [`third-party-notices.ps1`](#toolsthird-party-noticesps1) | Xerar os avisos de licenza das dependencias. |
@@ -153,9 +154,11 @@ Comproba que `meiga.exe` non depende do *runtime* de Visual C++. Protexe a decis
 Saída esperada:
 
 ```text
-meiga.exe imports: api-ms-win-core-synch-l1-2-0.dll, KERNEL32.dll, ntdll.dll
+meiga.exe imports: kernel32.dll, user32.dll, gdi32.dll, ntdll.dll, api-ms-win-core-synch-l1-2-0.dll, KERNEL32.dll
 OK: no dependencies on the Visual C++ runtime.
 ```
+
+`user32.dll` e `gdi32.dll` chegaron coa xanela, na subfase 1.1. Por que `kernel32.dll` aparece dúas veces explícase en [Código › meiga](meiga.md#comprobacións-feitas).
 
 **Por que fai falta.** A opción `+crt-static` está en `.cargo/config.toml`, pero hai formas de perdela sen que nada falle: a máis habitual é definir a variábel `RUSTFLAGS`, que fai que Cargo ignore os `rustflags` de `.cargo/config.toml` (ver [Código › .github](github.md#variábeis-de-contorno)). Comprobouse cunha compilación con `RUSTFLAGS='-C opt-level=3'`:
 
@@ -234,6 +237,161 @@ Write-Host 'OK: no dependencies on the Visual C++ runtime.'
 ```
 
 Busca as DLL do *runtime*: `vcruntime*.dll` (o *runtime* de Visual C++), `msvcp*.dll` (a biblioteca estándar de C++), `ucrtbase.dll` (o *Universal CRT*) e os *API sets* `api-ms-win-crt-*`, que son os nomes cos que se importa o *Universal CRT*. `-match` non distingue maiúsculas, así que `VCRUNTIME140.dll` tamén coincide. Se aparece algunha, o script falla e suxire a causa máis probábel.
+
+## `tools/check-window.ps1`
+
+Comproba que `meiga.exe` fai o que promete a subfase 1.1: abre a súa xanela, sen consola e coa escala por monitor, e remata ben cando se pecha. Inicia o programa de verdade, así que a xanela aparece un instante.
+
+```powershell
+.\tools\check-window.ps1                                  # comproba target\release\meiga.exe
+.\tools\check-window.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-window.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
+```
+
+Saída esperada:
+
+```text
+OK: it is a GUI program, so it opens no console window.
+OK: it opens its window (class 'meiga', title 'meiga').
+OK: the window is DPI aware per monitor (v2).
+OK: it ends with exit code 0 when its window closes.
+```
+
+Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1. Pase o que pase, `meiga.exe` non queda aberto.
+
+Explicación por partes:
+
+```powershell
+[ValidateRange(1, 600)]
+[int]$TimeoutSeconds = 10
+```
+
+O tempo máximo de cada espera: primeiro, a que se abra a xanela; despois, a que remate o proceso. Abrir a xanela leva milisegundos, así que 10 s só se esgotan se algo vai mal.
+
+```powershell
+$header = [byte[]]::new(4096)
+$stream = [IO.File]::OpenRead($Path)
+try {
+    $read = $stream.Read($header, 0, $header.Length)
+}
+finally {
+    $stream.Dispose()
+}
+$pe = if ($read -ge 0x40) { [BitConverter]::ToInt32($header, 0x3C) } else { -1 }
+if ($pe -lt 0 -or $pe + 24 + 70 -gt $read -or [BitConverter]::ToUInt32($header, $pe) -ne 0x4550) {
+    throw "$Path is not a Windows executable."
+}
+# The optional header follows the signature (4 bytes) and the file header (20
+# bytes), and Subsystem is at offset 68 in both PE32 and PE32+.
+$subsystem = [BitConverter]::ToUInt16($header, $pe + 24 + 68)
+if ($subsystem -ne 2) {
+    throw "$exe uses subsystem $subsystem instead of 2 (Windows GUI), so it opens a console window. Is it a debug build?"
+}
+```
+
+O **subsistema** (ver [Tecnoloxías › Subsistema](../tecnoloxias.md#6-subsistema-de-windows)) é un número na cabeceira do `.exe`, que segue o formato **PE** (*Portable Executable*):
+
+```mermaid
+flowchart LR
+    dos["Cabeceira MS-DOS<br/>(na posición 0x3C, onde empeza a PE)"] --> sig["Sinatura<br/>PE\0\0, 4 bytes"]
+    sig --> file["Cabeceira do arquivo<br/>20 bytes"]
+    file --> opt["Cabeceira opcional<br/>Subsystem na posición 68"]
+```
+
+- Só se len os primeiros 4 KB: a cabeceira sempre está ao principio, e un `.exe` de depuración ocupa varios MB.
+- `try`/`finally` pecha o arquivo aínda que a lectura falle.
+- `[BitConverter]::ToInt32($header, 0x3C)` le un número de 4 bytes na posición 0x3C: onde empeza a cabeceira PE.
+- `0x4550` son os bytes `P` e `E` seguidos de dous ceros, lidos como un número (os procesadores x64 gardan primeiro o byte de menos peso). Se non están, o arquivo non é un executábel de Windows. A condición tamén comproba que as posicións que se len caen dentro do que se leu.
+- `Subsystem` está na mesma posición nos executábeis de 32 bits (PE32) e nos de 64 (PE32+). O valor 2 é unha aplicación gráfica, e o 3, de consola: o que daría unha compilación de depuración (ver [Código › meiga](meiga.md#cratesmeigasrcmainrs)).
+
+```powershell
+if (-not ('Meiga.Tools.WindowCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name WindowCheck -MemberDefinition @'
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+public static extern int GetClassNameW(IntPtr window, System.Text.StringBuilder name, int capacity);
+
+[DllImport("user32.dll")]
+public static extern IntPtr GetWindowDpiAwarenessContext(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool AreDpiAwarenessContextsEqual(IntPtr first, IntPtr second);
+'@
+}
+```
+
+- PowerShell non pode chamar directamente a estas tres funcións de Windows. `Add-Type -MemberDefinition` compila unha clase de C# con elas: `[DllImport("user32.dll")]` indica en que DLL está cada unha, e .NET convirte os argumentos ao chamala (*P/Invoke*). Igual que en [`measure.ps1`](../tecnoloxias.md#c-dentro-de-powershell), só que con tres declaracións en vez dun arquivo.
+- `-as [type]` comproba se a clase xa existe: nunha mesma sesión de PowerShell só se pode compilar unha vez.
+- `GetClassNameW` dá o nome da clase dunha xanela, e `GetWindowDpiAwarenessContext`, como escala a xanela. `[return: MarshalAs(UnmanagedType.Bool)]` indica que o `BOOL` de Windows (un número de 4 bytes) se converte nun `bool`.
+
+```powershell
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+$process = [Diagnostics.Process]::Start($info)
+try {
+    # WaitForInputIdle returns when meiga has painted its window and waits for
+    # messages. It fails if the process has already ended.
+    $idle = try { $process.WaitForInputIdle($TimeoutSeconds * 1000) } catch { $false }
+    if (-not $idle) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) before it opened its window."
+        }
+        throw "$exe did not open its window within $TimeoutSeconds s."
+    }
+```
+
+- `UseShellExecute = $false`: Windows crea o proceso directamente, sen pasar polo Explorador.
+- `WaitForInputIdle` agarda a que o programa remate de arrancar e quede esperando mensaxes, sen ningunha pendente: no caso de meiga, coa xanela xa pintada (ver [Código › meiga-win](meiga-win.md#windowshow)). Devolve `$false` se pasa o tempo, e produce un erro se o proceso xa rematou, por iso o `try`/`catch`.
+
+```powershell
+    $process.Refresh()
+    $window = $process.MainWindowHandle
+    $class = [Text.StringBuilder]::new(256)
+    if ($window -ne [IntPtr]::Zero) {
+        $null = [Meiga.Tools.WindowCheck]::GetClassNameW($window, $class, $class.Capacity)
+    }
+    if ("$class" -ne 'meiga' -or $process.MainWindowTitle -ne 'meiga') {
+        throw "The main window has class '$class' and title '$($process.MainWindowTitle)' instead of class 'meiga' and title 'meiga'. Did meiga show an error?"
+    }
+```
+
+- `Refresh()` descarta os datos do proceso que .NET garda en memoria, para ler os actuais.
+- `MainWindowHandle` é a primeira xanela visíbel e de nivel superior do proceso. Se meiga fallase ao arrancar, sería a caixa da mensaxe de erro, que tamén leva o título «meiga». Por iso se comproba tamén a clase: a de meiga chámase `meiga`, e a das caixas de mensaxe, `#32770`.
+- `GetClassNameW` escribe o nome nun `StringBuilder`, un texto que se pode modificar, de ata 256 caracteres.
+
+```powershell
+    $context = [Meiga.Tools.WindowCheck]::GetWindowDpiAwarenessContext($window)
+    if (-not [Meiga.Tools.WindowCheck]::AreDpiAwarenessContextsEqual($context, [IntPtr]::new(-4))) {
+        throw 'The window is not DPI aware per monitor (v2). Is the manifest embedded?'
+    }
+```
+
+O **contexto de escala** da xanela di como escala (ver [Tecnoloxías › Manifesto](../tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)). `-4` é o valor que Windows define para «por monitor, versión 2» (`DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`). O contexto que devolve Windows non ten por que ser ese número, así que a documentación manda comparalos con `AreDpiAwarenessContextsEqual`, e non con `-eq`. Se o manifesto non estivese incrustado, a xanela non escalaría e a comprobación fallaría.
+
+```powershell
+    if (-not $process.CloseMainWindow()) {
+        throw "Could not ask the window of $exe to close."
+    }
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "$exe was still running $TimeoutSeconds s after its window was asked to close."
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0."
+    }
+}
+finally {
+    if (-not $process.HasExited) {
+        $process.Kill()
+    }
+    $process.Dispose()
+}
+```
+
+- `CloseMainWindow` envía `WM_CLOSE` á xanela, a mesma mensaxe que o botón X da barra de título, e `WaitForExit` agarda a que remate o proceso.
+- O código de saída ten que ser 0. Unha caixa de erro pechada así daría 1 (ver [Código › meiga](meiga.md#cratesmeigasrcmainrs)).
+- O bloque `finally` execútase sempre, tamén despois dun `throw`: se meiga segue aberto, remátao (`Kill`), e libera os recursos do obxecto do proceso (`Dispose`).
+
+A CI executa este script en cada PR, despois de empaquetar (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade.
 
 ## `tools/check-docs.ps1`
 
