@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 1.1.
+> Estado: subfase 1.2.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -10,6 +10,7 @@ Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non f
 | [`ProcessSnapshot.cs`](#toolsperfprocesssnapshotcs) | Ler dunha vez todos os procesos e fíos do sistema e facer as contas de cada grupo. Cárgao `measure.ps1`. |
 | [`test-measure.ps1`](#toolsperftest-measureps1) | Comprobar que `measure.ps1` mide ben, con procesos que consomen unha cantidade coñecida. |
 | [`measure-startup.ps1`](#toolsperfmeasure-startupps1) | Medir canto tarda meiga en abrir a súa xanela. |
+| [`measure-frames.ps1`](#toolsperfmeasure-framesps1) | Medir canto custan a meiga e ao sistema os fotogramas parciais e os completos. |
 
 Os escenarios de carga (`scenarios/`) e os scripts que os usan (`run-scenario.ps1`, `gen-bigfile.ps1` e `test-scenarios.ps1`) explícanse en [Código › escenarios de carga](escenarios.md).
 
@@ -787,3 +788,122 @@ $times | ForEach-Object {
 Os milisegundos escríbense con tres decimais e coa cultura invariante, para que o CSV leve sempre un punto decimal.
 
 A CI executa o script con `-Runs 3 -Warmup 1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)), só para comprobar que segue funcionando: os tempos dunha máquina compartida non se comparan con nada.
+
+## `tools/perf/measure-frames.ps1`
+
+Mide canto custan os fotogramas de meiga: un **parcial**, que presenta unha parte pequena da xanela, e un **completo**, que a presenta enteira. Abre meiga maximizado nun modo de medición ([`--bench`](meiga.md#cratesmeigasrcbenchrs)), que debuxa fotogramas sen parar, e co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)). Mentres tanto, [`measure.ps1`](#toolsperfmeasureps1) mide meiga, `dwm.exe` e o servizo de Escritorio remoto.
+
+```powershell
+.\tools\perf\measure-frames.ps1                             # os dous modos, 3 + 20 s cada un
+.\tools\perf\measure-frames.ps1 -Mode full -Duration 60
+.\tools\perf\measure-frames.ps1 -Duration 3 -Warmup 1       # como na CI
+```
+
+Mentres mide, non uses o equipo: as outras xanelas e o rato cambian o traballo de `dwm.exe` e do Escritorio remoto.
+
+Saída:
+
+```text
+Measuring partial frames: 3 s of warm-up and 20 s of measurement...
+Measuring full frames: 3 s of warm-up and 20 s of measurement...
+
+mode    width height fps kpixels compose_us compose_p95_us present_us present_p95_us
+----    ----- ------ --- ------- ---------- -------------- ---------- --------------
+partial     …      …   …       …          …              …          …              …
+full        …      …   …       …          …              …          …              …
+
+mode    meiga_cpu_pct meiga_ctx_per_s meiga_mb dwm_cpu_pct rdp_cpu_pct
+----    ------------- --------------- -------- ----------- -----------
+partial             …               …        …           …           …
+full                …               …        …           …           …
+
+kpixels: thousands of pixels presented by a frame. Times in microseconds: median and 95th percentile.
+CPU in % of one core: meiga, dwm.exe and the Remote Desktop service (rdp).
+Saved …\.perf\frames-20261108-005924-meiga.csv
+```
+
+Unha fila por modo:
+
+| Columna | Que é |
+|---|---|
+| `width` e `height` | O tamaño da xanela, maximizada. |
+| `fps` | Os fotogramas por segundo: como moito 30 por Escritorio remoto e 60 en local, o intervalo de `max_fps = "auto"`. |
+| `kpixels` | Os miles de píxeles que presenta un fotograma (a mediana). Nos parciais, uns 5: o cadrado e o sitio onde estaba son un rectángulo de 80 × 64. Nos completos, os da xanela enteira. |
+| `compose_us` e `compose_p95_us` | O tempo de compoñer un fotograma, en microsegundos: a mediana e o percentil 95. |
+| `present_us` e `present_p95_us` | O tempo de presentalo. |
+| `meiga_cpu_pct`, `meiga_ctx_per_s` e `meiga_mb` | A CPU de meiga, en % dun núcleo, os seus espertares por segundo e a súa memoria privada máxima, en MB. |
+| `dwm_cpu_pct` e `rdp_cpu_pct` | A CPU de `dwm.exe`, que compón as xanelas na pantalla, e a do servizo de Escritorio remoto, que envía a pantalla ao outro equipo. |
+
+Comparar os dous modos di canto custan os píxeles: a meiga, que os compón e os presenta, e ao resto do sistema, que os compón na pantalla e, por Escritorio remoto, os codifica e os envía.
+
+| Parámetro | Por defecto | Que fai |
+|---|---|---|
+| `-Mode` | `both` | `partial`, `full` ou `both`: os dous, un despois do outro. |
+| `-Duration` | 20 | Os segundos de cada medición. |
+| `-Warmup` | 3 | Os segundos entre que se abre meiga e empeza a medición. |
+| `-Path` | `target\release\meiga.exe` | O executábel que se mide. |
+| `-Label` | `meiga` | O nome da medición, para os arquivos. |
+| `-OutDir` | `.perf\` | O cartafol dos arquivos. |
+
+Garda, en `.perf\` e fóra de Git porque os números dependen da máquina:
+
+- `frames-<data>-<nome>.csv`: a táboa, cunha fila por modo e co punto como separador decimal;
+- `frames-<data>-<nome>-partial.trace.csv` e `…-full.trace.csv`: o rexistro dos fotogramas de cada modo;
+- `measure-<data>-<nome>-frames-partial.csv` e `…-full.csv`: o resultado completo de `measure.ps1`, con todos os grupos e procesos.
+
+Explicación por partes:
+
+```powershell
+function Measure-Mode([string]$Bench) {
+    $log = Join-Path $OutDir "frames-$stamp-$Label-$Bench.trace.csv"
+    $info = [Diagnostics.ProcessStartInfo]::new($Path)
+    $info.UseShellExecute = $true
+    $info.WindowStyle = [Diagnostics.ProcessWindowStyle]::Maximized
+    $info.Arguments = "--bench $Bench --trace-frames `"$log`""
+    $process = [Diagnostics.Process]::Start($info)
+```
+
+- **Maximizada**, para medir sempre co tamaño da pantalla, que é o peor caso dos fotogramas completos.
+- `UseShellExecute = $true`: Windows abre o programa como desde o Explorador ou un acceso directo, co modo de xanela de `WindowStyle`. meiga úsao ao mostrar a xanela (`SW_SHOWDEFAULT`, ver [Código › meiga-win](meiga-win.md#windowrun)).
+- Os argumentos van nun só texto, e a ruta do rexistro entre comiñas, por se ten espazos.
+
+```powershell
+        $idle = try { $process.WaitForInputIdle(10000) } catch { $false }
+        if (-not $idle) {
+            throw "$exe did not open its window."
+        }
+        Start-Sleep -Seconds $Warmup
+        $rows = @(& $measure -Id $process.Id -Duration $Duration -Label "$Label-frames-$Bench" -OutDir $OutDir -Quiet -PassThru)
+        if (-not $process.CloseMainWindow() -or -not $process.WaitForExit(10000)) {
+            throw "$exe did not close its window."
+        }
+```
+
+- Espera a que se abra a xanela e, despois, o **quecemento**: os primeiros fotogramas, mentres Windows e meiga rematan de arrancar, non contan.
+- `measure.ps1` mide meiga polo seu número de proceso (`-Id`), sen mostrar nada (`-Quiet`), e devolve as filas como obxectos (`-PassThru`).
+- Despois pecha a xanela e, como os outros scripts, comproba que meiga remata co código 0.
+
+```powershell
+    $frames = @(Import-Csv -LiteralPath $log | Where-Object {
+            $_.kind -eq 'frame' -and [double]::Parse($_.time_ms, $invariant) -ge $Warmup * 1000
+        })
+    …
+    $first = [double]::Parse($frames[0].time_ms, $invariant)
+    $last = [double]::Parse($frames[-1].time_ms, $invariant)
+```
+
+- Só contan as liñas `frame` de despois do quecemento: non o `compose` nin os `paint` do arranque. `time_ms` conta desde que meiga abriu o rexistro, xusto antes de crear a xanela.
+- `[double]::Parse(…, $invariant)` le os milisegundos co punto decimal do rexistro, sexa cal sexa o idioma de Windows.
+- `fps`: os fotogramas que hai despois do primeiro, divididos polo tempo entre o primeiro e o último.
+- As medianas e os percentís 95 calcúlanse como en [`measure-startup.ps1`](#toolsperfmeasure-startupps1).
+
+```powershell
+    $group = @{}
+    foreach ($row in $rows | Where-Object kind -EQ 'group') {
+        $group[$row.group] = $row
+    }
+```
+
+Das filas de `measure.ps1` só se usan as dos grupos: `terminal`, que é o proceso medido, meiga; `dwm`; e `termservice`, o servizo de Escritorio remoto (ver [Os grupos](#os-grupos)).
+
+A CI executa o script con `-Duration 3 -Warmup 1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)), só para comprobar que funciona: os números dunha máquina compartida non se comparan con nada.

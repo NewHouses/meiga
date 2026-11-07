@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` opens an empty window that uses no CPU while idle; there is nothing usable yet.
+> **Status:** early development. `meiga.exe` opens a window with a demo: dragging the mouse draws rectangles, and each frame presents only the areas that changed. It uses no CPU while idle or minimized; there is no terminal yet.
 
 ## Goals
 
@@ -44,11 +44,12 @@ cargo deny check
 .\tools\check-powershell.ps1
 .\tools\check-imports.ps1
 .\tools\check-window.ps1
+.\tools\check-present.ps1
 .\tools\perf\test-measure.ps1
 .\tools\perf\test-scenarios.ps1
 ```
 
-`check-imports.ps1` and `check-window.ps1` check the release build: build it first with `.\tools\package.ps1` or `cargo build --release`. `check-window.ps1` starts `meiga.exe`, so its window appears for a moment. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
+`check-imports.ps1`, `check-window.ps1` and `check-present.ps1` check the release build: build it first with `.\tools\package.ps1` or `cargo build --release`. `check-window.ps1` and `check-present.ps1` start `meiga.exe`, so its window appears for a moment; do not click or type in it while `check-present.ps1` draws in it. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
 
@@ -71,6 +72,12 @@ The latest build of each pull request can be downloaded from the artifacts of it
 
 ```powershell
 .\tools\perf\measure-startup.ps1
+```
+
+`tools\perf\measure-frames.ps1` measures what the frames of meiga cost to meiga, to the Desktop Window Manager and to Remote Desktop: it starts `meiga.exe` maximized with `--bench partial`, which moves a small square without a pause, and then with `--bench full`, which changes the whole window at each frame. Do not use the computer while it measures:
+
+```powershell
+.\tools\perf\measure-frames.ps1
 ```
 
 Run `Get-Help` with `-Detailed` on each script for all the options, for example `Get-Help .\tools\perf\run-scenario.ps1 -Detailed`.

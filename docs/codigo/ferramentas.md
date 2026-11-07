@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 1.1.
+> Estado: subfase 1.2.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -9,6 +9,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`package.ps1`](#toolspackageps1) | Compilar en modo *release* e crear o `.zip` que se distribúe. |
 | [`check-imports.ps1`](#toolscheck-importsps1) | Comprobar que `meiga.exe` non depende do *runtime* de Visual C++. |
 | [`check-window.ps1`](#toolscheck-windowps1) | Comprobar que `meiga.exe` abre a súa xanela e se pecha ben. |
+| [`check-present.ps1`](#toolscheck-presentps1) | Comprobar que `meiga.exe` presenta só o que cambia e non debuxa en repouso nin minimizado. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
 | [`third-party-notices.ps1`](#toolsthird-party-noticesps1) | Xerar os avisos de licenza das dependencias. |
@@ -341,7 +342,7 @@ try {
 ```
 
 - `UseShellExecute = $false`: Windows crea o proceso directamente, sen pasar polo Explorador.
-- `WaitForInputIdle` agarda a que o programa remate de arrancar e quede esperando mensaxes, sen ningunha pendente: no caso de meiga, coa xanela xa pintada (ver [Código › meiga-win](meiga-win.md#windowshow)). Devolve `$false` se pasa o tempo, e produce un erro se o proceso xa rematou, por iso o `try`/`catch`.
+- `WaitForInputIdle` agarda a que o programa remate de arrancar e quede esperando mensaxes, sen ningunha pendente: no caso de meiga, coa xanela xa pintada (ver [Código › meiga-win](meiga-win.md#windowrun)). Devolve `$false` se pasa o tempo, e produce un erro se o proceso xa rematou, por iso o `try`/`catch`.
 
 ```powershell
     $process.Refresh()
@@ -392,6 +393,159 @@ finally {
 - O bloque `finally` execútase sempre, tamén despois dun `throw`: se meiga segue aberto, remátao (`Kill`), e libera os recursos do obxecto do proceso (`Dispose`).
 
 A CI executa este script en cada PR, despois de empaquetar (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade.
+
+## `tools/check-present.ps1`
+
+Comproba que `meiga.exe` fai o que promete a subfase 1.2: presenta só o que cambia, agrupa os cambios en fotogramas e non debuxa nada en repouso nin coa xanela minimizada. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), envíalle á xanela eventos do rato, como faría unha persoa, e comproba no rexistro o que debuxou. Leva uns 7 segundos.
+
+```powershell
+.\tools\check-present.ps1                                  # comproba target\release\meiga.exe
+.\tools\check-present.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-present.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
+```
+
+Mentres corre, non premas o rato nin o teclado. Os eventos van directamente á xanela, sen mover o rato de verdade, pero un clic ou a tecla Esc na xanela cambiarían o que debuxa. Mover o rato, sen premelo, non lle afecta.
+
+Saída esperada, cos números que dependan da pantalla:
+
+```text
+OK: the first paint covers the whole window (… x … pixels).
+OK: drawing a rectangle made … frames, all inside it (… pixels in total).
+OK: while nothing changes, it draws nothing (1 s).
+OK: 40 moves sent at once made 2 frames.
+OK: clearing the window makes one full frame.
+OK: minimized, it draws nothing.
+OK: restoring the window paints all of it.
+OK: when the window grows (… x … pixels), it is composed and painted at the new size.
+OK: it ends with exit code 0 when its window closes.
+```
+
+Se falla unha comprobación, o script mostra as liñas do rexistro que o demostran e remata cun erro que explica cal, e código de saída 1. Ademais, garda o rexistro e di onde está: `The frame log is in …`. Pase o que pase, `meiga.exe` non queda aberto.
+
+**Comprobado:** con copias de meiga con erros feitos a propósito, o script falla (ver [Código › meiga](meiga.md#comprobacións-feitas)).
+
+Explicación por partes. O comezo (a axuda, os parámetros, a versión de PowerShell, a ruta de `meiga.exe` e a espera con `WaitForInputIdle`) é igual ca en [`check-window.ps1`](#toolscheck-windowps1).
+
+```powershell
+if (-not ('Meiga.Tools.PresentCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name PresentCheck -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT { public int Left, Top, Right, Bottom; }
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool PostMessageW(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+…
+'@
+}
+```
+
+As funcións de Windows que usa, declaradas en C# como en `check-window.ps1`:
+
+| Función | Para que |
+|---|---|
+| `PostMessageW` | Deixa unha mensaxe na cola da xanela, sen esperar a que a trate: os eventos do rato. |
+| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell (ver máis abaixo). |
+| `ShowWindowAsync` | Minimiza e restaura a xanela. |
+| `SetWindowPos` | Cambia o tamaño da xanela. |
+| `GetClientRect` | Le o tamaño da zona de debuxo da xanela, sen o marco nin a barra de título. |
+
+- `RECT` é a estrutura de Windows cos catro bordos dun rectángulo. `[StructLayout(LayoutKind.Sequential)]` garda os campos na orde en que se declaran, que é a que espera Windows.
+- `ShowWindowAsync` e `SetWindowPos` coa opción `SWP_ASYNCWINDOWPOS` (máis abaixo) non esperan a que meiga trate a petición: se meiga se bloquease, o script non quedaría parado, e fallaría na comprobación seguinte.
+
+```powershell
+$previousDpi = [Meiga.Tools.PresentCheck]::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+```
+
+**A escala do fío.** Comprobouse que Windows axusta as coordenadas das mensaxes do rato segundo a escala do fío que as envía. PowerShell non escala por monitor, así que, nunha pantalla ao 150 %, as coordenadas que chegaban a meiga non eran as que se enviaran, e os rectángulos non caían onde os esperaba o script. Con `-4`, por monitor (v2) como meiga (ver [`check-window.ps1`](#toolscheck-windowps1)), son píxeles da xanela, os mesmos do rexistro. Ao rematar, o fío volta á escala que tiña.
+
+```powershell
+$log = Join-Path ([IO.Path]::GetTempPath()) "meiga-check-present-$PID.csv"
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+$info.ArgumentList.Add('--trace-frames')
+$info.ArgumentList.Add($log)
+```
+
+- O rexistro vai ao cartafol temporal, cun nome que leva o número do proceso de PowerShell (`$PID`): dúas comprobacións á vez non escriben no mesmo arquivo.
+- `ArgumentList` pasa cada argumento por separado, e .NET pon as comiñas que fagan falta: a ruta pode ter espazos.
+
+```powershell
+    function Get-Log {
+        if (-not (Test-Path -LiteralPath $log)) { return }
+        Get-Content -LiteralPath $log | ConvertFrom-Csv
+    }
+
+    function Wait-Quiet([int]$From) {
+        …
+            elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 400) {
+                return $lines | Select-Object -Skip $From
+            }
+        …
+    }
+```
+
+- `Get-Log` le o rexistro mentres meiga corre, porque meiga escribe cada liña no momento. `ConvertFrom-Csv` converte cada liña nun obxecto coas columnas da cabeceira: `$_.kind`, `$_.pixels`…
+- **`Wait-Quiet`** espera a que meiga leve 0,4 s sen escribir nada, máis de 10 intervalos entre fotogramas, e devolve as liñas novas: as que van despois das `$From` primeiras. Así, cada paso sabe que meiga xa debuxou todo o que tiña que debuxar. Se meiga non para de escribir, o paso falla despois de `TimeoutSeconds`.
+
+```powershell
+    function Send-Mouse([int]$Message, [int]$Buttons, [int]$X, [int]$Y) {
+        $position = [IntPtr](($Y -shl 16) -bor ($X -band 0xFFFF))
+        if (-not [Meiga.Tools.PresentCheck]::PostMessageW($window, $Message, [IntPtr]$Buttons, $position)) {
+            throw "Could not send a mouse message to the window of $exe."
+        }
+    }
+
+    function Test-Full($Line) {
+        [long]$Line.pixels -eq [long]$Line.width * [long]$Line.height -and [long]$Line.pixels -gt 0
+    }
+```
+
+- Unha mensaxe do rato leva dous datos (ver [como os le meiga](meiga-win.md#decode)): `wParam`, os botóns premidos (`MK_LBUTTON`, o esquerdo), e `lParam`, a posición, coa `x` nos 16 bits baixos e a `y` nos 16 altos. `-shl 16` despraza a `y` 16 bits á esquerda, e `-band 0xFFFF` deixa a `x` nos 16 baixos.
+- `Test-Full` di se unha liña cubriu a xanela enteira. Os valores do CSV son textos, e `[long]` convérteos en números: sen el, PowerShell compararía textos.
+
+Os pasos, en orde:
+
+| Paso | Que fai o script | Que ten que haber no rexistro |
+|---|---|---|
+| 1 | Nada: espera ao primeiro fotograma. | Un `paint` da xanela enteira. A xanela ten que medir polo menos 400 × 300 píxeles, para que caiban os rectángulos. |
+| 2 | Debuxa un rectángulo de (40, 40) a (240, 160): un clic, 10 movementos cunha pausa de 15 ms entre eles, e soltar. | Polo menos 2 fotogramas, ningún completo, e todas as zonas dentro do rectángulo. |
+| 3 | Nada, durante 1 s. | Ningunha liña. |
+| 4 | Outro rectángulo: un clic, 40 movementos de golpe e soltar. | Entre 1 e 3 fotogramas. |
+| 5 | Un clic co botón dereito, que borra a xanela. | Un fotograma, da xanela enteira. |
+| 6 | Minimiza a xanela e debuxa outro rectángulo. | Ningunha liña. |
+| 7 | Restaura a xanela. | Un `paint` da xanela enteira. |
+| 8 | Fai a xanela máis pequena e despois máis grande. | Un `compose` co tamaño novo e algún `paint`. |
+| 9 | Pecha a xanela, como o botón X. | O código de saída 0. |
+
+- **Paso 2.** Coas pausas, os movementos chegan en momentos distintos: uns debúxanse no momento e outros co temporizador, como cando se arrastra o rato de verdade.
+- **Paso 4.** Os 41 cambios (o clic e os 40 movementos) chegan case á vez. O normal son 2 fotogramas: o clic, no momento, e todos os movementos xuntos, co temporizador. Se o envío leva máis dun intervalo, por exemplo nunha máquina moi ocupada, pode haber un terceiro. Sen agrupar os cambios, serían 41.
+- **Paso 6.** O rectángulo cambia o contido, pero non se presenta: os cambios esperan a que se restaure a xanela.
+- **Paso 7.** O `paint` mostra tamén o rectángulo do paso 6, porque o *framebuffer* se compón ao restaurar a xanela. O script non mira os píxeles: só comproba que se pintou a xanela enteira.
+- **Paso 8.** `SetWindowPos` cambia o tamaño da xanela co marco; por iso o tamaño que se compara co do `compose` é o da zona de debuxo, que dá `GetClientRect`. As opcións: sen movela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`), sen activala (`SWP_NOACTIVATE`) e sen esperar (`SWP_ASYNCWINDOWPOS`).
+
+```powershell
+finally {
+    $null = [Meiga.Tools.PresentCheck]::SetThreadDpiAwarenessContext($previousDpi)
+    if ($process) {
+        if (-not $process.HasExited) {
+            $process.Kill()
+        }
+        $process.Dispose()
+    }
+    if ($passed) {
+        Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
+    }
+    elseif (Test-Path -LiteralPath $log) {
+        Write-Host "The frame log is in $log"
+    }
+}
+```
+
+- O fío de PowerShell volta á súa escala, e meiga non queda aberto.
+- Se todo foi ben, bórrase o rexistro; se non, gárdase para poder miralo.
+
+A CI executa este script en cada PR, despois de `check-window.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
 
 ## `tools/check-docs.ps1`
 
@@ -566,10 +720,10 @@ A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso 
    }
    ```
 
-`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles:
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.2 son 17:
 
 ```text
-OK: the 13 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+OK: the 17 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
 ```
 
 | Comprobación | Como |
