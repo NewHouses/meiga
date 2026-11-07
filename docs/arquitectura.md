@@ -1,12 +1,12 @@
 # Arquitectura
 
-> Estado: subfase 0.4. Polo de agora só existe o esqueleto e a integración continua. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas.
+> Estado: subfase 0.5. Polo de agora só existe o esqueleto e a integración continua. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
 meiga é un terminal para Windows con tabs, grupos de tabs, explorador de cartafoles e restauración da sesión. A restrición que manda sobre todas as demais é o **rendemento**: o programa debe gastar o mínimo de CPU e de memoria, tamén en máquinas sen GPU ou que se usan por Escritorio remoto.
 
-Nesas máquinas, un terminal que debuxa con DirectX ou Vulkan non ten tarxeta gráfica que faga o traballo, e Windows emula a GPU na CPU (o rasterizador por software WARP). Ademais, o Escritorio remoto ten que comprimir e enviar pola rede cada fotograma que cambia. Por iso meiga debuxa na CPU, pero só o que cambia.
+Nesas máquinas, un terminal que debuxa con DirectX ou Vulkan non ten tarxeta gráfica que faga o traballo, e Windows emula a GPU na CPU (o rasterizador por software WARP). Ademais, o Escritorio remoto ten que comprimir e enviar pola rede cada fotograma que cambia. Por iso meiga debuxa na CPU, pero só o que cambia ([ADR 0002](adr/0002-windows-e-renderizado-cpu.md)).
 
 Deste obxectivo saen os principios de deseño:
 
@@ -47,7 +47,7 @@ graph TD
 - **Compilación incremental máis rápida.** Un cambio nun crate só recompila ese crate e os que dependen del.
 - **Preparado para o futuro.** Un renderizador con GPU (mellora futura F2) sería outra implementación dentro de `meiga-render`, sen tocar a lóxica de `meiga-core`.
 
-A regra de dependencias é estrita: as frechas do diagrama só van cara abaixo, e `meiga-core` nunca depende dos outros tres. Esta regra xa está declarada nos `Cargo.toml` de cada crate, así que Cargo non deixaría compilar un ciclo.
+A regra de dependencias é estrita: as frechas do diagrama só van cara abaixo, e `meiga-core` nunca depende dos outros tres. Esta regra xa está declarada nos `Cargo.toml` de cada crate, así que Cargo non deixaría compilar un ciclo. A elección de Rust explícase no [ADR 0001](adr/0001-rust.md).
 
 ## 3. Fluxo de datos (*previsto*)
 
@@ -70,9 +70,9 @@ sequenceDiagram
     U->>U: presenta só os rectángulos sucios (BitBlt)
 ```
 
-- **ConPTY** é a API de Windows que fai de "pseudoterminal": a shell cre que escribe nunha consola normal, e ConPTY tradúceo a un fluxo de texto con secuencias de escape VT, que é o que le meiga.
+- **ConPTY** é a API de Windows que fai de "pseudoterminal": a shell cre que escribe nunha consola normal, e ConPTY tradúceo a un fluxo de texto con secuencias de escape VT, que é o que le meiga. meiga distribúe a súa propia copia de ConPTY ([ADR 0004](adr/0004-conpty-empaquetado.md)).
 - **Secuencias VT** (ou ANSI): códigos que van mesturados co texto e indican cores, movementos do cursor, borrados… Por exemplo, `ESC[31m` cambia a cor do texto a vermello.
-- **Parser e grella**: o *parser* interpreta as secuencias VT e a grella é a matriz de celas (carácter, cor, estilo) que representa a pantalla do terminal.
+- **Parser e grella**: o *parser* interpreta as secuencias VT e a grella é a matriz de celas (carácter, cor, estilo) que representa a pantalla do terminal. Os dous veñen de `alacritty_terminal` ([ADR 0003](adr/0003-nucleo-vt-alacritty-terminal.md)), e un escáner propio detecta antes as secuencias da integración coa shell ([ADR 0007](adr/0007-integracion-coa-shell.md)).
 
 | Peza | Subfase |
 |---|---|
@@ -91,7 +91,7 @@ sequenceDiagram
 | Lector | 1 por tab coa shell en marcha | Le a saída da shell e actualiza a grella. | Só cando a shell escribe. |
 | Escritor | 1 por tab coa shell en marcha | Envía á shell o que se teclea. | Só cando hai algo que enviar. |
 
-Un fío bloqueado nunha lectura ou nunha espera non consome CPU: o sistema operativo non o planifica ata que hai datos. Por iso o número de fíos non é un problema en si; o problema é que esperten sen motivo.
+Un fío bloqueado nunha lectura ou nunha espera non consome CPU: o sistema operativo non o planifica ata que hai datos. Por iso o número de fíos non é un problema en si; o problema é que esperten sen motivo. O modelo completo, cos fotogramas e as tabs en segundo plano, está no [ADR 0005](adr/0005-fios-e-fotogramas.md).
 
 ## 5. Compilación
 
@@ -122,9 +122,22 @@ flowchart LR
 
 Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github-actions) e en [Código › .github](codigo/github.md).
 
-## 7. Estado actual (subfase 0.4)
+## 7. Decisións de arquitectura (ADR)
+
+| ADR | Decisión |
+|---|---|
+| [0001](adr/0001-rust.md) | Rust como linguaxe. |
+| [0002](adr/0002-windows-e-renderizado-cpu.md) | Só Windows, con renderizado por CPU do que cambia. |
+| [0003](adr/0003-nucleo-vt-alacritty-terminal.md) | `alacritty_terminal` como núcleo, detrás dunha fachada. |
+| [0004](adr/0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga. |
+| [0005](adr/0005-fios-e-fotogramas.md) | Fíos bloqueados e como moito un fotograma por intervalo. |
+| [0006](adr/0006-licenzas-e-dependencias.md) | Só licenzas permisivas e dependencias mínimas. |
+| [0007](adr/0007-integracion-coa-shell.md) | Integración coa shell mediante secuencias OSC. |
+
+## 8. Estado actual (subfase 0.5)
 
 - Existen os catro crates, baleiros, coa regra de dependencias xa declarada.
 - `meiga.exe` compila, arranca e sae co código 0. Ocupa uns 200 KB e só depende de DLL do sistema; a CI compróbao en cada cambio.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`).
-- Cada PR valídase automaticamente en GitHub Actions e produce un `.zip` descargábel con `meiga.exe`.
+- Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, e produce un `.zip` descargábel con `meiga.exe`.
+- As decisións de arquitectura están escritas en sete ADR.
