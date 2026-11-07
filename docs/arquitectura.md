@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 0.3. Polo de agora só existe o esqueleto. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas.
+> Estado: subfase 0.4. Polo de agora só existe o esqueleto e a integración continua. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas.
 
 ## 1. Obxectivo e restricións
 
@@ -101,8 +101,30 @@ Un fío bloqueado nunha lectura ou nunha espera non consome CPU: o sistema opera
 
 Os detalles explícanse en [Tecnoloxías](tecnoloxias.md) e, liña a liña, en [Código › configuración do workspace](codigo/workspace.md).
 
-## 6. Estado actual (subfase 0.3)
+## 6. Integración continua
+
+Ningún cambio chega a `main` sen pasar por un PR e pola CI:
+
+```mermaid
+flowchart LR
+    rama["Rama da subfase"] --> pr["Pull request"]
+    pr --> win["Build and test (Windows)<br/>fmt · clippy · test · release<br/>zip · DLL"]
+    pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
+    win --> art["Artefacto<br/>meiga-…-msvc.zip"]
+    win --> ok{"Checks verdes<br/>e revisión"}
+    deny --> ok
+    ok -->|squash merge| main["main"]
+```
+
+- As regras da rama `main` (*ruleset*) fan obrigatorio este camiño, tamén para os administradores.
+- Dependabot propón cada semana as versións novas dos crates, das actions e de Rust, como PR que pasan polo mesmo proceso.
+- Cada luns, a CI revisa de novo as dependencias contra a base de datos de vulnerabilidades, aínda que non cambiase nada.
+
+Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github-actions) e en [Código › .github](codigo/github.md).
+
+## 7. Estado actual (subfase 0.4)
 
 - Existen os catro crates, baleiros, coa regra de dependencias xa declarada.
-- `meiga.exe` compila, arranca e sae co código 0. Ocupa uns 200 KB e só depende de DLL do sistema.
+- `meiga.exe` compila, arranca e sae co código 0. Ocupa uns 200 KB e só depende de DLL do sistema; a CI compróbao en cada cambio.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`).
+- Cada PR valídase automaticamente en GitHub Actions e produce un `.zip` descargábel con `meiga.exe`.

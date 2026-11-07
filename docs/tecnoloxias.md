@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 0.3. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 0.4. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -22,7 +22,7 @@ Para cada tecnoloxía explícase que é, por que a usamos e como está configura
 
 ## 2. rustup e `rust-toolchain.toml`
 
-**Que é.** `rustup` instala e xestiona versións do compilador de Rust (*toolchains*) e os seus compoñentes. O arquivo `rust-toolchain.toml` indica que versión usar nun proxecto: ao executar `cargo` dentro do cartafol, rustup usa esa versión e, se non está instalada, descárgaa. Tamén se pode instalar explicitamente con `rustup toolchain install`, que le o mesmo arquivo.
+**Que é.** `rustup` instala e xestiona versións do compilador de Rust (*toolchains*) e os seus compoñentes. O arquivo `rust-toolchain.toml` indica que versión usar nun proxecto: ao executar `cargo` dentro do cartafol, rustup usa esa versión e, se non está instalada, descárgaa. Tamén se pode instalar explicitamente con `rustup toolchain install`, que le o mesmo arquivo: é o que fai a CI.
 
 **Configuración en meiga.**
 
@@ -46,7 +46,7 @@ O `Cargo.toml` da raíz de meiga é un **manifesto virtual**: non describe ning�
 
 **Resolvedor 3.** O *resolver* é o algoritmo que escolle que versión de cada dependencia se usa. A versión 3 ten en conta a versión mínima de Rust do proxecto (`rust-version`) e prefire versións das dependencias compatíbeis con ela.
 
-**`Cargo.lock`.** Garda a versión exacta de cada dependencia, incluídas as indirectas. Súbese ao repositorio porque meiga é un programa: así cada compilación é reproducíbel. Coa opción `--locked`, Cargo falla se o `Cargo.lock` non está ao día, en vez de cambialo en silencio. Úsaa o script dos avisos de terceiros e usaraa a CI (subfase 0.4).
+**`Cargo.lock`.** Garda a versión exacta de cada dependencia, incluídas as indirectas. Súbese ao repositorio porque meiga é un programa: así cada compilación é reproducíbel. Coa opción `--locked`, Cargo falla se o `Cargo.lock` non está ao día, en vez de cambialo en silencio. Úsana a CI e os scripts de `tools/`.
 
 ## 4. Perfís de compilación
 
@@ -160,7 +160,7 @@ Na validación úsase `cargo clippy … -- -D warnings`, que converte calquera a
 - `ignore-dev-dependencies = true`: exclúe as dependencias que só usan as probas, porque non se distribúen.
 - `private.ignore = true`: non inclúe os nosos crates.
 
-**Comprobación.** Cunha dependencia temporal (`memchr`), o arquivo xerado incluíu a licenza MIT co seu aviso de *copyright* e sen caracteres escapados. O arquivo non se garda no repo: xérase ao empaquetar o programa (subfase 0.4).
+**Comprobación.** Cunha dependencia temporal (`memchr`), o arquivo xerado incluíu a licenza MIT co seu aviso de *copyright* e sen caracteres escapados. O arquivo non se garda no repo: xérao `tools/package.ps1` ao empaquetar o programa.
 
 ## 11. PowerShell 7
 
@@ -185,13 +185,17 @@ Os scripts de `tools/` escríbense para PowerShell 7 (`pwsh`). Todos seguen o me
 
 - **Só *squash merge*:** cada PR convértese nun único commit en `main`, así que o historial é lineal e lexíbel, cun commit por subfase.
 - **Borrado automático da rama** ao integrar o PR.
-- **Alertas de Dependabot:** GitHub avisa se unha dependencia ten unha vulnerabilidade coñecida.
+- **Alertas e actualizacións de seguridade de Dependabot** (ver a [sección 16](#16-dependabot)).
 - ***Secret scanning* con *push protection*:** GitHub rexeita un *push* que conteña un segredo (por exemplo, un *token*).
 - **Notificación privada de vulnerabilidades:** permite informar dun problema de seguridade sen facelo público (ver `SECURITY.md`).
+- **Regras da rama `main`** (ver a [sección 17](#17-regras-da-rama-main-rulesets)).
 
 ## 13. MSVC e o Windows SDK
 
-Rust en Windows (o *target* `x86_64-pc-windows-msvc`) usa o ligador de Microsoft (`link.exe`) e as bibliotecas do Windows SDK. Instálanse con Visual Studio ou coas *Build Tools*, coa carga de traballo "Desenvolvemento para o escritorio con C++". `dumpbin`, das mesmas ferramentas, mostra as DLL de que depende un `.exe`.
+Rust en Windows (o *target* `x86_64-pc-windows-msvc`) usa o ligador de Microsoft (`link.exe`) e as bibliotecas do Windows SDK. Instálanse con Visual Studio ou coas *Build Tools*, coa carga de traballo "Desenvolvemento para o escritorio con C++".
+
+- **`dumpbin`**, das mesmas ferramentas, mostra a estrutura dun executábel, por exemplo as DLL das que depende (`/dependents`). Non está no `PATH` dunha consola normal, só na *Developer PowerShell for VS*.
+- **`vswhere`** (`%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe`) é a ferramenta oficial para localizar as instalacións de Visual Studio. Os scripts úsana para atopar `dumpbin` sen depender dunha versión concreta de Visual Studio.
 
 ## 14. Preparar o contorno de desenvolvemento
 
@@ -211,5 +215,91 @@ Rust en Windows (o *target* `x86_64-pc-windows-msvc`) usa o ligador de Microsoft
    cargo clippy --workspace --all-targets -- -D warnings
    cargo test --workspace
    cargo deny check
-   cargo build --release
+   .\tools\package.ps1         # compila en release e crea o zip en dist\
+   .\tools\check-imports.ps1   # meiga.exe non depende do runtime de Visual C++
    ```
+
+## 15. GitHub Actions
+
+**Que é.** O sistema de integración continua (CI) de GitHub: executa tarefas automaticamente cando pasa algo no repositorio, como un PR, un *push* ou unha hora programada.
+
+| Concepto | Que é |
+|---|---|
+| *Workflow* | Un proceso automático, definido nun arquivo YAML en `.github/workflows/`. |
+| Evento | O que lanza o workflow: `pull_request`, `push`, `schedule`… |
+| *Job* | Un conxunto de pasos que se executa nunha máquina. Os jobs dun workflow corren en paralelo, salvo que un dependa doutro. |
+| *Runner* | A máquina virtual onde corre un job. GitHub crea unha nova e limpa para cada job e destrúea ao rematar. |
+| Paso (*step*) | Un comando (`run`) ou unha *action* (`uses`). |
+| *Action* | Un compoñente reutilizábel publicado nun repositorio de GitHub, como `actions/checkout`. |
+| Artefacto | Un arquivo xerado por unha execución, que se pode descargar desde a web. |
+| *Check* | O resultado, correcto ou fallido, de cada job. Aparece no PR. |
+
+**Por que.** Cada PR compílase e próbase nunha máquina limpa e sempre igual, sen depender do estado do equipo de ninguén. Nos repositorios públicos é gratuíto.
+
+**En meiga** hai un workflow (`ci.yml`) con dous jobs en paralelo:
+
+- **Build and test (Windows):** formato, Clippy, probas, compilación *release*, paquete `.zip`, comprobación das DLL e subida do paquete como artefacto.
+- **Dependency policy (cargo-deny):** a política de dependencias, nunha máquina Linux. Ademais de en cada PR, execútase cada semana para detectar vulnerabilidades novas.
+
+A explicación liña a liña está en [Código › .github](codigo/github.md).
+
+### Seguridade do workflow
+
+Un workflow executa código de terceiros (as actions) cun *token* de acceso ao repositorio. Por iso protéxese en varias capas:
+
+- **Permisos mínimos:** `permissions: contents: read`. O *token* só pode ler o código.
+- **Actions fixadas por SHA.** Unha etiqueta como `v7.0.1` pódese mover: quen controle o repositorio da action pode apuntala a outro commit. Pasou en marzo de 2025 coa action `tj-actions/changed-files`: un atacante moveu as súas etiquetas a un commit malicioso que escribía os segredos dos workflows nos rexistros, en miles de repositorios. O SHA completo identifica un commit concreto e non se pode cambiar. A versión queda nun comentario, e Dependabot actualiza os dous.
+- **Sen credenciais gardadas:** `persist-credentials: false` ao descargar o código.
+- **Sen segredos:** a CI non usa ningún.
+- **Tempo máximo** en cada job (`timeout-minutes`).
+- **Ferramentas verificadas:** `taiki-e/install-action` comproba o SHA-256 de cada binario que descarga.
+- **Sen `RUSTFLAGS`:** esa variábel anularía as opcións de `.cargo/config.toml` (ver [Código › .github](codigo/github.md#variábeis-de-contorno)).
+
+Antes de subilo, o workflow revisouse con dúas ferramentas de análise:
+
+- [actionlint](https://github.com/rhysd/actionlint): erros de sintaxe, expresións e referencias incorrectas.
+- [zizmor](https://github.com/zizmorcore/zizmor): problemas de seguridade (permisos, credenciais, inxección de código, actions sen fixar…).
+
+### Imaxes dos runners
+
+Úsanse `windows-2025` e `ubuntu-24.04`, non `windows-latest` e `ubuntu-latest`. As etiquetas `-latest` cambian de versión do sistema cando GitHub o decide, e iso pode romper a compilación sen ningún cambio no repositorio. Coa versión fixada, o cambio faise nun PR cando GitHub anuncia a retirada dunha imaxe.
+
+### Caché e artefactos
+
+- **Caché:** `Swatinem/rust-cache` garda entre execucións as dependencias e as compilacións, e só se garda desde `main`.
+- **Artefactos:** o `.zip` de cada execución consérvase 30 días. Mentres non haxa versións publicadas (mellora futura F5), é a forma de obter un `meiga.exe` compilado pola CI.
+
+## 16. Dependabot
+
+**Que é.** O servizo de GitHub que vixía as dependencias. Ten tres funcións:
+
+| Función | Que fai | En meiga |
+|---|---|---|
+| Alertas | Avisa se unha dependencia ten unha vulnerabilidade coñecida. | Activadas desde a subfase 0.2. |
+| Actualizacións de seguridade | Abre automaticamente un PR que actualiza unha dependencia vulnerábel. | Activadas na subfase 0.4. |
+| Actualizacións de versión | Abre PR periódicos coas versións novas, aínda que non haxa vulnerabilidades. | Configuradas en `.github/dependabot.yml`. |
+
+**Configuración.** Tres ecosistemas: os crates de Rust, as actions dos workflows e a versión de Rust de `rust-toolchain.toml`. Revísanse unha vez por semana, cun único PR por ecosistema. Para os crates e as actions, só se propoñen versións publicadas hai polo menos 7 días (*cooldown*): se unha versión resulta ser maliciosa ou estar rota, adoita retirarse nese tempo. Detalle en [Código › .github](codigo/github.md#githubdependabotyml).
+
+Os PR de Dependabot pasan pola mesma CI e pola mesma revisión que calquera outro: nada se integra automaticamente.
+
+## 17. Regras da rama `main` (*rulesets*)
+
+**Que é.** Un *ruleset* é un conxunto de regras que GitHub aplica a unhas ramas concretas. É o mecanismo recomendado actualmente, en substitución da antiga "protección de ramas". As regras compróbanse no servidor de GitHub, así que se aplican sexa cal sexa a ferramenta coa que se traballe.
+
+**Regras de `main`:**
+
+| Regra | Efecto |
+|---|---|
+| PR obrigatorio | Ninguén pode facer *push* directo a `main`: todo cambio entra por un PR. Non se esixen aprobacións, porque en GitHub o autor dun PR non pode aprobalo, e o propietario do repositorio é quen abre os PR. A revisión faise igualmente antes de integrar. |
+| Só *squash merge* | Cada PR entra como un único commit. |
+| Conversas resoltas | Non se pode integrar un PR con comentarios de revisión pendentes. |
+| *Checks* obrigatorios | Os dous jobs da CI teñen que pasar. Só contan se os informa GitHub Actions, non outra aplicación que use o mesmo nome. |
+| Rama ao día | O PR ten que incluír o último commit de `main`, para que a CI valide exactamente o que quedará en `main`. |
+| Historial lineal | Non se admiten *merge commits*. |
+| Sen *force push* | Ninguén pode reescribir o historial de `main`. |
+| Sen borrado | Ninguén pode borrar `main`. |
+| Sen excepcións | As regras aplícanse tamén aos administradores. |
+| Aprobación extra para PR de Copilot | Valor por defecto de GitHub: se o axente de Copilot abre un PR coa súa propia identidade, e non en nome dunha persoa, esíxese unha aprobación máis. Non afecta aos PR que abre a conta propietaria. |
+
+Comprobación: un *push* directo a `main` é rexeitado con `GH013: Repository rule violations found for refs/heads/main`, indicando que os cambios deben entrar por un PR e que faltan os dous *checks* obrigatorios.
