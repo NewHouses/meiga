@@ -41,9 +41,20 @@ cargo test --workspace
 cargo deny check
 .\tools\check-docs.ps1
 .\tools\check-imports.ps1
+.\tools\perf\test-measure.ps1
 ```
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
+
+## Measuring
+
+`tools\perf\measure.ps1` measures the CPU, wakeups, memory and threads of a terminal and of the parts of Windows that put it on the screen (the Desktop Window Manager and Remote Desktop). It works with any terminal and does not need administrator rights. The results are printed and saved as CSV in `.perf\`, which is not committed:
+
+```powershell
+.\tools\perf\measure.ps1 WindowsTerminal -Duration 60 -Label idle
+```
+
+Run `Get-Help .\tools\perf\measure.ps1 -Detailed` for all the options.
 
 ## Documentation
 

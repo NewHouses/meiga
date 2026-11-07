@@ -1,8 +1,8 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 0.5.
+> Estado: subfase 0.6.
 
-Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa.
+Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md).
 
 | Arquivo | Para que |
 |---|---|
