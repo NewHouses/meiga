@@ -412,12 +412,21 @@ finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$checks | Format-Table -AutoSize | Out-Host
-$failed = @($checks | Where-Object Result -NE 'ok').Count
+# At a fixed width: the console of a CI runner can be narrower than the table,
+# and Format-Table would drop the last columns.
+$checks | Format-Table -AutoSize | Out-String -Width 400 | Write-Host
+$failed = @($checks | Where-Object Result -NE 'ok')
 if ($checks.Count -eq 0) {
     throw 'No scenario was checked.'
 }
-if ($failed -gt 0) {
-    throw "$failed of $($checks.Count) checks failed."
+if ($failed.Count -gt 0) {
+    # The table shortens long values, such as error messages: show them whole,
+    # with the control characters visible.
+    foreach ($check in $failed) {
+        $value = ($check.Measured | Out-String -Width 400).TrimEnd()
+        $value = $value.Replace("`e", '\e').Replace("`r", '\r')
+        Write-Host "$($check.Check): expected $($check.Expected), measured:`n$value`n"
+    }
+    throw "$($failed.Count) of $($checks.Count) checks failed."
 }
 Write-Host "All $($checks.Count) checks passed."
