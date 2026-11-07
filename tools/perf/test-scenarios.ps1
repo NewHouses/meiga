@@ -134,8 +134,20 @@ function Start-ScenarioProcess([string]$ShellName, [string]$Name, [string[]]$Arg
         $list = @((Join-Path $scenarios "$Name.sh")) + $Arguments
     }
     $output = Join-Path $RunDirectory 'output'
-    $process = Start-Process $file -ArgumentList ($list | ForEach-Object { ConvertTo-Argument $_ }) -NoNewWindow -PassThru `
-        -RedirectStandardOutput $output -RedirectStandardError "$output.err"
+    if ($IsWindows) {
+        $process = Start-Process $file -ArgumentList ($list | ForEach-Object { ConvertTo-Argument $_ }) -NoNewWindow -PassThru `
+            -RedirectStandardOutput $output -RedirectStandardError "$output.err"
+    }
+    else {
+        # Outside Windows, Start-Process reads a redirected output line by line
+        # and writes it again: carriage returns become new lines, and empty
+        # lines are lost. sh redirects the bytes as they are.
+        $info = [Diagnostics.ProcessStartInfo]::new('sh')
+        foreach ($argument in @('-c', 'out=$1; shift; exec "$@" >"$out" 2>"$out.err"', 'sh', $output, $file) + $list) {
+            $info.ArgumentList.Add($argument)
+        }
+        $process = [Diagnostics.Process]::Start($info)
+    }
     # Without the handle, ExitCode is empty once the process has ended.
     $null = $process.Handle
     [pscustomobject]@{

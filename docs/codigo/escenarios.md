@@ -101,7 +101,7 @@ function Get-RunDirectory {
 }
 ```
 
-O cartafol de coordinación. As rutas escríbense con `/`, que Windows tamén acepta, para que o módulo funcione igual en Linux, onde se executan as probas da CI.
+O cartafol de coordinación. As rutas escríbense con `/`, que Windows tamén acepta, para que o módulo funcione igual fóra de Windows.
 
 ```powershell
     if (-not [Console]::IsOutputRedirected) {
@@ -458,6 +458,22 @@ function Invoke-Screen([string]$Text) {
 Para comprobar ai-stream, a súa saída pásase por un **emulador de liñas** mínimo, que só entende o que usan os escenarios: texto, `\r`, `\n`, subir o cursor (`ESC[nA`) e borrar (`ESC[J`, `ESC[K`); as cores e o resto de secuencias ignóranse. O resultado é o texto que verías na pantalla e no historial, que se compara liña a liña coa conversa de `ai-stream.txt` sen as cores. Así compróbase todo o mecanismo de redebuxado: que non se perde nin se repite ningunha palabra, que as táboas quedan aliñadas e que se borra a zona de estado.
 
 **bash.** Os escenarios de bash necesitan bash 5. En Windows córrense en WSL, cun `wsl.exe -e bash` e as rutas convertidas con `wslpath`; a variábel `WSLENV` pásalle `MEIGA_PERF_RUN` a WSL traducindo a ruta (a opción `/p`). Noutros sistemas úsase o bash do sistema. Se non hai bash 5, as comprobacións de bash sáltanse cun aviso.
+
+**A saída, byte a byte.** En Windows, `Start-Process -RedirectStandardOutput` pásalle o arquivo directamente ao proceso, e os bytes chegan tal como saen. Fóra de Windows, en cambio, PowerShell le a saída liña a liña e escríbea outra vez: cada `\r` convértese nun salto de liña, as liñas baleiras pérdense e engade un salto ao final. As comprobacións de fotogramas, do cursor e da conversa fallarían, aínda que o escenario estivese ben. Por iso, fóra de Windows, o escenario arranca a través de `sh`, que fai a redirección:
+
+```powershell
+        $info = [Diagnostics.ProcessStartInfo]::new('sh')
+        foreach ($argument in @('-c', 'out=$1; shift; exec "$@" >"$out" 2>"$out.err"', 'sh', $output, $file) + $list) {
+            $info.ArgumentList.Add($argument)
+        }
+        $process = [Diagnostics.Process]::Start($info)
+```
+
+- `sh -c '…' sh <arquivo> <programa> <argumentos>`: no código de `-c`, `$0` é `sh`, `$1` o arquivo da saída e o resto, o programa cos seus argumentos. `shift` quita o arquivo, e `exec "$@"` substitúe `sh` polo escenario, coa saída e os erros redirixidos aos dous arquivos.
+- `ArgumentList` pasa cada argumento por separado, sen ter que poñer comiñas, ao contrario que `Start-Process`.
+- Como `exec` substitúe `sh`, o proceso que as probas esperan e, se fai falta, deteñen é o propio escenario.
+
+**Táboa de ancho fixo.** O resultado mostra a táboa con `Out-String -Width 400`, porque a consola dos *runners* de Linux é máis estreita ca a táboa, e `Format-Table` deixaría fóra as últimas columnas, as do valor medido e do resultado. Despois, cada comprobación que falla aparece outra vez co seu valor enteiro e os caracteres de control visíbeis (`\e`, `\r`).
 
 **Comprobación da proba.** Cunha copia de `ai-stream.sh` que se come os espazos entre palabras, a comprobación `ai-stream (bash): conversation` falla na primeira liña con espazos; e se o spinner non mostra o cursor ao final, falla a comprobación `cursor`.
 
