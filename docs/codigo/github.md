@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 0.4.
+> Estado: subfase 0.5.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -93,6 +93,15 @@ env:
 - `uses` executa unha *action*: un compoñente reutilizábel publicado noutro repositorio. `actions/checkout` descarga o código do repositorio no runner.
 - A versión fíxase co **SHA completo do commit**, e a etiqueta (`v7.0.1`) queda nun comentario. O motivo explícase en [Tecnoloxías › Seguridade do workflow](../tecnoloxias.md#seguridade-do-workflow).
 - `persist-credentials: false`: por defecto, `checkout` deixa o *token* gardado na configuración de Git do runner, para que os pasos seguintes poidan facer `git push`. Non o necesitamos, e así ningún paso posterior pode reutilizalo.
+
+#### Comprobar a documentación
+
+```yaml
+      - name: Check documentation links
+        run: ./tools/check-docs.ps1
+```
+
+Comproba que todas as ligazóns internas da documentación apuntan a arquivos e títulos que existen (ver [Código › ferramentas](ferramentas.md#toolscheck-docsps1)). Vai antes de instalar Rust porque non o necesita: se a documentación ten unha ligazón rota, o job falla en segundos.
 
 #### Instalar Rust
 

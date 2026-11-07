@@ -39,6 +39,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo deny check
+.\tools\check-docs.ps1
 .\tools\check-imports.ps1
 ```
 
@@ -46,7 +47,7 @@ The latest build of each pull request can be downloaded from the artifacts of it
 
 ## Documentation
 
-Detailed documentation of the architecture, the technologies and the code, written in Galician, is in [docs/](docs/README.md).
+Detailed documentation of the architecture, the technologies and the code, written in Galician, is in [docs/](docs/README.md). The architecture decision records are in [docs/adr/](docs/adr/README.md).
 
 ## Contributing
 

@@ -1,6 +1,6 @@
 # Código
 
-> Estado: subfase 0.4.
+> Estado: subfase 0.5.
 
 Explicación detallada do código, arquivo por arquivo. Para o *porqué* das decisións xerais, ver [Arquitectura](../arquitectura.md) e [Tecnoloxías](../tecnoloxias.md).
 
@@ -39,4 +39,4 @@ meiga/
 | [meiga-render.md](meiga-render.md) | Renderizador por CPU. |
 | [meiga-win.md](meiga-win.md) | Capa de plataforma de Windows. |
 | [meiga.md](meiga.md) | O programa executábel. |
-| [ferramentas.md](ferramentas.md) | Scripts e modelos de `tools/`: empaquetado, comprobación das DLL e avisos de terceiros. |
+| [ferramentas.md](ferramentas.md) | Scripts e modelos de `tools/`: empaquetado, comprobación das DLL e das ligazóns da documentación, e avisos de terceiros. |
