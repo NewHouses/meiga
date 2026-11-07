@@ -1,6 +1,6 @@
 # Código
 
-> Estado: subfase 0.5.
+> Estado: subfase 0.6.
 
 Explicación detallada do código, arquivo por arquivo. Para o *porqué* das decisións xerais, ver [Arquitectura](../arquitectura.md) e [Tecnoloxías](../tecnoloxias.md).
 
@@ -28,6 +28,7 @@ meiga/
 │  ├─ meiga-win/           → meiga-win.md
 │  └─ meiga/               → meiga.md
 ├─ tools/                  → ferramentas.md
+│  └─ perf/                → perf.md
 └─ docs/                   (esta documentación)
 ```
 
@@ -40,3 +41,4 @@ meiga/
 | [meiga-win.md](meiga-win.md) | Capa de plataforma de Windows. |
 | [meiga.md](meiga.md) | O programa executábel. |
 | [ferramentas.md](ferramentas.md) | Scripts e modelos de `tools/`: empaquetado, comprobación das DLL e das ligazóns da documentación, e avisos de terceiros. |
+| [perf.md](perf.md) | Medición do rendemento (`tools/perf/`): o script que mide os terminais, o código C# que le os procesos e a súa proba. |

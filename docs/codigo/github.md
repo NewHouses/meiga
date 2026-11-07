@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 0.5.
+> Estado: subfase 0.6.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -102,6 +102,15 @@ env:
 ```
 
 Comproba que todas as ligazóns internas da documentación apuntan a arquivos e títulos que existen (ver [Código › ferramentas](ferramentas.md#toolscheck-docsps1)). Vai antes de instalar Rust porque non o necesita: se a documentación ten unha ligazón rota, o job falla en segundos.
+
+#### Comprobar o arnés de medición
+
+```yaml
+      - name: Check the measurement harness
+        run: ./tools/perf/test-measure.ps1 -Duration 5
+```
+
+Executa a proba de `tools/perf/measure.ps1` con procesos de consumo coñecido (ver [Código › medición](perf.md#toolsperftest-measureps1)). Tampouco necesita Rust e leva uns 15 s. Non mide o rendemento de meiga: as máquinas da CI son compartidas e darían cifras con moito ruído. Só comproba que o arnés segue medindo ben, para que un cambio nos scripts non o estrague sen que se note.
 
 #### Instalar Rust
 

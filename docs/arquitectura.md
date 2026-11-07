@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 0.5. Polo de agora só existe o esqueleto e a integración continua. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 0.6. Polo de agora só existen o esqueleto, a integración continua e as ferramentas de medición. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -18,7 +18,7 @@ Deste obxectivo saen os principios de deseño:
 | Agrupar en fotogramas | Como moito un fotograma por intervalo, aínda que a shell escriba miles de veces por segundo. |
 | Poucos fíos, e bloqueados | Un fío para a interface e dous por tab. Cando non hai traballo, todos esperan bloqueados sen gastar CPU. |
 | Sen *frameworks* pesados | Win32, DirectWrite e GDI directamente: nada de navegadores embebidos nin *runtimes* asíncronos. |
-| Medir sempre | Cada fase pecha cunha porta de rendemento con medicións. |
+| Medir sempre | Cada fase pecha cunha porta de rendemento con medicións (ver a [sección 8](#8-medición-do-rendemento)). |
 
 ## 2. Estrutura do código: un *workspace* con catro *crates*
 
@@ -108,7 +108,7 @@ Ningún cambio chega a `main` sen pasar por un PR e pola CI:
 ```mermaid
 flowchart LR
     rama["Rama da subfase"] --> pr["Pull request"]
-    pr --> win["Build and test (Windows)<br/>fmt · clippy · test · release<br/>zip · DLL"]
+    pr --> win["Build and test (Windows)<br/>ligazóns · arnés de medición<br/>fmt · clippy · test · release<br/>zip · DLL"]
     pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
     win --> art["Artefacto<br/>meiga-…-msvc.zip"]
     win --> ok{"Checks verdes<br/>e revisión"}
@@ -134,10 +134,34 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0006](adr/0006-licenzas-e-dependencias.md) | Só licenzas permisivas e dependencias mínimas. |
 | [0007](adr/0007-integracion-coa-shell.md) | Integración coa shell mediante secuencias OSC. |
 
-## 8. Estado actual (subfase 0.5)
+## 8. Medición do rendemento
+
+O rendemento mídese desde fóra, sen tocar o código de meiga, co mesmo arnés para calquera terminal: `tools/perf/measure.ps1`. Cada certo tempo fai unha "fotografía" de todos os procesos e fíos do sistema e reparte o consumo en grupos:
+
+```mermaid
+flowchart TD
+    subgraph T["Lanzado polo terminal"]
+        term["terminal<br/>meiga.exe, warp.exe…"] --> con["console<br/>OpenConsole.exe, un por tab"]
+        term --> sh["shells<br/>pwsh, wsl, cmd e os seus programas"]
+    end
+    subgraph P["Poñer a imaxe na pantalla"]
+        dwm["dwm<br/>compón as xanelas"]
+        rdp["termservice e wudfhost<br/>Escritorio remoto"]
+    end
+    sys["system: toda a máquina"]
+```
+
+- **Que conta como custo do terminal:** o propio terminal, os seus procesos de consola e o traballo que provoca en `dwm` e no Escritorio remoto ao debuxar. As shells son a carga de traballo, igual para todos os terminais.
+- **Métricas:** CPU (en % dun núcleo e en ciclos), espertares por segundo, memoria privada e fíos. Explícanse en [Tecnoloxías › Medición do rendemento](tecnoloxias.md#19-medición-do-rendemento).
+- **Onde:** en local, no equipo de desenvolvemento, e non na CI, porque as máquinas da CI son compartidas e darían cifras con moito ruído. Os resultados gárdanse en `.perf/`, fóra de Git. A CI só comproba que o arnés mide ben.
+
+O código explícase en [Código › medición](codigo/perf.md). Nas subfases seguintes engadiranse os escenarios de carga (0.7) e a liña base co Warp e o Windows Terminal (0.8), que fixará os orzamentos de cada fase.
+
+## 9. Estado actual (subfase 0.6)
 
 - Existen os catro crates, baleiros, coa regra de dependencias xa declarada.
 - `meiga.exe` compila, arranca e sae co código 0. Ocupa uns 200 KB e só depende de DLL do sistema; a CI compróbao en cada cambio.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`).
-- Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, e produce un `.zip` descargábel con `meiga.exe`.
+- Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación e o arnés de medición, e produce un `.zip` descargábel con `meiga.exe`.
 - As decisións de arquitectura están escritas en sete ADR.
+- O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla.
