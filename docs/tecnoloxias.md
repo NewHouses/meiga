@@ -245,9 +245,10 @@ Rust en Windows (o *target* `x86_64-pc-windows-msvc`) usa o ligador de Microsoft
 
 **Por que.** Cada PR compílase e próbase nunha máquina limpa e sempre igual, sen depender do estado do equipo de ninguén. Nos repositorios públicos é gratuíto.
 
-**En meiga** hai un workflow (`ci.yml`) con dous jobs en paralelo:
+**En meiga** hai un workflow (`ci.yml`) con tres jobs en paralelo:
 
-- **Build and test (Windows):** ligazóns da documentación, proba do arnés de medición, formato, Clippy, probas, compilación *release*, paquete `.zip`, comprobación das DLL e subida do paquete como artefacto.
+- **Build and test (Windows):** ligazóns da documentación, a comprobación de que os scripts piden PowerShell 7, as probas do arnés de medición e dos escenarios de carga en PowerShell, formato, Clippy, probas, compilación *release*, paquete `.zip`, comprobación das DLL e subida do paquete como artefacto.
+- **Load scenarios (bash):** ShellCheck e as probas dos escenarios de carga en bash, nunha máquina Linux.
 - **Dependency policy (cargo-deny):** a política de dependencias, nunha máquina Linux. Ademais de en cada PR, execútase cada semana para detectar vulnerabilidades novas.
 
 A explicación liña a liña está en [Código › .github](codigo/github.md).
@@ -303,7 +304,7 @@ Os PR de Dependabot pasan pola mesma CI e pola mesma revisión que calquera outr
 | PR obrigatorio | Ninguén pode facer *push* directo a `main`: todo cambio entra por un PR. Non se esixen aprobacións, porque en GitHub o autor dun PR non pode aprobalo, e o propietario do repositorio é quen abre os PR. A revisión faise igualmente antes de integrar. |
 | Só *squash merge* | Cada PR entra como un único commit. |
 | Conversas resoltas | Non se pode integrar un PR con comentarios de revisión pendentes. |
-| *Checks* obrigatorios | Os dous jobs da CI teñen que pasar. Só contan se os informa GitHub Actions, non outra aplicación que use o mesmo nome. |
+| *Checks* obrigatorios | Os tres jobs da CI teñen que pasar (o de bash, desde a subfase 0.7). Só contan se os informa GitHub Actions, non outra aplicación que use o mesmo nome. |
 | Rama ao día | O PR ten que incluír o último commit de `main`, para que a CI valide exactamente o que quedará en `main`. |
 | Historial lineal | Non se admiten *merge commits*. |
 | Sen *force push* | Ninguén pode reescribir o historial de `main`. |
@@ -311,7 +312,7 @@ Os PR de Dependabot pasan pola mesma CI e pola mesma revisión que calquera outr
 | Sen excepcións | As regras aplícanse tamén aos administradores. |
 | Aprobación extra para PR de Copilot | Valor por defecto de GitHub: se o axente de Copilot abre un PR coa súa propia identidade, e non en nome dunha persoa, esíxese unha aprobación máis. Non afecta aos PR que abre a conta propietaria. |
 
-Comprobación: un *push* directo a `main` é rexeitado con `GH013: Repository rule violations found for refs/heads/main`, indicando que os cambios deben entrar por un PR e que faltan os dous *checks* obrigatorios.
+Comprobación: un *push* directo a `main` é rexeitado con `GH013: Repository rule violations found for refs/heads/main`, indicando que os cambios deben entrar por un PR e que faltan os *checks* obrigatorios.
 
 ## 18. Markdown, Mermaid e ADR
 
