@@ -1,0 +1,181 @@
+> Find the ten biggest files under this folder
+
+\e[1;38;5;141mThe ten biggest files\e[0m
+
+In PowerShell, list every file below the current folder, sort them by
+size and keep the first ten:
+
+  \e[2m│\e[0m \e[38;5;81mGet-ChildItem\e[0m -Recurse -File |
+  \e[2m│\e[0m     \e[38;5;81mSort-Object\e[0m Length -Descending |
+  \e[2m│\e[0m     \e[38;5;81mSelect-Object\e[0m -First \e[38;5;179m10\e[0m FullName, Length
+
+\e[38;5;179m-Recurse\e[0m walks into every subfolder, and \e[38;5;179m-File\e[0m leaves the
+folders out, because a folder has no length of its own. If some
+folders cannot be read, add \e[38;5;179m-ErrorAction SilentlyContinue\e[0m so that
+the errors do not hide the result.
+
+To show the sizes in megabytes, end the pipeline with a calculated
+property instead:
+
+  \e[2m│\e[0m     \e[38;5;81mSelect-Object\e[0m -First \e[38;5;179m10\e[0m FullName, @{
+  \e[2m│\e[0m         Name = \e[38;5;114m'MB'\e[0m
+  \e[2m│\e[0m         Expression = { [math]::Round(\e[38;5;204m$_\e[0m.Length / \e[38;5;179m1MB\e[0m, \e[38;5;179m1\e[0m) }
+  \e[2m│\e[0m     }
+
+The same in bash, with GNU \e[38;5;179mfind\e[0m and \e[38;5;179msort\e[0m:
+
+  \e[2m│\e[0m \e[38;5;81mfind\e[0m . -type f -printf \e[38;5;114m'%s %p\n'\e[0m | \e[38;5;81msort\e[0m -rn | \e[38;5;81mhead\e[0m -n \e[38;5;179m10\e[0m
+
+\e[38;5;179m-printf\e[0m writes the size in bytes before each path, \e[38;5;179msort -rn\e[0m puts
+the biggest numbers first and \e[38;5;179mhead\e[0m keeps ten lines. Keep the sizes
+in bytes: sizes such as \e[38;5;179m1.5G\e[0m only sort right with \e[38;5;179msort -h\e[0m.
+
+💡 On a big tree, the first run is slow because the disk is cold. The
+second one is much faster, since the system keeps the folders in memory.
+
+> Why does my Rust release build take so long?
+
+\e[1;38;5;141mWhere the time goes\e[0m
+
+A release build spends its time in three places:
+
+\e[36m•\e[0m \e[1mDependencies\e[0m, only in the first build: Cargo keeps them in
+  \e[38;5;179mtarget/\e[0m and reuses them while their versions do not change.
+\e[36m•\e[0m \e[1mYour own crates\e[0m, which take longer with \e[38;5;179mlto = "fat"\e[0m and
+  \e[38;5;179mcodegen-units = 1\e[0m, because the optimizer sees the whole program.
+\e[36m•\e[0m \e[1mThe linker\e[0m, which runs in every build and slows down with a
+  lot of debug information.
+
+Measure before you change anything:
+
+  \e[2m│\e[0m \e[38;5;81mcargo\e[0m build --release --timings
+
+Cargo writes \e[38;5;179mcargo-timing.html\e[0m, with one bar per crate and the
+critical path highlighted.
+
+\e[2m┌──────────────────────┬──────────────┬──────────────┐\e[0m
+\e[2m│\e[0m \e[1mSetting\e[0m              \e[2m│\e[0m \e[1mBuild time\e[0m   \e[2m│\e[0m \e[1mSpeed\e[0m        \e[2m│\e[0m
+\e[2m├──────────────────────┼──────────────┼──────────────┤\e[0m
+\e[2m│\e[0m lto = "fat"          \e[2m│\e[0m \e[31m▲ longest\e[0m    \e[2m│\e[0m \e[32m▲ best\e[0m       \e[2m│\e[0m
+\e[2m│\e[0m lto = "thin"         \e[2m│\e[0m \e[33m▲ longer\e[0m     \e[2m│\e[0m \e[32m▲ good\e[0m       \e[2m│\e[0m
+\e[2m│\e[0m codegen-units = 16   \e[2m│\e[0m \e[32m▼ shorter\e[0m    \e[2m│\e[0m \e[33m▼ a bit less\e[0m \e[2m│\e[0m
+\e[2m│\e[0m debug = 0            \e[2m│\e[0m \e[32m▼ shorter\e[0m    \e[2m│\e[0m same         \e[2m│\e[0m
+\e[2m└──────────────────────┴──────────────┴──────────────┘\e[0m
+
+For day-to-day work, keep \e[38;5;179mlto = "fat"\e[0m only in the profile that you
+ship, and use a lighter one while you develop:
+
+  \e[2m│\e[0m \e[38;5;204m[profile.dev]\e[0m
+  \e[2m│\e[0m debug = \e[38;5;114m"line-tables-only"\e[0m
+  \e[2m│\e[0m
+  \e[2m│\e[0m \e[38;5;204m[profile.release]\e[0m
+  \e[2m│\e[0m lto = \e[38;5;114m"fat"\e[0m
+  \e[2m│\e[0m codegen-units = \e[38;5;179m1\e[0m
+
+\e[38;2;255;175;95m⚡\e[0m A faster linker can help too: on Windows, try \e[38;5;179mrust-lld\e[0m and
+compare the times of a few builds before you keep it.
+
+> Como renomeo moitos arquivos á vez en bash?
+
+\e[1;38;5;141mRenomear en bloque\e[0m
+
+Co bucle \e[38;5;179mfor\e[0m de bash e a substitución de parámetros non precisas
+ningún programa externo. Por exemplo, para cambiar a extensión de
+todos os \e[38;5;179m.jpeg\e[0m do cartafol actual a \e[38;5;179m.jpg\e[0m:
+
+  \e[2m│\e[0m \e[38;5;204mfor\e[0m f \e[38;5;204min\e[0m *.jpeg; \e[38;5;204mdo\e[0m
+  \e[2m│\e[0m     \e[38;5;81mmv\e[0m -n -- \e[38;5;114m"$f"\e[0m \e[38;5;114m"${f%.jpeg}.jpg"\e[0m
+  \e[2m│\e[0m \e[38;5;204mdone\e[0m
+
+\e[38;5;179m${f%.jpeg}\e[0m quita o sufixo \e[38;5;179m.jpeg\e[0m do nome, e \e[38;5;179m-n\e[0m fai que \e[38;5;179mmv\e[0m
+non sobrescriba un arquivo que xa exista. As comiñas son necesarias:
+sen elas, un nome con espazos, como \e[38;5;114m"canción de Ourense.jpeg"\e[0m,
+partiríase en varias palabras.
+
+Antes de renomear de verdade, mira o que faría o bucle cambiando \e[38;5;179mmv\e[0m
+por \e[38;5;179mecho mv\e[0m. Se a lista é longa, gárdaa nun arquivo e revísaa con
+calma: eiquí un minuto de comprobación aforra moito traballo, porque
+non sempre é posíbel voltar atrás.
+
+Para pasar os nomes a minúsculas, bash tamén o fai sen axuda:
+
+  \e[2m│\e[0m \e[38;5;204mfor\e[0m f \e[38;5;204min\e[0m *; \e[38;5;204mdo\e[0m
+  \e[2m│\e[0m     \e[38;5;81mmv\e[0m -n -- \e[38;5;114m"$f"\e[0m \e[38;5;114m"${f,,}"\e[0m
+  \e[2m│\e[0m \e[38;5;204mdone\e[0m
+
+Con nomes como \e[38;5;114m"Información_A_Coruña.PDF"\e[0m, o resultado depende da
+configuración rexional: cun \e[38;5;179mLANG\e[0m en UTF-8, \e[38;5;179m${f,,}\e[0m tamén pasa a
+minúsculas as letras con acento, e a \e[38;5;179mÑ\e[0m queda \e[38;5;179mñ\e[0m. ✅
+
+> Summarize what changed in the repository this week
+
+\e[1;38;5;141mThis week in the repository\e[0m
+
+I read the 23 commits since Monday with \e[38;5;179mgit log --since=monday\e[0m.
+They fall into four groups:
+
+✨ \e[1mFeatures\e[0m
+  \e[36m•\e[0m Tabs can be renamed with a double click (\e[33ma41c9e2\e[0m).
+  \e[36m•\e[0m The explorer remembers the last folder of each tab (\e[33m7d0b13f\e[0m).
+
+🐛 \e[1mFixes\e[0m
+  \e[36m•\e[0m Wide characters no longer move the cursor one cell too far, which
+    broke names such as \e[38;5;114m"日本語のファイル名.txt"\e[0m (\e[33mc52e8aa\e[0m).
+  \e[36m•\e[0m Resizing the window while a program writes no longer leaves old
+    text on the right edge (\e[33m19fe4d7\e[0m).
+
+📦 \e[1mDependencies\e[0m
+  \e[36m•\e[0m Two updates from Dependabot, both patch versions (\e[33m3b8e0c1\e[0m,
+    \e[33m88a2f6d\e[0m).
+
+🧪 \e[1mTests\e[0m
+  \e[36m•\e[0m New tests for keyboard layouts with dead keys, and for paths with
+    spaces and CJK characters, such as \e[38;5;114m"项目/终端/配置"\e[0m.
+
+\e[1mCommits by author\e[0m
+
+  \e[2m│\e[0m 14  \e[38;2;255;175;95m██████████████\e[0m  Ana
+  \e[2m│\e[0m  6  \e[38;2;135;175;255m██████\e[0m          Brais
+  \e[2m│\e[0m  3  \e[38;2;135;215;135m███\e[0m             Dependabot
+
+Nothing was reverted, and the tests passed on every commit. 🎉 The only
+open question is the fix for wide characters: it changes how the cursor
+moves, so try it with your own prompt before the release.
+
+> Explain this error: borrowed value does not live long enough
+
+\e[1;38;5;141mWhat the compiler is telling you\e[0m
+
+A reference must never outlive the value that it points to. This small
+program breaks that rule:
+
+  \e[2m│\e[0m \e[38;5;204mlet\e[0m first;
+  \e[2m│\e[0m {
+  \e[2m│\e[0m     \e[38;5;204mlet\e[0m line = String::from(\e[38;5;114m"hello"\e[0m);
+  \e[2m│\e[0m     first = &line;
+  \e[2m│\e[0m }
+  \e[2m│\e[0m \e[38;5;81mprintln!\e[0m(\e[38;5;114m"{first}"\e[0m);
+
+\e[38;5;179mline\e[0m is dropped at the closing brace of its block, but \e[38;5;179mfirst\e[0m is
+still used after it. The compiler stops you, because at that point the
+reference would point to freed memory:
+
+  \e[2m│\e[0m \e[1;31merror[E0597]\e[0m\e[1m: `line` does not live long enough\e[0m
+  \e[2m│\e[0m    \e[34m|\e[0m
+  \e[2m│\e[0m \e[34m4\e[0m  \e[34m|\e[0m     first = &line;
+  \e[2m│\e[0m    \e[34m|\e[0m             \e[1;31m^^^^^ borrowed value does not live long enough\e[0m
+  \e[2m│\e[0m \e[34m5\e[0m  \e[34m|\e[0m }
+  \e[2m│\e[0m    \e[34m|\e[0m \e[1;31m- `line` dropped here while still borrowed\e[0m
+
+There are three usual ways out:
+
+\e[36m1.\e[0m \e[1mMove the value\e[0m instead of borrowing it, if nobody else needs it:
+   \e[38;5;179mfirst = line;\e[0m makes \e[38;5;179mfirst\e[0m the owner.
+\e[36m2.\e[0m \e[1mDeclare the value in the outer block\e[0m, so that it lives as long
+   as the reference.
+\e[36m3.\e[0m \e[1mClone it\e[0m with \e[38;5;179mfirst = line.clone();\e[0m when you need both. It
+   costs an allocation, which is rarely a problem outside a hot loop.
+
+The rule protects you from a whole class of bugs that C and C++ only
+catch at run time, if at all. ✅ Once the lifetimes line up, the same
+code runs without any extra checks.

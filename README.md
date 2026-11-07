@@ -21,6 +21,7 @@ Requirements:
 - Windows 10 version 1809 or later.
 - [rustup](https://rustup.rs/). The Rust version is pinned in `rust-toolchain.toml`, and rustup installs it automatically.
 - The MSVC build tools (Visual Studio or the Build Tools with the "Desktop development with C++" workload).
+- [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/install-powershell-on-windows) (`pwsh`) for the scripts in `tools\`. Windows PowerShell 5.1 does not run them: it only prints the `pwsh` command that does.
 
 ```powershell
 cargo build --release
@@ -32,7 +33,7 @@ To build the zip file that is distributed (`dist\meiga-<version>-x86_64-pc-windo
 .\tools\package.ps1
 ```
 
-Every change must pass these checks ([cargo-deny](https://github.com/EmbarkStudios/cargo-deny) is installed with `cargo install --locked cargo-deny`). CI runs them on every pull request:
+Every change must pass these checks ([cargo-deny](https://github.com/EmbarkStudios/cargo-deny) is installed with `cargo install --locked cargo-deny`). CI runs them on every pull request. Run them from PowerShell 7:
 
 ```powershell
 cargo fmt --all --check
@@ -40,9 +41,13 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo deny check
 .\tools\check-docs.ps1
+.\tools\check-powershell.ps1
 .\tools\check-imports.ps1
 .\tools\perf\test-measure.ps1
+.\tools\perf\test-scenarios.ps1
 ```
+
+`test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
 
@@ -54,7 +59,14 @@ The latest build of each pull request can be downloaded from the artifacts of it
 .\tools\perf\measure.ps1 WindowsTerminal -Duration 60 -Label idle
 ```
 
-Run `Get-Help .\tools\perf\measure.ps1 -Detailed` for all the options.
+`tools\perf\run-scenario.ps1` measures a terminal while it runs a load scenario: a spinner (`spinner`), an AI tool that streams its answers (`ai-stream`), or printing a 50 MiB file (`bigfile`). Each scenario has a PowerShell and a bash version, for WSL tabs. Run `run-scenario.ps1` from another terminal: it shows the command to run in the measured one, measures 3 windows of 60 s, and prints a summary with a verdict on how stable the results are:
+
+```powershell
+.\tools\perf\run-scenario.ps1 spinner WindowsTerminal
+.\tools\perf\run-scenario.ps1 ai-stream warp -Shell wsl
+```
+
+Run `Get-Help` with `-Detailed` on each script for all the options, for example `Get-Help .\tools\perf\run-scenario.ps1 -Detailed`.
 
 ## Documentation
 

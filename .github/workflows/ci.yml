@@ -40,8 +40,14 @@ jobs:
       - name: Check documentation links
         run: ./tools/check-docs.ps1
 
+      - name: Check that the scripts ask for PowerShell 7
+        run: ./tools/check-powershell.ps1
+
       - name: Check the measurement harness
         run: ./tools/perf/test-measure.ps1 -Duration 5
+
+      - name: Check the load scenarios in PowerShell
+        run: ./tools/perf/test-scenarios.ps1 -Shell pwsh
 
       - name: Install the Rust toolchain from rust-toolchain.toml
         run: |
@@ -79,6 +85,25 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 30
+
+  scenarios:
+    name: Load scenarios (bash)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the bash scripts with ShellCheck
+        run: |
+          shellcheck --version
+          shellcheck -x -P SCRIPTDIR tools/perf/scenarios/*.sh
+
+      - name: Check the load scenarios in bash
+        shell: pwsh
+        run: ./tools/perf/test-scenarios.ps1 -Shell bash
 
   deny:
     name: Dependency policy (cargo-deny)

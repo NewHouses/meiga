@@ -1,6 +1,6 @@
 # Código
 
-> Estado: subfase 0.6.
+> Estado: subfase 0.7.
 
 Explicación detallada do código, arquivo por arquivo. Para o *porqué* das decisións xerais, ver [Arquitectura](../arquitectura.md) e [Tecnoloxías](../tecnoloxias.md).
 
@@ -29,6 +29,8 @@ meiga/
 │  └─ meiga/               → meiga.md
 ├─ tools/                  → ferramentas.md
 │  └─ perf/                → perf.md
+│     ├─ scenarios/        → escenarios.md
+│     └─ gen-bigfile.ps1, run-scenario.ps1, test-scenarios.ps1 → escenarios.md
 └─ docs/                   (esta documentación)
 ```
 
@@ -40,5 +42,6 @@ meiga/
 | [meiga-render.md](meiga-render.md) | Renderizador por CPU. |
 | [meiga-win.md](meiga-win.md) | Capa de plataforma de Windows. |
 | [meiga.md](meiga.md) | O programa executábel. |
-| [ferramentas.md](ferramentas.md) | Scripts e modelos de `tools/`: empaquetado, comprobación das DLL e das ligazóns da documentación, e avisos de terceiros. |
+| [ferramentas.md](ferramentas.md) | Scripts e modelos de `tools/`: empaquetado, comprobación das DLL, das ligazóns da documentación e de que os scripts piden PowerShell 7, e avisos de terceiros. |
 | [perf.md](perf.md) | Medición do rendemento (`tools/perf/`): o script que mide os terminais, o código C# que le os procesos e a súa proba. |
+| [escenarios.md](escenarios.md) | Escenarios de carga (`tools/perf/scenarios/`): o spinner, a IA e o arquivo grande, en PowerShell e en bash, o script que mide un terminal mentres corren e as súas probas. |
