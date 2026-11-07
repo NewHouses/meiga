@@ -20,6 +20,7 @@ name = "meiga-render"
 version = "0.1.0"
 dependencies = [
  "meiga-core",
+ "windows-sys",
 ]
 
 [[package]]
