@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 0.6.
+> Estado: subfase 0.7.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -9,6 +9,8 @@ Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non f
 | [`measure.ps1`](#toolsperfmeasureps1) | Medir un terminal e as partes de Windows que o poñen na pantalla, e gardar o resultado en CSV. |
 | [`ProcessSnapshot.cs`](#toolsperfprocesssnapshotcs) | Ler dunha vez todos os procesos e fíos do sistema e facer as contas de cada grupo. Cárgao `measure.ps1`. |
 | [`test-measure.ps1`](#toolsperftest-measureps1) | Comprobar que `measure.ps1` mide ben, con procesos que consomen unha cantidade coñecida. |
+
+Os escenarios de carga (`scenarios/`) e os scripts que os usan (`run-scenario.ps1`, `gen-bigfile.ps1` e `test-scenarios.ps1`) explícanse en [Código › escenarios de carga](escenarios.md).
 
 ## Como se reparte o traballo
 
@@ -50,6 +52,9 @@ Mide un terminal durante un tempo e informa, por grupos, da CPU, os ciclos, os e
 | `-Delay` | 0 | Segundos de espera antes de empezar, por exemplo para preparar o escenario. |
 | `-Label` | `manual` | Nome do escenario. Vai no CSV e no nome do arquivo, así que só admite letras, números, `_`, `.` e `-`. |
 | `-OutDir` | `.perf\` | Cartafol do CSV. Git ignórao (`.gitignore`), porque os resultados describen a túa máquina. |
+| `-StartedFile` | — | Arquivo que se crea cando empeza a medición, para que outro script (un escenario) empece ao mesmo tempo. |
+| `-StopFile` | — | Arquivo que remata a medición antes de tempo cando aparece. O script búscao cada 0,1 s, e `-Duration` pasa a ser a duración máxima. |
+| `-Quiet` | — | Non escribe as mensaxes nin a táboa, para os scripts que mostran o seu propio resumo. Os avisos si se escriben. |
 | `-PassThru` | — | Devolve tamén as filas como obxectos, para usalas desde outro script. |
 
 ### Os grupos
@@ -109,14 +114,7 @@ Na fila `system` quedan baleiras `user_pct`, `kernel_pct`, `mcycles_per_s` e `ex
 
 ### Explicación por partes
 
-O script empeza cun comentario de axuda (`<# … #>`) coas seccións `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER` e `.EXAMPLE`, que mostra `Get-Help .\tools\perf\measure.ps1 -Detailed`.
-
-```powershell
-#>
-#Requires -Version 7.0
-```
-
-PowerShell non executa o script nunha versión anterior á 7 (por exemplo, en Windows PowerShell 5.1) e explica o motivo. Sen esta liña, fallaría ao final, despois de medir. Vai xusto despois da axuda e non na primeira liña: se estivese antes, `Get-Help` non atoparía a axuda.
+O script empeza cun comentario de axuda (`<# … #>`) coas seccións `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER` e `.EXAMPLE`, que mostra `Get-Help .\tools\perf\measure.ps1 -Detailed`. Despois dos parámetros vai a comprobación da versión de PowerShell que levan todos os scripts de `tools\`: en Windows PowerShell 5.1, o script non se executa e mostra o comando exacto para executalo con `pwsh` (ver [Tecnoloxías › PowerShell 7](../tecnoloxias.md#11-powershell-7)).
 
 ```powershell
 [CmdletBinding(DefaultParameterSetName = 'Name')]
@@ -149,10 +147,14 @@ if (-not ('Meiga.Perf.Tracker' -as [type])) {
 - `Add-Type -Path` compila o arquivo C# en memoria e carga as súas clases. Unha clase non se pode cargar dúas veces na mesma sesión de PowerShell, así que só se compila se aínda non existe: `-as [type]` devolve `$null` cando o tipo non existe. Por iso, despois de cambiar `ProcessSnapshot.cs`, hai que abrir unha sesión de PowerShell nova.
 
 ```powershell
+if (-not $OutDir) {
+    $OutDir = Join-Path $PSScriptRoot '..\..\.perf'
+}
 $OutDir = [IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir))
 ```
 
-Primeiro resólvese a ruta contra o cartafol actual de PowerShell, como nos outros scripts (ver [Tecnoloxías › PowerShell 7](../tecnoloxias.md#11-powershell-7)). Despois, `GetFullPath` recibe unha ruta xa completa e só elimina os `..` (o valor por defecto é `tools\perf\..\..\.perf`), para que a mensaxe final mostre unha ruta limpa.
+- O valor por defecto ponse eiquí e non en `param()`, onde Windows PowerShell 5.1 deixa `$PSScriptRoot` baleiro: o script fallaría antes de chegar á comprobación da versión.
+- Primeiro resólvese a ruta contra o cartafol actual de PowerShell, como nos outros scripts (ver [Tecnoloxías › PowerShell 7](../tecnoloxias.md#11-powershell-7)). Despois, `GetFullPath` recibe unha ruta xa completa e só elimina os `..` (o valor por defecto é `tools\perf\..\..\.perf`), para que a mensaxe final mostre unha ruta limpa. `-StartedFile` e `-StopFile` resólvense igual.
 
 ```powershell
 $cpuCount = [Meiga.Perf.ProcessSnapshot]::ProcessorCount
@@ -210,7 +212,9 @@ foreach ($root in $roots) {
 O `Tracker` (en C#, ver [máis abaixo](#tracker)) leva a conta dos grupos. Recibe a sesión de Windows do script, para escoller o seu `dwm.exe`, e o PID do servizo de Escritorio remoto.
 
 ```powershell
-Write-Host "Measuring $target for $Duration s. Leave this window alone until it finishes."
+if (-not $Quiet) {
+    Write-Host "Measuring $target for $Duration s. Leave this window alone until it finishes."
+}
 
 # Start-up work goes on in the background for a moment after it ends: .NET
 # optimizes the code that has just run, and that can cost this script more than
@@ -220,29 +224,49 @@ Write-Host "Measuring $target for $Duration s. Leave this window alone until it 
 Start-Sleep -Seconds 2
 ```
 
-- A mensaxe escríbese antes da medición. Durante a medición non se escribe nada, para que a consola onde corre o script non teña nada que debuxar.
+- A mensaxe escríbese antes da medición, salvo con `-Quiet`. Durante a medición non se escribe nada, para que a consola onde corre o script non teña nada que debuxar.
 - **Quecemento.** .NET compila cada método a código máquina a primeira vez que se usa e, un pouco despois, recompila en segundo plano os máis usados (ver [Tecnoloxías › C# dentro de PowerShell](../tecnoloxias.md#c-dentro-de-powershell)). Sen este paso, ese traballo caía dentro da medición, e nas medicións curtas podía custarlle ao script máis do 10 % dun núcleo. Para evitalo, o código da medición execútase unha vez cun `Tracker` que despois se descarta, e espérase 2 s. A espera tamén lle dá tempo ao terminal para debuxar a mensaxe.
 
 ```powershell
 $first = [Meiga.Perf.ProcessSnapshot]::Take()
 $run = [datetime]::Now
 $tracker.Add($first)
+if ($StartedFile) {
+    New-Item -ItemType File -Force -Path $StartedFile | Out-Null
+}
+```
+
+A medición empeza coa primeira fotografía. Xusto despois créase `-StartedFile`, se se indicou: así, un escenario que agarda por ese arquivo empeza dentro da medición, nunca antes.
+
+```powershell
+function Wait-Snapshot([double]$seconds) {
+    $deadline = [Diagnostics.Stopwatch]::GetTimestamp() + $seconds * [Diagnostics.Stopwatch]::Frequency
+    while ($true) {
+        if ($StopFile -and (Test-Path -LiteralPath $StopFile)) {
+            return $true
+        }
+        $left = ($deadline - [Diagnostics.Stopwatch]::GetTimestamp()) / [Diagnostics.Stopwatch]::Frequency
+        if ($left -le 0) {
+            return $false
+        }
+        $step = if ($StopFile) { [math]::Min($left, 0.1) } else { $left }
+        Start-Sleep -Milliseconds ([int][math]::Ceiling($step * 1000))
+    }
+}
+
 do {
     $elapsed = ([Diagnostics.Stopwatch]::GetTimestamp() - $first.Timestamp) / [Diagnostics.Stopwatch]::Frequency
-    $wait = [math]::Min($SampleInterval, $Duration - $elapsed)
-    if ($wait -gt 0) {
-        Start-Sleep -Milliseconds ([int][math]::Ceiling($wait * 1000))
-    }
+    $stopped = Wait-Snapshot ([math]::Min($SampleInterval, $Duration - $elapsed))
     $current = [Meiga.Perf.ProcessSnapshot]::Take()
     $tracker.Add($current)
-} while ($current.SecondsSince($first) -lt $Duration)
+} while (-not $stopped -and $current.SecondsSince($first) -lt $Duration)
 $seconds = $current.SecondsSince($first)
 ```
 
 - A medición vai da primeira fotografía á última.
 - Os tempos mídense co `Stopwatch` de .NET, un contador de alta resolución que nunca se axusta, desde o momento de cada fotografía. A hora do reloxo non serve, porque Windows pode corrixila durante a medición.
 - A espera calcúlase desde o comezo, así que os atrasos non se acumulan: a última fotografía tómase ao cumprirse `-Duration`, aínda que non sexa un múltiplo de `-SampleInterval`.
-- Mentres espera, o script dorme (`Start-Sleep`) sen gastar CPU.
+- Mentres espera, o script dorme (`Start-Sleep`) sen gastar CPU. Con `-StopFile`, esperta cada 0,1 s para mirar se apareceu o arquivo; se apareceu, toma a última fotografía e a medición remata, aínda que non pasase `-Duration`. Así, a medición dun escenario que remata (imprimir un arquivo grande) dura o mesmo ca el, cunha décima de segundo de marxe como moito.
 
 ```powershell
 foreach ($entry in $tracker.Processes.GetEnumerator()) {
@@ -299,7 +323,7 @@ $rows | ForEach-Object {
 ```
 
 - `Export-Csv` escribe os números co formato do idioma de Windows: en galego, `1,5`. Outros programas lerían mal ese CSV. Por iso cada número (todos implementan `IFormattable`) pásase a texto coa **cultura invariante**, que sempre usa o punto: `1.5`. Comprobouse cunha configuración rexional galega (`gl-ES`).
-- A táboa da consola, en cambio, usa o formato do teu idioma (`1,5`), porque é para lela ti.
+- A táboa da consola, en cambio, usa o formato do teu idioma (`1,5`), porque é para lela ti. Con `-Quiet` non se escribe, nin tampouco as dúas liñas finais (o divisor do Xestor de tarefas e onde se gardou o CSV).
 - `utf8NoBOM`: UTF-8 sen a marca de bytes ao comezo, que algúns programas mostran como caracteres estraños.
 
 ```powershell
@@ -614,6 +638,7 @@ Despois compara o resultado co esperado e con `Get-Process`, que le os mesmos co
 | `groups in order` | 8 | Hai unha fila por grupo, na orde de `GroupNames`. |
 | `CSV: rows` | as filas que devolveu o script | O CSV contén todas as filas. |
 | `CSV: numbers with a dot` | todos | Os números do CSV lense coa cultura invariante, sexa cal sexa o idioma de Windows. |
+| `stop file: window, s` | 2–4 | Unha medición de ata 60 s que remata cando outro proceso crea `-StopFile`, 2 s despois de ver `-StartedFile`. |
 
 ```powershell
 $reference = ((Get-Process -Id $busy.Id).TotalProcessorTime - $cpuBefore).TotalSeconds / $clock.Elapsed.TotalSeconds * 100
@@ -622,13 +647,25 @@ $reference = ((Get-Process -Id $busy.Id).TotalProcessorTime - $cpuBefore).TotalS
 A referencia: o tempo de CPU que suma o bucle segundo `Get-Process`, dividido entre o tempo real que pasou, desde antes de chamar a `measure.ps1` ata despois.
 
 ```powershell
+$helper = Start-Loop ("while (-not (Test-Path -LiteralPath '$quotedStarted')) { Start-Sleep -Milliseconds 50 }; " +
+    "Start-Sleep -Seconds 2; New-Item -ItemType File -Path '$quotedStop' | Out-Null")
+$stopRows = & (Join-Path $PSScriptRoot 'measure.ps1') -Id $sleep.Id -Duration 60 -SampleInterval 1 -Label self-test-stop `
+    -OutDir $outDir -StartedFile $started -StopFile $stop -Quiet -PassThru
+```
+
+A última comprobación usa `-StartedFile` e `-StopFile` como `run-scenario.ps1` con bigfile: un terceiro proceso agarda a que apareza o arquivo de inicio e, 2 s despois, crea o de fin. A medición, de 60 s como moito, debe durar uns 2 s. As comiñas simples das rutas dóbranse (`''`), porque van dentro dunha cadea entre comiñas simples.
+
+```powershell
 finally {
     Stop-Process -Id $busy.Id, $sleep.Id -ErrorAction SilentlyContinue
+    if ($helper) {
+        Stop-Process -Id $helper.Id -ErrorAction SilentlyContinue
+    }
     Remove-Item -LiteralPath $outDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 ```
 
-Pase o que pase, os dous bucles detéñense e bórrase o cartafol temporal do CSV. Se falla algunha comprobación, o script remata cun erro e código de saída 1, e a CI márcase en vermello.
+Pase o que pase, os procesos de proba detéñense e bórrase o cartafol temporal dos CSV. Se falla algunha comprobación, o script remata cun erro e código de saída 1, e a CI márcase en vermello.
 
 **Comprobación da proba.** Cunha copia de `ProcessSnapshot.cs` con dúas posicións cambiadas a propósito (os cambios de contexto lidos en 0x44 e o tempo de usuario en 0x20), a proba falla en tres comprobacións: `busy: CPU`, `busy: CPU, Get-Process` e `sleep: wakeups per second`.
 

@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 0.6.
+> Estado: subfase 0.7.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -103,6 +103,15 @@ env:
 
 Comproba que todas as ligazóns internas da documentación apuntan a arquivos e títulos que existen (ver [Código › ferramentas](ferramentas.md#toolscheck-docsps1)). Vai antes de instalar Rust porque non o necesita: se a documentación ten unha ligazón rota, o job falla en segundos.
 
+#### Comprobar que os scripts piden PowerShell 7
+
+```yaml
+      - name: Check that the scripts ask for PowerShell 7
+        run: ./tools/check-powershell.ps1
+```
+
+Comproba que todos os scripts de `tools/` explican como executalos con PowerShell 7 se se abren con Windows PowerShell 5.1: executa cada un en 5.1 e mira a mensaxe (ver [Código › ferramentas](ferramentas.md#toolscheck-powershellps1)). O runner de Windows trae as dúas versións de PowerShell. Leva uns segundos.
+
 #### Comprobar o arnés de medición
 
 ```yaml
@@ -110,7 +119,16 @@ Comproba que todas as ligazóns internas da documentación apuntan a arquivos e 
         run: ./tools/perf/test-measure.ps1 -Duration 5
 ```
 
-Executa a proba de `tools/perf/measure.ps1` con procesos de consumo coñecido (ver [Código › medición](perf.md#toolsperftest-measureps1)). Tampouco necesita Rust e leva uns 15 s. Non mide o rendemento de meiga: as máquinas da CI son compartidas e darían cifras con moito ruído. Só comproba que o arnés segue medindo ben, para que un cambio nos scripts non o estrague sen que se note.
+Executa a proba de `tools/perf/measure.ps1` con procesos de consumo coñecido (ver [Código › medición](perf.md#toolsperftest-measureps1)). Tampouco necesita Rust e leva uns 20 s. Non mide o rendemento de meiga: as máquinas da CI son compartidas e darían cifras con moito ruído. Só comproba que o arnés segue medindo ben, para que un cambio nos scripts non o estrague sen que se note.
+
+#### Comprobar os escenarios de carga
+
+```yaml
+      - name: Check the load scenarios in PowerShell
+        run: ./tools/perf/test-scenarios.ps1 -Shell pwsh
+```
+
+Executa os escenarios de PowerShell e comproba o que debuxan e como se coordinan con `run-scenario.ps1` (ver [Código › escenarios de carga](escenarios.md#test-scenariosps1)). Os de bash compróbanse no [job `scenarios`](#job-scenarios), en Linux, porque o runner de Windows non ten WSL.
 
 #### Instalar Rust
 
@@ -193,6 +211,34 @@ Compila en modo *release*, crea o `.zip` en `dist/` e comproba as DLL das que de
 - `archive: false`: sóbeo tal cal. Por defecto, a action metería os arquivos noutro zip, e descargariamos un zip dentro doutro. Con esta opción só se pode subir un arquivo, e o artefacto leva o seu nome.
 - `if-no-files-found: error`: se non hai ningún zip, o paso falla, en vez de mostrar só un aviso.
 - `retention-days: 30`: os artefactos bórranse aos 30 días.
+
+### Job `scenarios`
+
+```yaml
+  scenarios:
+    name: Load scenarios (bash)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the bash scripts with ShellCheck
+        run: |
+          shellcheck --version
+          shellcheck -x -P SCRIPTDIR tools/perf/scenarios/*.sh
+
+      - name: Check the load scenarios in bash
+        shell: pwsh
+        run: ./tools/perf/test-scenarios.ps1 -Shell bash
+```
+
+- Comproba as versións en bash dos escenarios de carga, as que se usan nas tabs de WSL. Corre en Linux porque o runner de Windows non ten WSL, e o Ubuntu do runner trae o mesmo bash 5 ca o Ubuntu de WSL.
+- **ShellCheck** analiza os scripts de bash e avisa dos erros habituais: variábeis sen comiñas, comandos que fallan sen que se note, sintaxe que non funciona en todas as versións… (ver [Tecnoloxías › bash, WSL e ShellCheck](../tecnoloxias.md#20-bash-wsl-e-shellcheck)). Vén instalado no runner. `-x` segue os arquivos que se cargan con `.` (`common.sh`), e `-P SCRIPTDIR` búscaos no cartafol de cada script.
+- O último paso usa PowerShell 7, que tamén vén no runner de Linux: a mesma proba que no job de Windows, pero coas versións de bash (ver [Código › escenarios de carga](escenarios.md#test-scenariosps1)).
+- Coma o job de Windows, non corre nas execucións programadas.
 
 ### Job `deny`
 

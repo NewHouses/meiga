@@ -17,3 +17,4 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 0.4 | Integración continua | [PR #2](https://github.com/NewHouses/meiga/pull/2) | [0.4-ci.md](0.4-ci.md) |
 | 0.5 | ADR | [PR #3](https://github.com/NewHouses/meiga/pull/3) | [0.5-adr.md](0.5-adr.md) |
 | 0.6 | Arnés de medición | [PR #4](https://github.com/NewHouses/meiga/pull/4) | [0.6-medicion.md](0.6-medicion.md) |
+| 0.7 | Escenarios de carga | [PR #5](https://github.com/NewHouses/meiga/pull/5) | [0.7-escenarios.md](0.7-escenarios.md) |

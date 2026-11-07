@@ -1,16 +1,19 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 0.6.
+> Estado: subfase 0.7.
 
-Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md).
+Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
 | Arquivo | Para que |
 |---|---|
 | [`package.ps1`](#toolspackageps1) | Compilar en modo *release* e crear o `.zip` que se distribúe. |
 | [`check-imports.ps1`](#toolscheck-importsps1) | Comprobar que `meiga.exe` non depende do *runtime* de Visual C++. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
+| [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
 | [`third-party-notices.ps1`](#toolsthird-party-noticesps1) | Xerar os avisos de licenza das dependencias. |
 | [`about.hbs`](#toolsabouthbs) | Modelo dos avisos de licenza. |
+
+Todos os scripts empezan igual: a axuda, os parámetros e unha comprobación da versión de PowerShell, que se explica en [`check-powershell.ps1`](#toolscheck-powershellps1).
 
 ## `tools/package.ps1`
 
@@ -35,9 +38,15 @@ Explicación por partes:
 ```powershell
 [CmdletBinding()]
 param(
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'),
+    [string]$OutDir,
     [switch]$NoBuild
 )
+
+# Windows PowerShell 5.1 can read this file but not run it: tell how to run
+# it with PowerShell 7. tools/check-powershell.ps1 checks that this works.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    …
+}
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -45,14 +54,21 @@ Set-StrictMode -Version Latest
 
 - `$OutDir`: o cartafol de destino. Por defecto, `dist\`, que Git ignora.
 - `[switch]$NoBuild`: un parámetro sen valor. Se aparece na chamada, vale `$true`.
+- A comprobación da versión é a mesma en todos os scripts (ver [`check-powershell.ps1`](#toolscheck-powershellps1)).
 - As dúas últimas liñas deteñen o script ante calquera erro, como en todos os scripts (ver [Tecnoloxías › PowerShell 7](../tecnoloxias.md#11-powershell-7)).
 
 ```powershell
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $OutDir) {
+    $OutDir = Join-Path $root 'dist'
+}
 $OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
 ```
 
 - `Resolve-Path` devolve un obxecto; `.Path` colle a ruta como texto, para combinala despois con `Join-Path`.
+- O valor por defecto de `$OutDir` ponse eiquí, despois da comprobación da versión, e non en `param()` (ver [`check-powershell.ps1`](#toolscheck-powershellps1)).
 - A ruta de saída resólvese antes de cambiar de cartafol, igual que en [`third-party-notices.ps1`](#toolsthird-party-noticesps1).
 
 ```powershell
@@ -353,6 +369,71 @@ Mostra todos os problemas e despois falla, para corrixilos todos dunha vez en ve
 
 **Comprobación:** cun arquivo de proba, o script detectou unha ruta inexistente, unha ruta con maiúsculas incorrectas e unha ancla inexistente, e aceptou como correctas unha ancla dun título repetido, unha ancla con acentos, a mesma ancla codificada (`%C3%AD`), unha ligazón a un cartafol e unha URL externa. As ligazóns dentro de código ignoráronse.
 
+## `tools/check-powershell.ps1`
+
+Todos os scripts de `tools\` necesitan PowerShell 7 (`pwsh`). Windows, en cambio, trae Windows PowerShell 5.1, e é fácil abrir un script con ela sen darse conta: cunha tab de *Windows PowerShell*, ou co botón dereito sobre o arquivo e *Executar con PowerShell*. Por iso cada script empeza cunha comprobación que, en 5.1, explica como executalo:
+
+```powershell
+# Windows PowerShell 5.1 can read this file but not run it: tell how to run
+# it with PowerShell 7. tools/check-powershell.ps1 checks that this works.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $command = "pwsh -File $(Resolve-Path -Relative $PSCommandPath)"
+    if ($PSBoundParameters.Count -gt 0) { $command += ' <the same parameters>' }
+    Write-Host "This script needs PowerShell 7. Run it with: $command" -ForegroundColor Yellow
+    exit 1
+}
+```
+
+```text
+This script needs PowerShell 7. Run it with: pwsh -File .\tools\perf\measure.ps1 <the same parameters>
+```
+
+- `$PSVersionTable.PSVersion.Major` é a versión principal: 5 en Windows PowerShell e 7 en PowerShell 7.
+- `Resolve-Path -Relative` dá a ruta do script desde o cartafol actual, para que o comando se poida copiar tal cal. Se se pasaron parámetros, engade `<the same parameters>`, porque non se poden reconstruír con seguridade (comiñas, listas…).
+- `exit 1` remata cun código de erro, para que a CI ou outro script o note.
+- **Por que non `#Requires -Version 7.0`.** Ata a subfase 0.7, `measure.ps1` levaba esa liña, e Windows PowerShell 5.1 detíase cunha mensaxe técnica que non dicía como executalo. A comprobación propia indica o comando exacto.
+
+A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso esixe dúas cousas:
+
+1. **Que 5.1 poida ler o arquivo.** PowerShell analiza o arquivo enteiro antes de executar nada. Se usa sintaxe que só coñece PowerShell 7 (os operadores `?:`, `??` ou `&&`), 5.1 dá un erro de sintaxe e a comprobación non chega a correr. Por iso os scripts usan só a sintaxe que comparten as dúas versións, e están escritos en ASCII (ver [Código › escenarios](escenarios.md#scenariopsm1)).
+2. **Que 5.1 poida asignar os parámetros.** Os valores por defecto de `param()` calcúlanse antes da comprobación. Nun script avanzado (con `[CmdletBinding()]`) lanzado con `-File`, Windows PowerShell 5.1 deixa `$PSScriptRoot` baleiro nese momento, e un valor como `(Join-Path $PSScriptRoot '..\dist')` fallaba cun erro de `Join-Path` que non tiña nada que ver coa versión. Por iso eses valores calcúlanse despois da comprobación:
+
+   ```powershell
+   param(
+       [string]$OutDir
+   )
+   …
+   if (-not $OutDir) {
+       $OutDir = Join-Path $PSScriptRoot '..\..\.perf'
+   }
+   ```
+
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles:
+
+```text
+OK: the 13 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+```
+
+| Comprobación | Como |
+|---|---|
+| O script ten a comprobación | Busca a liña `if ($PSVersionTable.PSVersion.Major -lt 7) {`. |
+| Os valores por defecto non usan `$PSScriptRoot` | Analiza o script co analizador de PowerShell (a súa árbore sintáctica, o AST) e busca `$PSScriptRoot`, `$PSCommandPath` e `$MyInvocation` nos valores por defecto dos parámetros. |
+| 5.1 pode lelo | Pásalle a `powershell.exe` (5.1) un bloque de código que analiza todos os scripts co analizador de 5.1 e devolve os erros. |
+| 5.1 mostra a mensaxe | Executa todos os scripts en Windows PowerShell 5.1, á vez, e comproba que cada un remata co código 1 e coa mensaxe. Se un script segue a correr despois de 60 s, detense e conta como erro. |
+
+```powershell
+$arguments = @{
+    'measure.ps1'      = @('-Name', 'none')
+    'run-scenario.ps1' = @('idle', '-Name', 'none')
+}
+```
+
+Os scripts con parámetros obrigatorios reciben valores: sen eles, Windows PowerShell 5.1 pediríaos antes da comprobación. Un script novo con parámetros obrigatorios necesita unha entrada nesta táboa; se falta, a última comprobación falla e avisa.
+
+**Comprobación da proba.** Con dous scripts temporais, un con `(Join-Path $PSScriptRoot 'x')` como valor por defecto e outro sen a comprobación, o script informou dos tres problemas (o valor por defecto, a comprobación que falta e que 5.1 executou o segundo sen mostrar a mensaxe) e rematou co código 1.
+
+A CI execútao en cada PR (ver [Código › .github](github.md#job-windows)).
+
 ## `tools/third-party-notices.ps1`
 
 Xera `THIRD-PARTY-NOTICES.txt` coas licenzas de todas as dependencias. Uso:
@@ -377,12 +458,12 @@ Axuda integrada en PowerShell (*comment-based help*). Con `Get-Help .\tools\thir
 ```powershell
 [CmdletBinding()]
 param(
-    [string]$OutFile = (Join-Path $PSScriptRoot '..\target\THIRD-PARTY-NOTICES.txt')
+    [string]$OutFile
 )
 ```
 
 - `[CmdletBinding()]` fai que o script se comporte como un *cmdlet*: acepta parámetros comúns como `-Verbose`.
-- `$OutFile` é o arquivo de saída. Por defecto vai a `target\`, que Git ignora. `$PSScriptRoot` é o cartafol do propio script, así que funciona desde calquera cartafol.
+- `$OutFile` é o arquivo de saída. Por defecto vai a `target\`, que Git ignora; o valor por defecto ponse máis abaixo, despois da comprobación da versión de PowerShell (ver [`check-powershell.ps1`](#toolscheck-powershellps1)).
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -393,6 +474,11 @@ As dúas liñas que deteñen o script ante calquera erro (ver [Tecnoloxías › 
 
 ```powershell
 $root = Resolve-Path (Join-Path $PSScriptRoot '..')
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $OutFile) {
+    $OutFile = Join-Path $root 'target\THIRD-PARTY-NOTICES.txt'
+}
 # Resolve a relative path against the current PowerShell location. .NET APIs
 # such as [System.IO.Path]::GetFullPath use the process working directory,
 # which PowerShell does not update on Set-Location.
@@ -400,7 +486,7 @@ $OutFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPa
 New-Item -ItemType Directory -Force -Path (Split-Path $OutFile) | Out-Null
 ```
 
-- `$root`: a raíz do repositorio.
+- `$root`: a raíz do repositorio. `$PSScriptRoot` é o cartafol do propio script, así que funciona desde calquera cartafol.
 - `GetUnresolvedProviderPathFromPSPath` converte a ruta de saída nunha ruta absoluta. Faise antes de entrar na raíz do repositorio (máis abaixo), para que unha ruta relativa como `-OutFile notices.txt` siga referíndose ao cartafol desde o que se lanzou o script.
   - Funciona aínda que o arquivo non exista, e resolve os `..` da ruta por defecto.
   - **Trampa evitada:** a alternativa obvia, `[System.IO.Path]::GetFullPath`, é unha función de .NET que usa o cartafol de traballo do *proceso*. PowerShell non o actualiza ao facer `cd` (`Set-Location`), así que nunha sesión na que xa se cambiou de cartafol, a ruta resolveríase contra o cartafol inicial da sesión. Comprobouse: despois de `Set-Location C:\Windows`, `GetFullPath('x.txt')` devolveu a ruta no cartafol inicial, mentres que esta función devolveu `C:\Windows\x.txt`.
