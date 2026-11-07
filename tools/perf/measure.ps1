@@ -62,7 +62,6 @@ Also return the rows as objects, for other scripts.
 .EXAMPLE
 .\tools\perf\measure.ps1 -Name WindowsTerminal -Duration 60 -Label idle-5-tabs
 #>
-#Requires -Version 7.0
 [CmdletBinding(DefaultParameterSetName = 'Name')]
 param(
     [Parameter(Mandatory, ParameterSetName = 'Name', Position = 0)]
@@ -88,6 +87,14 @@ param(
     [switch]$PassThru
 )
 
+# Windows PowerShell 5.1 can read this file but not run it: tell how to run
+# it with PowerShell 7. tools/check-powershell.ps1 checks that this works.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $command = "pwsh -File $(Resolve-Path -Relative $PSCommandPath)"
+    if ($PSBoundParameters.Count -gt 0) { $command += ' <the same parameters>' }
+    Write-Host "This script needs PowerShell 7. Run it with: $command" -ForegroundColor Yellow
+    exit 1
+}
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
