@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 0.4.
+> Estado: subfase 0.5.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa.
 
@@ -8,6 +8,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 |---|---|
 | [`package.ps1`](#toolspackageps1) | Compilar en modo *release* e crear o `.zip` que se distribúe. |
 | [`check-imports.ps1`](#toolscheck-importsps1) | Comprobar que `meiga.exe` non depende do *runtime* de Visual C++. |
+| [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`third-party-notices.ps1`](#toolsthird-party-noticesps1) | Xerar os avisos de licenza das dependencias. |
 | [`about.hbs`](#toolsabouthbs) | Modelo dos avisos de licenza. |
 
@@ -217,6 +218,140 @@ Write-Host 'OK: no dependencies on the Visual C++ runtime.'
 ```
 
 Busca as DLL do *runtime*: `vcruntime*.dll` (o *runtime* de Visual C++), `msvcp*.dll` (a biblioteca estándar de C++), `ucrtbase.dll` (o *Universal CRT*) e os *API sets* `api-ms-win-crt-*`, que son os nomes cos que se importa o *Universal CRT*. `-match` non distingue maiúsculas, así que `VCRUNTIME140.dll` tamén coincide. Se aparece algunha, o script falla e suxire a causa máis probábel.
+
+## `tools/check-docs.ps1`
+
+Comproba as ligazóns internas da documentación: que cada ligazón relativa de `README.md` e de `docs/` apunte a un arquivo que existe e, se leva ancla (`#sección`), que ese arquivo teña un título con esa ancla. As ligazóns externas (`https://…`) non se comproban, porque dependen da rede e de servizos alleos.
+
+```powershell
+.\tools\check-docs.ps1                               # README.md e todo docs\
+.\tools\check-docs.ps1 -Path docs\arquitectura.md    # só os arquivos indicados
+```
+
+Saída esperada (os números dependen da documentación):
+
+```text
+OK: 126 relative links checked in 25 files.
+```
+
+Se algo falla, indica o arquivo, a liña e a ligazón:
+
+```text
+docs\exemplo.md:13: target not found (check the letter case): Arquitectura.md
+docs\exemplo.md:14: anchor not found: arquitectura.md#non-existe
+```
+
+Explicación por partes:
+
+```powershell
+param(
+    [string[]]$Path
+)
+...
+if ($Path) {
+    $Path = $Path | ForEach-Object { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($_) }
+}
+else {
+    $Path = @(Join-Path $root 'README.md') +
+        @(Get-ChildItem -LiteralPath (Join-Path $root 'docs') -Recurse -Filter '*.md' -File | ForEach-Object FullName)
+}
+```
+
+- `[string[]]$Path`: unha lista de arquivos. Se non se indica, revísanse `README.md` e todos os `.md` de `docs\`, incluídos os subcartafoles (`-Recurse`).
+- `@(…) + @(…)` une dúas listas. `@()` garante que cada parte sexa unha lista aínda que só teña un elemento.
+
+```powershell
+$fence = '^\s*(```|~~~)'
+```
+
+A expresión regular que recoñece o inicio e o fin dun bloque de código. O que hai dentro dos bloques de código son exemplos, non ligazóns nin títulos, así que non se analiza.
+
+```powershell
+function ConvertTo-Anchor([string]$heading) {
+    $text = ($heading -replace '[`*]', '').ToLowerInvariant()
+    ($text -replace '[^\p{L}\p{M}\p{N}\p{Pc}\- ]', '') -replace ' ', '-'
+}
+```
+
+Calcula a ancla dun título igual que GitHub:
+
+1. quita as marcas de formato (`` ` `` e `*`), porque a ancla sae do texto que se ve;
+2. pasa todo a minúsculas;
+3. elimina todo o que non sexa unha letra (`\p{L}`, tamén con acento), unha marca diacrítica (`\p{M}`), un número (`\p{N}`), un guión baixo (`\p{Pc}`), un guión ou un espazo;
+4. cambia cada espazo por un guión.
+
+Por exemplo, `## 4. Perfís de compilación` dá `4-perfís-de-compilación`.
+
+```powershell
+function Get-Anchor([string]$file) {
+    $anchors = [System.Collections.Generic.HashSet[string]]::new()
+    $seen = @{}
+    ...
+        if ($inFence -or $line -notmatch '^#{1,6}\s+(.+?)(\s+#+)?\s*$') { continue }
+        $anchor = ConvertTo-Anchor $Matches[1]
+        # Repeated headings get a numeric suffix: name, name-1, name-2...
+        if ($seen.ContainsKey($anchor)) {
+            $seen[$anchor]++
+            $anchor = "$anchor-$($seen[$anchor])"
+        }
+        ...
+    , $anchors
+}
+```
+
+- Recolle as anclas de todos os títulos dun arquivo nun `HashSet`, un conxunto que comproba moi rápido se contén un valor.
+- Un título é unha liña que empeza por entre un e seis `#` seguidos dun espazo.
+- Se dous títulos dan a mesma ancla, GitHub engade `-1`, `-2`… a partir do segundo. `$seen` leva a conta.
+- A coma de `, $anchors` impide que PowerShell desfaga o conxunto en elementos soltos ao devolvelo.
+
+```powershell
+function Resolve-ExactPath([string]$directory, [string]$relative) {
+    $current = $directory
+    foreach ($segment in $relative -split '[\\/]') {
+        if ($segment -in '', '.') { continue }
+        if ($segment -eq '..') {
+            $current = [System.IO.Path]::GetDirectoryName($current)
+            continue
+        }
+        $entry = Get-ChildItem -LiteralPath $current -Force -ErrorAction SilentlyContinue |
+            Where-Object Name -CEQ $segment
+        if (-not $entry) { return $null }
+        $current = $entry.FullName
+    }
+    $current
+}
+```
+
+Resolve a ruta da ligazón cartafol a cartafol. En Windows, `Test-Path` non distingue maiúsculas de minúsculas, pero GitHub si: unha ligazón a `Arquitectura.md` funcionaría en local e estaría rota en GitHub. Por iso cada parte da ruta compárase co nome real con `-CEQ`, a comparación que si distingue maiúsculas.
+
+```powershell
+        # Links inside inline code are examples, not links.
+        $prose = $line -replace '`[^`]*`', ''
+        foreach ($match in [regex]::Matches($prose, '\]\(([^)\s]+)\)')) {
+            $target = $match.Groups[1].Value
+            if ($target -match '^[a-z][a-z0-9+.-]*:') { continue }
+```
+
+- Quita o código en liña da liña antes de buscar ligazóns.
+- Unha ligazón de Markdown ten a forma `[texto](destino)`; a expresión regular captura o destino.
+- Se o destino empeza por un esquema (`https:`, `mailto:`…), é externo e non se comproba.
+
+```powershell
+            $pathPart, $anchor = $target -split '#', 2
+```
+
+Separa a ruta e a ancla. Se non hai ancla, `$anchor` queda baleira. Se non hai ruta (por exemplo, `#sección`), a ligazón apunta ao mesmo arquivo. `UnescapeDataString` decodifica os caracteres codificados nas URL, como `%C3%AD` (`í`).
+
+```powershell
+if ($problems.Count -gt 0) {
+    $problems | ForEach-Object { Write-Host $_ }
+    throw "$($problems.Count) broken link(s) in the documentation."
+}
+```
+
+Mostra todos os problemas e despois falla, para corrixilos todos dunha vez en vez de un a un.
+
+**Comprobación:** cun arquivo de proba, o script detectou unha ruta inexistente, unha ruta con maiúsculas incorrectas e unha ancla inexistente, e aceptou como correctas unha ancla dun título repetido, unha ancla con acentos, a mesma ancla codificada (`%C3%AD`), unha ligazón a un cartafol e unha URL externa. As ligazóns dentro de código ignoráronse.
 
 ## `tools/third-party-notices.ps1`
 

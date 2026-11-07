@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 0.4. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 0.5. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -215,6 +215,7 @@ Rust en Windows (o *target* `x86_64-pc-windows-msvc`) usa o ligador de Microsoft
    cargo clippy --workspace --all-targets -- -D warnings
    cargo test --workspace
    cargo deny check
+   .\tools\check-docs.ps1      # ligazóns da documentación
    .\tools\package.ps1         # compila en release e crea o zip en dist\
    .\tools\check-imports.ps1   # meiga.exe non depende do runtime de Visual C++
    ```
@@ -238,7 +239,7 @@ Rust en Windows (o *target* `x86_64-pc-windows-msvc`) usa o ligador de Microsoft
 
 **En meiga** hai un workflow (`ci.yml`) con dous jobs en paralelo:
 
-- **Build and test (Windows):** formato, Clippy, probas, compilación *release*, paquete `.zip`, comprobación das DLL e subida do paquete como artefacto.
+- **Build and test (Windows):** ligazóns da documentación, formato, Clippy, probas, compilación *release*, paquete `.zip`, comprobación das DLL e subida do paquete como artefacto.
 - **Dependency policy (cargo-deny):** a política de dependencias, nunha máquina Linux. Ademais de en cada PR, execútase cada semana para detectar vulnerabilidades novas.
 
 A explicación liña a liña está en [Código › .github](codigo/github.md).
@@ -303,3 +304,15 @@ Os PR de Dependabot pasan pola mesma CI e pola mesma revisión que calquera outr
 | Aprobación extra para PR de Copilot | Valor por defecto de GitHub: se o axente de Copilot abre un PR coa súa propia identidade, e non en nome dunha persoa, esíxese unha aprobación máis. Non afecta aos PR que abre a conta propietaria. |
 
 Comprobación: un *push* directo a `main` é rexeitado con `GH013: Repository rule violations found for refs/heads/main`, indicando que os cambios deben entrar por un PR e que faltan os dous *checks* obrigatorios.
+
+## 18. Markdown, Mermaid e ADR
+
+**Markdown** é o formato de texto de toda a documentación: títulos con `#`, listas, táboas, ligazóns `[texto](destino)` e bloques de código. GitHub móstrao xa formatado.
+
+**Anclas dos títulos.** GitHub crea unha ancla para cada título, e unha ligazón pode apuntar a ela con `#`: `tecnoloxias.md#16-dependabot`. A ancla sae do texto do título: en minúsculas, sen signos de puntuación e cos espazos cambiados por guións. As letras con acento mantéñense. Se dous títulos dan a mesma ancla, o segundo leva `-1`, o terceiro `-2`, etc.
+
+**Mermaid** é unha linguaxe de texto para debuxar diagramas: fluxos, secuencias, dependencias… Escríbese dentro dun bloque de código marcado como `mermaid`, e GitHub debúxao directamente. Ao ser texto, os diagramas revísanse nos PR coma o resto da documentación.
+
+**Comprobación automática.** `tools/check-docs.ps1` comproba en cada PR que as ligazóns internas apuntan a arquivos e anclas que existen, distinguindo maiúsculas e minúsculas como fai GitHub (ver [Código › ferramentas](codigo/ferramentas.md#toolscheck-docsps1)).
+
+**ADR** (*Architecture Decision Record*): un documento curto por cada decisión importante, co seu contexto, alternativas e consecuencias. Están en [`docs/adr/`](adr/README.md).

@@ -37,6 +37,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check documentation links
+        run: ./tools/check-docs.ps1
+
       - name: Install the Rust toolchain from rust-toolchain.toml
         run: |
           rustup toolchain install
