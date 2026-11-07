@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 0.7. Polo de agora só existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 1.1. Existen o esqueleto, a integración continua, as ferramentas de medición, os escenarios de carga e unha xanela baleira, co seu bucle de mensaxes. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -76,7 +76,7 @@ sequenceDiagram
 
 | Peza | Subfase |
 |---|---|
-| Xanela e bucle de mensaxes | 1.1 |
+| Xanela e bucle de mensaxes | 1.1 (feita) |
 | *Framebuffer* e presentación parcial | 1.2 |
 | Fontes e caché de glifos | 1.3 |
 | ConPTY | 1.4 |
@@ -93,11 +93,14 @@ sequenceDiagram
 
 Un fío bloqueado nunha lectura ou nunha espera non consome CPU: o sistema operativo non o planifica ata que hai datos. Por iso o número de fíos non é un problema en si; o problema é que esperten sen motivo. O modelo completo, cos fotogramas e as tabs en segundo plano, está no [ADR 0005](adr/0005-fios-e-fotogramas.md).
 
+O fío da interface xa existe desde a subfase 1.1: é o fío principal do programa, que dorme en `GetMessageW` mentres non chega ningunha mensaxe (ver [Tecnoloxías › Xanelas Win32](tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes)). Ao arrancar, Windows crea ademais algúns fíos auxiliares no proceso, por exemplo para cargar as DLL en paralelo, que rematan sós ao pouco tempo se non teñen traballo.
+
 ## 5. Compilación
 
 - O perfil `release` optimiza ao máximo: LTO completo, unha soa unidade de xeración de código e `panic = "abort"`.
 - O *runtime* de C vai ligado estaticamente, así que `meiga.exe` non necesita que estea instalado o *Visual C++ Redistributable*.
 - As versións *release* usan o subsistema gráfico de Windows (sen xanela de consola). As de depuración manteñen a consola para ver diagnósticos.
+- O **manifesto da aplicación** vai dentro de `meiga.exe`: escala por monitor (v2), Windows 10 e 11 sen modos de compatibilidade, e sen pedir permisos de administrador. Incrústao o ligador, a petición do `build.rs` de `meiga` (ver [Tecnoloxías › Manifesto](tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)).
 
 Os detalles explícanse en [Tecnoloxías](tecnoloxias.md) e, liña a liña, en [Código › configuración do workspace](codigo/workspace.md).
 
@@ -108,7 +111,7 @@ Ningún cambio chega a `main` sen pasar por un PR e pola CI:
 ```mermaid
 flowchart LR
     rama["Rama da subfase"] --> pr["Pull request"]
-    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · test · release<br/>zip · DLL"]
+    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · test · release<br/>zip · DLL · xanela · arranque"]
     pr --> scen["Load scenarios (bash)<br/>ShellCheck · escenarios en bash"]
     pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
     win --> art["Artefacto<br/>meiga-…-msvc.zip"]
@@ -156,6 +159,7 @@ flowchart TD
 - **Que conta como custo do terminal:** o propio terminal, os seus procesos de consola e o traballo que provoca en `dwm` e no Escritorio remoto ao debuxar. As shells son a carga de traballo, igual para todos os terminais.
 - **Métricas:** CPU (en % dun núcleo e en ciclos), espertares por segundo, memoria privada e fíos. Explícanse en [Tecnoloxías › Medición do rendemento](tecnoloxias.md#19-medición-do-rendemento).
 - **Onde:** en local, no equipo de desenvolvemento, e non na CI, porque as máquinas da CI son compartidas e darían cifras con moito ruído. Os resultados gárdanse en `.perf/`, fóra de Git. A CI só comproba que o arnés mide ben.
+- **O arranque:** `tools/perf/measure-startup.ps1` mide o tempo desde que se crea o proceso de meiga ata que a súa xanela está pintada (ver [Tecnoloxías › Tempo ata o primeiro fotograma](tecnoloxias.md#tempo-ata-o-primeiro-fotograma)).
 
 O código explícase en [Código › medición](codigo/perf.md).
 
@@ -182,15 +186,16 @@ flowchart LR
 - Mide varias veces seguidas (por defecto, 3 medicións de 60 s) e di se os resultados son **estábeis**: se os ciclos do terminal varían pouco entre medicións ou, en bigfile, o tempo de imprimir. Se non o son, hai que voltar medir coa máquina máis tranquila.
 - A CI comproba que os escenarios debuxan exactamente o esperado, en PowerShell e en bash, pero non mide nada.
 
-O código explícase en [Código › escenarios de carga](codigo/escenarios.md). Na subfase seguinte (0.8) mídese a liña base co Warp e o Windows Terminal, que fixará os orzamentos de cada fase.
+O código explícase en [Código › escenarios de carga](codigo/escenarios.md). Na subfase 0.8 mediuse en local a liña base co Warp e o Windows Terminal, que fixou os orzamentos de rendemento de cada fase. Esas medicións non se publican, porque describen unha máquina concreta.
 
-## 9. Estado actual (subfase 0.7)
+## 9. Estado actual (subfase 1.1)
 
-- Existen os catro crates, baleiros, coa regra de dependencias xa declarada.
-- `meiga.exe` compila, arranca e sae co código 0. Ocupa uns 200 KB e só depende de DLL do sistema; a CI compróbao en cada cambio.
-- Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`).
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten o tipo das cores e `meiga-win`, a xanela e o bucle de mensaxes; `meiga-render` segue baleiro.
+- `meiga.exe` abre unha xanela baleira co fondo escuro, que se pode mover, redimensionar e maximizar, e que aplica o tamaño que suxire Windows cando cambia a escala. En repouso non fai nada: o seu fío dorme en `GetMessageW`. Ao pechala, o programa remata co código 0.
+- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 210 KB e só depende de DLL do sistema. A CI compróbao en cada cambio: as DLL, que abre a xanela, a escala por monitor e que remata ben.
+- Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). A primeira dependencia externa é `windows-sys`.
 - Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe`.
 - As decisións de arquitectura están escritas en sete ADR.
-- O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla.
+- O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla, e `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis.
 - Os scripts de `tools/` necesitan PowerShell 7. En Windows PowerShell 5.1 non se executan: só mostran o comando para facelo con `pwsh`.

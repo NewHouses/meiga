@@ -1,6 +1,6 @@
 # Código › configuración do workspace
 
-> Estado: subfase 0.7.
+> Estado: subfase 1.1.
 
 Os arquivos da raíz do repositorio configuran como se compila e se revisa todo o proxecto. Neste documento explícanse un a un.
 
@@ -42,9 +42,14 @@ Valores comúns que cada crate herda con `campo.workspace = true`, para non repe
 meiga-core = { path = "crates/meiga-core" }
 meiga-render = { path = "crates/meiga-render" }
 meiga-win = { path = "crates/meiga-win" }
+windows-sys = "0.61.2"
 ```
 
-Declara unha soa vez onde está cada crate interno. Cada crate que o necesite escribe só `meiga-core.workspace = true`. As dependencias externas tamén se declararán eiquí, coa súa versión, para que todos os crates usen a mesma.
+Declara unha soa vez onde está cada dependencia e que versión se usa:
+
+- Os crates internos, polo seu cartafol (`path`). Cada crate que o necesite escribe só `meiga-core.workspace = true`.
+- As dependencias externas, coa súa versión, para que todos os crates usen a mesma. Cada crate escolle as súas *features*: por exemplo, `meiga-win` usa `windows-sys = { workspace = true, features = [...] }` (ver [Código › meiga-win](meiga-win.md#cratesmeiga-wincargotoml)). A primeira é `windows-sys`, desde a subfase 1.1 (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)).
+- `"0.61.2"` significa «0.61.2 ou unha versión compatíbel posterior»: nas versións 0.x, as 0.61.*. A versión exacta que se usa é a do `Cargo.lock`.
 
 ```toml
 [workspace.lints.rust]
@@ -82,7 +87,7 @@ debug = "limited"
 
 ## `Cargo.lock`
 
-Xérao Cargo automaticamente e **non se edita a man**. Garda a versión exacta de cada crate do workspace e de cada dependencia. Agora só contén os catro crates propios, porque aínda non hai dependencias externas. Súbese ao repositorio para que as compilacións sexan reproducíbeis.
+Xérao Cargo automaticamente e **non se edita a man**. Garda a versión exacta de cada crate do workspace e de cada dependencia, coa súa suma de comprobación (*checksum*). Agora contén os catro crates propios, `windows-sys` e `windows-link`, unha dependencia de `windows-sys`. Súbese ao repositorio para que as compilacións sexan reproducíbeis.
 
 ## `rust-toolchain.toml`
 

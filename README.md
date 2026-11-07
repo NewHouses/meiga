@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. There is nothing usable yet.
+> **Status:** early development. `meiga.exe` opens an empty window that uses no CPU while idle; there is nothing usable yet.
 
 ## Goals
 
@@ -43,11 +43,12 @@ cargo deny check
 .\tools\check-docs.ps1
 .\tools\check-powershell.ps1
 .\tools\check-imports.ps1
+.\tools\check-window.ps1
 .\tools\perf\test-measure.ps1
 .\tools\perf\test-scenarios.ps1
 ```
 
-`test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
+`check-imports.ps1` and `check-window.ps1` check the release build: build it first with `.\tools\package.ps1` or `cargo build --release`. `check-window.ps1` starts `meiga.exe`, so its window appears for a moment. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
 
@@ -64,6 +65,12 @@ The latest build of each pull request can be downloaded from the artifacts of it
 ```powershell
 .\tools\perf\run-scenario.ps1 spinner WindowsTerminal
 .\tools\perf\run-scenario.ps1 ai-stream warp -Shell wsl
+```
+
+`tools\perf\measure-startup.ps1` measures how long `meiga.exe` takes to open its window: it starts it 20 times, closes it each time, and prints the median and the 95th percentile of the time until the window is painted:
+
+```powershell
+.\tools\perf\measure-startup.ps1
 ```
 
 Run `Get-Help` with `-Detailed` on each script for all the options, for example `Get-Help .\tools\perf\run-scenario.ps1 -Detailed`.
