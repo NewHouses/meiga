@@ -11,7 +11,7 @@ Destination file. Defaults to target\THIRD-PARTY-NOTICES.txt.
 #>
 [CmdletBinding()]
 param(
-    [string]$OutFile = (Join-Path $PSScriptRoot '..\target\THIRD-PARTY-NOTICES.txt')
+    [string]$OutFile
 )
 
 # Windows PowerShell 5.1 can read this file but not run it: tell how to run
@@ -27,6 +27,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $root = Resolve-Path (Join-Path $PSScriptRoot '..')
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $OutFile) {
+    $OutFile = Join-Path $root 'target\THIRD-PARTY-NOTICES.txt'
+}
 # Resolve a relative path against the current PowerShell location. .NET APIs
 # such as [System.IO.Path]::GetFullPath use the process working directory,
 # which PowerShell does not update on Set-Location.

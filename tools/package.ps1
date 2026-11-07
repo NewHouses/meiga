@@ -15,7 +15,7 @@ Package the existing target\release\meiga.exe without building it again.
 #>
 [CmdletBinding()]
 param(
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'),
+    [string]$OutDir,
     [switch]$NoBuild
 )
 
@@ -32,6 +32,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $OutDir) {
+    $OutDir = Join-Path $root 'dist'
+}
 $OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
 
 Push-Location $root

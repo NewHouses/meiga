@@ -6,14 +6,19 @@ PowerShell 7 when it is started from Windows PowerShell 5.1.
 .DESCRIPTION
 The scripts in tools\ need PowerShell 7. Each one starts with a check that,
 in Windows PowerShell 5.1, prints the command to run it with pwsh and stops.
-That check only runs if Windows PowerShell 5.1 can read the whole file, so
-the scripts cannot use syntax that only PowerShell 7 knows, such as the ?:
-and ?? operators. For every .ps1 file under tools\, this script checks that:
+That check only runs if Windows PowerShell 5.1 can read the whole file and
+bind the parameters, so the scripts cannot use syntax that only PowerShell 7
+knows, such as the ?: and ?? operators, and the default values of the
+parameters cannot use $PSScriptRoot, which Windows PowerShell 5.1 leaves
+empty while it binds them. For every .ps1 file under tools\, this script
+checks that:
 
 - it has the check;
-- Windows PowerShell 5.1 can parse it.
-
-Then it runs check-docs.ps1 in Windows PowerShell 5.1 to see the message.
+- no default value of its parameters uses $PSScriptRoot, $PSCommandPath or
+  $MyInvocation;
+- Windows PowerShell 5.1 can parse it;
+- run in Windows PowerShell 5.1, it shows the message and ends with exit
+  code 1.
 #>
 [CmdletBinding()]
 param()
@@ -35,8 +40,21 @@ $scripts = @(Get-ChildItem -LiteralPath (Join-Path $root 'tools') -Recurse -Filt
 $problems = [System.Collections.Generic.List[string]]::new()
 
 foreach ($script in $scripts) {
+    $relative = $script.Substring($root.Length + 1)
     if (-not (Select-String -LiteralPath $script -Pattern '^if \(\$PSVersionTable\.PSVersion\.Major -lt 7\) \{$' -Quiet)) {
-        $problems.Add("$($script.Substring($root.Length + 1)): it does not check the version of PowerShell.")
+        $problems.Add("${relative}: it does not check the version of PowerShell.")
+    }
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$null, [ref]$null)
+    if ($ast.ParamBlock) {
+        foreach ($parameter in $ast.ParamBlock.Parameters) {
+            $variables = if ($parameter.DefaultValue) {
+                $parameter.DefaultValue.FindAll({ $args[0] -is [System.Management.Automation.Language.VariableExpressionAst] }, $true) |
+                    Where-Object { $_.VariablePath.UserPath -in 'PSScriptRoot', 'PSCommandPath', 'MyInvocation' }
+            }
+            foreach ($variable in $variables) {
+                $problems.Add("${relative}:$($variable.Extent.StartLineNumber): the default value of $($parameter.Name) uses $($variable.Extent.Text), which is empty in Windows PowerShell 5.1: set it after the check.")
+            }
+        }
     }
 }
 
@@ -61,14 +79,49 @@ foreach ($parseError in $parseErrors) {
     $problems.Add("Windows PowerShell 5.1 cannot parse $($parseError.Substring($root.Length + 1))")
 }
 
-# Run one script in Windows PowerShell 5.1 to see the message.
-$output = powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-docs.ps1') 2>&1 | Out-String
-if ($LASTEXITCODE -ne 1 -or $output -notmatch 'This script needs PowerShell 7\. Run it with: pwsh -File ') {
-    $problems.Add("In Windows PowerShell 5.1, check-docs.ps1 did not show the message (exit code $LASTEXITCODE): $output")
+# Run every script in Windows PowerShell 5.1, all at once, to see the message.
+# Scripts with mandatory parameters get values for them: without them,
+# Windows PowerShell 5.1 would ask for them before the check runs.
+$arguments = @{
+    'measure.ps1'      = @('-Name', 'none')
+    'run-scenario.ps1' = @('idle', '-Name', 'none')
+}
+$work = Join-Path ([IO.Path]::GetTempPath()) "meiga-check-powershell-$PID"
+New-Item -ItemType Directory -Force -Path $work | Out-Null
+try {
+    $runs = for ($index = 0; $index -lt $scripts.Count; $index++) {
+        $script = $scripts[$index]
+        $list = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', "`"$script`"")
+        $name = Split-Path $script -Leaf
+        if ($arguments.ContainsKey($name)) {
+            $list += $arguments[$name]
+        }
+        $output = Join-Path $work "$index.txt"
+        $process = Start-Process powershell.exe -ArgumentList $list -NoNewWindow -PassThru `
+            -RedirectStandardOutput $output -RedirectStandardError "$output.err"
+        # Without the handle, ExitCode is empty once the process has ended.
+        $null = $process.Handle
+        [pscustomobject]@{ Script = $script; Process = $process; Output = $output }
+    }
+    foreach ($run in $runs) {
+        $relative = $run.Script.Substring($root.Length + 1)
+        if (-not $run.Process.WaitForExit(60000)) {
+            $run.Process.Kill()
+            $problems.Add("In Windows PowerShell 5.1, $relative was still running after 60 s.")
+            continue
+        }
+        $text = (Get-Content -LiteralPath $run.Output, "$($run.Output).err" -Raw) -join ''
+        if ($run.Process.ExitCode -ne 1 -or $text -notmatch 'This script needs PowerShell 7\. Run it with: pwsh -File ') {
+            $problems.Add("In Windows PowerShell 5.1, $relative did not show the message (exit code $($run.Process.ExitCode)): $text")
+        }
+    }
+}
+finally {
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 if ($problems.Count -gt 0) {
     $problems | ForEach-Object { Write-Host $_ }
     throw "$($problems.Count) problem(s) with the PowerShell 7 check."
 }
-Write-Host "OK: the $($scripts.Count) scripts ask for PowerShell 7, and Windows PowerShell 5.1 can read them."
+Write-Host "OK: the $($scripts.Count) scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them."

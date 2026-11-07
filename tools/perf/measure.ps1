@@ -93,7 +93,7 @@ param(
     [ValidatePattern('^[\w.-]+$')]
     [string]$Label = 'manual',
 
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\..\.perf'),
+    [string]$OutDir,
 
     [string]$StartedFile,
 
@@ -123,6 +123,11 @@ if (-not ('Meiga.Perf.Tracker' -as [type])) {
     Add-Type -Path (Join-Path $PSScriptRoot 'ProcessSnapshot.cs')
 }
 
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $OutDir) {
+    $OutDir = Join-Path $PSScriptRoot '..\..\.perf'
+}
 $OutDir = [IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir))
 if ($StartedFile) {
     $StartedFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($StartedFile)

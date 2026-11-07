@@ -14,7 +14,7 @@ The executable to check. Defaults to target\release\meiga.exe.
 #>
 [CmdletBinding()]
 param(
-    [string]$Path = (Join-Path $PSScriptRoot '..\target\release\meiga.exe')
+    [string]$Path
 )
 
 # Windows PowerShell 5.1 can read this file but not run it: tell how to run
@@ -29,6 +29,11 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $Path) {
+    $Path = Join-Path $PSScriptRoot '..\target\release\meiga.exe'
+}
 $Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
 if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     throw "$Path does not exist. Build it first with: cargo build --release"
