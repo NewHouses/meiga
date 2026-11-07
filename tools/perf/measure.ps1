@@ -56,6 +56,17 @@ Name of the scenario. It goes into the CSV and into its file name.
 .PARAMETER OutDir
 Folder for the CSV file. Defaults to .perf\ in the repository.
 
+.PARAMETER StartedFile
+File to create when the window starts, so that another script, such as a
+load scenario, can start at the same time.
+
+.PARAMETER StopFile
+File that ends the window early when it appears. The script looks for it
+every 0.1 s. -Duration is then the longest window.
+
+.PARAMETER Quiet
+Do not print the messages and the table. Warnings are still printed.
+
 .PARAMETER PassThru
 Also return the rows as objects, for other scripts.
 
@@ -84,6 +95,12 @@ param(
 
     [string]$OutDir = (Join-Path $PSScriptRoot '..\..\.perf'),
 
+    [string]$StartedFile,
+
+    [string]$StopFile,
+
+    [switch]$Quiet,
+
     [switch]$PassThru
 )
 
@@ -95,6 +112,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     Write-Host "This script needs PowerShell 7. Run it with: $command" -ForegroundColor Yellow
     exit 1
 }
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -106,6 +124,12 @@ if (-not ('Meiga.Perf.Tracker' -as [type])) {
 }
 
 $OutDir = [IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir))
+if ($StartedFile) {
+    $StartedFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($StartedFile)
+}
+if ($StopFile) {
+    $StopFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($StopFile)
+}
 $invariant = [cultureinfo]::InvariantCulture
 $groupNames = [Meiga.Perf.Tracker]::GroupNames
 $cpuCount = [Meiga.Perf.ProcessSnapshot]::ProcessorCount
@@ -144,10 +168,14 @@ foreach ($root in $roots) {
 }
 
 if ($Delay -gt 0) {
-    Write-Host "Starting in $Delay s..."
+    if (-not $Quiet) {
+        Write-Host "Starting in $Delay s..."
+    }
     Start-Sleep -Seconds $Delay
 }
-Write-Host "Measuring $target for $Duration s. Leave this window alone until it finishes."
+if (-not $Quiet) {
+    Write-Host "Measuring $target for $Duration s. Leave this window alone until it finishes."
+}
 
 # Start-up work goes on in the background for a moment after it ends: .NET
 # optimizes the code that has just run, and that can cost this script more than
@@ -159,15 +187,33 @@ Start-Sleep -Seconds 2
 $first = [Meiga.Perf.ProcessSnapshot]::Take()
 $run = [datetime]::Now
 $tracker.Add($first)
+if ($StartedFile) {
+    New-Item -ItemType File -Force -Path $StartedFile | Out-Null
+}
+
+# Waits until the next snapshot. With -StopFile, it looks for the file every
+# 0.1 s and returns $true as soon as it appears.
+function Wait-Snapshot([double]$seconds) {
+    $deadline = [Diagnostics.Stopwatch]::GetTimestamp() + $seconds * [Diagnostics.Stopwatch]::Frequency
+    while ($true) {
+        if ($StopFile -and (Test-Path -LiteralPath $StopFile)) {
+            return $true
+        }
+        $left = ($deadline - [Diagnostics.Stopwatch]::GetTimestamp()) / [Diagnostics.Stopwatch]::Frequency
+        if ($left -le 0) {
+            return $false
+        }
+        $step = if ($StopFile) { [math]::Min($left, 0.1) } else { $left }
+        Start-Sleep -Milliseconds ([int][math]::Ceiling($step * 1000))
+    }
+}
+
 do {
     $elapsed = ([Diagnostics.Stopwatch]::GetTimestamp() - $first.Timestamp) / [Diagnostics.Stopwatch]::Frequency
-    $wait = [math]::Min($SampleInterval, $Duration - $elapsed)
-    if ($wait -gt 0) {
-        Start-Sleep -Milliseconds ([int][math]::Ceiling($wait * 1000))
-    }
+    $stopped = Wait-Snapshot ([math]::Min($SampleInterval, $Duration - $elapsed))
     $current = [Meiga.Perf.ProcessSnapshot]::Take()
     $tracker.Add($current)
-} while ($current.SecondsSince($first) -lt $Duration)
+} while (-not $stopped -and $current.SecondsSince($first) -lt $Duration)
 $seconds = $current.SecondsSince($first)
 
 # CPU, cycles and context switches of each process and group.
@@ -278,16 +324,20 @@ $rows | ForEach-Object {
     [pscustomobject]$text
 } | Export-Csv -LiteralPath $file -NoTypeInformation -Encoding utf8NoBOM
 
-$rows | Where-Object kind -EQ 'group' |
-    Format-Table group, processes, cpu_pct, mcycles_per_s, ctx_per_s, private_mb_avg, private_mb_max, threads_max -AutoSize |
-    Out-Host
+if (-not $Quiet) {
+    $rows | Where-Object kind -EQ 'group' |
+        Format-Table group, processes, cpu_pct, mcycles_per_s, ctx_per_s, private_mb_avg, private_mb_max, threads_max -AutoSize |
+        Out-Host
+}
 foreach ($group in 'terminal', 'console') {
     if ($usage[$group].Exited -gt 0) {
         Write-Warning "$($usage[$group].Exited) $group processes exited during the window: the CPU that they used after the last snapshot is not counted."
     }
 }
-Write-Host "CPU in % of one core over $([math]::Round($seconds, 1)) s; Task Manager shows it divided by $cpuCount."
-Write-Host "Saved $file"
+if (-not $Quiet) {
+    Write-Host "CPU in % of one core over $([math]::Round($seconds, 1)) s; Task Manager shows it divided by $cpuCount."
+    Write-Host "Saved $file"
+}
 
 if ($PassThru) {
     $rows

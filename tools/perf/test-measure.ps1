@@ -30,6 +30,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     Write-Host "This script needs PowerShell 7. Run it with: $command" -ForegroundColor Yellow
     exit 1
 }
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -53,6 +54,7 @@ function Start-Loop([string]$command) {
 
 $busy = Start-Loop 'while ($true) {}'
 $sleep = Start-Loop 'while ($true) { Start-Sleep -Milliseconds 100 }'
+$helper = $null
 try {
     # Let both processes finish starting.
     Start-Sleep -Seconds 3
@@ -99,9 +101,25 @@ try {
 
     $harness = $groupRows | Where-Object group -EQ 'harness'
     Write-Host "The measurement itself used $($harness.cpu_pct) % of one core."
+
+    # A window that another process ends: it waits for the file that marks
+    # the start of the window and creates the stop file 2 s later.
+    $started = Join-Path $outDir 'started'
+    $stop = Join-Path $outDir 'stop'
+    $quotedStarted = $started.Replace("'", "''")
+    $quotedStop = $stop.Replace("'", "''")
+    $helper = Start-Loop ("while (-not (Test-Path -LiteralPath '$quotedStarted')) { Start-Sleep -Milliseconds 50 }; " +
+        "Start-Sleep -Seconds 2; New-Item -ItemType File -Path '$quotedStop' | Out-Null")
+    $stopRows = & (Join-Path $PSScriptRoot 'measure.ps1') -Id $sleep.Id -Duration 60 -SampleInterval 1 -Label self-test-stop `
+        -OutDir $outDir -StartedFile $started -StopFile $stop -Quiet -PassThru
+    $window = ($stopRows | Where-Object { $_.kind -eq 'group' -and $_.group -eq 'terminal' }).seconds
+    Add-Check 'stop file: window, s' '2-4' $window ($window -ge 2 -and $window -le 4)
 }
 finally {
     Stop-Process -Id $busy.Id, $sleep.Id -ErrorAction SilentlyContinue
+    if ($helper) {
+        Stop-Process -Id $helper.Id -ErrorAction SilentlyContinue
+    }
     Remove-Item -LiteralPath $outDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
