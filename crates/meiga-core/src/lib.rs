@@ -8,3 +8,6 @@
 #![forbid(unsafe_code)]
 
 pub mod color;
+pub mod damage;
+pub mod geometry;
+pub mod pacing;
