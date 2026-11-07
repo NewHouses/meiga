@@ -6,3 +6,5 @@
 //! to test and fast to compile.
 
 #![forbid(unsafe_code)]
+
+pub mod color;
