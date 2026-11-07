@@ -40,6 +40,9 @@ jobs:
       - name: Check documentation links
         run: ./tools/check-docs.ps1
 
+      - name: Check the measurement harness
+        run: ./tools/perf/test-measure.ps1 -Duration 5
+
       - name: Install the Rust toolchain from rust-toolchain.toml
         run: |
           rustup toolchain install
