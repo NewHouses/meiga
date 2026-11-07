@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 1.1. Existen o esqueleto, a integración continua, as ferramentas de medición, os escenarios de carga e unha xanela baleira, co seu bucle de mensaxes. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 1.2. Existen o esqueleto, a integración continua, as ferramentas de medición, os escenarios de carga e unha xanela que presenta só o que cambia, cun *framebuffer* propio e unha demo que debuxa rectángulos co rato. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -14,7 +14,7 @@ Deste obxectivo saen os principios de deseño:
 |---|---|
 | Cero traballo en repouso | Sen temporizadores periódicos, sen *polling* e sen animacións. Se non pasa nada, o programa está durmido. |
 | Debuxar só o que cambia | Lévase a conta das celas que cambiaron (*damage tracking*) e só se presentan eses rectángulos. |
-| Non debuxar o que non se ve | As tabs en segundo plano só procesan a saída da shell; non se debuxan. |
+| Non debuxar o que non se ve | As tabs en segundo plano só procesan a saída da shell; non se debuxan. Coa xanela minimizada, non se debuxa nada ([ADR 0009](adr/0009-xanela-que-non-se-ve.md)). |
 | Agrupar en fotogramas | Como moito un fotograma por intervalo, aínda que a shell escriba miles de veces por segundo. |
 | Poucos fíos, e bloqueados | Un fío para a interface e dous por tab. Cando non hai traballo, todos esperan bloqueados sen gastar CPU. |
 | Sen *frameworks* pesados | Win32, DirectWrite e GDI directamente: nada de navegadores embebidos nin *runtimes* asíncronos. |
@@ -77,23 +77,47 @@ sequenceDiagram
 | Peza | Subfase |
 |---|---|
 | Xanela e bucle de mensaxes | 1.1 (feita) |
-| *Framebuffer* e presentación parcial | 1.2 |
+| *Framebuffer* e presentación parcial | 1.2 (feita) |
 | Fontes e caché de glifos | 1.3 |
 | ConPTY | 1.4 |
 | Fachada do terminal (parser e grella) | 1.5 |
 | Da saída á pantalla | 1.6 |
 
+### Fotogramas: do cambio á pantalla
+
+Desde a subfase 1.2, o final do camiño xa funciona, cunha demo que debuxa rectángulos co rato no lugar do terminal:
+
+```mermaid
+flowchart LR
+    ev["Un cambio<br/>(o rato; desde a 1.6, a saída da shell)"] --> dmg["Damage<br/>as zonas que cambiaron"]
+    dmg --> pacer{"FramePacer<br/>pasou o intervalo?"}
+    pacer -- "si" --> frame["Fotograma"]
+    pacer -- "non" --> timer["Temporizador<br/>dunha soa vez"]
+    timer --> frame
+    frame --> comp["Compoñer as zonas<br/>no framebuffer"]
+    comp --> pres["Presentalas<br/>na xanela (BitBlt)"]
+    paint["WM_PAINT<br/>(pídeo Windows)"] --> copy["Copiar desde<br/>o framebuffer"]
+```
+
+1. Cada cambio anota a súa zona no ***damage*** ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrcdamagers)), que xunta as zonas próximas.
+2. O ***pacer*** decide cando se debuxa ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrcpacingrs)): se pasou o intervalo desde o último fotograma, 33,3 ms por Escritorio remoto e 16,7 ms en local, no momento; se non, cun temporizador dunha soa vez ao final do intervalo. Os cambios que chegan mentres tanto van no mesmo fotograma ([ADR 0005](adr/0005-fios-e-fotogramas.md), [ADR 0008](adr/0008-temporizador-dos-fotogramas.md)).
+3. O fotograma **compón** só esas zonas no *framebuffer*, unha *DIB section* ([Código › meiga-render](codigo/meiga-render.md)), e **preséntaas**: copia cada unha á xanela con `BitBlt` ([Tecnoloxías › DIB sections](tecnoloxias.md#24-dib-sections-e-gdi-o-framebuffer-e-a-súa-presentación)).
+4. Cando Windows pide pintar (`WM_PAINT`), por exemplo cando a xanela medra ou se restaura, cópiase do *framebuffer*, sen compoñer nada ([Tecnoloxías › Pintar nunha xanela](tecnoloxias.md#25-pintar-nunha-xanela-wm_paint-e-dwm)).
+5. Coa xanela minimizada, non se debuxa nada: os cambios esperan e, ao restaurala, píntase enteira unha vez ([ADR 0009](adr/0009-xanela-que-non-se-ve.md)).
+
+O código que une as pezas explícase en [Código › meiga](codigo/meiga.md#cratesmeigasrcframesrs).
+
 ## 4. Fíos (*previsto*)
 
 | Fío | Cantos | Que fai | Cando esperta |
 |---|---|---|---|
-| Interface | 1 | Mensaxes de Windows, entrada do usuario, composición e presentación. | Só cando chega unha mensaxe (`GetMessageW`). |
+| Interface | 1 | Mensaxes de Windows, entrada do usuario, composición e presentación. | Só cando chega unha mensaxe ou vence o temporizador dun fotograma pendente (`MsgWaitForMultipleObjectsEx`). |
 | Lector | 1 por tab coa shell en marcha | Le a saída da shell e actualiza a grella. | Só cando a shell escribe. |
 | Escritor | 1 por tab coa shell en marcha | Envía á shell o que se teclea. | Só cando hai algo que enviar. |
 
 Un fío bloqueado nunha lectura ou nunha espera non consome CPU: o sistema operativo non o planifica ata que hai datos. Por iso o número de fíos non é un problema en si; o problema é que esperten sen motivo. O modelo completo, cos fotogramas e as tabs en segundo plano, está no [ADR 0005](adr/0005-fios-e-fotogramas.md).
 
-O fío da interface xa existe desde a subfase 1.1: é o fío principal do programa, que dorme en `GetMessageW` mentres non chega ningunha mensaxe (ver [Tecnoloxías › Xanelas Win32](tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes)). Ao arrancar, Windows crea ademais algúns fíos auxiliares no proceso, por exemplo para cargar as DLL en paralelo, que rematan sós ao pouco tempo se non teñen traballo.
+O fío da interface xa existe desde a subfase 1.1: é o fío principal do programa. Dorme en `MsgWaitForMultipleObjectsEx` mentres non chega ningunha mensaxe nin vence o temporizador dos fotogramas, que só está activo cando hai un fotograma pendente (ver [Tecnoloxías › Temporizadores](tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface)). Na subfase 1.1 durmía en `GetMessageW`, que só espera mensaxes ([Tecnoloxías › Xanelas Win32](tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes)); o temporizador chegou coa 1.2 ([ADR 0008](adr/0008-temporizador-dos-fotogramas.md)). Ao arrancar, Windows crea ademais algúns fíos auxiliares no proceso, por exemplo para cargar as DLL en paralelo, que rematan sós ao pouco tempo se non teñen traballo.
 
 ## 5. Compilación
 
@@ -111,7 +135,7 @@ Ningún cambio chega a `main` sen pasar por un PR e pola CI:
 ```mermaid
 flowchart LR
     rama["Rama da subfase"] --> pr["Pull request"]
-    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · test · release<br/>zip · DLL · xanela · arranque"]
+    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · test · release<br/>zip · DLL · xanela · presentación · arranque · fotogramas"]
     pr --> scen["Load scenarios (bash)<br/>ShellCheck · escenarios en bash"]
     pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
     win --> art["Artefacto<br/>meiga-…-msvc.zip"]
@@ -138,6 +162,8 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0005](adr/0005-fios-e-fotogramas.md) | Fíos bloqueados e como moito un fotograma por intervalo. |
 | [0006](adr/0006-licenzas-e-dependencias.md) | Só licenzas permisivas e dependencias mínimas. |
 | [0007](adr/0007-integracion-coa-shell.md) | Integración coa shell mediante secuencias OSC. |
+| [0008](adr/0008-temporizador-dos-fotogramas.md) | Un temporizador de alta resolución para os fotogramas. |
+| [0009](adr/0009-xanela-que-non-se-ve.md) | Non debuxar coa xanela minimizada; as tapadas debúxanse. |
 
 ## 8. Medición do rendemento
 
@@ -160,6 +186,7 @@ flowchart TD
 - **Métricas:** CPU (en % dun núcleo e en ciclos), espertares por segundo, memoria privada e fíos. Explícanse en [Tecnoloxías › Medición do rendemento](tecnoloxias.md#19-medición-do-rendemento).
 - **Onde:** en local, no equipo de desenvolvemento, e non na CI, porque as máquinas da CI son compartidas e darían cifras con moito ruído. Os resultados gárdanse en `.perf/`, fóra de Git. A CI só comproba que o arnés mide ben.
 - **O arranque:** `tools/perf/measure-startup.ps1` mide o tempo desde que se crea o proceso de meiga ata que a súa xanela está pintada (ver [Tecnoloxías › Tempo ata o primeiro fotograma](tecnoloxias.md#tempo-ata-o-primeiro-fotograma)).
+- **Os fotogramas:** `tools/perf/measure-frames.ps1` mide canto custan a meiga, a `dwm` e ao Escritorio remoto os fotogramas parciais e os completos, cos modos de medición de meiga (`--bench`).
 
 O código explícase en [Código › medición](codigo/perf.md).
 
@@ -188,14 +215,17 @@ flowchart LR
 
 O código explícase en [Código › escenarios de carga](codigo/escenarios.md). Na subfase 0.8 mediuse en local a liña base co Warp e o Windows Terminal, que fixou os orzamentos de rendemento de cada fase. Esas medicións non se publican, porque describen unha máquina concreta.
 
-## 9. Estado actual (subfase 1.1)
+## 9. Estado actual
 
-- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten o tipo das cores e `meiga-win`, a xanela e o bucle de mensaxes; `meiga-render` segue baleiro.
-- `meiga.exe` abre unha xanela baleira co fondo escuro, que se pode mover, redimensionar e maximizar, e que aplica o tamaño que suxire Windows cando cambia a escala. En repouso non fai nada: o seu fío dorme en `GetMessageW`. Ao pechala, o programa remata co código 0.
-- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 210 KB e só depende de DLL do sistema. A CI compróbao en cada cambio: as DLL, que abre a xanela, a escala por monitor e que remata ben.
-- Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). A primeira dependencia externa é `windows-sys`.
+Despois da subfase 1.2:
+
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores, os rectángulos, as zonas que cambian (*damage*) e o *pacer* dos fotogramas; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI; e `meiga-win`, a xanela, os seus eventos, o bucle de mensaxes e o temporizador dos fotogramas.
+- `meiga.exe` abre unha xanela cunha demo: arrastrando co rato debúxanse rectángulos, e cada fotograma presenta só as zonas que cambian, que se poden ver cun bordo magenta (tecla P). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e o seu fío dorme. Ao pechala, o programa remata co código 0.
+- Ten dous modos de medición, `--bench partial` e `--bench full`, e un rexistro dos fotogramas, `--trace-frames`.
+- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 260 KB e só depende de DLL do sistema. A CI compróbao en cada cambio: as DLL, que abre a xanela, a escala por monitor, que presenta só o que cambia e que remata ben.
+- Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). A única dependencia externa é `windows-sys`.
 - Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe`.
-- As decisións de arquitectura están escritas en sete ADR.
-- O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla, e `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela.
+- As decisións de arquitectura están escritas en nove ADR.
+- O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, e `measure-frames.ps1`, canto custan os seus fotogramas.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis.
 - Os scripts de `tools/` necesitan PowerShell 7. En Windows PowerShell 5.1 non se executan: só mostran o comando para facelo con `pwsh`.

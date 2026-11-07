@@ -1,6 +1,6 @@
 # ADR NNNN · Título curto da decisión
 
-- **Estado:** Proposto · Aceptado · Substituído polo ADR NNNN · Descartado
+- **Estado:** Proposto · Aceptado · Aceptado; concretado polo ADR NNNN · Substituído polo ADR NNNN · Descartado
 - **Data:** AAAA-MM-DD
 - **Relacionados:** ADR NNNN
 

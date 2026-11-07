@@ -5,33 +5,61 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![forbid(unsafe_code)]
 
+mod app;
+mod bench;
+mod demo;
+mod frames;
+mod options;
+mod trace;
+
+use std::env;
+use std::error::Error;
 use std::process::ExitCode;
 
-use meiga_core::color::Rgb;
 use meiga_win::window::{self, Window, WindowOptions};
 
-/// Colour of the empty window.
-const BACKGROUND: Rgb = Rgb::new(0x16, 0x18, 0x1d);
+use crate::app::App;
+use crate::options::{Options, USAGE};
+use crate::trace::Trace;
+
+/// The exit code when the command line is wrong.
+const USAGE_ERROR: u8 = 2;
 
 fn main() -> ExitCode {
-    match run() {
+    let options = match Options::parse(env::args_os().skip(1)) {
+        Ok(options) => options,
+        Err(error) => {
+            report(&format!("{error}\n\n{USAGE}"));
+            return ExitCode::from(USAGE_ERROR);
+        }
+    };
+    match run(&options) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            let text = format!("meiga stopped because of an unexpected error.\n\n{error}");
-            // Release builds have no console, so the message box is the only
-            // way to tell the user.
-            eprintln!("{text}");
-            window::show_error("meiga", &text);
+            report(&format!(
+                "meiga stopped because of an unexpected error.\n\n{error}"
+            ));
             ExitCode::FAILURE
         }
     }
 }
 
-fn run() -> Result<(), meiga_win::Error> {
-    let window = Window::create(&WindowOptions {
-        title: "meiga",
-        background: BACKGROUND,
-    })?;
-    window.show()?;
-    window::run_message_loop()
+fn run(options: &Options) -> Result<(), Box<dyn Error>> {
+    let trace =
+        match &options.trace_frames {
+            Some(path) => Some(Trace::create(path).map_err(|error| {
+                format!("Cannot create the frame log {}: {error}", path.display())
+            })?),
+            None => None,
+        };
+    let window = Window::create(&WindowOptions { title: "meiga" })?;
+    let mut app = App::new(&window, options.bench, trace)?;
+    window.run(&mut app)
+}
+
+/// Tells the user about an error. Release builds have no console, so the
+/// message box is the only way.
+fn report(text: &str) {
+    eprintln!("{text}");
+    window::show_error("meiga", text);
 }

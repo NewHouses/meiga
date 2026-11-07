@@ -1,6 +1,6 @@
 # ADR 0002 · Só Windows, con renderizado por CPU
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0009](0009-xanela-que-non-se-ve.md)
 - **Data:** 2026-11-06
 - **Relacionados:** [ADR 0004](0004-conpty-empaquetado.md), [ADR 0005](0005-fios-e-fotogramas.md)
 
