@@ -92,7 +92,12 @@ public static extern bool AreDpiAwarenessContextsEqual(IntPtr first, IntPtr seco
 $title = 'meiga-check'
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
-foreach ($argument in 'cmd', '/d', '/k', "ping -n 2 127.0.0.1 >nul & title $title") {
+# With /k, cmd shows each command in the title while it runs ("cmd.exe -
+# ping ..."), as soon as it starts, and the title "meiga" could be gone
+# before the check below. With /c it does not. pause keeps cmd running until
+# the window closes, and there is no space before & because it would be part
+# of the title.
+foreach ($argument in 'cmd', '/d', '/c', "ping -n 2 127.0.0.1 >nul & title $title& pause >nul") {
     $info.ArgumentList.Add($argument)
 }
 $process = [Diagnostics.Process]::Start($info)

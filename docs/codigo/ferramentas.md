@@ -565,7 +565,12 @@ public static extern bool AreDpiAwarenessContextsEqual(IntPtr first, IntPtr seco
 $title = 'meiga-check'
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
-foreach ($argument in 'cmd', '/d', '/k', "ping -n 2 127.0.0.1 >nul & title $title") {
+# With /k, cmd shows each command in the title while it runs ("cmd.exe -
+# ping ..."), as soon as it starts, and the title "meiga" could be gone
+# before the check below. With /c it does not. pause keeps cmd running until
+# the window closes, and there is no space before & because it would be part
+# of the title.
+foreach ($argument in 'cmd', '/d', '/c', "ping -n 2 127.0.0.1 >nul & title $title& pause >nul") {
     $info.ArgumentList.Add($argument)
 }
 ```
@@ -575,9 +580,10 @@ Desde a subfase 1.6, meiga executa no seu terminal o programa da súa liña de c
 - `UseShellExecute = $false`: Windows crea o proceso directamente, sen pasar polo Explorador.
 - `ArgumentList` pasa cada argumento por separado, e .NET pon as comiñas que fagan falta: o último leva espazos, así que vai entre comiñas. meiga recibe os catro e xúntaos outra vez, coas mesmas regras, para lanzar cmd ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)). Polo camiño, ninguén interpreta o `>nul` nin o `&`: chegan ao cmd de dentro de meiga, que quita as comiñas de fóra e executa o que hai dentro.
 - `/d`: cmd non executa os comandos `AutoRun` do rexistro de Windows, que alguén pode ter configurados e que cambiarían o que fai.
-- `/k`: cmd executa o comando e segue aberto, esperando ordes, coma unha shell. Con `/c` remataría despois de poñer o título, e a última comprobación, que cmd remata cando se pecha meiga, non demostraría nada.
-- `ping -n 2 127.0.0.1 >nul` envía dous *pings* ao propio equipo, cun segundo entre eles: sen rede e, con `>nul`, sen escribir nada. É o xeito clásico de esperar un segundo en cmd. A espera fai que o título aínda sexa «meiga» cando o script mira a xanela, xusto despois de que se abra, e que cambie despois: sen ela, cmd podería cambialo antes, e a comprobación da xanela fallaría ás veces.
-- `&` executa un comando despois do outro, e `title` cambia o título da consola. O ConPTY envíallo ao terminal como unha secuencia OSC ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
+- `/c`: cmd executa os comandos e remata. Con `/k`, que despois segue aberto esperando ordes, coma unha shell, cmd mostra no título cada comando mentres o executa (`C:\Windows\SYSTEM32\cmd.exe - ping  -n 2 127.0.0.1`), e faino en canto arranca: o título «meiga» podía desaparecer antes de que o script mirase a xanela. Pasou nunha execución da CI: o título de cmd chega poucos milisegundos despois de abrirse a xanela. Con `/c`, cmd non toca o título: só o cambia `title`.
+- `ping -n 2 127.0.0.1 >nul` envía dous *pings* ao propio equipo, cun segundo entre eles: sen rede e, con `>nul`, sen escribir nada. É o xeito clásico de esperar un segundo en cmd. A espera fai que o título aínda sexa «meiga» cando o script mira a xanela, xusto despois de que se abra, e que cambie despois: sen ela, `title` podería cambialo antes, e a comprobación da xanela fallaría ás veces.
+- `&` executa un comando despois do outro, e `title` cambia o título da consola co texto que ten detrás, ata o seguinte `&`: por iso non hai un espazo antes del, que sería parte do título. O ConPTY envíallo ao terminal como unha secuencia OSC ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
+- `pause >nul` agarda a que se prema unha tecla, sen escribir nada, e ninguén a preme: así cmd segue aberto ata que se pecha a xanela, e a última comprobación, que cmd remata cando se pecha meiga, demostra algo. Sen el, cmd remataría despois de poñer o título.
 
 ```powershell
 $process = [Diagnostics.Process]::Start($info)
