@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-Measures what the frames of meiga cost: a partial frame and a full frame.
+Measures what the frames of meiga cost: a partial frame, a full frame and a
+full frame of text.
 
 .DESCRIPTION
 For each mode, starts meiga.exe maximized with --bench, which draws frames
@@ -8,7 +9,10 @@ without a pause, and with its frame log (--trace-frames):
 
 - partial: a 64-pixel square crosses the window, so each frame presents a
   small part of it;
-- full: the whole window changes colour, so each frame presents all of it.
+- full: the whole window changes colour, so each frame presents all of it;
+- text: the whole window is full of text that changes at every frame, so
+  each frame composes the glyphs of every cell, from the glyph cache, and
+  presents all of it.
 
 After -Warmup seconds, measure.ps1 measures meiga, dwm.exe (which composes the
 windows on the screen) and the Remote Desktop service for -Duration seconds.
@@ -22,7 +26,7 @@ dot as the decimal separator. Do not use the computer while it measures: the
 other windows and the mouse change what dwm.exe and Remote Desktop do.
 
 .PARAMETER Mode
-partial, full or both.
+partial, full, text or all.
 
 .PARAMETER Duration
 Seconds of each measurement.
@@ -43,12 +47,12 @@ Folder for the files. Defaults to .perf\ in the repository.
 pwsh -File .\tools\perf\measure-frames.ps1
 
 .EXAMPLE
-pwsh -File .\tools\perf\measure-frames.ps1 -Mode full -Duration 60
+pwsh -File .\tools\perf\measure-frames.ps1 -Mode text -Duration 60
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('partial', 'full', 'both')]
-    [string]$Mode = 'both',
+    [ValidateSet('partial', 'full', 'text', 'all')]
+    [string]$Mode = 'all',
 
     [ValidateRange(1, 3600)]
     [int]$Duration = 20,
@@ -92,7 +96,7 @@ $OutDir = [IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolv
 $measure = Join-Path $PSScriptRoot 'measure.ps1'
 $exe = Split-Path -Leaf $Path
 $invariant = [cultureinfo]::InvariantCulture
-$modes = if ($Mode -eq 'both') { @('partial', 'full') } else { @($Mode) }
+$modes = if ($Mode -eq 'all') { @('partial', 'full', 'text') } else { @($Mode) }
 $run = Get-Date
 $stamp = $run.ToString('yyyyMMdd-HHmmss', $invariant)
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null

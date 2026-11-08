@@ -4,11 +4,13 @@ use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 /// How to run meiga, without options.
-pub const USAGE: &str = "Usage: meiga [--trace-frames <file>] [--bench partial|full]
+pub const USAGE: &str = "Usage: meiga [--trace-frames <file>] [--bench partial|full|text]
 
   --trace-frames <file>  Write a line per frame to <file> (CSV).
   --bench partial        Instead of the demo, move a small square without stopping.
-  --bench full           Instead of the demo, change the whole window without stopping.";
+  --bench full           Instead of the demo, change the whole window without stopping.
+  --bench text           Instead of the demo, fill the whole window with text that
+                         changes at every frame.";
 
 /// What to draw instead of the demo, to measure the cost of the frames.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,6 +19,9 @@ pub enum BenchMode {
     Partial,
     /// A frame that presents the whole window.
     Full,
+    /// A frame that composes the whole window full of text, and presents
+    /// it.
+    Text,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -43,7 +48,8 @@ impl Options {
                     options.bench = Some(match args.next().as_deref().and_then(OsStr::to_str) {
                         Some("partial") => BenchMode::Partial,
                         Some("full") => BenchMode::Full,
-                        _ => return Err("--bench needs 'partial' or 'full'.".into()),
+                        Some("text") => BenchMode::Text,
+                        _ => return Err("--bench needs 'partial', 'full' or 'text'.".into()),
                     });
                 }
                 _ => return Err(format!("Unknown option: {}", arg.to_string_lossy())),
@@ -78,6 +84,10 @@ mod tests {
         assert_eq!(
             parse(&["--bench", "partial"]).unwrap().bench,
             Some(BenchMode::Partial)
+        );
+        assert_eq!(
+            parse(&["--bench", "text"]).unwrap().bench,
+            Some(BenchMode::Text)
         );
     }
 
