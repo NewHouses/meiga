@@ -1,17 +1,18 @@
 # Código › `meiga-core`
 
-> Estado: subfase 1.2. Contén as cores, a xeometría (puntos, tamaños e rectángulos), as zonas que cambiaron (*damage*) e o ritmo dos fotogramas.
+> Estado: subfase 1.3. Contén as cores, a xeometría (puntos, tamaños e rectángulos), as zonas que cambiaron (*damage*), o ritmo dos fotogramas e as celas do texto.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
 | Arquivo | Contido |
 |---|---|
-| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate, sen dependencias. |
+| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e a súa única dependencia, `unicode-width`. |
 | [`src/lib.rs`](#cratesmeiga-coresrclibrs) | A raíz do crate: os módulos. |
 | [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores. |
 | [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles. |
 | [`src/damage.rs`](#cratesmeiga-coresrcdamagers) | `Damage`: as zonas da xanela que cambiaron desde o último fotograma. |
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
+| [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella. |
 
 ## `crates/meiga-core/Cargo.toml`
 
@@ -26,6 +27,10 @@ license.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[dependencies]
+# The width of each character in cells, as alacritty_terminal measures it.
+unicode-width.workspace = true
+
 [lints]
 workspace = true
 ```
@@ -33,8 +38,8 @@ workspace = true
 - `name`: o nome do crate. No código úsase con guión baixo: `meiga_core`.
 - `description`: unha liña que describe o crate.
 - As liñas `campo.workspace = true` herdan os valores de `[workspace.package]` do `Cargo.toml` raíz.
+- `[dependencies]`: desde a subfase 1.3, `unicode-width`, coa versión e as opcións do `Cargo.toml` raíz ([Código › workspace](workspace.md#cargotoml-raíz)). Dá o ancho de cada carácter en celas, como o mide `alacritty_terminal` ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)). É código Rust puro, sen `unsafe` nin APIs de ningún sistema, así que respecta as regras deste crate.
 - `[lints] workspace = true`: aplica as regras de calidade comúns.
-- Non ten sección `[dependencies]`: non depende de ningún outro crate.
 
 ## `crates/meiga-core/src/lib.rs`
 
@@ -52,12 +57,13 @@ pub mod color;
 pub mod damage;
 pub mod geometry;
 pub mod pacing;
+pub mod text;
 ```
 
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos outros tres.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais.
 
 ## `crates/meiga-core/src/color.rs`
 
@@ -79,14 +85,14 @@ impl Rgb {
 }
 ```
 
-Unha cor en RGB, con 8 bits (0–255) por canle: vermello (`r`), verde (`g`) e azul (`b`). Desde a subfase 1.2 úsase para todo o que se debuxa no *framebuffer*; máis adiante servirá tamén para o texto, os temas e a configuración.
+Unha cor en RGB, con 8 bits (0–255) por canle: vermello (`r`), verde (`g`) e azul (`b`). Desde a subfase 1.2 úsase para todo o que se debuxa no *framebuffer*, e desde a 1.3 tamén para as cores do texto; máis adiante servirá para os temas e a configuración.
 
 - Está en `meiga-core`, e non nun crate de Windows, porque unha cor non depende de Windows. Cada uso convértea ao seu formato: `meiga-render` convértea nun píxel do *framebuffer* (`0x00RRGGBB`) e, para as brochas de GDI, nun `COLORREF` (`0x00BBGGRR`); ver [Código › meiga-render](meiga-render.md#pixel).
 - `#[derive(…)]` fai que o compilador escriba automaticamente estas implementacións:
   - `Clone` e `Copy`: unha cor son 3 bytes, así que se copia ao asignala ou ao pasala a unha función, en vez de *moverse* (en Rust, por defecto, asignar un valor transfire a súa propiedade e o orixinal xa non se pode usar);
   - `Debug`: permite mostrala nas mensaxes de diagnóstico con `{:?}`;
   - `PartialEq` e `Eq`: permiten comparar dúas cores con `==`;
-  - `Hash`: permite usala como clave nun `HashMap`, por exemplo nunha futura caché de glifos por cor.
+  - `Hash`: permite usala como clave nun `HashMap`, por exemplo nunha táboa cun valor por cor.
 - `const fn new`: unha función **constante**, que o compilador pode executar mentres compila. Por iso as cores se poden declarar como constantes: `const BACKGROUND: Rgb = Rgb::new(0x16, 0x18, 0x1d);`.
 - Os campos son públicos (`pub`): calquera combinación de tres bytes é unha cor válida, así que non hai ningunha regra que protexer.
 
@@ -122,6 +128,8 @@ pub struct Rect {
 |---|---|
 | `EMPTY` | O rectángulo baleiro que devolven as operacións cando non queda ningún píxel. |
 | `new` e `from_size` | Un rectángulo cos seus catro lados, ou o dun tamaño desde (0, 0). |
+| `at(origin, size)` | O rectángulo dun tamaño coa esquina superior esquerda en `origin`: por exemplo, unha cela na súa posición. |
+| `offset(by)` | O mesmo rectángulo, movido. As sumas quedan no máximo de `i32` en vez de desbordar (`saturating_add`). |
 | `spanning(a, b)` | O rectángulo máis pequeno que inclúe os píxeles `a` e `b`, en calquera orde: o que se debuxa ao arrastrar o rato desde `a` ata `b`. |
 | `width`, `height`, `size` e `area` | As medidas. Dun rectángulo invertido, 0. |
 | `intersection` | Os píxeles que están nos dous. Se non hai ningún, `EMPTY`. |
@@ -146,7 +154,7 @@ const fn saturate(value: u32) -> i32 {
 - `spanning` suma 1 co `saturating_add`, que queda no máximo en vez de desbordar.
 - Moitas funcións son `const fn`, que se poden usar en constantes, como `Rect::EMPTY`.
 
-**Probas.** Oito, unha por propiedade: que `right` e `bottom` non se inclúen, que os rectángulos invertidos están baleiros, `from_size` (tamén co tamaño máximo), `spanning` nas dúas ordes, a intersección e a unión (tamén con rectángulos baleiros), `contains`, e que os lados de `border` cobren o bordo sen solaparse nin saír dun rectángulo estreito.
+**Probas.** Nove, unha por propiedade: que `right` e `bottom` non se inclúen, que os rectángulos invertidos están baleiros, `from_size` (tamén co tamaño máximo), `spanning` nas dúas ordes, a intersección e a unión (tamén con rectángulos baleiros), `contains`, que `at` e `offset` moven o rectángulo (tamén preto do máximo de `i32`), e que os lados de `border` cobren o bordo sen solaparse nin saír dun rectángulo estreito.
 
 ## `crates/meiga-core/src/damage.rs`
 
@@ -264,3 +272,57 @@ Algo cambiou no instante `now`: cando se debuxa?
 - `is_scheduled()` di se hai un fotograma programado, `cancel()` esquéceo (por exemplo, ao minimizar a xanela) e `drawn(now)` anota que se debuxou un fotograma en `now`.
 
 **Probas.** Seis: o primeiro cambio debúxase no momento; un cambio dentro do intervalo espera o que falta (23 ms dun intervalo de 33 se pasaron 10), e os seguintes xa están programados; despois do intervalo, no momento; un temporizador que vai tarde non atrasa o fotograma; `drawn` e `cancel` rematan a espera; e `auto` dá 33 333 333 ns en remoto e 16 666 666 ns en local.
+
+## `crates/meiga-core/src/text.rs`
+
+O texto como celas dunha grella: que caracteres ocupan unha cela, cales dúas e cales ningunha ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)).
+
+```rust
+pub enum CellChar {
+    Blank,
+    Narrow(char),
+    WideLeft(char),
+    WideRight(char),
+}
+```
+
+O que mostra unha cela:
+
+| Variante | Que é |
+|---|---|
+| `Blank` | Só o fondo, como un espazo. |
+| `Narrow(c)` | Un carácter que ocupa esta cela. |
+| `WideLeft(c)` | A metade esquerda dun carácter que ocupa esta cela e a seguinte. |
+| `WideRight(c)` | A metade dereita dun carácter que ocupa a cela anterior e esta. |
+
+- **Por que dúas metades.** Así cada cela se pode debuxar soa: cando só cambia unha das dúas, ou cando só unha está dentro da zona que cambiou, só se debuxa esa. Na caché de glifos, cada metade ten o seu *slot* ([Código › meiga-render](meiga-render.md#glyphcache)).
+- Deriva `Clone`, `Copy`, `Debug`, `PartialEq`, `Eq` e `Hash`, como `Rgb`.
+
+```rust
+pub fn cells(text: &str) -> impl Iterator<Item = CellChar> + '_ {
+    text.chars().flat_map(|c| {
+        let (first, second) = match c.width() {
+            Some(1) if c == ' ' => (Some(CellChar::Blank), None),
+            Some(1) => (Some(CellChar::Narrow(c)), None),
+            Some(2) => (Some(CellChar::WideLeft(c)), Some(CellChar::WideRight(c))),
+            _ => (None, None),
+        };
+        first.into_iter().chain(second)
+    })
+}
+
+pub fn width(text: &str) -> usize {
+    cells(text).count()
+}
+```
+
+- **`cells`** dá as celas dun texto, unha tras outra. O ancho de cada carácter é o que dá `unicode-width` (`c.width()`, do seu trait `UnicodeWidthChar`), o mesmo que usa `alacritty_terminal` para a grella do terminal:
+  - o espazo é unha cela en branco;
+  - un carácter de ancho 1, unha cela;
+  - un de ancho 2, as súas dúas metades;
+  - os de control (`None`) e os que non teñen ancho (`Some(0)`), como os acentos que se combinan coa letra anterior, ningunha. Xuntalos co carácter anterior, nun grafema, é traballo da subfase 8.1. As letras con acento xa compostas, como `á`, son un só carácter.
+- `flat_map` converte cada carácter en cero, unha ou dúas celas. `first.into_iter().chain(second)` encadea dous `Option`, que se percorren como listas de cero ou un elementos, sen reservar memoria: quen chama decide onde gardar as celas, por exemplo nun `Vec` con `collect`.
+- `impl Iterator<Item = CellChar> + '_`: devolve un iterador sen dicir o seu tipo exacto, que toma prestado o texto (`'_`).
+- **`width`** conta as celas que ocupa un texto.
+
+**Probas.** Tres: as letras, `ñ` e `€` ocupan unha cela, e o espazo é unha cela en branco; `中` e `😀` ocupan dúas cada un, e `日本語 abc`, dez; e os caracteres de control (o tabulador) e os que non teñen ancho (un acento que se combina e o espazo de ancho cero) non ocupan ningunha.

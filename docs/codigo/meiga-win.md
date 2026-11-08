@@ -1,6 +1,6 @@
 # Código › `meiga-win`
 
-> Estado: subfase 1.2. Contén a xanela, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa e o tipo dos erros de Windows.
+> Estado: subfase 1.3. Contén a xanela, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, o DPI da xanela e o tipo dos erros de Windows.
 
 **Responsabilidade:** a capa de plataforma. Envolve todo o que é específico de Windows: ConPTY, a detección das shells instaladas, o sistema de arquivos, o portapapeis, a xanela Win32 e a xestión do DPI. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -10,7 +10,7 @@
 | [`src/lib.rs`](#cratesmeiga-winsrclibrs) | A raíz do crate: os módulos e os tipos que se publican. |
 | [`src/error.rs`](#cratesmeiga-winsrcerrorrs) | `Error`: unha chamada a Windows que fallou. |
 | [`src/event.rs`](#cratesmeiga-winsrceventrs) | Os eventos da xanela e o *trait* `Handler`, que os recibe. |
-| [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o bucle de mensaxes, o temporizador dos fotogramas e a mensaxe de erro. |
+| [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o seu DPI, o bucle de mensaxes, o temporizador dos fotogramas e a mensaxe de erro. |
 
 Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes), e os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface).
 
@@ -36,6 +36,7 @@ windows-sys = { workspace = true, features = [
     "Win32_Security",
     "Win32_System_LibraryLoader",
     "Win32_System_Threading",
+    "Win32_UI_HiDpi",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
 ] }
@@ -56,6 +57,7 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 | `Win32_Security` | A seguridade dos obxectos de Windows. | Nada directamente: `CreateWaitableTimerExW` recibe uns `SECURITY_ATTRIBUTES`, e `windows-sys` só declara a función se o tipo existe. Por iso vai co comentario. |
 | `Win32_System_LibraryLoader` | A carga de DLL e módulos. | `GetModuleHandleW`. |
 | `Win32_System_Threading` | Fíos, procesos e obxectos de sincronización. | O temporizador: `CreateWaitableTimerExW`, `SetWaitableTimer`, `CancelWaitableTimer` e `INFINITE`. |
+| `Win32_UI_HiDpi` | A escala e o DPI. | `GetDpiForWindow`, desde a subfase 1.3. |
 | `Win32_UI_Input_KeyboardAndMouse` | O teclado e o rato. | `SetCapture`, `GetCapture` e `ReleaseCapture`. |
 | `Win32_UI_WindowsAndMessaging` | As xanelas, as mensaxes, os temporizadores das xanelas, os cursores e as caixas de mensaxe. | O resto. |
 
@@ -412,6 +414,23 @@ pub fn client_size(&self) -> Result<Size, Error> {
 ```
 
 O tamaño da área cliente: a xanela sen a barra de título nin os bordos. `GetClientRect` devolve un rectángulo que empeza sempre en (0, 0), así que `right` e `bottom` son o ancho e o alto. `.max(0)` evita converter un número negativo a `u32`, que daría un número enorme.
+
+### `Window::dpi`
+
+```rust
+pub fn dpi(&self) -> u32 {
+    match unsafe { GetDpiForWindow(self.handle) } {
+        0 => USER_DEFAULT_SCREEN_DPI,
+        dpi => dpi,
+    }
+}
+```
+
+Os puntos por polgada do monitor da xanela: 96 ao 100 % de escala, 120 ao 125 % e 144 ao 150 %. O programa créa con el a fonte do texto, para que os glifos teñan o seu tamaño real ([Tecnoloxías › Manifesto e DPI](../tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)).
+
+- `GetDpiForWindow` dá o DPI que corresponde á escala da xanela: como meiga é *per monitor* v2, o do monitor onde está.
+- Devolve 0 se o *handle* non é dunha xanela, que non pode pasar mentres exista a `Window`. Nese caso, o DPI por defecto, 96 (`USER_DEFAULT_SCREEN_DPI`), en vez dun erro.
+- Cando a xanela pasa a outro monitor, o DPI cambia. Polo de agora o programa só o le ao arrancar; os cambios trátanse na subfase 1.9.
 
 ### `Window::run`
 

@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 1.2.
+> Estado: subfase 1.3.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -10,7 +10,7 @@ Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non f
 | [`ProcessSnapshot.cs`](#toolsperfprocesssnapshotcs) | Ler dunha vez todos os procesos e fíos do sistema e facer as contas de cada grupo. Cárgao `measure.ps1`. |
 | [`test-measure.ps1`](#toolsperftest-measureps1) | Comprobar que `measure.ps1` mide ben, con procesos que consomen unha cantidade coñecida. |
 | [`measure-startup.ps1`](#toolsperfmeasure-startupps1) | Medir canto tarda meiga en abrir a súa xanela. |
-| [`measure-frames.ps1`](#toolsperfmeasure-framesps1) | Medir canto custan a meiga e ao sistema os fotogramas parciais e os completos. |
+| [`measure-frames.ps1`](#toolsperfmeasure-framesps1) | Medir canto custan a meiga e ao sistema os fotogramas parciais, os completos e os completos de texto. |
 
 Os escenarios de carga (`scenarios/`) e os scripts que os usan (`run-scenario.ps1`, `gen-bigfile.ps1` e `test-scenarios.ps1`) explícanse en [Código › escenarios de carga](escenarios.md).
 
@@ -791,11 +791,11 @@ A CI executa o script con `-Runs 3 -Warmup 1` (ver [Código › .github](github.
 
 ## `tools/perf/measure-frames.ps1`
 
-Mide canto custan os fotogramas de meiga: un **parcial**, que presenta unha parte pequena da xanela, e un **completo**, que a presenta enteira. Abre meiga maximizado nun modo de medición ([`--bench`](meiga.md#cratesmeigasrcbenchrs)), que debuxa fotogramas sen parar, e co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)). Mentres tanto, [`measure.ps1`](#toolsperfmeasureps1) mide meiga, `dwm.exe` e o servizo de Escritorio remoto.
+Mide canto custan os fotogramas de meiga: un **parcial**, que presenta unha parte pequena da xanela; un **completo**, que a presenta enteira; e un **completo de texto**, que ademais debuxa en cada cela a tinta do seu glifo. Abre meiga maximizado nun modo de medición ([`--bench`](meiga.md#cratesmeigasrcbenchrs)), que debuxa fotogramas sen parar, e co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)). Mentres tanto, [`measure.ps1`](#toolsperfmeasureps1) mide meiga, `dwm.exe` e o servizo de Escritorio remoto.
 
 ```powershell
-.\tools\perf\measure-frames.ps1                             # os dous modos, 3 + 20 s cada un
-.\tools\perf\measure-frames.ps1 -Mode full -Duration 60
+.\tools\perf\measure-frames.ps1                             # os tres modos, 3 + 20 s cada un
+.\tools\perf\measure-frames.ps1 -Mode text -Duration 60
 .\tools\perf\measure-frames.ps1 -Duration 3 -Warmup 1       # como na CI
 ```
 
@@ -806,16 +806,19 @@ Saída:
 ```text
 Measuring partial frames: 3 s of warm-up and 20 s of measurement...
 Measuring full frames: 3 s of warm-up and 20 s of measurement...
+Measuring text frames: 3 s of warm-up and 20 s of measurement...
 
 mode    width height fps kpixels compose_us compose_p95_us present_us present_p95_us
 ----    ----- ------ --- ------- ---------- -------------- ---------- --------------
 partial     …      …   …       …          …              …          …              …
 full        …      …   …       …          …              …          …              …
+text        …      …   …       …          …              …          …              …
 
 mode    meiga_cpu_pct meiga_ctx_per_s meiga_mb dwm_cpu_pct rdp_cpu_pct
 ----    ------------- --------------- -------- ----------- -----------
 partial             …               …        …           …           …
 full                …               …        …           …           …
+text                …               …        …           …           …
 
 kpixels: thousands of pixels presented by a frame. Times in microseconds: median and 95th percentile.
 CPU in % of one core: meiga, dwm.exe and the Remote Desktop service (rdp).
@@ -828,17 +831,17 @@ Unha fila por modo:
 |---|---|
 | `width` e `height` | O tamaño da xanela, maximizada. |
 | `fps` | Os fotogramas por segundo: como moito 30 por Escritorio remoto e 60 en local, o intervalo de `max_fps = "auto"`. |
-| `kpixels` | Os miles de píxeles que presenta un fotograma (a mediana). Nos parciais, uns 5: o cadrado e o sitio onde estaba son un rectángulo de 80 × 64. Nos completos, os da xanela enteira. |
+| `kpixels` | Os miles de píxeles que presenta un fotograma (a mediana). Nos parciais, uns 5: o cadrado e o sitio onde estaba son un rectángulo de 80 × 64. Nos completos e nos de texto, os da xanela enteira. |
 | `compose_us` e `compose_p95_us` | O tempo de compoñer un fotograma, en microsegundos: a mediana e o percentil 95. |
 | `present_us` e `present_p95_us` | O tempo de presentalo. |
 | `meiga_cpu_pct`, `meiga_ctx_per_s` e `meiga_mb` | A CPU de meiga, en % dun núcleo, os seus espertares por segundo e a súa memoria privada máxima, en MB. |
 | `dwm_cpu_pct` e `rdp_cpu_pct` | A CPU de `dwm.exe`, que compón as xanelas na pantalla, e a do servizo de Escritorio remoto, que envía a pantalla ao outro equipo. |
 
-Comparar os dous modos di canto custan os píxeles: a meiga, que os compón e os presenta, e ao resto do sistema, que os compón na pantalla e, por Escritorio remoto, os codifica e os envía.
+Comparar `partial` e `full` di canto custan os píxeles: a meiga, que os compón e os presenta, e ao resto do sistema, que os compón na pantalla e, por Escritorio remoto, os codifica e os envía. Comparar `full` e `text` di canto custa o texto: os dous presentan a xanela enteira, pero en `text` cada cela busca o seu glifo na caché e debuxa a súa tinta.
 
 | Parámetro | Por defecto | Que fai |
 |---|---|---|
-| `-Mode` | `both` | `partial`, `full` ou `both`: os dous, un despois do outro. |
+| `-Mode` | `all` | `partial`, `full`, `text` ou `all`: os tres, un despois do outro. |
 | `-Duration` | 20 | Os segundos de cada medición. |
 | `-Warmup` | 3 | Os segundos entre que se abre meiga e empeza a medición. |
 | `-Path` | `target\release\meiga.exe` | O executábel que se mide. |
@@ -848,8 +851,8 @@ Comparar os dous modos di canto custan os píxeles: a meiga, que os compón e os
 Garda, en `.perf\` e fóra de Git porque os números dependen da máquina:
 
 - `frames-<data>-<nome>.csv`: a táboa, cunha fila por modo e co punto como separador decimal;
-- `frames-<data>-<nome>-partial.trace.csv` e `…-full.trace.csv`: o rexistro dos fotogramas de cada modo;
-- `measure-<data>-<nome>-frames-partial.csv` e `…-full.csv`: o resultado completo de `measure.ps1`, con todos os grupos e procesos.
+- `frames-<data>-<nome>-partial.trace.csv`, `…-full.trace.csv` e `…-text.trace.csv`: o rexistro dos fotogramas de cada modo;
+- `measure-<data>-<nome>-frames-partial.csv`, `…-full.csv` e `…-text.csv`: o resultado completo de `measure.ps1`, con todos os grupos e procesos.
 
 Explicación por partes:
 
@@ -879,7 +882,7 @@ function Measure-Mode([string]$Bench) {
         }
 ```
 
-- Espera a que se abra a xanela e, despois, o **quecemento**: os primeiros fotogramas, mentres Windows e meiga rematan de arrancar, non contan.
+- Espera a que se abra a xanela e, despois, o **quecemento**: os primeiros fotogramas, mentres Windows e meiga rematan de arrancar, non contan. En `text`, os glifos rasterízanse nos primeiros fotogramas, antes da medición, así que os que se miden só os buscan na caché.
 - `measure.ps1` mide meiga polo seu número de proceso (`-Id`), sen mostrar nada (`-Quiet`), e devolve as filas como obxectos (`-PassThru`).
 - Despois pecha a xanela e, como os outros scripts, comproba que meiga remata co código 0.
 

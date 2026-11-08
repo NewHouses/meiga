@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 1.2. Existen o esqueleto, a integración continua, as ferramentas de medición, os escenarios de carga e unha xanela que presenta só o que cambia, cun *framebuffer* propio e unha demo que debuxa rectángulos co rato. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 1.3. Existen o esqueleto, a integración continua, as ferramentas de medición, os escenarios de carga e unha xanela que presenta só o que cambia, cun *framebuffer* propio, e que debuxa texto con DirectWrite: unha demo mostra o mesmo texto a tres escalas e debuxa rectángulos co rato. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -78,7 +78,7 @@ sequenceDiagram
 |---|---|
 | Xanela e bucle de mensaxes | 1.1 (feita) |
 | *Framebuffer* e presentación parcial | 1.2 (feita) |
-| Fontes e caché de glifos | 1.3 |
+| Fontes e caché de glifos | 1.3 (feita) |
 | ConPTY | 1.4 |
 | Fachada do terminal (parser e grella) | 1.5 |
 | Da saída á pantalla | 1.6 |
@@ -106,6 +106,28 @@ flowchart LR
 5. Coa xanela minimizada, non se debuxa nada: os cambios esperan e, ao restaurala, píntase enteira unha vez ([ADR 0009](adr/0009-xanela-que-non-se-ve.md)).
 
 O código que une as pezas explícase en [Código › meiga](codigo/meiga.md#cratesmeigasrcframesrs).
+
+### Texto: da cela aos píxeles
+
+Desde a subfase 1.3, meiga debuxa texto. Agora é o da demo, o mesmo a tres escalas; desde a 1.6, será a grella do terminal ([ADR 0010](adr/0010-texto-con-directwrite.md)):
+
+```mermaid
+flowchart LR
+    text["Texto<br/>(desde a 1.6, a grella)"] --> cells["Celas<br/>CellChar, con unicode-width"]
+    cells --> draw["Font::draw<br/>só as celas do recorte"]
+    draw --> cache{"Está na caché<br/>de glifos?"}
+    cache -- "non" --> raster["DirectWrite rasterízao<br/>(co fallback, se a fonte non o ten)"]
+    raster --> slot["Gárdase nun slot<br/>do tamaño da cela"]
+    slot --> ink["A súa tinta, coa táboa<br/>de tons, no framebuffer"]
+    cache -- "si" --> ink
+```
+
+1. O texto divídese en celas ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrctextrs)): cada carácter ocupa unha, ou dúas se é ancho, segundo `unicode-width`, o mesmo crate que usará o núcleo do terminal ([Tecnoloxías › O ancho dos caracteres](tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)).
+2. `Font::draw` debuxa unha fila de celas coas súas cores: primeiro o fondo e despois a tinta dos glifos, só das celas que caen dentro do recorte do lenzo, que son as das zonas que cambiaron ([Código › meiga-render](codigo/meiga-render.md#cratesmeiga-rendersrctextrs)).
+3. Cada glifo búscase na caché. A primeira vez, DirectWrite rasterízao con antialiasing en grises e gárdase nun *slot* do tamaño dunha cela. Se a fonte non ten o carácter, o *fallback* do sistema escolle outra que o teña ([Tecnoloxías › DirectWrite](tecnoloxias.md#27-directwrite-fontes-e-glifos)).
+4. A tinta do glifo, os píxeles con cobertura, convértese en cor cunha táboa cos 256 tons entre o fondo e o texto ([Tecnoloxías › Mesturar o texto co fondo](tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste)).
+
+O tamaño da cela sae das métricas da fonte e do DPI da xanela. Cada fonte, a un tamaño, ten a súa caché: a demo ten tres, unha por escala.
 
 ## 4. Fíos (*previsto*)
 
@@ -164,6 +186,7 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0007](adr/0007-integracion-coa-shell.md) | Integración coa shell mediante secuencias OSC. |
 | [0008](adr/0008-temporizador-dos-fotogramas.md) | Un temporizador de alta resolución para os fotogramas. |
 | [0009](adr/0009-xanela-que-non-se-ve.md) | Non debuxar coa xanela minimizada; as tapadas debúxanse. |
+| [0010](adr/0010-texto-con-directwrite.md) | Texto con DirectWrite, nunha caché de glifos do tamaño da cela. |
 
 ## 8. Medición do rendemento
 
@@ -186,7 +209,7 @@ flowchart TD
 - **Métricas:** CPU (en % dun núcleo e en ciclos), espertares por segundo, memoria privada e fíos. Explícanse en [Tecnoloxías › Medición do rendemento](tecnoloxias.md#19-medición-do-rendemento).
 - **Onde:** en local, no equipo de desenvolvemento, e non na CI, porque as máquinas da CI son compartidas e darían cifras con moito ruído. Os resultados gárdanse en `.perf/`, fóra de Git. A CI só comproba que o arnés mide ben.
 - **O arranque:** `tools/perf/measure-startup.ps1` mide o tempo desde que se crea o proceso de meiga ata que a súa xanela está pintada (ver [Tecnoloxías › Tempo ata o primeiro fotograma](tecnoloxias.md#tempo-ata-o-primeiro-fotograma)).
-- **Os fotogramas:** `tools/perf/measure-frames.ps1` mide canto custan a meiga, a `dwm` e ao Escritorio remoto os fotogramas parciais e os completos, cos modos de medición de meiga (`--bench`).
+- **Os fotogramas:** `tools/perf/measure-frames.ps1` mide canto custan a meiga, a `dwm` e ao Escritorio remoto os fotogramas parciais, os completos e os completos de texto, cos modos de medición de meiga (`--bench`).
 
 O código explícase en [Código › medición](codigo/perf.md).
 
@@ -217,15 +240,15 @@ O código explícase en [Código › escenarios de carga](codigo/escenarios.md).
 
 ## 9. Estado actual
 
-Despois da subfase 1.2:
+Despois da subfase 1.3:
 
-- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores, os rectángulos, as zonas que cambian (*damage*) e o *pacer* dos fotogramas; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI; e `meiga-win`, a xanela, os seus eventos, o bucle de mensaxes e o temporizador dos fotogramas.
-- `meiga.exe` abre unha xanela cunha demo: arrastrando co rato debúxanse rectángulos, e cada fotograma presenta só as zonas que cambian, que se poden ver cun bordo magenta (tecla P). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e o seu fío dorme. Ao pechala, o programa remata co código 0.
-- Ten dous modos de medición, `--bench partial` e `--bench full`, e un rexistro dos fotogramas, `--trace-frames`.
-- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 260 KB e só depende de DLL do sistema. A CI compróbao en cada cambio: as DLL, que abre a xanela, a escala por monitor, que presenta só o que cambia e que remata ben.
-- Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). A única dependencia externa é `windows-sys`.
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores, os rectángulos, as zonas que cambian (*damage*), o *pacer* dos fotogramas e as celas do texto; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, o bucle de mensaxes e o temporizador dos fotogramas.
+- `meiga.exe` abre unha xanela cunha demo: o mesmo texto ao 100 %, ao 125 % e ao 150 % de escala, con letras con acentos, símbolos, liñas de caixa, ideogramas CJK e cores, e por riba, os rectángulos que se debuxan arrastrando co rato. Cada fotograma presenta só as zonas que cambian, que se poden ver cun bordo magenta (tecla P). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e o seu fío dorme. Ao pechala, o programa remata co código 0.
+- Ten tres modos de medición, `--bench partial`, `--bench full` e `--bench text`, e un rexistro dos fotogramas, `--trace-frames`.
+- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 330 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela, a escala por monitor, que presenta só o que cambia e que remata ben.
+- Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). As dependencias externas son `windows-sys`, `windows` e `windows-core`, de Microsoft, e `unicode-width`.
 - Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe`.
-- As decisións de arquitectura están escritas en nove ADR.
-- O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, e `measure-frames.ps1`, canto custan os seus fotogramas.
+- As decisións de arquitectura están escritas en dez ADR.
+- O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, e `measure-frames.ps1`, canto custan os seus fotogramas: parciais, completos e completos de texto.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis.
 - Os scripts de `tools/` necesitan PowerShell 7. En Windows PowerShell 5.1 non se executan: só mostran o comando para facelo con `pwsh`.

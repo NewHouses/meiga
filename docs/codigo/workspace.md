@@ -1,6 +1,6 @@
 # Código › configuración do workspace
 
-> Estado: subfase 1.1.
+> Estado: subfase 1.3.
 
 Os arquivos da raíz do repositorio configuran como se compila e se revisa todo o proxecto. Neste documento explícanse un a un.
 
@@ -42,13 +42,19 @@ Valores comúns que cada crate herda con `campo.workspace = true`, para non repe
 meiga-core = { path = "crates/meiga-core" }
 meiga-render = { path = "crates/meiga-render" }
 meiga-win = { path = "crates/meiga-win" }
+unicode-width = { version = "0.2.3", default-features = false }
+windows = "0.62.2"
+windows-core = "0.62.2"
 windows-sys = "0.61.2"
 ```
 
 Declara unha soa vez onde está cada dependencia e que versión se usa:
 
 - Os crates internos, polo seu cartafol (`path`). Cada crate que o necesite escribe só `meiga-core.workspace = true`.
-- As dependencias externas, coa súa versión, para que todos os crates usen a mesma. Cada crate escolle as súas *features*: por exemplo, `meiga-win` usa `windows-sys = { workspace = true, features = [...] }` (ver [Código › meiga-win](meiga-win.md#cratesmeiga-wincargotoml)). A primeira é `windows-sys`, desde a subfase 1.1 (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)).
+- As dependencias externas, coa súa versión, para que todos os crates usen a mesma. Cada crate escolle as súas *features*: por exemplo, `meiga-win` usa `windows-sys = { workspace = true, features = [...] }` (ver [Código › meiga-win](meiga-win.md#cratesmeiga-wincargotoml)).
+  - `windows-sys`, desde a subfase 1.1, para Win32 e GDI (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)).
+  - `windows` e `windows-core`, desde a 1.3, para DirectWrite (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). As dúas teñen a mesma versión, porque `windows` depende de `windows-core`, e comparten `windows-link` con `windows-sys`.
+  - `unicode-width`, desde a 1.3, para o ancho dos caracteres. `default-features = false` quita a *feature* `cjk`, as táboas para os contextos CJK, que meiga non usa (ver [Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)). Neste caso as opcións van no `Cargo.toml` raíz, porque un crate pode engadir *features* pero non quitar as que trae por defecto.
 - `"0.61.2"` significa «0.61.2 ou unha versión compatíbel posterior»: nas versións 0.x, as 0.61.*. A versión exacta que se usa é a do `Cargo.lock`.
 
 ```toml
@@ -87,7 +93,7 @@ debug = "limited"
 
 ## `Cargo.lock`
 
-Xérao Cargo automaticamente e **non se edita a man**. Garda a versión exacta de cada crate do workspace e de cada dependencia, coa súa suma de comprobación (*checksum*). Agora contén os catro crates propios, `windows-sys` e `windows-link`, unha dependencia de `windows-sys`. Súbese ao repositorio para que as compilacións sexan reproducíbeis.
+Xérao Cargo automaticamente e **non se edita a man**. Garda a versión exacta de cada crate do workspace e de cada dependencia, coa súa suma de comprobación (*checksum*). Agora contén os catro crates propios e 17 dependencias: `windows-sys` e `windows-link`, desde a subfase 1.1; e, desde a 1.3, `unicode-width` e o crate `windows` cos seus: `windows-core`, `windows-collections`, `windows-future`, `windows-implement`, `windows-interface`, `windows-numerics`, `windows-result`, `windows-strings` e `windows-threading`, máis catro que só se usan ao compilar as macros (`proc-macro2`, `quote`, `syn` e `unicode-ident`). Súbese ao repositorio para que as compilacións sexan reproducíbeis.
 
 ## `rust-toolchain.toml`
 

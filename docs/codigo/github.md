@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 1.2.
+> Estado: subfase 1.3.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -209,7 +209,7 @@ As mesmas comprobacións que en local (ver [Tecnoloxías](../tecnoloxias.md#7-li
 - Compila en modo *release*, crea o `.zip` en `dist/` e comproba as DLL das que depende `meiga.exe` (ver [Código › ferramentas](ferramentas.md)).
 - `check-window.ps1` abre `meiga.exe` e comproba a xanela, a escala por monitor e que remata co código 0 ao pechala (ver [Código › ferramentas](ferramentas.md#toolscheck-windowps1)). Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade, aínda que ninguén a vexa. Leva un segundo.
 - `check-present.ps1` debuxa na xanela con eventos do rato e comproba no rexistro dos fotogramas que meiga presenta só o que cambia, agrupa os cambios e non debuxa en repouso nin coa xanela minimizada (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Leva uns segundos.
-- `measure-startup.ps1` arranca meiga 4 veces e mide o tempo ata o primeiro fotograma (ver [Código › medición](perf.md#toolsperfmeasure-startupps1)), e `measure-frames.ps1` mide 3 s de fotogramas parciais e outros 3 de completos (ver [Código › medición](perf.md#toolsperfmeasure-framesps1)). Só comproban que os scripts seguen funcionando: igual que co arnés de medición, os números dunha máquina compartida non se comparan con nada.
+- `measure-startup.ps1` arranca meiga 4 veces e mide o tempo ata o primeiro fotograma (ver [Código › medición](perf.md#toolsperfmeasure-startupps1)), e `measure-frames.ps1` mide 3 s de cada tipo de fotograma: parciais, completos e completos de texto (ver [Código › medición](perf.md#toolsperfmeasure-framesps1)). Só comproban que os scripts seguen funcionando: igual que co arnés de medición, os números dunha máquina compartida non se comparan con nada.
 
 #### Subir o artefacto
 

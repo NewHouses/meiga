@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 1.2.
+> Estado: subfase 1.3.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -155,11 +155,11 @@ Comproba que `meiga.exe` non depende do *runtime* de Visual C++. Protexe a decis
 Saída esperada:
 
 ```text
-meiga.exe imports: kernel32.dll, user32.dll, gdi32.dll, ntdll.dll, api-ms-win-core-synch-l1-2-0.dll, KERNEL32.dll
+meiga.exe imports: gdi32.dll, kernel32.dll, user32.dll, api-ms-win-core-synch-l1-2-0.dll, ntdll.dll, oleaut32.dll, dwrite.dll, combase.dll, KERNEL32.dll
 OK: no dependencies on the Visual C++ runtime.
 ```
 
-`user32.dll` e `gdi32.dll` chegaron coa xanela, na subfase 1.1. Por que `kernel32.dll` aparece dúas veces explícase en [Código › meiga](meiga.md#comprobacións-feitas).
+`user32.dll` e `gdi32.dll` chegaron coa xanela, na subfase 1.1, e `dwrite.dll`, `combase.dll` e `oleaut32.dll`, co texto, na 1.3. Para que serve cada unha e por que `kernel32.dll` aparece dúas veces explícase en [Código › meiga](meiga.md#comprobacións-feitas).
 
 **Por que fai falta.** A opción `+crt-static` está en `.cargo/config.toml`, pero hai formas de perdela sen que nada falle: a máis habitual é definir a variábel `RUSTFLAGS`, que fai que Cargo ignore os `rustflags` de `.cargo/config.toml` (ver [Código › .github](github.md#variábeis-de-contorno)). Comprobouse cunha compilación con `RUSTFLAGS='-C opt-level=3'`:
 
