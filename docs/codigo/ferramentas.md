@@ -627,23 +627,29 @@ try {
 O **contexto de escala** da xanela di como escala (ver [Tecnoloxías › Manifesto](../tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)). `-4` é o valor que Windows define para «por monitor, versión 2» (`DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`). O contexto que devolve Windows non ten por que ser ese número, así que a documentación manda comparalos con `AreDpiAwarenessContextsEqual`, e non con `-eq`. Se o manifesto non estivese incrustado, a xanela non escalaría e a comprobación fallaría.
 
 ```powershell
+    # As administrator, as on the CI runners, cmd puts "Administrator: " (in
+    # the language of Windows) before the title that it is given.
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ($true) {
         $process.Refresh()
-        if ($process.MainWindowTitle -eq $title) {
+        $shown = $process.MainWindowTitle
+        if ($shown -eq $title -or $shown.EndsWith(" $title")) {
             break
         }
         if ($process.HasExited -or [DateTime]::UtcNow -gt $deadline) {
-            throw "The title of the window is '$($process.MainWindowTitle)' and not '$title', the one that cmd sets in the terminal."
+            throw "The title of the window is '$shown' and not '$title', the one that cmd sets in the terminal."
         }
         Start-Sleep -Milliseconds 100
     }
+    Write-Host "OK: the program in the terminal sets the title of the window ('$shown')."
 ```
 
 **O título** é a forma máis simple de ver desde fóra que a saída dun programa chega á xanela, e para chegar pasa por todo o camiño da subfase 1.6: cmd cambia o título da consola, o ConPTY escríbeo na súa saída, o fío lector de meiga pásallo ao terminal e avisa á xanela, e a xanela colle o título e pono na barra de título ([Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage) e [› O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)). Se falla calquera paso, o título non cambia.
 
 - O script mira o título cada 0,1 s ata que é o de cmd. `Refresh()` fai falta en cada volta: sen el, .NET devolvería sempre o título que leu a primeira vez.
+- **Como administrador**, cmd pon diante do título que lle dan `Administrator: `, na lingua de Windows, e un espazo. Por iso vale tamén un título que remate nun espazo e `meiga-check`. Os *runners* da CI corren como administrador, e alí a liña do resultado é `OK: the program in the terminal sets the title of the window ('Administrator:  meiga-check').` O prefixo pono cmd, non o ConPTY: o título que escribe un programa cunha secuencia OSC chega tal cal, como o de [`check-present.ps1`](#toolscheck-presentps1).
 - Se meiga remata, ou se pasa o tempo, falla e di que título ten a xanela.
+- A liña do resultado mostra o título que ten a xanela.
 
 ```powershell
     # The programs that meiga started: the console host of the session and

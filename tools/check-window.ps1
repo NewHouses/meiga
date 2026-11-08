@@ -133,18 +133,21 @@ try {
     }
     Write-Host 'OK: the window is DPI aware per monitor (v2).'
 
+    # As administrator, as on the CI runners, cmd puts "Administrator: " (in
+    # the language of Windows) before the title that it is given.
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ($true) {
         $process.Refresh()
-        if ($process.MainWindowTitle -eq $title) {
+        $shown = $process.MainWindowTitle
+        if ($shown -eq $title -or $shown.EndsWith(" $title")) {
             break
         }
         if ($process.HasExited -or [DateTime]::UtcNow -gt $deadline) {
-            throw "The title of the window is '$($process.MainWindowTitle)' and not '$title', the one that cmd sets in the terminal."
+            throw "The title of the window is '$shown' and not '$title', the one that cmd sets in the terminal."
         }
         Start-Sleep -Milliseconds 100
     }
-    Write-Host "OK: the program in the terminal sets the title of the window ('$title')."
+    Write-Host "OK: the program in the terminal sets the title of the window ('$shown')."
 
     # The programs that meiga started: the console host of the session and
     # cmd.
