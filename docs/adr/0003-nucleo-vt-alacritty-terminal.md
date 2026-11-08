@@ -48,4 +48,4 @@ Facelo ben leva moito traballo e está cheo de casos límite; facelo ademais rá
 
 - [`alacritty_terminal` en crates.io](https://crates.io/crates/alacritty_terminal): versión 0.26.0, Apache-2.0.
 - `vte` v0.15.0, [`src/ansi.rs`](https://github.com/alacritty/vte/blob/v0.15.0/src/ansi.rs) (función `osc_dispatch`): os códigos OSC que trata.
-- [Arquitectura › Fluxo de datos](../arquitectura.md#3-fluxo-de-datos-previsto)
+- [Arquitectura › Fluxo de datos](../arquitectura.md#3-fluxo-de-datos)

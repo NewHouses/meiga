@@ -1,6 +1,6 @@
 # Código › `meiga-render`
 
-> Estado: subfase 1.3. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo.
+> Estado: subfase 1.6. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo. Na 1.6 chegaron ao texto a negra, a cursiva e a posición do subliñado e do riscado; o resto non cambiou desde a 1.3.
 
 **Responsabilidade:** o renderizado por CPU. Compón no *framebuffer* só o que cambiou e presenta na xanela só os rectángulos modificados. O texto debúxase desde unha caché de glifos, que DirectWrite rasteriza unha soa vez. Ver [Arquitectura › Fotogramas](../arquitectura.md#fotogramas-do-cambio-á-pantalla) e [Arquitectura › Texto](../arquitectura.md#texto-da-cela-aos-píxeles).
 
@@ -11,11 +11,11 @@
 | [`src/canvas.rs`](#cratesmeiga-rendersrccanvasrs) | `Canvas`, o lenzo: debuxar en píxeles en memoria, sen saír nunca deles; e `Shades`, os tons do texto. |
 | [`src/error.rs`](#cratesmeiga-rendersrcerrorrs) | `Error`: unha chamada a GDI ou a DirectWrite que fallou, ou fontes que non están instaladas. |
 | [`src/gdi.rs`](#cratesmeiga-rendersrcgdirs) | `Surface`, o *framebuffer* nunha *DIB section*, e a súa presentación con `BitBlt`. |
-| [`src/dwrite.rs`](#cratesmeiga-rendersrcdwriters) | `FontSystem` e `Typeface`: as fontes con DirectWrite, o tamaño da cela e a cobertura de cada glifo. |
-| [`src/glyphs.rs`](#cratesmeiga-rendersrcglyphsrs) | `GlyphCache`: a caché de glifos, en *slots* do tamaño dunha cela. |
-| [`src/text.rs`](#cratesmeiga-rendersrctextrs) | `Font`: unha fonte coa súa caché, que debuxa filas de celas no lenzo. |
+| [`src/dwrite.rs`](#cratesmeiga-rendersrcdwriters) | `FontSystem` e `Typeface`: as fontes con DirectWrite, normais, negras e cursivas; o tamaño da cela, onde van o subliñado e o riscado (`Decorations`) e a cobertura de cada glifo. |
+| [`src/glyphs.rs`](#cratesmeiga-rendersrcglyphsrs) | `GlyphCache`: a caché de glifos de todos os estilos, en *slots* do tamaño dunha cela. |
+| [`src/text.rs`](#cratesmeiga-rendersrctextrs) | `Font` e `FontStyle`: unha fonte, cos seus estilos e a súa caché, que debuxa filas de celas no lenzo. |
 
-Que son as *DIB sections* e como funcionan `BitBlt` e `GdiFlush` explícase en [Tecnoloxías › DIB sections e GDI](../tecnoloxias.md#24-dib-sections-e-gdi-o-framebuffer-e-a-súa-presentación); DirectWrite, COM e a mestura do texto, en [Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos), [COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows) e [Mesturar o texto co fondo](../tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste).
+Que son as *DIB sections* e como funcionan `BitBlt` e `GdiFlush` explícase en [Tecnoloxías › DIB sections e GDI](../tecnoloxias.md#24-dib-sections-e-gdi-o-framebuffer-e-a-súa-presentación); DirectWrite, COM e a mestura do texto, en [Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos), [COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows) e [Mesturar o texto co fondo](../tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste); e como se debuxa cada estilo das celas, en [A paleta e os estilos das celas](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas).
 
 ## `crates/meiga-render/Cargo.toml`
 
@@ -77,14 +77,15 @@ mod glyphs;
 mod text;
 
 pub use canvas::{Blending, Canvas, Shades, pixel};
-pub use dwrite::FontSystem;
+pub use dwrite::{Decorations, FontSystem, Line};
 pub use error::Error;
 pub use gdi::{Fit, Surface};
-pub use text::{BLENDING, Font};
+pub use text::{BLENDING, Font, FontStyle};
 ```
 
 - Os seis módulos son privados (`mod`, sen `pub`), e a raíz publica só os tipos que necesitan os demais crates: `meiga_render::Surface`, e non `meiga_render::gdi::Surface`. A caché de glifos e `Typeface` non se publican: úsanse a través de [`Font`](#font-e-blending).
-- **Onde está o `unsafe`.** Este crate chama a GDI e a DirectWrite, e iso require `unsafe`. Todo ese código está en `gdi.rs` e en `dwrite.rs`. Os outros catro módulos levan `#![forbid(unsafe_code)]`, así que o compilador garante que o lenzo, a caché de glifos e o texto, que son o código que máis vai medrar (o cursor, a selección…), non teñen ningún bloque inseguro.
+- **Os estilos**, desde a subfase 1.6: [`FontStyle`](#fontstyle-e-face), o estilo no que se debuxa unha fila, e [`Decorations` e `Line`](#line-e-decorations), onde van o subliñado e o riscado. Úsaos a vista do terminal de `meiga`, que debuxa os estilos de cada cela ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). `Decorations` e `Line` están en `dwrite.rs`, pero a vista recíbeos de `Font::decorations`, así que `Typeface` segue sen publicarse.
+- **Onde está o `unsafe`.** Este crate chama a GDI e a DirectWrite, e iso require `unsafe`. Todo ese código está en `gdi.rs` e en `dwrite.rs`. Os outros catro módulos levan `#![forbid(unsafe_code)]`, así que o compilador garante que o lenzo, a caché de glifos e o texto, que fan as contas cos píxeles e cos *slots*, non teñen ningún bloque inseguro: se un índice estivese mal calculado, o programa pararía (*panic*) en vez de escribir fóra da memoria.
 
 ## `crates/meiga-render/src/canvas.rs`
 
@@ -170,7 +171,7 @@ pub fn fill(&mut self, rect: Rect, color: Rgb) {
 }
 ```
 
-**Encher un rectángulo** cunha cor: o fondo das celas do texto e os rectángulos da demo.
+**Encher un rectángulo** cunha cor: o fondo das celas do texto, as marxes da xanela, as liñas do subliñado e do riscado, o cursor e os modos de medición.
 
 - Primeiro recórtase ao `clip`. Como o recorte está dentro do lenzo, as coordenadas non son negativas, e `as usize` é seguro.
 - Cada fila é unha porción contigua de píxeles, e `slice::fill` éncheas co mesmo valor. O compilador convérteo en instrucións que escriben varios píxeles á vez.
@@ -335,7 +336,7 @@ Algo que o renderizador non puido facer: unha chamada a GDI ou a DirectWrite que
 
 ## `crates/meiga-render/src/gdi.rs`
 
-O *framebuffer* e a súa presentación na xanela. É o único arquivo de `meiga-render` con `unsafe`. Os fragmentos son extractos, sen os comentarios `// SAFETY:`.
+O *framebuffer* e a súa presentación na xanela. Xunto con `dwrite.rs`, é o único arquivo de `meiga-render` con `unsafe`. Os fragmentos son extractos, sen os comentarios `// SAFETY:`.
 
 ### `Fit` e `Surface`
 
@@ -446,7 +447,7 @@ fn copy(&self, target: HDC, rects: &[Rect]) -> Result<(), Error> {
 pub fn mark(&self, window: HWND, rects: &[Rect], color: Rgb, thickness: u32) -> Result<(), Error> { … }
 ```
 
-Debuxa directamente na xanela, e non no *framebuffer*, o bordo de cada rectángulo, cunha brocha (`FillRect` para cada lado). Son as **marcas** da demo: deixan ver que zonas presentou o último fotograma. Como non están no *framebuffer*, presentar de novo eses rectángulos bórraas.
+Debuxa directamente na xanela, e non no *framebuffer*, o bordo de cada rectángulo, cunha brocha (`FillRect` para cada lado). Son as **marcas**, que se activan e se desactivan coa tecla P: deixan ver que zonas presentou o último fotograma. Como non están no *framebuffer*, presentar de novo eses rectángulos bórraas.
 
 ### `Dib`
 
@@ -570,7 +571,7 @@ Estas probas usan GDI de verdade, pero sen ningunha xanela: só *bitmaps* en mem
 
 ## `crates/meiga-render/src/dwrite.rs`
 
-As fontes con DirectWrite: a fonte das celas, o tamaño dunha cela e a cobertura de cada glifo. Xunto con `gdi.rs`, é o único arquivo do crate con `unsafe`: os métodos COM precísano, aínda que o crate `windows` comprobe os `HRESULT` e leve a conta das referencias ([Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Os fragmentos son extractos, sen os comentarios `// SAFETY:` nin algúns `map_err`.
+As fontes con DirectWrite: a fonte das celas, normal, negra ou cursiva; o tamaño dunha cela, onde van o subliñado e o riscado e a cobertura de cada glifo. Xunto con `gdi.rs`, é o único arquivo do crate con `unsafe`: os métodos COM precísano, aínda que o crate `windows` comprobe os `HRESULT` e leve a conta das referencias ([Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Os fragmentos son extractos, sen os comentarios `// SAFETY:` nin algúns `map_err`.
 
 ### `FontSystem`
 
@@ -634,29 +635,35 @@ pub struct Typeface {
     system: FontSystem,
     family: String,
     family_name: HSTRING,
+    weight: DWRITE_FONT_WEIGHT,
+    style: DWRITE_FONT_STYLE,
     face: IDWriteFontFace,
     em: f32,
     cell: Size,
     baseline: f32,
+    decorations: Decorations,
     texture: Vec<u8>,
 }
 ```
 
-Unha fonte para as celas dunha grella, a un tamaño e a un DPI: o tamaño da cela, onde está a liña base e a cobertura dos seus glifos.
+Unha fonte para as celas dunha grella, a un tamaño, a un DPI e nun estilo (normal, negra, cursiva ou negra cursiva): o tamaño da cela, onde está a liña base, onde van o subliñado e o riscado e a cobertura dos seus glifos.
 
 | Campo | Que garda |
 |---|---|
 | `system` | A súa copia do [`FontSystem`](#fontsystem). |
 | `family` e `family_name` | A familia que se atopou, como texto de Rust e como `HSTRING` (UTF-16, para o *fallback*). |
-| `face` | A cara da fonte, co peso, o ancho e o estilo normais. |
+| `weight` e `style` | Desde a subfase 1.6, o peso (normal ou negra) e o estilo (normal ou cursiva) da fonte, que usa tamén o *fallback*. |
+| `face` | A cara da fonte: a da familia máis parecida a ese peso e a ese estilo, co ancho normal. |
 | `em` | O tamaño do em, en píxeles. |
 | `cell` | O tamaño dunha cela, en píxeles. |
 | `baseline` | A distancia desde o alto da cela ata a liña base, en píxeles. |
+| `decorations` | Desde a 1.6, onde van o subliñado e o riscado na cela ([`Decorations`](#line-e-decorations)). |
 | `texture` | A textura do último glifo, que se garda para rasterizar o seguinte sen reservar memoria. |
 
 ```rust
 pub fn new(system: &FontSystem, families: &[&str], points: f32, dpi: u32) -> Result<Self, Error> {
-    let Some((family, face)) = families.iter().find_map(|&name| find(system, name)) else {
+    let (weight, style) = (DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL);
+    let Some((family, face)) = families.iter().find_map(|&name| find(system, name, weight, style)) else {
         return Err(Error::no_font(families));
     };
     let em = points * dpi as f32 / 72.0;
@@ -671,18 +678,49 @@ pub fn new(system: &FontSystem, families: &[&str], points: f32, dpi: u32) -> Res
         .and_then(|glyph| advance(&face, glyph, em))
         .unwrap_or(em / 2.0);
     let cell = Size::new(advance.round().max(1.0) as u32, height.max(1.0) as u32);
+    let decorations = decorations(&metrics, units, baseline, cell);
     Ok(Self { … })
 }
 ```
 
-1. A primeira familia da lista que estea instalada: `find_map` percorre a lista ata que `find` dá algo. Se non hai ningunha, o erro `NoFont`.
+1. A primeira familia da lista que estea instalada, coa súa fonte normal: o peso normal e sen inclinar. `find_map` percorre a lista ata que `find` dá algo. Se non hai ningunha, o erro `NoFont`.
 2. O em en píxeles: `puntos × DPI / 72` ([Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos)).
 3. As métricas pásanse de unidades de deseño a píxeles. `max(1)` evita dividir entre 0 cunha fonte estragada.
 4. A liña base redondéase primeiro, e o alto despois: así o descenso cabe enteiro debaixo dela.
 5. O ancho é o avance do `0`. Se a fonte non o tivese, a metade do em.
 6. A cela mide polo menos 1 × 1. Os valores son números positivos pequenos, así que as conversións a `u32` son exactas.
+7. Onde van o subliñado e o riscado, coas mesmas métricas, os mesmos `units` e a liña base xa redondeada ([`Line` e `Decorations`](#line-e-decorations)).
 
 Cascadia Mono a 12 puntos dá celas de 9 × 19 píxeles ao 100 %, de 12 × 24 ao 125 % e de 14 × 28 ao 150 %.
+
+```rust
+pub fn styled(&self, bold: bool, italic: bool) -> Result<Self, Error> {
+    let weight = if bold { DWRITE_FONT_WEIGHT_BOLD } else { DWRITE_FONT_WEIGHT_NORMAL };
+    let style = if italic { DWRITE_FONT_STYLE_ITALIC } else { DWRITE_FONT_STYLE_NORMAL };
+    let (_, face) = find(&self.system, &self.family, weight, style)
+        .ok_or_else(|| Error::no_font(&[self.family.as_str()]))?;
+    Ok(Self {
+        system: self.system.clone(),
+        family: self.family.clone(),
+        family_name: self.family_name.clone(),
+        weight,
+        style,
+        face,
+        em: self.em,
+        cell: self.cell,
+        baseline: self.baseline,
+        decorations: self.decorations,
+        texture: Vec::new(),
+    })
+}
+```
+
+**Outra fonte da mesma familia**, desde a subfase 1.6: a negra (`bold`), a cursiva (`italic`) ou a negra cursiva, para as mesmas celas.
+
+- **A fonte.** O peso da negra é 700 (`DWRITE_FONT_WEIGHT_BOLD`), e o da normal, 400; o estilo da cursiva é `DWRITE_FONT_STYLE_ITALIC`. `find` busca na familia a fonte máis parecida a ese peso e a ese estilo ([Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos)). Cascadia Mono e Consolas teñen negra e cursiva de verdade; se unha familia non as ten, a súa cara simúlaas: DirectWrite engrosa os contornos ou inclínaos.
+- **As mesmas celas.** A cela, a liña base, o em e as liñas cópianse da fonte normal, desde a que se crea, en vez de calculalos coas métricas da nova. Así os catro estilos encaixan na mesma grella: o texto normal e o negro dunha liña apóianse na mesma liña base, e o subliñado non cambia de altura nin de grosor entre eles. Se a negra dunha familia avanzase outro ancho, `rasterize` centraría os seus glifos na cela, coma os do *fallback*. A cursiva inclínase cara á dereita, e o que saia da cela córtase, coma en calquera glifo ([ADR 0010](../adr/0010-texto-con-directwrite.md)).
+- `self.system.clone()` só fai `AddRef` nos obxectos COM e suma 1 ao contador da configuración rexional, e a textura empeza baleira: cada fonte ten a súa.
+- Se `find` non dá nada, o erro é o de `no_font`, coa familia. Quen chama decide que facer: [`Font`](#font-e-blending) debuxa ese estilo coa fonte normal.
 
 ```rust
 pub fn rasterize(&mut self, c: char, columns: u32, coverage: &mut [u8]) -> Result<(), Error> {
@@ -786,8 +824,8 @@ fn fallback(&self, c: char) -> Option<(IDWriteFontFace, u16, f32)> {
             len,
             &self.system.collection,
             &self.family_name,
-            DWRITE_FONT_WEIGHT_NORMAL,
-            DWRITE_FONT_STYLE_NORMAL,
+            self.weight,
+            self.style,
             DWRITE_FONT_STRETCH_NORMAL,
             &mut mapped_len,
             &mut font,
@@ -806,17 +844,65 @@ fn fallback(&self, c: char) -> Option<(IDWriteFontFace, u16, f32)> {
 
 - O carácter pásase a UTF-16, a codificación de Windows: unha unidade, ou dúas (un par subrogado) para os que están fóra do plano básico, como os emoji.
 - `OneChar { … }.into()` crea o obxecto COM: `#[implement]` xera a conversión da estrutura de Rust á súa interface, nun bloque de memoria con conta de referencias.
-- `MapCharacters` recibe o texto, a colección onde buscar, a familia preferida e o peso, o estilo e o ancho. Devolve cantos caracteres cobre a fonte escollida (`mapped_len`), a fonte (`font`, ou `None` se ningunha os ten) e unha escala (`scale`) para igualar o tamaño aparente das dúas fontes.
+- `MapCharacters` recibe o texto, a colección onde buscar, a familia preferida e o peso, o estilo e o ancho desexados. Devolve cantos caracteres cobre a fonte escollida (`mapped_len`), a fonte (`font`, ou `None` se ningunha os ten) e unha escala (`scale`) para igualar o tamaño aparente das dúas fontes.
+- **O peso e o estilo son os da fonte** (`self.weight` e `self.style`), desde a subfase 1.6; antes eran sempre os normais. Así, nunha fila en negra ou en cursiva, o *fallback* busca para o carácter que falta a fonte máis parecida a ese peso e a ese estilo, e o carácter non destaca entre os demais.
 - `.ok()?` converte cada erro en `None`: se o *fallback* falla, debúxase o glifo dos caracteres que faltan.
 - A escala só se aplica se é un número positivo.
-- Cada carácter que lle falta á fonte pasa por eiquí unha vez por tamaño de fonte, a primeira vez que se debuxa: despois, o seu glifo xa está na caché.
+- Cada carácter que lle falta á fonte pasa por eiquí unha vez por tamaño e estilo de fonte, a primeira vez que se debuxa: despois, o seu glifo xa está na caché.
+
+### `Line` e `Decorations`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Line {
+    pub top: u32,
+    pub thickness: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Decorations {
+    pub underline: Line,
+    pub strikeout: Line,
+}
+```
+
+Desde a subfase 1.6, onde van nunha cela as liñas do texto, como di a fonte ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+
+- **`Line`**: unha liña que cruza as celas. `top` é a súa primeira fila de píxeles, contando desde o alto da cela, e `thickness`, cantas filas ocupa.
+- **`Decorations`**: as dúas liñas que dá a fonte, a do subliñado (`underline`) e a do riscado (`strikeout`). Son catro números: `Typeface::decorations` e `Font::decorations` dan unha copia (`Copy`).
+- **`meiga-render` só di onde van.** Debúxaas a vista do terminal, da cor do texto, enchendo rectángulos con [`fill`](#canvas): o subliñado simple, o dobre, o ondulado, o de puntos e o de trazos saen todos da liña do subliñado ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs), [Tecnoloxías › A paleta e os estilos](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)). Que liñas leva cada cela é un atributo das celas do terminal, que este crate non coñece.
+
+```rust
+fn decorations(metrics: &DWRITE_FONT_METRICS, units: f32, baseline: f32, cell: Size) -> Decorations {
+    let line = |position: i16, thickness: u16| {
+        let thickness = (f32::from(thickness) * units).round().max(1.0);
+        let top = (baseline - f32::from(position) * units).round().max(0.0);
+        let thickness = (thickness as u32).min(cell.height);
+        Line { top: (top as u32).min(cell.height - thickness), thickness }
+    };
+    Decorations {
+        underline: line(metrics.underlinePosition, metrics.underlineThickness),
+        strikeout: line(metrics.strikethroughPosition, metrics.strikethroughThickness),
+    }
+}
+```
+
+`decorations` calcula as dúas liñas unha vez, en [`Typeface::new`](#typeface). A *closure* `line` fai o mesmo para cada unha, coa súa posición e o seu grosor:
+
+1. **As métricas.** `DWRITE_FONT_METRICS` dá a posición e o grosor do subliñado e do riscado, en unidades de deseño ([Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos)). `units` son os píxeles dunha unidade, os mesmos cos que se calcula a cela.
+2. **A posición é a do bordo superior da liña**, desde a liña base cara arriba: positiva por riba dela, como a do riscado, e negativa por debaixo, como a do subliñado. DirectWrite só di que é relativa á liña base; meiga tómaa como din as táboas de OpenType de onde sae, a `post` para o subliñado e a `OS/2` para o riscado. As filas de píxeles contan cara abaixo desde o alto da cela, así que o bordo superior está en `baseline - position × units`.
+3. **Píxeles enteiros.** O bordo e o grosor redondéanse, porque as liñas se debuxan enchendo filas enteiras de píxeles, nítidas, sen antialiasing. O grosor é polo menos dun píxel: a tamaños pequenos, o da fonte podería redondear a 0, e a liña non se vería.
+4. **Dentro da cela.** O bordo non sobe por riba dela (`max(0.0)`), o grosor non pasa do seu alto, e o bordo baixa como moito ata o alto menos o grosor, así que a liña remata na última fila da cela ou antes. Cada fila de celas debúxase só nos seus píxeles, e un fotograma redebuxa só as que cambiaron: unha liña que baixase á fila seguinte pintaría nela, e esa fila borraríaa ao debuxarse de novo.
+
+- `cell.height - thickness` non pode dar negativo, porque o grosor xa non pasa do alto. As conversións a `u32` son exactas: os valores xa están redondeados, non son negativos, e unha cela mide poucas decenas de píxeles.
+- As outras fontes da familia non as calculan: copian as da normal ([`styled`](#typeface)).
 
 ### Funcións auxiliares
 
 | Función | Que fai |
 |---|---|
 | `rendering()` | As opcións da rasterización: o modo `NATURAL_SYMMETRIC` e o axuste á grella activado. |
-| `find(system, name)` | A familia `name`, se está instalada, e a súa cara normal: `FindFamilyName`, `GetFontFamily`, `GetFirstMatchingFont` e `CreateFontFace`. |
+| `find(system, name, weight, style)` | A familia `name`, se está instalada, e a súa cara máis parecida a `weight` e `style`, co ancho normal: `FindFamilyName`, `GetFontFamily`, `GetFirstMatchingFont` e `CreateFontFace`. Se a familia non ten ese peso ou ese estilo, a cara simúlao. Desde a subfase 1.6 recibe o peso e o estilo; antes, daba sempre a cara normal. |
 | `font_metrics(face)` | As métricas da fonte (`GetMetrics`). |
 | `glyph_index(face, c)` | O glifo de `c` na cara, ou `None` se a cara non o ten: o glifo 0. |
 | `advance(face, glyph, em)` | Canto avanza un glifo, en píxeles. `GetDesignGlyphMetrics` dáo en unidades de deseño. |
@@ -874,10 +960,12 @@ Usan as fontes instaladas de verdade, pero sen ningunha xanela: Cascadia Mono ou
 | `descenders_go_below_the_baseline_and_stay_in_the_cell` | A 144 DPI, a `x` non baixa da liña base, e a `g` baixa máis dun píxel por debaixo dela, sen saír da cela. |
 | `wide_characters_fill_both_cells_with_the_fallback_font` | A fonte das celas non ten `中`, e o carácter ten tinta nas dúas celas: o ideograma da fonte que escolle o *fallback* ou, nun Windows sen fontes CJK, o glifo dos caracteres que faltan, centrado. |
 | `a_character_that_no_font_has_draws_the_missing_glyph` | U+FDD0, un «non carácter» que ningunha fonte ten, debuxa o glifo dos caracteres que faltan. |
+| `bold_and_italic_change_the_glyphs_but_not_the_cells` | A 144 DPI, a negra e a cursiva teñen a mesma cela ca a normal, e a negra, as mesmas liñas. A tinta da `M` negra, a suma da súa cobertura, é máis dun 10 % maior ca a da normal. E a cursiva inclínase: o centro da tinta da `I` normal está na mesma columna, a menos dun píxel, na primeira fila con tinta e na última, e o da `I` cursiva está máis dun píxel máis á dereita na primeira ca na última. Usa a `I` porque a `\|` de Cascadia Mono non se inclina na cursiva. |
+| `the_underline_goes_below_the_baseline_and_the_strikeout_above` | A 96, 120 e 144 DPI, as dúas liñas teñen polo menos un píxel de grosor; o subliñado está enteiro debaixo da liña base e dentro da cela, e o riscado, enteiro por riba da liña base, sen empezar na primeira fila da cela. |
 
 ## `crates/meiga-render/src/glyphs.rs`
 
-A caché de glifos: a cobertura de cada glifo, rasterizada unha vez, en *slots* do tamaño dunha cela ([ADR 0010](../adr/0010-texto-con-directwrite.md)).
+A caché de glifos: a cobertura de cada glifo, rasterizada unha vez, en *slots* do tamaño dunha cela ([ADR 0010](../adr/0010-texto-con-directwrite.md)). Desde a subfase 1.6, a mesma caché garda os glifos de todos os estilos, co estilo na clave de cada un.
 
 ### `GlyphCache`
 
@@ -922,18 +1010,20 @@ struct Slot {
 - **A memoria** medra con cada glifo novo, ata `CAPACITY` *slots*: con celas de 14 × 28 píxeles (150 %), 1,6 MB como moito. Unha pantalla dun terminal usa uns poucos centos de glifos distintos, moitos menos ca celas.
 
 ```rust
-pub fn find(&mut self, glyph: CellChar) -> Option<SlotId> {
-    let slot = *self.index.get(&key(glyph))?;
+pub fn find(&mut self, glyph: CellChar, style: u8) -> Option<SlotId> {
+    let slot = *self.index.get(&key(glyph, style))?;
     self.slots[slot as usize].used = true;
     Some(SlotId(slot))
 }
 ```
 
-**Buscar** un glifo é unha consulta na táboa *hash* e marcar o seu *slot* como usado. É o que se fai, en cada fotograma, en cada cela con texto que cambiou.
+**Buscar** un glifo nun estilo é unha consulta na táboa *hash* e marcar o seu *slot* como usado. É o que se fai, en cada fotograma, en cada cela con texto que cambiou.
+
+- **O estilo** é un número de 0 a 3, que escolle [`Font`](#font-e-blending): 0 é o normal. A caché non sabe que é a negra nin a cursiva, só que un carácter en dous estilos son dous glifos. Así, `glyphs.rs` non depende de `text.rs`, e as probas usan números.
 
 ```rust
-pub fn insert(&mut self, glyph: CellChar, rasterize: impl FnOnce(&mut [u8])) -> SlotId {
-    let key = key(glyph);
+pub fn insert(&mut self, glyph: CellChar, style: u8, rasterize: impl FnOnce(&mut [u8])) -> SlotId {
+    let key = key(glyph, style);
     let slot = match self.index.get(&key) {
         Some(&slot) => slot as usize,
         None => self.free_slot(),
@@ -947,7 +1037,7 @@ pub fn insert(&mut self, glyph: CellChar, rasterize: impl FnOnce(&mut [u8])) -> 
 }
 ```
 
-**Engadir** un glifo:
+**Engadir** un glifo nun estilo:
 
 1. Se xa estaba, reutiliza o seu *slot*; se non, colle un libre (`free_slot`).
 2. Pon o *slot* a cero e pásallo a `rasterize`, unha *closure* que escribe a cobertura. Así, a caché non sabe nada de DirectWrite, e as probas usan *closures* que pintan un píxel. `[slot * self.slot_len..][..self.slot_len]` é a porción do *slot*: desde o seu comezo, `slot_len` bytes.
@@ -980,17 +1070,24 @@ Un *slot* para un glifo novo:
 - É o algoritmo clásico de substitución de páxinas da memoria virtual: unha aproximación barata a substituír o glifo usado hai máis tempo (LRU), sen listas que actualizar cada vez que se usa un ([Wikipedia](https://en.wikipedia.org/wiki/Page_replacement_algorithm#Clock)).
 
 ```rust
-fn key(glyph: CellChar) -> u32 {
-    match glyph {
-        CellChar::Blank => 0,
-        CellChar::Narrow(c) => u32::from(c) << 2 | 1,
-        CellChar::WideLeft(c) => u32::from(c) << 2 | 2,
-        CellChar::WideRight(c) => u32::from(c) << 2 | 3,
-    }
+fn key(glyph: CellChar, style: u8) -> u32 {
+    let (c, cell) = match glyph {
+        CellChar::Blank => return 0,
+        CellChar::Narrow(c) => (c, 1),
+        CellChar::WideLeft(c) => (c, 2),
+        CellChar::WideRight(c) => (c, 3),
+    };
+    u32::from(c) << 4 | u32::from(style & 3) << 2 | cell
 }
 ```
 
-**A clave** dun glifo: o carácter e, nos dous bits baixos, que parte é: enteiro, a metade esquerda ou a dereita. Os caracteres chegan ata U+10FFFF, que cabe en 21 bits, así que a clave cabe en 23. Unha cela en branco nunca chega á caché.
+**A clave** dun glifo: o carácter, desde o bit 4; o estilo, de 0 a 3, nos bits 2 e 3; e, nos dous bits baixos, que parte é: enteiro, a metade esquerda ou a dereita. Os caracteres chegan ata U+10FFFF, que cabe en 21 bits, así que a clave cabe en 25. Unha cela en branco nunca chega á caché.
+
+- Desde a subfase 1.6, o carácter vai dous bits máis arriba, para deixarlle sitio ao estilo. `style & 3` deixa só os dous bits do estilo: un número maior non podería tocar os do carácter.
+- `return 0` sae da función desde dentro do `match`, coa clave dunha cela en branco. As outras dan o carácter e a súa parte, que se xuntan co estilo ao final.
+- **Un número, e non unha tupla.** Xuntar as tres cousas nun `u32` mantén a clave en 4 bytes, no índice e en cada *slot*, e o seu *hash* nunha soa multiplicación.
+
+**Unha soa caché para todos os estilos.** As fontes dos catro estilos teñen a mesma cela ([`styled`](#typeface)), así que os seus glifos caben nos mesmos *slots*. Con catro cachés, o límite de memoria sería catro veces maior, e cada unha substituiría os seus glifos sen ver os das outras. Cunha, os `CAPACITY` *slots* son para todos, e cando se enche sae un glifo que non se usou ultimamente, sexa do estilo que sexa: unha pantalla con moito texto en negra garda máis glifos negros.
 
 ```rust
 struct KeyHasher(u64);
@@ -1012,13 +1109,45 @@ impl Hasher for KeyHasher {
 | `a_glyph_is_rasterized_once_and_found_after` | Un glifo que non está non se atopa. Ao engadilo, a *closure* recibe un *slot* a cero, e despois atópase, coa súa cobertura e o seu rectángulo con tinta. |
 | `a_glyph_without_ink_has_an_empty_ink_box` | Un glifo sen cobertura ten o rectángulo con tinta baleiro. |
 | `each_half_of_a_wide_character_has_its_slot` | As dúas metades dun carácter ancho teñen *slots* distintos, e o carácter enteiro non atopa ningunha. |
+| `each_style_of_a_character_has_its_slot` | A mesma letra nos estilos 0 e 1 ocupa dous *slots*, e cada estilo atopa o seu, coa súa tinta; no estilo 3, no que non se engadiu, non se atopa. |
 | `inserting_again_reuses_the_slot` | Engadir outra vez un glifo usa o mesmo *slot*. |
 | `when_it_is_full_a_glyph_used_since_the_last_round_stays` | Nunha caché de 3, o cuarto glifo colle o *slot* do primeiro; e se o segundo se usa de novo, o quinto colle o do terceiro. |
 | `a_reused_slot_is_cleared_first` | Un *slot* reutilizado chega a cero á *closure*, sen a cobertura do glifo anterior. |
 
 ## `crates/meiga-render/src/text.rs`
 
-O texto en celas: os glifos dunha fonte, rasterizados a primeira vez que se debuxan, e debuxados no lenzo coas cores de cada cela.
+O texto en celas: os glifos dunha fonte, rasterizados a primeira vez que se debuxan, e debuxados no lenzo coas cores de cada cela. Desde a subfase 1.6, tamén en negra, en cursiva e en negra cursiva.
+
+### `FontStyle` e `Face`
+
+```rust
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct FontStyle {
+    pub bold: bool,
+    pub italic: bool,
+}
+
+impl FontStyle {
+    pub const REGULAR: FontStyle = FontStyle { bold: false, italic: false };
+
+    const fn index(self) -> usize {
+        self.bold as usize | (self.italic as usize) << 1
+    }
+}
+
+enum Face {
+    NotYet,
+    Ready(Typeface),
+    Missing,
+}
+```
+
+Os estilos da fonte, desde a subfase 1.6: a negra e a cursiva debúxanse coas fontes negra e cursiva da familia, sen cambiar a cor ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+
+- **`FontStyle`** di como se debuxan os glifos dunha fila: en negra (`bold`), en cursiva (`italic`), as dúas cousas ou ningunha. A negra e a cursiva son os únicos estilos das celas que chegan a `meiga-render`. Os outros resólveos a vista do terminal ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs), [Tecnoloxías › A paleta e os estilos](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)): o inverso e o tenue son as cores que lle pasa a [`Font::draw`](#font-e-blending), o oculto son celas en branco, e as liñas do subliñado e do riscado debúxaas ela despois. Así, este crate non depende dos atributos das celas do terminal.
+- Os `derive` son os mesmos ca os de [`Rgb`](meiga-core.md#cratesmeiga-coresrccolorrs), máis `Default`, que dá o estilo normal. **`REGULAR`** é ese mesmo estilo como constante, que se le mellor onde se usa: `FontStyle::REGULAR`.
+- **`index`** numera os catro estilos cun bit para cada atributo: 0 a normal, 1 a negra, 2 a cursiva e 3 a negra cursiva. `as usize` converte `false` en 0 e `true` en 1, e `<< 1` leva o da cursiva ao segundo bit. O número serve para dúas cousas: menos un, é o sitio da fonte do estilo no campo `styled` de `Font`; e é o estilo dos seus glifos na [caché](#glyphcache). É privada: os outros crates só ven os dous campos.
+- **`Face`** é a fonte dun estilo que non é o normal: `NotYet` mentres non se debuxou nada nese estilo, `Ready` coa fonte xa creada e `Missing` se non se puido crear. `Missing` lembra o fallo: as filas nese estilo debúxanse coa normal, sen intentalo outra vez en cada unha.
 
 ### `Font` e `BLENDING`
 
@@ -1027,7 +1156,8 @@ pub const BLENDING: Blending = Blending { gamma: 1.5, contrast: 0.5 };
 const SHADES: usize = 64;
 
 pub struct Font {
-    typeface: Typeface,
+    regular: Typeface,
+    styled: [Face; 3],
     glyphs: GlyphCache,
     wide: Vec<u8>,
     shades: Vec<(Rgb, Rgb, Box<Shades>)>,
@@ -1035,15 +1165,25 @@ pub struct Font {
 }
 ```
 
-Unha fonte para as celas dunha grella, a un tamaño e a un DPI, coa súa caché de glifos. É o que usa o resto de meiga para debuxar texto.
+Unha fonte para as celas dunha grella, a un tamaño e a un DPI, nos catro estilos, coa súa caché de glifos. É o que usa o resto de meiga para debuxar texto.
 
 - **`BLENDING`**: o gamma e o contraste do texto, ata que a subfase 8.3 os faga configurábeis. Con eles, unha liña de Cascadia Mono ao 150 % ten a mesma tinta ca no Windows Terminal, cunha diferenza menor do 0,5 % ([Tecnoloxías › Mesturar o texto co fondo](../tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste)).
+- **`regular` e `styled`**: a fonte normal e, desde a subfase 1.6, as dos outros tres estilos, na orde de `index`: a negra, a cursiva e a negra cursiva. `Font::new` só crea a normal; as outras créanse a primeira vez que se debuxa unha fila no seu estilo (`typeface_for`, máis abaixo). Así, o arranque crea unha soa fonte, e un programa que nunca usa a cursiva nunca a crea.
+- **`glyphs`**: unha soa caché para os glifos de todos os estilos, co estilo na clave ([`GlyphCache`](#glyphcache)).
 - `wide`: un búfer para as dúas celas dun carácter ancho, que se rasterizan xuntas. Reutilízase.
 - `shades`: as táboas de tons dos últimos 64 pares de cores (`SHADES`), a máis recente ao final. Unha pantalla dun terminal usa poucos pares; se hai máis, o máis antigo calcúlase de novo cando volta. Cada táboa ocupa 1 KB, nunha `Box`, e o vector só move punteiros.
-- `new`, `family`, `cell` e `cached_glyphs` crean a fonte, e dan a familia atopada, o tamaño da cela e cantos glifos hai na caché.
+- `new`, `family`, `cell`, `decorations` e `cached_glyphs` crean a fonte, e dan a familia atopada, o tamaño da cela, onde van o subliñado e o riscado ([`Decorations`](#line-e-decorations)) e cantos glifos hai na caché, de todos os estilos. A familia, a cela e as liñas son as da fonte normal, que comparten os outros estilos: o subliñado dunha liña vai á mesma altura no texto normal e no negro.
 
 ```rust
-pub fn draw(&mut self, canvas: &mut Canvas<'_>, at: Point, cells: &[CellChar], text: Rgb, background: Rgb) {
+pub fn draw(
+    &mut self,
+    canvas: &mut Canvas<'_>,
+    at: Point,
+    cells: &[CellChar],
+    style: FontStyle,
+    text: Rgb,
+    background: Rgb,
+) {
     let cell = self.cell();
     let (Ok(count), Ok(width), Ok(height)) =
         (i32::try_from(cells.len()), i32::try_from(cell.width), i32::try_from(cell.height))
@@ -1063,10 +1203,11 @@ pub fn draw(&mut self, canvas: &mut Canvas<'_>, at: Point, cells: &[CellChar], t
     canvas.fill(visible, background);
     let first = ((visible.left - at.x) / width) as usize;
     let last = ((visible.right - 1 - at.x) / width) as usize;
-    let Self { typeface, glyphs, wide, shades, blending } = self;
+    let Self { regular, styled, glyphs, wide, shades, blending } = self;
+    let (typeface, style) = typeface_for(regular, styled, style);
     let shades = shades_for(shades, text, background, *blending);
     for (index, &c) in cells.iter().enumerate().take(last + 1).skip(first) {
-        let Some(slot) = slot(glyphs, typeface, wide, c) else {
+        let Some(slot) = slot(glyphs, typeface, style, wide, c) else {
             continue;
         };
         let glyph = glyphs.glyph(slot);
@@ -1076,29 +1217,67 @@ pub fn draw(&mut self, canvas: &mut Canvas<'_>, at: Point, cells: &[CellChar], t
 }
 ```
 
-**Debuxa `cells` nunha fila**, desde `at`, a esquina superior esquerda da primeira, coas cores `text` e `background`:
+**Debuxa `cells` nunha fila**, desde `at`, a esquina superior esquerda da primeira, no estilo `style` e coas cores `text` e `background`:
 
 1. **A parte visíbel:** o rectángulo da fila, recortado polo `clip` do lenzo. Se non se ve nada, non fai nada máis: nin sequera busca os glifos.
 2. **O fondo** de toda a parte visíbel, dunha vez.
 3. **As celas que toca a parte visíbel**, da primeira (`first`) á última (`last`): só esas buscan o seu glifo e debuxan a súa tinta. Así, un fotograma que cambia unha cela non toca as demais da fila, e un glifo que non se ve nin se rasteriza.
-4. **A táboa de tons** do par de cores, unha vez para toda a fila.
-5. **Cada cela:** o seu *slot* na caché (`slot`, que rasteriza o glifo a primeira vez) e a súa tinta (`draw_coverage`). Unha cela en branco só ten o fondo.
+4. **A fonte do estilo** (`typeface_for`), que se crea a primeira vez que se usa, e o número co que os seus glifos van na caché.
+5. **A táboa de tons** do par de cores.
+6. **Cada cela:** o seu *slot* na caché (`slot`, que rasteriza o glifo a primeira vez) e a súa tinta (`draw_coverage`). Unha cela en branco só ten o fondo.
 
-- **Os préstamos.** `let Self { typeface, glyphs, wide, shades, blending } = self;` separa os campos en referencias distintas: a táboa de tons segue prestada mentres se modifican a caché e a fonte, e Rust permíteo porque son campos distintos.
+- **Un estilo e un par de cores por fila.** Quen chama divide cada fila de celas en tramos co mesmo estilo e as mesmas cores, e chama a `draw` unha vez por tramo ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). Por iso a fonte e a táboa de tons se escollen unha vez para toda a fila, e non en cada cela. Desde a subfase 1.6 recibe o estilo; antes, todo o texto era normal.
+- **Os préstamos.** `let Self { regular, styled, glyphs, wide, shades, blending } = self;` separa os campos en referencias distintas: a fonte do estilo, a caché e a táboa de tons están prestadas á vez, as dúas primeiras para modificalas, e Rust permíteo porque son campos distintos. Por iso `typeface_for`, `slot` e `shades_for` son funcións que reciben campos, e non métodos: un método tomaría prestada a `Font` enteira.
 - As contas das posicións son `saturating_*`: unha fila moi longa ou moi á dereita queda no máximo dun `i32`, en vez de desbordar. As divisións non dan números negativos, porque a parte visíbel está dentro da fila.
 - Se DirectWrite non pode rasterizar un glifo, a cela queda co fondo e o debuxo continúa.
 
 ```rust
-fn slot(glyphs: &mut GlyphCache, typeface: &mut Typeface, wide: &mut Vec<u8>, c: CellChar) -> Option<SlotId> {
+fn typeface_for<'a>(
+    regular: &'a mut Typeface,
+    styled: &'a mut [Face; 3],
+    style: FontStyle,
+) -> (&'a mut Typeface, u8) {
+    let Some(face) = style.index().checked_sub(1).map(|index| &mut styled[index]) else {
+        return (regular, 0);
+    };
+    if matches!(face, Face::NotYet) {
+        *face = match regular.styled(style.bold, style.italic) {
+            Ok(typeface) => Face::Ready(typeface),
+            Err(_) => Face::Missing,
+        };
+    }
+    match face {
+        Face::Ready(typeface) => (typeface, style.index() as u8),
+        Face::NotYet | Face::Missing => (regular, 0),
+    }
+}
+```
+
+**A fonte dun estilo**, e o seu número na caché de glifos:
+
+- O estilo normal, o 0, é a fonte normal: `checked_sub(1)` dá `None`, e o `let … else` volta con ela. Nos outros, o índice menos un, de 0 a 2, é o seu sitio en `styled`, así que `styled[index]` nunca sae do *array*.
+- **A primeira vez** (`NotYet`), crea a fonte con [`Typeface::styled`](#typeface), a partir da normal. `matches!` mira a variante sen mover nada.
+- **Se non se pode crear**, queda `Missing`, e non se intenta outra vez: cada intento busca na colección de fontes, e cada fila nese estilo o repetiría.
+- **Sen ela, a normal e o estilo 0.** As celas dese estilo vense coma as normais, sen negra nin cursiva, pero vense; e os seus glifos son os da normal na caché, que non se rasterizan nin se gardan dúas veces.
+- O tempo de vida `'a` di que a fonte que devolve está prestada dun dos dous parámetros, e non pode vivir máis ca eles. `as u8` non perde nada: o índice é como moito 3. `NotYet` non pode chegar ao último `match`, porque o `if` o cambia, pero Rust pide cubrir todas as variantes.
+
+```rust
+fn slot(
+    glyphs: &mut GlyphCache,
+    typeface: &mut Typeface,
+    style: u8,
+    wide: &mut Vec<u8>,
+    c: CellChar,
+) -> Option<SlotId> {
     if c == CellChar::Blank {
         return None;
     }
-    if let Some(slot) = glyphs.find(c) {
+    if let Some(slot) = glyphs.find(c, style) {
         return Some(slot);
     }
     match c {
         CellChar::Blank => None,
-        CellChar::Narrow(character) => Some(glyphs.insert(c, |coverage| {
+        CellChar::Narrow(character) => Some(glyphs.insert(c, style, |coverage| {
             let _ = typeface.rasterize(character, 1, coverage);
         })),
         CellChar::WideLeft(character) | CellChar::WideRight(character) => {
@@ -1118,17 +1297,17 @@ fn slot(glyphs: &mut GlyphCache, typeface: &mut Typeface, wide: &mut Vec<u8>, c:
             };
             let right = matches!(c, CellChar::WideRight(_));
             let other = if right { CellChar::WideLeft(character) } else { CellChar::WideRight(character) };
-            glyphs.insert(other, half(!right));
-            Some(glyphs.insert(c, half(right)))
+            glyphs.insert(other, style, half(!right));
+            Some(glyphs.insert(c, style, half(right)))
         }
     }
 }
 ```
 
-**O *slot* do glifo dunha cela:**
+**O *slot* do glifo dunha cela** no estilo `style`, o da fonte `typeface`:
 
 - Unha cela en branco non ten glifo: `None`.
-- Se está na caché, o seu *slot*.
+- Se está na caché nese estilo, o seu *slot*. A mesma letra en normal e en negra son dous glifos, en dous *slots*.
 - Un carácter estreito rasterízase directamente no seu *slot*. Se falla, o *slot* queda a cero e a cela vese co fondo, ata que a caché o substitúa. `let _ =` descarta o erro de forma explícita.
 - **Un carácter ancho** rasterízase unha soa vez nas dúas celas, no búfer `wide`, e gárdanse as dúas metades: a *closure* que dá `half` copia a metade esquerda ou a dereita de cada fila ao *slot*. Gárdase primeiro a outra metade, a que non se pediu, porque o *slot* que vale é o da última inserción ([`SlotId`](#glyphcache)). A outra metade adoita debuxarse xusto despois, e xa estará na caché.
 
@@ -1159,4 +1338,5 @@ Usan as fontes do sistema, como as de `dwrite.rs`.
 | `a_row_paints_its_background_and_the_ink_of_its_glyphs` | Unha fila de tres celas (`a b`) nun lenzo de catro: a cela en branco só ten fondo, as outras dúas teñen píxeles da cor do texto, a cuarta non se toca, e a caché ten dous glifos. |
 | `only_the_cells_inside_the_clip_are_drawn_and_rasterized` | Cun recorte que colle o final da terceira cela e a cuarta, só cambian os píxeles do recorte, e só se rasterizan dous glifos. |
 | `a_wide_character_is_rasterized_once_for_both_cells` | Debuxando só a metade dereita de `中`, as dúas metades quedan na caché; debuxándoo enteiro despois, non se engade ningunha, e hai tinta nas dúas celas. |
+| `each_style_has_its_glyphs` | Unha `M` en normal, en negra e en cursiva: a negra ten máis píxeles con tinta ca a normal, a cursiva é distinta da normal, e a caché ten tres glifos, un por estilo. Se a negra ou a cursiva non se puidesen crear, usarían o glifo da normal, e serían menos. As liñas da fonte son as da normal. |
 | `the_shades_of_the_oldest_pair_are_dropped_first` | Con 65 pares de cores, quedan 64 e sae o primeiro; un par que xa estaba dá a súa táboa sen engadir ningunha. |

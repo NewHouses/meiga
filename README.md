@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` opens a window with a demo: the same text at three scales, drawn with DirectWrite and a glyph cache, and rectangles that you draw by dragging the mouse, so that you can see that each frame presents only the areas that changed. It uses no CPU while idle or minimized. The platform layer can already run a shell in a pseudoconsole (ConPTY) and talk to it, and the terminal core can already read its output, behind a facade over `alacritty_terminal`, but the window does not show shells yet.
+> **Status:** early development. `meiga.exe` is already a terminal, without a keyboard yet: it runs a program in a pseudoconsole (ConPTY), by default PowerShell 7, and shows its output with colours, bold and italic text, underlines, wide characters, a cursor and the title that the program sets. Each frame presents only the cells that changed, and it uses no CPU while idle or minimized. Typing comes next.
 
 ## Goals
 
@@ -54,7 +54,7 @@ cargo deny check
 
 `fetch-conpty.ps1` downloads the ConPTY that meiga ships, the NuGet package `Microsoft.Windows.Console.ConPTY` at a pinned version, checks its SHA-256 and its Microsoft signatures, and extracts it to `target\conpty\`. It downloads it only once. The tests of `meiga-win` run programs in it, and fail with a message that asks for the script when it is missing. `.\tools\fetch-conpty.ps1 -CheckLatest` tells whether nuget.org has a newer stable version; CI checks it every Monday.
 
-`check-imports.ps1`, `check-window.ps1` and `check-present.ps1` check the release build: build it first with `.\tools\package.ps1` or `cargo build --release`. `check-window.ps1` and `check-present.ps1` start `meiga.exe`, so its window appears for a moment; do not click or type in it while `check-present.ps1` draws in it. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
+`check-imports.ps1`, `check-window.ps1` and `check-present.ps1` check the release build: build it first with `.\tools\package.ps1`, which also puts the ConPTY of meiga next to it. `check-window.ps1` runs cmd in meiga, and checks that cmd sets the title of the window and ends with it; `check-present.ps1` runs a PowerShell script in meiga that writes to it step by step, and checks the frames. Their windows appear for a moment: do not click or type while `check-present.ps1` runs. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
 
 To see what a program sends through the ConPTY, run it in the console example of `meiga-win`. It prints each block of output with the control characters in sight, and sends each line that you type, followed by Enter; Ctrl+Z and Enter close the session:
 
@@ -73,6 +73,18 @@ cargo run --release -p meiga-core --example replay -- ola.mrec --screen
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
 
+## Running
+
+```powershell
+.\target\release\meiga.exe                     # PowerShell 7 or, if it is not installed, Windows PowerShell
+.\target\release\meiga.exe cmd /k title Hello  # any program, with its arguments
+.\target\release\meiga.exe pwsh -NoProfile -File tools\terminal-sample.ps1
+```
+
+The command line is `meiga [--trace-frames <file>] [--] [<program> [<arguments>]]`: the options of meiga go before the program, everything after the program is for it, and `--` ends the options. When the program ends, meiga shows its exit code and keeps the window open until you close it. There is no keyboard yet, so the program runs without input.
+
+meiga uses the `conpty.dll` and `OpenConsole.exe` next to `meiga.exe`, as in the zip file, and the ConPTY of Windows when they are missing. `package.ps1` also copies them next to `target\release\meiga.exe`. `tools\terminal-sample.ps1` writes a sample of colours, styles and wide characters, to check a terminal by eye.
+
 ## Measuring
 
 `tools\perf\measure.ps1` measures the CPU, wakeups, memory and threads of a terminal and of the parts of Windows that put it on the screen (the Desktop Window Manager and Remote Desktop). It works with any terminal and does not need administrator rights. The results are printed and saved as CSV in `.perf\`, which is not committed:
@@ -88,7 +100,13 @@ The latest build of each pull request can be downloaded from the artifacts of it
 .\tools\perf\run-scenario.ps1 ai-stream warp -Shell wsl
 ```
 
-`tools\perf\measure-startup.ps1` measures how long `meiga.exe` takes to open its window: it starts it 20 times, closes it each time, and prints the median and the 95th percentile of the time until the window is painted:
+With `-Start`, it starts a terminal that runs the program of its command line, such as meiga, with the scenario as its program, and closes it at the end:
+
+```powershell
+.\tools\perf\run-scenario.ps1 bigfile -Start .\target\release\meiga.exe
+```
+
+`tools\perf\measure-startup.ps1` measures how long `meiga.exe` takes to open its window, with its shell started: it starts it 20 times, closes it each time, and prints the median and the 95th percentile of the time until the window is painted:
 
 ```powershell
 .\tools\perf\measure-startup.ps1

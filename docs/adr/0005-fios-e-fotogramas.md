@@ -1,6 +1,6 @@
 # ADR 0005 · Modelo de fíos e fotogramas
 
-- **Estado:** Aceptado; concretado polos [ADR 0008](0008-temporizador-dos-fotogramas.md) e [ADR 0011](0011-fin-e-peche-das-sesions.md)
+- **Estado:** Aceptado; concretado polos [ADR 0008](0008-temporizador-dos-fotogramas.md), [ADR 0011](0011-fin-e-peche-das-sesions.md) e [ADR 0013](0013-da-saida-a-pantalla.md)
 - **Data:** 2026-11-06
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0004](0004-conpty-empaquetado.md)
 
@@ -61,5 +61,5 @@
 
 ## Referencias
 
-- [Arquitectura › Fluxo de datos](../arquitectura.md#3-fluxo-de-datos-previsto) e [Arquitectura › Fíos](../arquitectura.md#4-fíos-previsto).
+- [Arquitectura › Fluxo de datos](../arquitectura.md#3-fluxo-de-datos) e [Arquitectura › Fíos](../arquitectura.md#4-fíos).
 - Microsoft Learn: [`GetMessageW`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagew), [`PostMessageW`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew) e [`RegisterWaitForSingleObject`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-registerwaitforsingleobject).

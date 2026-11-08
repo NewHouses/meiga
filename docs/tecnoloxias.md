@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 1.5. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 1.6. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -601,6 +601,10 @@ meiga usa un *waitable timer* de alta resolución para os fotogramas, e só o ac
 
 **Por que unha caché.** Rasterizar un glifo leva microsegundos; copiar os seus píxeles xa calculados, moito menos. Por iso meiga rasteriza cada glifo a primeira vez que o debuxa e garda a súa cobertura nunha caché ([Código › meiga-render](codigo/meiga-render.md#cratesmeiga-rendersrcglyphsrs)).
 
+**A negra e a cursiva.** Cada fonte dunha familia ten un peso (*weight*: 400 a normal, 700 a negra), un estilo (normal, cursiva ou oblicua) e un ancho. `IDWriteFontFamily::GetFirstMatchingFont` dá a fonte da familia máis parecida a un peso, un ancho e un estilo. Se a familia non ten negra ou cursiva, DirectWrite simúlaas: engrosa os contornos ou inclínaos, e `GetSimulations` dío. Cascadia Mono, nas versións actuais de Windows, é unha fonte variábel: un só arquivo cun eixe de peso, e DirectWrite mostra as súas instancias con nome (Light, Regular, SemiBold, Bold…), tamén as cursivas, coma fontes da familia. Consolas ten catro arquivos: normal, negra, cursiva e negra cursiva. meiga crea a negra, a cursiva e a negra cursiva só a primeira vez que as necesita, co tamaño de cela e a liña base da normal, para que todas encaixen na mesma grella ([Código › meiga-render](codigo/meiga-render.md#cratesmeiga-rendersrctextrs)).
+
+**O subliñado e o riscado.** As métricas da fonte (`DWRITE_FONT_METRICS`) dan a posición e o grosor do subliñado (`underlinePosition` e `underlineThickness`) e do riscado (`strikethroughPosition` e `strikethroughThickness`), en unidades de deseño e desde a liña base cara arriba: a do subliñado é negativa, debaixo dela. meiga toma a posición coma o bordo superior da liña, como di a táboa `post` de OpenType, convértea a píxeles e mantena dentro da cela, cun grosor dun píxel polo menos.
+
 ## 28. COM e o crate `windows`
 
 **COM** (*Component Object Model*) é o modelo de obxectos binarios de Windows: unha forma de usar os obxectos doutro código, escrito en calquera linguaxe, compartindo só unha táboa de funcións. Moitas APIs de Windows son COM: DirectWrite, Direct2D, Direct3D, WIC…
@@ -793,7 +797,7 @@ Dous crates do proxecto Alacritty fan o traballo central do terminal ([ADR 0003]
 | `Bell` | A campá. | Un aviso, desde a fase 2. |
 | `ClipboardStore` | Copiar un texto (OSC 52) ao portapapeis ou á selección primaria. | Só ao portapapeis. |
 | `ClipboardLoad` | Ler o portapapeis para o programa. | Nunca chega: `Osc52::OnlyCopy`. |
-| `ColorRequest`, `TextAreaSizeRequest` | Preguntas polas cores e polo tamaño en píxeles, que necesitan o renderizador. | Desde a subfase 1.6. |
+| `ColorRequest`, `TextAreaSizeRequest` | Preguntas polas cores e polo tamaño en píxeles, que necesitan o renderizador. | Respóndense coa paleta e co tamaño da cela, no seu lugar entre as outras respostas ([ADR 0013](adr/0013-da-saida-a-pantalla.md)). |
 | `CursorBlinkingChange`, `MouseCursorDirty`, `Wakeup`, `Exit`, `ChildExit` | Para a interface e o bucle de eventos de Alacritty. | Non se usan. |
 
 **O que meiga non usa.** `alacritty_terminal` ten tamén o seu propio PTY e o seu bucle de eventos (`tty` e `event_loop`, cos crates `polling`, `miow` e `piper`), a selección, o modo vi e a busca con expresións regulares (`regex-automata`). meiga só usa o `Term` e o parser: compílase todo, pero o ligador elimina o que non se chama. Sen as *features* por defecto, non usa `serde`.
@@ -842,7 +846,7 @@ CAN (`0x18`) e SUB (`0x1A`) cancelan a secuencia que se estaba a ler, e un ESC n
 | `2026` | As actualizacións sincronizadas, máis abaixo. |
 | `9001` | *win32-input-mode*: as teclas como eventos completos de Windows ([§31](#31-conpty-a-pseudoconsola-de-windows)). `alacritty_terminal` ignórao, e sígueo o escáner de meiga. |
 
-Ademais, `ESC =` e `ESC >` activan e desactivan o modo aplicación do teclado numérico; `ESC [ 20 h`, que un salto de liña leve tamén o cursor ao principio da liña (*LNM*); e `ESC [ n SP q` (*DECSCUSR*) cambia a forma do cursor: bloque, subliñado ou barra, pestanexando ou fixo.
+Ademais, `ESC =` e `ESC >` activan e desactivan o modo aplicación do teclado numérico; `ESC [ 20 h`, que un salto de liña leve tamén o cursor ao principio da liña (*LNM*); e `ESC [ n SP q` (*DECSCUSR*) cambia a forma do cursor: bloque (1 e 2), subliñado (3 e 4) ou barra (5 e 6), pestanexando (os impares) ou fixo (os pares). O 0 volta á forma por defecto, que en meiga é a barra que pestanexa ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)).
 
 **As respostas.** Algunhas secuencias son preguntas, e o terminal responde escribindo na entrada do programa, como se fose o teclado:
 
@@ -853,12 +857,102 @@ Ademais, `ESC =` e `ESC >` activan e desactivan o modo aplicación do teclado nu
 | `ESC [ 5 n` (*DSR*) | `ESC [ 0 n` | Que todo está ben. |
 | `ESC [ 6 n` (*DSR*) | `ESC [ fila ; columna R` | A posición do cursor. |
 | `ESC [ 18 t` (*XTWINOPS*) | `ESC [ 8 ; filas ; columnas t` | O tamaño da grella. |
-| `ESC [ 14 t`; `ESC ] 4 ; n ; ?`, `ESC ] 10 ; ?` e `ESC ] 11 ; ?` | Ningunha, ata a subfase 1.6 | O tamaño en píxeles e as cores. |
+| `ESC [ 14 t` (*XTWINOPS*) | `ESC [ 4 ; alto ; ancho t` | O tamaño da grella en píxeles: as celas polo tamaño dunha cela. |
+| `ESC ] 4 ; n ; ? ST` | `ESC ] 4 ; n ; rgb:rrrr/gggg/bbbb ST` | A cor *n* da paleta, con catro cifras hexadecimais por compoñente: `#16181D` é `rgb:1616/1818/1d1d`. |
+| `ESC ] 10 ; ? ST`, `ESC ] 11 ; ? ST` e `ESC ] 12 ; ? ST` | `ESC ] 10 ; rgb:… ST`, e o mesmo co 11 e o 12 | A cor do texto, a do fondo e a do cursor. |
+
+`ST` é o final dunha OSC: a resposta remata coma a pregunta, con `BEL` ou con `ESC \`. A orde das respostas é a das preguntas: moitos programas preguntan pola cor do fondo e despois polos atributos do terminal (`ESC [ c`), á que responden todos, para saber, se esta chega primeiro, que o terminal non responde a outra ([ADR 0013](adr/0013-da-saida-a-pantalla.md)).
 
 `ESC [ 22 t` e `ESC [ 23 t` gardan e recuperan o título. `ESC [ 1 t`, que o ConPTY envía ao arrancar, pide restaurar a xanela se está minimizada, e ignórase.
 
 **O título e o portapapeis.** `ESC ] 0 ; texto BEL` e `ESC ] 2 ; texto BEL` cambian o título; con un texto baleiro, a tab volta ao seu. `ESC ] 52 ; c ; base64 BEL` copia ao portapapeis un texto codificado en base64. Con `?` no lugar do texto, pediría lelo, e meiga nunca o permite: calquera programa, tamén un servidor remoto ao que te conectas por SSH, podería ler o que copiaches. `p` e `s` no lugar de `c` son a selección primaria de X11, que Windows non ten.
 
-**As actualizacións sincronizadas.** Un programa que redebuxa moito, como un editor ou unha IA que reescribe a súa zona de estado, pode escribir `ESC [ ? 2026 h` antes e `ESC [ ? 2026 l` despois: o terminal garda o que hai entre as dúas e móstrao de vez, sen fotogramas a medio debuxar. Se o fin non chega, móstrao igual aos 150 ms, ou cando xa garda 2 MiB. `vte` garda a saída e coñece a hora límite, pero non ten temporizador: meiga consúltaa (`sync_deadline`) e remata a actualización (`end_sync`) desde o temporizador dos fotogramas, na subfase 1.6 ([ADR 0012](adr/0012-fachada-do-terminal.md)).
+**As actualizacións sincronizadas.** Un programa que redebuxa moito, como un editor ou unha IA que reescribe a súa zona de estado, pode escribir `ESC [ ? 2026 h` antes e `ESC [ ? 2026 l` despois: o terminal garda o que hai entre as dúas e móstrao de vez, sen fotogramas a medio debuxar. Se o fin non chega, móstrao igual aos 150 ms, ou cando xa garda 2 MiB. `vte` garda a saída e coñece a hora límite, pero non ten temporizador: antes de cada fotograma, meiga consúltaa (`sync_deadline`) e, se xa pasou, remata a actualización (`end_sync`); se non, programa o temporizador dos fotogramas para esa hora ([ADR 0012](adr/0012-fachada-do-terminal.md), [ADR 0013](adr/0013-da-saida-a-pantalla.md)). Faino tamén coa xanela minimizada, que non debuxa fotogramas: mentres a actualización está aberta, `vte` garda tamén as preguntas do programa, e este esperaría a resposta ata que se restaurase a xanela.
 
 **O escáner de meiga.** Antes do parser, un escáner le os mesmos bytes para seguir os modos que `alacritty_terminal` ignora, polo de agora só `?9001` ([ADR 0007](adr/0007-integracion-coa-shell.md)). Segue as mesmas regras ca `vte` (un ESC empeza outra secuencia, CAN e SUB cancelan, despois dun ESC os caracteres de control e os bytes desde 0x7f non contan, os mesmos límites, e `?` só conta xusto despois de `ESC [`), así que ve un cambio de modo só cando `vte` o vería. Só le byte a byte as secuencias `ESC [ ?`: para chegar á seguinte, busca o ESC con `memchr`, un crate que compara 16 ou 32 bytes á vez con instrucións SIMD ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrctermscannerrs)).
+
+## 36. Avisar á xanela desde outro fío: `PostMessage`
+
+Cada xanela pertence ao fío que a creou: só ese fío recibe as súas mensaxes, e é o que debe debuxar nela ([§22](#22-xanelas-win32-e-o-bucle-de-mensaxes)). Os outros fíos, como o lector dunha sesión, teñen que pedirllo. Windows ofrece tres formas:
+
+| Función | Que fai | Por que non, ou por que si |
+|---|---|---|
+| [`SendMessageW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-sendmessagew) | Chama ao procedemento da xanela, no fío da xanela, e agarda a que remate. | O fío que a envía queda bloqueado: se a interface agarda por algo que ten ese fío, ningún dos dous avanza. |
+| [`PostThreadMessageW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-postthreadmessagew) | Deixa a mensaxe na cola do fío, sen xanela, e volta de inmediato. | Microsoft avisa de que se perde se o fío está nun bucle modal, como o que fai Windows mentres se move ou se redimensiona a xanela ([§26](#26-temporizadores-e-a-espera-do-fío-da-interface)). |
+| [`PostMessageW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-postmessagew) | Deixa a mensaxe na cola da xanela e volta de inmediato. | A que usa meiga. A cola admite como moito 10 000 mensaxes publicadas, así que non se pode enviar unha por cada bloque de saída. |
+
+**As mensaxes propias.** Os números desde [`WM_APP`](https://learn.microsoft.com/windows/win32/winmsg/wm-app) (`0x8000`) ata `0xBFFF` son para as mensaxes privadas dun programa, que ningún control nin Windows usa; os desde `WM_USER` (`0x0400`) son das clases de xanela, e os controles úsanos. meiga usa `WM_APP` para o aviso do fío lector, `WM_WAKE`.
+
+**Cando chega.** A mensaxe espera na cola ata que o fío da interface a colle: se chega antes de que empece o bucle de mensaxes, por exemplo porque o programa escribiu moi rápido, atende cando empeza. `MsgWaitForMultipleObjectsEx` esperta cunha mensaxe publicada ([§26](#26-temporizadores-e-a-espera-do-fío-da-interface)). Se a xanela xa non existe, `PostMessageW` falla sen máis.
+
+**Un aviso, non unha cola de traballo.** O aviso non leva datos: só di «mira o terminal». O fío lector só o envía se non había outro pendente, cunha marca que comparte coa interface baixo o mesmo *lock* ca o terminal, e a interface quítaa cando o le. Así, por moita saída que chegue, nunca hai máis dun aviso de cada tipo na cola ([ADR 0013](adr/0013-da-saida-a-pantalla.md)).
+
+## 37. A paleta e os estilos das celas
+
+**As 16 cores.** As secuencias de cor do terminal (*SGR*, [§35](#35-as-secuencias-de-control)) non din que cor exacta é «vermello»: cada terminal ten a súa paleta. meiga usa a do esquema *Campbell*, a de por defecto no Windows Terminal e na consola de Windows, coas súas propias cores para o texto e o fondo:
+
+| | Normais (`30`–`37`) | Brillantes (`90`–`97`) |
+|---|---|---|
+| Negro | `#0C0C0C` | `#767676` |
+| Vermello | `#C50F1F` | `#E74856` |
+| Verde | `#13A10E` | `#16C60C` |
+| Amarelo | `#C19C00` | `#F9F1A5` |
+| Azul | `#0037DA` | `#3B78FF` |
+| Magenta | `#881798` | `#B4009E` |
+| Cian | `#3A96DD` | `#61D6D6` |
+| Branco | `#CCCCCC` | `#F2F2F2` |
+
+O texto e o fondo por defecto (`39` e `49`) non son ningunha delas: en meiga, `#D4D7DD` e `#16181D`. O cursor é da cor do texto.
+
+**As 256 cores.** Despois das 16 vén un cubo de 6 × 6 × 6 cores, da 16 á 231: a cor `16 + 36 r + 6 g + b`, onde cada compoñente, de 0 a 5, vale `00`, `5F`, `87`, `AF`, `D7` ou `FF`. Da 232 á 255, 24 grises, de `8` a `238` en pasos de 10. Son as do xterm, e todos os terminais as usan. As cores *truecolor* (`38;2;r;g;b`) non pasan pola paleta.
+
+**Cambiar a paleta.** Un programa pode cambiar a cor *n* da paleta (`ESC ] 4 ; n ; cor ST`), a do texto (`ESC ] 10`), a do fondo (`ESC ] 11`) e a do cursor (`ESC ] 12`), e voltar á orixinal (`ESC ] 104`, `110`, `111` e `112`). A cor escríbese como `#RRGGBB` ou `rgb:RR/GG/BB`. As celas gardan o número da cor, non a cor, así que o texto que xa está na pantalla cambia tamén, coma no xterm: meiga compara a paleta en cada copia do que cambiou, e se cambiou, volta debuxalo todo, marxes incluídas.
+
+**Os estilos.** Así debuxa meiga cada cela ([Código › meiga](codigo/meiga.md#cratesmeigasrcviewrs)):
+
+| Estilo | Como se debuxa |
+|---|---|
+| Negra (`1`), cursiva (`3`) | Coa fonte negra, cursiva ou negra cursiva da familia ([§27](#27-directwrite-fontes-e-glifos)), sen cambiar a cor. |
+| Inverso (`7`) | O texto coa cor do fondo, e o fondo coa do texto. |
+| Tenue (`2`) | A cor do texto, despois do inverso, un terzo do camiño cara á do fondo. |
+| Oculto (`8`) | Só o fondo. |
+| Subliñado (`4`, `4:2`–`4:5`) | Unha liña simple, dobre, ondulada, de puntos ou de trazos, da cor do texto, onde di a fonte. Os puntos e as ondas van sempre nos mesmos sitios da fila, contados desde a esquerda da xanela, aínda que un fotograma debuxe só unha parte dela. |
+| Riscado (`9`) | Unha liña da cor do texto, onde di a fonte. |
+| Carácter ancho | Ocupa dúas celas ([§29](#29-o-ancho-dos-caracteres-unicode-width)), e o cursor sobre el tamén. |
+
+Os terminais non coinciden en todo: o xterm, por exemplo, pode debuxar a negra coa cor brillante en vez de coa fonte negra.
+
+## 38. O cursor de Windows: pestanexo, tempo e grosor
+
+Windows chama *caret* ao cursor do texto (o *cursor* é o do rato), e ten catro axustes del:
+
+| Axuste | Como se le | Que é |
+|---|---|---|
+| Pestanexo activado | [`GetSystemMetrics`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getsystemmetrics)`(SM_CARETBLINKINGENABLED)` | Distinto de 0 se o cursor debe pestanexar. O Escritorio remoto pode desactivalo, para aforrar eses fotogramas. |
+| Tempo do pestanexo | [`GetCaretBlinkTime`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getcaretblinktime) | Os milisegundos de cada metade do pestanexo, visíbel e oculto: 530 por defecto. `INFINITE` se non pestanexa, e 0 se hai un erro. |
+| Tempo de espera | [`SystemParametersInfoW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-systemparametersinfow)`(SPI_GETCARETTIMEOUT)` | Os milisegundos sen actividade despois dos que o cursor deixa de pestanexar: 5 000 por defecto. |
+| Grosor | `SystemParametersInfoW(SPI_GETCARETWIDTH)` | O ancho do cursor en píxeles á escala do 100 %: o «grosor do cursor de texto» da configuración de accesibilidade, 1 por defecto. |
+
+**Como os usa meiga** ([ADR 0013](adr/0013-da-saida-a-pantalla.md)). O cursor só pestanexa se a xanela ten o foco, se o pestanexo está activado e o seu tempo vai de 1 a 10 000 ms, coma no Windows Terminal, e se o programa non pediu un cursor fixo. Deixa de pestanexar, visíbel, cando pasa o tempo de espera sen ningún cambio na pantalla: así, en repouso, a xanela non esperta. O grosor da barra, do subliñado e do contorno escálase co DPI da xanela, redondeado: 2 píxeles ao 150 % co grosor de 1. meiga le os axustes ao arrancar e cada vez que a xanela recupera o foco, porque poden cambiar mentres corre: por exemplo, ao conectarse á sesión por Escritorio remoto.
+
+**As formas.** O programa escolle a forma con *DECSCUSR* ([§35](#35-as-secuencias-de-control)) e ocúltao con `ESC [ ? 25 l`. Sen o foco, meiga debuxa sempre un rectángulo baleiro, que non pestanexa, coma o Windows Terminal. Co bloque, o carácter de debaixo debúxase coa cor do fondo sobre a do cursor.
+
+## 39. O foco e o título da xanela
+
+**O foco** é a xanela que recibe o teclado. Cando unha xanela o gaña, Windows envíalle [`WM_SETFOCUS`](https://learn.microsoft.com/windows/win32/inputdev/wm-setfocus), e cando o perde, `WM_KILLFOCUS`. meiga usa o foco para o cursor ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)) e, desde a subfase 1.7, para avisar ao programa que o pediu (`ESC [ ? 1004 h`, [§35](#35-as-secuencias-de-control)).
+
+**O título.** [`SetWindowTextW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setwindowtextw) cambia o texto da barra de título, que tamén mostra a barra de tarefas. Envíalle `WM_SETTEXT` á xanela, así que meiga chámaa desde o fío da interface, cando o fío lector avisa de que o programa cambiou o título ([§36](#36-avisar-á-xanela-desde-outro-fío-postmessage)). Se o programa non pon ningún, o título é «meiga».
+
+## 40. A liña de comandos en Windows
+
+**Un texto, non unha lista.** En Windows, un programa recibe a súa liña de comandos coma un só texto ([`GetCommandLineW`](https://learn.microsoft.com/windows/win32/api/processenv/nf-processenv-getcommandlinew)), e é el quen a divide en argumentos. Os programas en C e en Rust (`std::env::args_os`) divídena coas regras do *runtime* de C de Microsoft, as mesmas ca [`CommandLineToArgvW`](https://learn.microsoft.com/windows/win32/api/shellapi/nf-shellapi-commandlinetoargvw):
+
+- os espazos e os tabuladores separan os argumentos, salvo entre comiñas dobres;
+- unha barra invertida só é especial xusto antes dunhas comiñas: `2n` barras e unhas comiñas son `n` barras e o principio ou o fin dun texto entre comiñas; `2n + 1` barras e unhas comiñas son `n` barras e unhas comiñas no argumento;
+- o primeiro, o nome do programa, é distinto: chega ata o seguinte espazo, ou vai entre comiñas, sen barras especiais. Por iso non pode ter comiñas.
+
+**Lanzar un programa cos seus argumentos.** [`CreateProcessW`](https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw) tamén recibe un só texto. meiga recibe o programa e os seus argumentos xa divididos, e ten que xuntalos outra vez de forma que o programa os divida igual ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrcshellrs)): un argumento sen espazos, tabuladores nin comiñas, e non baleiro, vai tal cal; os outros, entre comiñas, cunha barra antes de cada comiña e as barras que van antes dunha comiña, ou do final, dobradas. Así, `C:\my scripts\a.ps1` vai como `"C:\my scripts\a.ps1"`, e `say "hi"` como `"say \"hi\""`. `cmd.exe` é a excepción: le o resto da liña coas súas propias regras (`cmd /?`).
+
+**Onde busca o programa.** Se o nome non leva ruta, `CreateProcessW` búscao no cartafol de `meiga.exe`, no cartafol actual, nos cartafoles do sistema e de Windows e, por último, nos do `PATH`, e engádelle `.exe` se non ten extensión. Se non o atopa, falla co erro 2, «non se atopa o arquivo»: é o que fai que meiga probe Windows PowerShell (`powershell`) cando PowerShell 7 (`pwsh`) non está instalado.
+
+**O fin das opcións.** `--` é un costume dos programas de Unix, que tamén segue meiga: o que vén despois non son opcións, aínda que empece por `-`. meiga le as súas opcións ata o primeiro argumento que non o é, que é o programa: as opcións que veñen despois son do programa.
