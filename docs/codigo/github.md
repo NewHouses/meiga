@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 1.3.
+> Estado: subfase 1.4.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -17,8 +17,9 @@ on:
   push:
     branches: [main]
   schedule:
-    # Every Monday, so that new security advisories are reported even when the
-    # dependencies did not change. Only the cargo-deny job runs on schedule.
+    # Every Monday, so that new security advisories and new versions of the
+    # ConPTY are reported even when nothing changed. Only the cargo-deny job
+    # and the ConPTY version check run on schedule.
     - cron: "17 5 * * 1"
   workflow_dispatch:
 ```
@@ -27,7 +28,7 @@ on:
 - `on`: os eventos que lanzan o workflow.
   - `pull_request` cara a `main`: valida cada PR antes de integralo. GitHub non proba a rama do PR tal cal, senón o resultado de mesturala con `main` (a referencia `refs/pull/N/merge`). É dicir, proba o que quedaría en `main`.
   - `push` a `main`: valida o resultado final de cada integración e garda a caché que reutilizarán os PR.
-  - `schedule`: unha execución semanal, para detectar vulnerabilidades novas en dependencias que non cambiaron. O formato `cron` ten cinco campos: minuto, hora, día do mes, mes e día da semana. `17 5 * * 1` significa os luns ás 05:17 (UTC). O minuto 17 é intencionado: GitHub recomenda evitar as horas en punto, cando hai máis carga e as execucións programadas poden atrasarse.
+  - `schedule`: unha execución semanal, para detectar vulnerabilidades novas en dependencias que non cambiaron e versións novas do ConPTY. O formato `cron` ten cinco campos: minuto, hora, día do mes, mes e día da semana. `17 5 * * 1` significa os luns ás 05:17 (UTC). O minuto 17 é intencionado: GitHub recomenda evitar as horas en punto, cando hai máis carga e as execucións programadas poden atrasarse.
   - `workflow_dispatch`: permite lanzalo a man desde a web, co botón *Run workflow*.
 
 ### Permisos
@@ -178,11 +179,16 @@ Executa os escenarios de PowerShell e comproba o que debuxan e como se coordinan
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
+      - name: Download the ConPTY for the tests and the package
+        run: ./tools/fetch-conpty.ps1
+
       - name: Test
         run: cargo test --workspace --locked
 ```
 
 As mesmas comprobacións que en local (ver [Tecnoloxías](../tecnoloxias.md#7-lints-rustc-e-clippy)). Con `--locked`, se o `Cargo.lock` non está ao día, a CI falla en vez de actualizalo pola súa conta.
+
+Desde a subfase 1.4, as probas de `meiga-win` lanzan programas no ConPTY que vai con meiga, así que antes hai que descargalo con [`fetch-conpty.ps1`](ferramentas.md#toolsfetch-conptyps1): sen el, esas probas fallan cunha mensaxe que o di. O script comproba o SHA-256 do paquete e a sinatura de Microsoft, e deixa os dous arquivos en `target\conpty\`, onde os buscan as probas e, máis adiante, `package.ps1`. A caché de Rust só garda o que compila Cargo, así que cada execución descarga o paquete, de 1,7 MB.
 
 #### Empaquetar e comprobar o executábel
 
@@ -206,7 +212,7 @@ As mesmas comprobacións que en local (ver [Tecnoloxías](../tecnoloxias.md#7-li
         run: ./tools/perf/measure-frames.ps1 -Duration 3 -Warmup 1
 ```
 
-- Compila en modo *release*, crea o `.zip` en `dist/` e comproba as DLL das que depende `meiga.exe` (ver [Código › ferramentas](ferramentas.md)).
+- Compila en modo *release*, crea o `.zip` en `dist/`, co ConPTY, e comproba as DLL das que depende `meiga.exe` (ver [Código › ferramentas](ferramentas.md)).
 - `check-window.ps1` abre `meiga.exe` e comproba a xanela, a escala por monitor e que remata co código 0 ao pechala (ver [Código › ferramentas](ferramentas.md#toolscheck-windowps1)). Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade, aínda que ninguén a vexa. Leva un segundo.
 - `check-present.ps1` debuxa na xanela con eventos do rato e comproba no rexistro dos fotogramas que meiga presenta só o que cambia, agrupa os cambios e non debuxa en repouso nin coa xanela minimizada (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Leva uns segundos.
 - `measure-startup.ps1` arranca meiga 4 veces e mide o tempo ata o primeiro fotograma (ver [Código › medición](perf.md#toolsperfmeasure-startupps1)), e `measure-frames.ps1` mide 3 s de cada tipo de fotograma: parciais, completos e completos de texto (ver [Código › medición](perf.md#toolsperfmeasure-framesps1)). Só comproban que os scripts seguen funcionando: igual que co arnés de medición, os números dunha máquina compartida non se comparan con nada.
@@ -282,7 +288,31 @@ As mesmas comprobacións que en local (ver [Tecnoloxías](../tecnoloxias.md#7-li
 - Usa Linux porque o resultado non depende do sistema (`deny.toml` xa indica que se analicen as dependencias de Windows) e as máquinas Linux arrancan antes.
 - Necesita Rust porque cargo-deny le as dependencias a través de `cargo metadata`.
 - `cargo deny --locked check`: `--locked` vai antes de `check` porque é unha opción xeral de cargo-deny, non do subcomando `check`.
-- É o único job das execucións programadas. Cada vez descarga a base de datos de vulnerabilidades actualizada.
+- Corre tamén nas execucións programadas. Cada vez descarga a base de datos de vulnerabilidades actualizada.
+
+### Job `conpty`
+
+```yaml
+  conpty:
+    name: ConPTY version
+    # Not on pull requests: a new version of the ConPTY must not block them.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check that the pinned ConPTY is the latest stable version
+        shell: pwsh
+        run: ./tools/fetch-conpty.ps1 -CheckLatest
+```
+
+- Desde a subfase 1.4. Comproba en nuget.org que non hai unha versión estábel do ConPTY máis nova ca a fixada en [`fetch-conpty.ps1`](ferramentas.md#toolsfetch-conptyps1), e falla se a hai ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Dependabot non pode facelo: só coñece os paquetes NuGet dos proxectos de .NET.
+- `if`: só corre nas execucións programadas, os luns, e nas que se lanzan a man. Nos PR e en `main` non corre, así que unha versión nova nunca bloquea un PR, e tampouco é un dos *checks* obrigatorios da rama `main`.
+- Non descarga o paquete nin necesita Rust: só le a lista de versións. Por iso corre en Linux, co PowerShell 7 que trae o *runner*.
+- Cando falla, GitHub avisa por correo a quen ten o repositorio, e o erro di que versión hai e que dúas liñas do script hai que cambiar.
 
 ## `.github/dependabot.yml`
 

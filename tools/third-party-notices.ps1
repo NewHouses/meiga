@@ -1,9 +1,12 @@
 <#
 .SYNOPSIS
-Generates THIRD-PARTY-NOTICES.txt for the crates that meiga ships.
+Generates THIRD-PARTY-NOTICES.txt for the crates and the ConPTY that meiga
+ships.
 
 .DESCRIPTION
-Runs cargo-about with about.toml and tools/about.hbs. Install cargo-about with:
+Runs cargo-about with about.toml and tools/about.hbs. The template adds the
+license of the ConPTY (conpty.dll and OpenConsole.exe), which is not a crate.
+Install cargo-about with:
     cargo install --locked cargo-about --features cli
 
 .PARAMETER OutFile

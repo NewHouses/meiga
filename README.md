@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` opens a window with a demo: the same text at three scales, drawn with DirectWrite and a glyph cache, and rectangles that you draw by dragging the mouse, so that you can see that each frame presents only the areas that changed. It uses no CPU while idle or minimized; there is no terminal yet.
+> **Status:** early development. `meiga.exe` opens a window with a demo: the same text at three scales, drawn with DirectWrite and a glyph cache, and rectangles that you draw by dragging the mouse, so that you can see that each frame presents only the areas that changed. It uses no CPU while idle or minimized. The platform layer can already run a shell in a pseudoconsole (ConPTY) and talk to it, but the window does not show shells yet: there is no terminal yet.
 
 ## Goals
 
@@ -33,11 +33,14 @@ To build the zip file that is distributed (`dist\meiga-<version>-x86_64-pc-windo
 .\tools\package.ps1
 ```
 
+The zip file includes the ConPTY of Windows Terminal (`conpty.dll` and `OpenConsole.exe`), which `package.ps1` takes from `tools\fetch-conpty.ps1`.
+
 Every change must pass these checks ([cargo-deny](https://github.com/EmbarkStudios/cargo-deny) is installed with `cargo install --locked cargo-deny`). CI runs them on every pull request. Run them from PowerShell 7:
 
 ```powershell
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
+.\tools\fetch-conpty.ps1
 cargo test --workspace
 cargo deny check
 .\tools\check-docs.ps1
@@ -49,7 +52,17 @@ cargo deny check
 .\tools\perf\test-scenarios.ps1
 ```
 
+`fetch-conpty.ps1` downloads the ConPTY that meiga ships, the NuGet package `Microsoft.Windows.Console.ConPTY` at a pinned version, checks its SHA-256 and its Microsoft signatures, and extracts it to `target\conpty\`. It downloads it only once. The tests of `meiga-win` run programs in it, and fail with a message that asks for the script when it is missing. `.\tools\fetch-conpty.ps1 -CheckLatest` tells whether nuget.org has a newer stable version; CI checks it every Monday.
+
 `check-imports.ps1`, `check-window.ps1` and `check-present.ps1` check the release build: build it first with `.\tools\package.ps1` or `cargo build --release`. `check-window.ps1` and `check-present.ps1` start `meiga.exe`, so its window appears for a moment; do not click or type in it while `check-present.ps1` draws in it. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
+
+To see what a program sends through the ConPTY, run it in the console example of `meiga-win`. It prints each block of output with the control characters in sight, and sends each line that you type, followed by Enter; Ctrl+Z and Enter close the session:
+
+```powershell
+cargo run -p meiga-win --example conpty                     # cmd, in the ConPTY of meiga
+cargo run -p meiga-win --example conpty -- --system         # cmd, in the ConPTY of Windows
+cargo run -p meiga-win --example conpty -- pwsh -NoLogo     # any command line
+```
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
 

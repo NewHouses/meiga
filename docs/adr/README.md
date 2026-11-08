@@ -18,13 +18,14 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0001](0001-rust.md) | Rust como linguaxe | Aceptado |
 | [0002](0002-windows-e-renderizado-cpu.md) | Só Windows, con renderizado por CPU | Aceptado; concretado polos [0009](0009-xanela-que-non-se-ve.md) e [0010](0010-texto-con-directwrite.md) |
 | [0003](0003-nucleo-vt-alacritty-terminal.md) | `alacritty_terminal` como núcleo, detrás dunha fachada | Aceptado |
-| [0004](0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga | Aceptado |
-| [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polo [0008](0008-temporizador-dos-fotogramas.md) |
+| [0004](0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga | Aceptado; concretado polo [0011](0011-fin-e-peche-das-sesions.md) |
+| [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polos [0008](0008-temporizador-dos-fotogramas.md) e [0011](0011-fin-e-peche-das-sesions.md) |
 | [0006](0006-licenzas-e-dependencias.md) | Licenzas e dependencias | Aceptado |
 | [0007](0007-integracion-coa-shell.md) | Integración coa shell | Aceptado |
 | [0008](0008-temporizador-dos-fotogramas.md) | Temporizador dos fotogramas | Aceptado |
 | [0009](0009-xanela-que-non-se-ve.md) | Que se debuxa cando a xanela non se ve | Aceptado |
 | [0010](0010-texto-con-directwrite.md) | Texto con DirectWrite e unha caché de glifos | Aceptado |
+| [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado |
 
 ## Como se relacionan
 
@@ -39,8 +40,10 @@ graph TD
     A3 --> A7["0007 Integración coa shell"]
     A3 --> A10
     A4 --> A5
+    A4 --> A11["0011 Fin e peche das sesións"]
     A5 --> A8["0008 Temporizador dos fotogramas"]
     A5 --> A9
+    A5 --> A11
     A6 --> A3
     A6 --> A4
     A6 --> A10

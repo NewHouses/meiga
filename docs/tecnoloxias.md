@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 1.3. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 1.4. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -641,7 +641,7 @@ Nun terminal, cada carácter ocupa unha cela ou dúas, e algúns ningunha. Unico
 | De control | — | O tabulador, o salto de liña… Non se debuxan: son ordes para o terminal. |
 
 - Os caracteres **ambiguos** (*Ambiguous*), como as letras gregas ou `°`, ocupan unha cela fóra dos contextos CJK, como recomenda o propio UAX #11.
-- **Por que importa.** O ancho co que meiga debuxa ten que ser o mesmo que usan o núcleo do terminal, para colocar os caracteres na grella, e ConPTY, para mover o cursor. Se non coinciden, o cursor desaxústase e o texto móvese. `alacritty_terminal` usa o crate **`unicode-width`** ([ADR 0003](adr/0003-nucleo-vt-alacritty-terminal.md)), e meiga usa o mesmo, na mesma versión 0.2. ConPTY medirá igual co *flag* `PSEUDOCONSOLE_GLYPH_WIDTH_WCSWIDTH` (subfase 1.4).
+- **Por que importa.** O ancho co que meiga debuxa ten que ser o mesmo que usan o núcleo do terminal, para colocar os caracteres na grella, e ConPTY, para mover o cursor. Se non coinciden, o cursor desaxústase e o texto móvese. `alacritty_terminal` usa o crate **`unicode-width`** ([ADR 0003](adr/0003-nucleo-vt-alacritty-terminal.md)), e meiga usa o mesmo, na mesma versión 0.2. O ConPTY empaquetado mide igual co *flag* `PSEUDOCONSOLE_GLYPH_WIDTH_WCSWIDTH`; o de Windows ignórao ([§31](#31-conpty-a-pseudoconsola-de-windows)).
 - **Sen a *feature* `cjk`.** Por defecto, `unicode-width` trae tamén táboas para os contextos CJK, nos que os ambiguos ocupan dúas celas. meiga non as usa, e desactívaas (`default-features = false`).
 - **Os grafemas.** O que unha persoa ve como un carácter pode ser varios: unha letra e un acento que se combina con ela, unha bandeira (dous indicadores rexionais) ou unha familia de emoji unidos con *zero width joiner*. Xuntalos nunha cela é traballo da subfase 8.1; ata entón, os caracteres sen ancho non ocupan ningunha cela e non se debuxan.
 
@@ -662,3 +662,100 @@ Nun terminal, cada carácter ocupa unha cela ou dúas, e algúns ningunha. Unico
 **Os valores.** γ = 1,5 e un contraste de 0,5, escollidos comparando capturas de meiga e do Windows Terminal coa mesma fonte, o mesmo tamaño e as mesmas cores. A rasterización é exactamente a mesma (o mesmo número de píxeles cubertos, enteiros e parciais), e a suma da cobertura dunha liña, a súa **tinta**, coincide cunha diferenza menor do 0,5 %, en texto claro sobre fondo escuro e ao revés. Serán configurábeis na subfase 8.3 ([ADR 0010](adr/0010-texto-con-directwrite.md)).
 
 **Por que non os valores do sistema.** `CreateRenderingParams` dá o gamma e o contraste que o usuario axusta co axustador de texto ClearType, pero leva uns milisegundos ao arrancar, e a corrección que aplica Direct2D é máis complexa. A táboa simple, axustada contra o Windows Terminal, dá a mesma tinta.
+
+## 31. ConPTY: a pseudoconsola de Windows
+
+**Que é.** En Unix, un terminal fala cos programas a través dun **pseudoterminal**: o programa escribe texto con secuencias de escape (VT) para mover o cursor, cambiar a cor ou borrar, e o terminal interprétaas e debúxaas. O que escribe o usuario chega ao programa polo mesmo camiño. Os programas de consola de Windows non funcionan así: chaman á API de consola (escribir nunha posición, cambiar a cor dunha cela, ler os eventos do teclado…), que atende o **anfitrión da consola**, `conhost.exe`, e este debuxa na súa propia xanela. **ConPTY** (Windows 10 1809) é un anfitrión da consola sen xanela: atende a API de consola dos programas e traduce o que mostran a texto con secuencias VT, que escribe nunha tubaxe. Ao revés, le doutra tubaxe o que envía o terminal (texto e as secuencias das teclas) e convérteo en eventos de entrada.
+
+| Concepto | Que é |
+|---|---|
+| Pseudoconsola (`HPCON`) | O *handle* que devolve `CreatePseudoConsole`, que recibe o tamaño en celas, as dúas tubaxes e uns *flags*. |
+| Anfitrión | O proceso que fai de consola: `conhost.exe`, o de Windows, ou `OpenConsole.exe`, o empaquetado. ConPTY arráncao sen xanela (`--headless`), un por pseudoconsola. |
+| Programa | O que se lanza na pseudoconsola, con `CreateProcessW` e o atributo `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE`. El e os programas que lance conéctanse á consola. |
+| Tubaxe de entrada | meiga escribe nela, e ConPTY le. |
+| Tubaxe de saída | ConPTY escribe nela texto UTF-8 con secuencias VT, e meiga le. |
+| Pechar | `ClosePseudoConsole` envía `CTRL_CLOSE_EVENT` a cada programa conectado. Cando remataron todos, o anfitrión remata e a tubaxe de saída péchase. |
+
+**Os dous ConPTY** ([ADR 0004](adr/0004-conpty-empaquetado.md) e [ADR 0011](adr/0011-fin-e-peche-das-sesions.md)):
+
+| | O de Windows | O empaquetado |
+|---|---|---|
+| Onde está | En `kernel32.dll`: `CreatePseudoConsole`, `ClosePseudoConsole`… | En `conpty.dll`, ao lado de `meiga.exe`: `ConptyCreatePseudoConsole`, `ConptyClosePseudoConsole`… |
+| Anfitrión | `conhost.exe`, de Windows. | `OpenConsole.exe`, ao lado de `conpty.dll`. |
+| Versión | A do Windows de cada máquina. | A do paquete NuGet, a mesma en todas ([§33](#33-nuget-e-as-sinaturas-authenticode)). |
+| `ClosePseudoConsole` | Volta de inmediato desde Windows 11 24H2; antes, espera ata que remata o anfitrión. | Volta de inmediato. |
+| Medir os caracteres con `wcswidth` | Non: ignora o *flag*. | Si. |
+
+meiga usa o empaquetado se os dous arquivos están ao lado de `meiga.exe`, e se non, o de Windows. Fan falta os dous: sen `OpenConsole.exe`, `conpty.dll` arrancaría sen avisar o `conhost.exe` de Windows.
+
+**Os *flags*.** O ConPTY empaquetado acepta estes, que declara o `conpty.h` do paquete:
+
+| *Flag* | Valor | Que fai |
+|---|---|---|
+| `PSEUDOCONSOLE_INHERIT_CURSOR` | `0x1` | Empeza na posición do cursor que xa tiña o terminal, e espera a que o terminal lla diga. meiga non o usa. |
+| `PSEUDOCONSOLE_GLYPH_WIDTH_GRAPHEMES` | `0x08` | Mide o texto por grafemas, como o Windows Terminal. |
+| `PSEUDOCONSOLE_GLYPH_WIDTH_WCSWIDTH` | `0x10` | Mide cada carácter co seu ancho de Unicode, como `wcswidth` e como `unicode-width` ([§29](#29-o-ancho-dos-caracteres-unicode-width)). meiga usa este. |
+| `PSEUDOCONSOLE_GLYPH_WIDTH_CONSOLE` | `0x18` | Mide como a consola clásica. |
+| `PSEUDOCONSOLE_AMBIGUOUS_IS_WIDE` | `0x20` | Os caracteres ambiguos ocupan dúas celas. |
+
+O ConPTY empaquetado pásalle a medida ao seu anfitrión como unha opción (`--textMeasurement wcswidth`). O de Windows non coñece estes *flags*: a pseudoconsola créase igual, sen ningunha opción para o anfitrión.
+
+**O que escribe ao arrancar.** Antes de nada, o ConPTY empaquetado escribe `ESC [ 1 t`, unha orde *XTWINOPS* que di que a xanela non está minimizada. Despois pídelle ao terminal os seus atributos (*DA1*, `ESC [ c`) e activa os eventos de foco (`ESC [ ? 1004 h`) e o **win32-input-mode** (`ESC [ ? 9001 h`), co que o terminal pode enviar cada tecla como un evento completo de Windows ([ADR 0004](adr/0004-conpty-empaquetado.md)). Non espera a resposta de DA1. Ao rematar, desactiva os dous modos (`ESC [ ? 1004 l` e `ESC [ ? 9001 l`). O de Windows activa os mesmos modos, sen DA1, e empeza borrando a pantalla (`ESC [ 2 J`). meiga interpretará todo isto desde a subfase 1.5; ata entón, o exemplo da 1.4 móstrao tal cal ([Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winexamplesconptyrs)).
+
+**A entrada.** O ConPTY acepta tanto texto e secuencias VT clásicas como os eventos do win32-input-mode. Intro envíase como `CR` (`\r`), que é o que envía esa tecla nun terminal.
+
+**Pechar.** `ClosePseudoConsole` envía `CTRL_CLOSE_EVENT` aos programas conectados, como cando se pecha a xanela dunha consola: dun en dun, do máis novo ao máis vello. Windows dálle a cada un o tempo de `SPI_GETHUNGAPPTIMEOUT`, 5 s, para atendelo, e despois remátao e pasa ao seguinte. Un programa que remata así sae co código `0xC000013A` ([§32](#32-procesos-tubaxes-e-eventos)).
+
+- Antes de Windows 11 24H2, o `ClosePseudoConsole` de Windows espera ata que remata o anfitrión, e o anfitrión non remata mentres teña saída pendente que ninguén le. Por iso non se pode chamar no fío da interface nin no fío que le a saída.
+- Se a pseudoconsola se pecha nos primeiros milisegundos dun programa, mentres aínda se está a conectar a ela, o anfitrión e o programa poden quedar esperando un polo outro. Pode ser o programa da sesión ou un que este acaba de arrancar. Se pasan 10 s sen que remate ningún dos programas que tiña a sesión ao pechala, meiga remata todos os do seu *job* ([§32](#32-procesos-tubaxes-e-eventos) e [ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
+
+**Liberar a referencia.** O Windows Terminal chama a `ConptyReleasePseudoConsole` despois de arrancar a shell: así, o anfitrión remata cando se desconecta o último programa da consola, aínda que a shell xa saíse. meiga non o fai: as súas sesións rematan cando remata a shell ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
+
+## 32. Procesos, tubaxes e eventos
+
+**Os *handles*.** Windows identifica cada obxecto do núcleo que abre un programa (un proceso, unha tubaxe, un evento, un arquivo…) cun *handle*, e o obxecto vive mentres alguén teña un aberto. Cada *handle* péchase unha vez, con `CloseHandle`. En Rust, `OwnedHandle`, da biblioteca estándar, é un *handle* que se pecha só ao destruílo.
+
+**As tubaxes.** `CreatePipe` crea unha tubaxe anónima: dous *handles*, un para escribir e outro para ler, cun búfer entre eles do tamaño que se pide, aproximadamente.
+
+- `ReadFile` bloquea o fío ata que hai algo que ler, e devolve o que haxa, ata o tamaño do búfer. Cando se pecharon todos os *handles* do outro extremo e xa non queda nada, falla con `ERROR_BROKEN_PIPE`: é o fin da tubaxe. Unha lectura de 0 bytes non é o fin: significa que o outro lado escribiu 0 bytes.
+- `WriteFile` bloquea ata que o escribiu todo. Se o búfer está cheo, espera a que o outro lado lea.
+- Son **síncronas**: cada operación bloquea o fío ata que remata. Un fío bloqueado non gasta CPU, e por iso cada sesión ten un fío para ler e outro para escribir ([ADR 0005](adr/0005-fios-e-fotogramas.md)). A alternativa, a E/S **solapada** (`OVERLAPPED`), permite que un mesmo fío faga varias operacións á vez, a cambio de bastante máis código.
+
+**A herdanza.** Un *handle* pode ser herdábel: cando un proceso crea outro con `bInheritHandles` a `TRUE`, o novo recibe unha copia de todos os herdábeis. Se un programa herdase o extremo de escritura da tubaxe de saída, a tubaxe non se pecharía cando remata o ConPTY, e `ReadFile` esperaría para sempre. Por iso meiga crea as tubaxes sen herdanza e lanza os programas con `bInheritHandles` a `FALSE`.
+
+**Lanzar un programa.** `CreateProcessW` recibe a liña de comandos (o programa e os seus argumentos, nun único texto que pode modificar, así que ten que ser unha copia escribíbel) e unha `STARTUPINFOEXW`:
+
+- Se o programa non leva ruta, búscao no cartafol de meiga, no cartafol actual, nos do sistema e no `PATH`, e engade `.exe` se non ten extensión.
+- A **lista de atributos** leva opcións extra para o proceso novo. `InitializeProcThreadAttributeList` chámase dúas veces: a primeira só di cantos bytes necesita para o número de atributos que se lle pide, e a segunda prepara a lista na memoria reservada. `UpdateProcThreadAttribute` engade un atributo, e `DeleteProcThreadAttributeList` libera a lista ao final. meiga usa dous: `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE`, co `HPCON` como valor, e `PROC_THREAD_ATTRIBUTE_JOB_LIST`, co *job* da sesión. O valor dun atributo pode ser un punteiro, e entón o que apunta ten que durar tanto coma a lista.
+- `EXTENDED_STARTUPINFO_PRESENT` dille que a estrutura é a ampliada, a que leva a lista.
+- `STARTF_USESTDHANDLES` con *handles* nulos: o programa non ten entrada nin saída estándar propias, e usa as da pseudoconsola. Sen isto, podería quedar coas de meiga.
+- Devolve dous *handles*, o do proceso e o do seu primeiro fío, e o identificador do proceso.
+
+**Os eventos e as esperas.** Un **evento** (`CreateEventW`) é un obxecto que está sinalado ou non. `SetEvent` sinálao. Se é de **reinicio automático**, a espera que o atopa sinalado volta deixalo sen sinalar; se é de **reinicio manual**, segue sinalado ata que alguén o reinicia, e todas as esperas o atopan sinalado. `WaitForSingleObject` e `WaitForMultipleObjects` bloquean o fío ata que se sinala un dos obxectos, ou ata un tempo máximo; se hai varios sinalados, `WaitForMultipleObjects` di o primeiro da lista. Con `bWaitAll` a `TRUE`, `WaitForMultipleObjects` espera ata que estean sinalados todos. O *handle* dun proceso sinálase cando o proceso remata: un fío pode esperar á vez por un evento e polo fin dun proceso, sen gastar nada mentres tanto.
+
+**Os *jobs*.** Un *job* (`CreateJobObjectW`) agrupa procesos para tratalos xuntos. Un proceso pode crearse xa nun *job*, co atributo `PROC_THREAD_ATTRIBUTE_JOB_LIST` (desde Windows 10), e os procesos que crea entran nel tamén. Un proceso non pode saír dun *job*, pero os que crea si, se o piden (`CREATE_BREAKAWAY_FROM_JOB`) e o *job* o permite: `JOB_OBJECT_LIMIT_BREAKAWAY_OK`, un dos límites **estendidos**, que se fixan con `SetInformationJobObject` e a estrutura `JOBOBJECT_EXTENDED_LIMIT_INFORMATION`. Se non o permite, o programa que o pide non arranca. `TerminateJobObject` remata todos os procesos do *job* á vez, co código que se lle diga, e `QueryInformationJobObject` con `JobObjectBasicProcessIdList` dá a lista dos seus procesos. Para esperar por un proceso que non creou, un programa ábreo con `OpenProcess`, pedindo só o dereito `SYNCHRONIZE`: mentres teña ese *handle*, Windows non reutiliza o identificador do proceso. Pechar o último *handle* dun *job* non remata os seus procesos, salvo co límite `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. Desde Windows 8, un proceso pode estar en varios *jobs* aniñados, así que meiga pode crealos aínda que el mesmo xa corra nun *job*. Cada sesión de meiga ten un, sen ese límite: só se usa para rematar unha sesión bloqueada ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
+
+**Os códigos de saída.** `GetExitCodeProcess` dá o código co que rematou un proceso, ou `STILL_ACTIVE` (259) se aínda non rematou. `TerminateProcess` remata un proceso no momento, co código que se lle diga, sen deixarlle facer nada máis; `TerminateJobObject` fai o mesmo con todos os do *job*.
+
+| Código | Que significa |
+|---|---|
+| 0 | O programa rematou sen erros. |
+| 1, 2… | O programa rematou cun erro; cada programa ten os seus códigos. meiga remata co 1 os programas dunha sesión bloqueada ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)). |
+| `0xC000013A` (`STATUS_CONTROL_C_EXIT`) | Un programa de consola que rematou por un Ctrl+C ou porque se pechou a súa consola. |
+| `0xC0000142` (`STATUS_DLL_INIT_FAILED`) | O programa non chegou a arrancar: por exemplo, porque a súa consola se pechou mentres se conectaba a ela. |
+
+**Cargar unha DLL.** `LoadLibraryExW` carga unha DLL e `GetProcAddress` dá a dirección dunha das súas funcións, que en Rust se converte nun punteiro a función coa súa firma (`mem::transmute`). meiga carga `conpty.dll` coa ruta completa e coas opcións `LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR` e `LOAD_LIBRARY_SEARCH_SYSTEM32`: as DLL que ela necesite só se buscan no seu cartafol e en System32, nunca no cartafol actual nin no `PATH`, onde alguén podería deixar unha DLL falsa.
+
+**Os fíos en Rust.** `std::thread::Builder` crea un fío cun nome, que se ve nos depuradores e nos perfís de WPA. Os datos que comparten varios fíos van nun `Arc`, unha conta de referencias atómica, e, se cambian, nun `Mutex`. Se un fío falla (*panic*) co `Mutex` collido, o `Mutex` queda **envelenado**, e quen o colla despois recibe un erro. En meiga, os datos dos seus `Mutex` nunca quedan a medias, así que se collen igual (`PoisonError::into_inner`).
+
+## 33. NuGet e as sinaturas Authenticode
+
+**NuGet** é o xestor de paquetes de .NET, e nuget.org, o seu repositorio público. Microsoft publica alí o ConPTY do Windows Terminal, `Microsoft.Windows.Console.ConPTY`, coa licenza MIT ([ADR 0004](adr/0004-conpty-empaquetado.md)).
+
+- **O paquete** (`.nupkg`) é un arquivo zip cos arquivos do paquete, un `.nuspec` cos seus datos (versión, licenza, autores) e a sinatura de nuget.org (`.signature.p7s`). O do ConPTY leva `conpty.dll` e `OpenConsole.exe` para x86, x64 e ARM64, e o `conpty.h` coas declaracións das funcións. meiga só usa os dous arquivos de x64.
+- **As versións** do ConPTY seguen as do Windows Terminal: 1.25.260930003 é da serie 1.25. As de proba levan un sufixo, como `1.26.260930004-preview`, e as demais son **estábeis**. Microsoft segue publicando arranxos da serie anterior (1.24), así que a última versión publicada non é sempre a estábel máis nova.
+- **As APIs.** nuget.org ten a API v3, en `api.nuget.org`, e mantén a v2, en `www.nuget.org/api/v2`: `package/<id>/<versión>` descarga un paquete, e `FindPackagesById()` lista as versións dun paquete nun XML (Atom), en páxinas unidas por ligazóns `next`. `tools/fetch-conpty.ps1` usa a v2, porque nalgunhas redes a conexión con `api.nuget.org` falla.
+
+**O SHA-256** é unha función *hash* criptográfica: o mesmo arquivo dá sempre os mesmos 32 bytes, e na práctica é imposíbel atopar outro arquivo co mesmo resultado. O script garda a versión e o SHA-256 do paquete (`Get-FileHash`), e falla se o arquivo descargado non é exactamente o mesmo. Así, a versión fixada non pode cambiar sen que se note, nin por un erro nin por un ataque.
+
+**Authenticode** é a sinatura de código de Windows: unha sinatura dixital dentro do propio `.exe` ou `.dll`, co certificado de quen o asina. `Get-AuthenticodeSignature` comproba que o arquivo non cambiou despois de asinalo e que o certificado é de confianza (`Status` `Valid`), e di quen o asinou (`SignerCertificate.Subject`). O script comproba que `conpty.dll` e `OpenConsole.exe` están asinados por Microsoft Corporation: se algún día se fixase por erro un paquete que non fose de Microsoft, fallaría.

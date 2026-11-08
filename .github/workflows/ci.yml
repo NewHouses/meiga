@@ -6,8 +6,9 @@ on:
   push:
     branches: [main]
   schedule:
-    # Every Monday, so that new security advisories are reported even when the
-    # dependencies did not change. Only the cargo-deny job runs on schedule.
+    # Every Monday, so that new security advisories and new versions of the
+    # ConPTY are reported even when nothing changed. Only the cargo-deny job
+    # and the ConPTY version check run on schedule.
     - cron: "17 5 * * 1"
   workflow_dispatch:
 
@@ -69,6 +70,9 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Download the ConPTY for the tests and the package
+        run: ./tools/fetch-conpty.ps1
 
       - name: Test
         run: cargo test --workspace --locked
@@ -135,3 +139,18 @@ jobs:
 
       - name: cargo deny
         run: cargo deny --locked check
+
+  conpty:
+    name: ConPTY version
+    # Not on pull requests: a new version of the ConPTY must not block them.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check that the pinned ConPTY is the latest stable version
+        shell: pwsh
+        run: ./tools/fetch-conpty.ps1 -CheckLatest

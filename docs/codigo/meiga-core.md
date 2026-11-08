@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 1.3. Contén as cores, a xeometría (puntos, tamaños e rectángulos), as zonas que cambiaron (*damage*), o ritmo dos fotogramas e as celas do texto.
+> Estado: subfase 1.4. Contén as cores, a xeometría (puntos, tamaños e rectángulos, e o tamaño da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas e as celas do texto.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -9,7 +9,7 @@
 | [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e a súa única dependencia, `unicode-width`. |
 | [`src/lib.rs`](#cratesmeiga-coresrclibrs) | A raíz do crate: os módulos. |
 | [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores. |
-| [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles. |
+| [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; e `GridSize`, o tamaño da grella en celas. |
 | [`src/damage.rs`](#cratesmeiga-coresrcdamagers) | `Damage`: as zonas da xanela que cambiaron desde o último fotograma. |
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
 | [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella. |
@@ -98,7 +98,7 @@ Unha cor en RGB, con 8 bits (0–255) por canle: vermello (`r`), verde (`g`) e a
 
 ## `crates/meiga-core/src/geometry.rs`
 
-Puntos, tamaños e rectángulos en píxeles: os tipos cos que todos os crates falan de posicións na xanela.
+Puntos, tamaños e rectángulos en píxeles: os tipos cos que todos os crates falan de posicións na xanela. Desde a subfase 1.4, tamén o tamaño da grella, en celas ([`GridSize`](#gridsize)).
 
 ```rust
 pub struct Point {
@@ -155,6 +155,29 @@ const fn saturate(value: u32) -> i32 {
 - Moitas funcións son `const fn`, que se poden usar en constantes, como `Rect::EMPTY`.
 
 **Probas.** Nove, unha por propiedade: que `right` e `bottom` non se inclúen, que os rectángulos invertidos están baleiros, `from_size` (tamén co tamaño máximo), `spanning` nas dúas ordes, a intersección e a unión (tamén con rectángulos baleiros), `contains`, que `at` e `offset` moven o rectángulo (tamén preto do máximo de `i32`), e que os lados de `border` cobren o bordo sen solaparse nin saír dun rectángulo estreito.
+
+### `GridSize`
+
+```rust
+/// A size of the terminal grid, in cells: how many columns and rows of
+/// characters fit in it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct GridSize {
+    pub columns: u16,
+    pub rows: u16,
+}
+
+impl GridSize {
+    pub const fn new(columns: u16, rows: u16) -> Self {
+        Self { columns, rows }
+    }
+}
+```
+
+Desde a subfase 1.4: o tamaño da grella do terminal, en celas, non en píxeles. É o tamaño que recibe a pseudoconsola ao creala ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcconptyrs)) e, desde a 1.5, o do núcleo do terminal; desde a 1.9, sairá do tamaño da xanela dividido polo da cela.
+
+- `u16`: ningunha grella chega a 65 535 columnas ou filas. Cada uso comproba o seu propio límite: o ConPTY, por exemplo, recibe as medidas nun `COORD`, de 16 bits con signo, así que acepta como moito 32 767, e polo menos 1.
+- Deriva o mesmo ca os outros tipos do módulo, e os campos son públicos: calquera par de números é un tamaño, e quen o usa decide se lle serve.
 
 ## `crates/meiga-core/src/damage.rs`
 

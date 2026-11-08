@@ -45,7 +45,7 @@ Isto concreta o [ADR 0002](0002-windows-e-renderizado-cpu.md) no punto da caché
 | Antialiasing ClearType | Bordos de cor, depende do monitor do outro equipo por Escritorio remoto, e mesturar as tres canles por separado triplica o traballo de cada píxel. |
 | Un atlas con glifos de tamaño variábel, como os das GPU | Máis complexo de encher e de baleirar. Os glifos dun terminal son case todos do tamaño dunha cela, e os *slots* fixos fan que atopar e substituír un glifo sexa inmediato. O que sae da cela pérdese: os bloques e as liñas de caixa debuxaranse por código na subfase 8.2. |
 | Substituír o glifo usado hai máis tempo (LRU) cunha lista ligada | Máis memoria e actualizar punteiros cada vez que se usa un glifo. O reloxo só marca un *bit*. |
-| A táboa *hash* coa función de *hash* estándar (SipHash) | Protexe contra claves escollidas por un atacante, que aquí non existen, e é máis lenta. |
+| A táboa *hash* coa función de *hash* estándar (SipHash) | Protexe contra claves escollidas por un atacante, que eiquí non existen, e é máis lenta. |
 | Mestura lineal | O texto claro sobre fondo escuro vese máis fino ca no Windows Terminal. |
 | Os parámetros de mestura do sistema (`CreateRenderingParams`) e a corrección de Direct2D | Uns milisegundos máis ao arrancar, e un algoritmo máis complexo. Unha táboa simple, axustada contra o Windows Terminal, dá a mesma tinta. |
 | Crates de fontes e rasterizadores propios (`font-kit`, `swash`, `fontdue`, `ab_glyph`) | Máis dependencias, un aspecto distinto ao do resto de Windows e sen o *fallback* nin o *hinting* de DirectWrite. |

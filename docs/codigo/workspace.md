@@ -1,6 +1,6 @@
 # Código › configuración do workspace
 
-> Estado: subfase 1.3.
+> Estado: subfase 1.4.
 
 Os arquivos da raíz do repositorio configuran como se compila e se revisa todo o proxecto. Neste documento explícanse un a un.
 
@@ -137,6 +137,8 @@ allow-unwrap-in-tests = true
 
 Fai que as regras `unwrap_used` e `expect_used` non se apliquen nas probas. Nunha proba, que `unwrap()` provoque un pánico é precisamente o que se quere: a proba falla e mostra onde.
 
+Clippy só o aplica ás funcións de proba (`#[test]`) e aos módulos `#[cfg(test)]`. As funcións auxiliares das probas de integración (`tests/*.rs`), fóra deles, non contan como probas: por iso [`crates/meiga-win/tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs) permite as dúas regras en todo o arquivo.
+
 ## `deny.toml`
 
 A política de dependencias que revisa `cargo deny check`. Cada sección explícase en [Tecnoloxías › cargo-deny](../tecnoloxias.md#9-cargo-deny). Resumo:
@@ -160,6 +162,6 @@ Explicados en [Tecnoloxías › Git e GitHub](../tecnoloxias.md#12-git-e-github)
 
 ## `README.md`, `LICENSE` e `SECURITY.md`
 
-- `README.md` (en inglés): que é meiga, estado, obxectivos, requisitos (entre eles, PowerShell 7 para os scripts de `tools/`), como compilalo e empaquetalo, as comprobacións que debe pasar cada cambio e como medir un terminal co arnés e cos escenarios de carga. Leva unha insignia (*badge*) co estado da CI en `main` e unha ligazón a esta documentación.
+- `README.md` (en inglés): que é meiga, estado, obxectivos, requisitos (entre eles, PowerShell 7 para os scripts de `tools/`), como compilalo e empaquetalo, as comprobacións que debe pasar cada cambio (desde a subfase 1.4, despois de descargar o ConPTY con `fetch-conpty.ps1`), o exemplo de consola do ConPTY e como medir un terminal co arnés e cos escenarios de carga. Leva unha insignia (*badge*) co estado da CI en `main` e unha ligazón a esta documentación.
 - `LICENSE`: todos os dereitos reservados. O código vese en GitHub, pero non se concede permiso para usalo, copialo nin distribuílo. A única excepción son os dereitos que os termos de servizo de GitHub dan a calquera usuario: ver o repositorio e facer un *fork* dentro de GitHub. O último parágrafo lembra que os compoñentes de terceiros manteñen as súas propias licenzas, e que os seus avisos se distribúen cos binarios en `THIRD-PARTY-NOTICES.txt`.
 - `SECURITY.md`: como informar dun problema de seguridade de forma privada.

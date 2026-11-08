@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 1.3. Existen o esqueleto, a integración continua, as ferramentas de medición, os escenarios de carga e unha xanela que presenta só o que cambia, cun *framebuffer* propio, e que debuxa texto con DirectWrite: unha demo mostra o mesmo texto a tres escalas e debuxa rectángulos co rato. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 1.4. Existen o esqueleto, a integración continua, as ferramentas de medición, os escenarios de carga e unha xanela que presenta só o que cambia, cun *framebuffer* propio, e que debuxa texto con DirectWrite: unha demo mostra o mesmo texto a tres escalas e debuxa rectángulos co rato. `meiga-win` xa lanza programas nunha pseudoconsola e fala con eles, aínda fóra da xanela: un exemplo de consola mostra o que escriben. As seccións marcadas como *previsto* describen o deseño acordado, que se irá implementando nas subfases indicadas. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -79,9 +79,30 @@ sequenceDiagram
 | Xanela e bucle de mensaxes | 1.1 (feita) |
 | *Framebuffer* e presentación parcial | 1.2 (feita) |
 | Fontes e caché de glifos | 1.3 (feita) |
-| ConPTY | 1.4 |
+| ConPTY | 1.4 (feita) |
 | Fachada do terminal (parser e grella) | 1.5 |
 | Da saída á pantalla | 1.6 |
+
+### Sesións: a shell, o ConPTY e os dous fíos
+
+Desde a subfase 1.4, o principio do camiño xa funciona: `meiga-win` lanza un programa nunha pseudoconsola e fala con el ([Tecnoloxías › ConPTY](tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). Aínda non chega á xanela: as probas e un exemplo de consola reciben o que escribe.
+
+```mermaid
+flowchart LR
+    write["Pty::write<br/>(desde a 1.7, o teclado)"] --> input["Entrada pendente<br/>Vec + evento"]
+    input --> writer["Fío escritor"]
+    writer -- "tubaxe de entrada" --> conpty["ConPTY<br/>(OpenConsole)"]
+    conpty <--> shell["Programa<br/>(pwsh, cmd, wsl…)"]
+    conpty -- "tubaxe de saída" --> reader["Fío lector<br/>ReadFile de 64 KiB"]
+    reader --> output["Output::received<br/>(desde a 1.6, o terminal)"]
+    reader -. "ao final" .-> ended["Output::ended<br/>co código de saída"]
+```
+
+1. `Conpty::spawn` crea as dúas tubaxes, a pseudoconsola e un *job*, lanza o programa nela e dentro do *job*, e arranca os dous fíos da sesión. Devolve un `Pty` ([Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winsrcconptyrs)).
+2. `Pty::write` deixa os bytes na entrada pendente e esperta o escritor, que os escribe na tubaxe de entrada. Nunca espera.
+3. O lector le a saída en bloques de ata 64 KiB e pásaos a un `Output`, que desde a subfase 1.6 será o terminal.
+4. O escritor espera á vez a entrada e o fin do programa. Cando o programa remata, ou cando se destrúe o `Pty`, pecha a pseudoconsola: o ConPTY remata, a tubaxe de saída péchase, e o lector avisa do fin co código de saída do programa. Se pasan 10 s sen que remate ningún dos programas que tiña a sesión ao pechala, está bloqueada, e o escritor remata todos os do *job*: o programa e os que arrancou ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
+5. meiga usa o ConPTY que leva ao lado de `meiga.exe` (`conpty.dll` e `OpenConsole.exe`) ou, se non está, o de Windows ([ADR 0004](adr/0004-conpty-empaquetado.md)).
 
 ### Fotogramas: do cambio á pantalla
 
@@ -134,12 +155,14 @@ O tamaño da cela sae das métricas da fonte e do DPI da xanela. Cada fonte, a u
 | Fío | Cantos | Que fai | Cando esperta |
 |---|---|---|---|
 | Interface | 1 | Mensaxes de Windows, entrada do usuario, composición e presentación. | Só cando chega unha mensaxe ou vence o temporizador dun fotograma pendente (`MsgWaitForMultipleObjectsEx`). |
-| Lector | 1 por tab coa shell en marcha | Le a saída da shell e actualiza a grella. | Só cando a shell escribe. |
-| Escritor | 1 por tab coa shell en marcha | Envía á shell o que se teclea. | Só cando hai algo que enviar. |
+| Lector | 1 por tab coa shell en marcha | Le a saída da shell e actualiza a grella. | Só cando a shell escribe (`ReadFile`). |
+| Escritor | 1 por tab coa shell en marcha | Envía á shell o que se teclea, e pecha a pseudoconsola cando a shell remata ou se pecha a tab. | Só cando hai algo que enviar, cando se pecha a tab ou cando remata a shell (`WaitForMultipleObjects`). |
 
-Un fío bloqueado nunha lectura ou nunha espera non consome CPU: o sistema operativo non o planifica ata que hai datos. Por iso o número de fíos non é un problema en si; o problema é que esperten sen motivo. O modelo completo, cos fotogramas e as tabs en segundo plano, está no [ADR 0005](adr/0005-fios-e-fotogramas.md).
+Un fío bloqueado nunha lectura ou nunha espera non consome CPU: o sistema operativo non o planifica ata que hai datos. Por iso o número de fíos non é un problema en si; o problema é que esperten sen motivo. O modelo completo, cos fotogramas e as tabs en segundo plano, está no [ADR 0005](adr/0005-fios-e-fotogramas.md), e o fin e o peche das sesións, no [ADR 0011](adr/0011-fin-e-peche-das-sesions.md).
 
 O fío da interface xa existe desde a subfase 1.1: é o fío principal do programa. Dorme en `MsgWaitForMultipleObjectsEx` mentres non chega ningunha mensaxe nin vence o temporizador dos fotogramas, que só está activo cando hai un fotograma pendente (ver [Tecnoloxías › Temporizadores](tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface)). Na subfase 1.1 durmía en `GetMessageW`, que só espera mensaxes ([Tecnoloxías › Xanelas Win32](tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes)); o temporizador chegou coa 1.2 ([ADR 0008](adr/0008-temporizador-dos-fotogramas.md)). Ao arrancar, Windows crea ademais algúns fíos auxiliares no proceso, por exemplo para cargar as DLL en paralelo, que rematan sós ao pouco tempo se non teñen traballo.
+
+O lector e o escritor existen desde a subfase 1.4, en cada sesión de ConPTY ([Sesións](#sesións-a-shell-o-conpty-e-os-dous-fíos)), pero `meiga.exe` aínda non abre ningunha: as tabs chegan na fase 2.
 
 ## 5. Compilación
 
@@ -157,7 +180,7 @@ Ningún cambio chega a `main` sen pasar por un PR e pola CI:
 ```mermaid
 flowchart LR
     rama["Rama da subfase"] --> pr["Pull request"]
-    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · test · release<br/>zip · DLL · xanela · presentación · arranque · fotogramas"]
+    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · ConPTY · test · release<br/>zip · DLL · xanela · presentación · arranque · fotogramas"]
     pr --> scen["Load scenarios (bash)<br/>ShellCheck · escenarios en bash"]
     pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
     win --> art["Artefacto<br/>meiga-…-msvc.zip"]
@@ -169,7 +192,7 @@ flowchart LR
 
 - As regras da rama `main` (*ruleset*) fan obrigatorio este camiño, tamén para os administradores.
 - Dependabot propón cada semana as versións novas dos crates, das actions e de Rust, como PR que pasan polo mesmo proceso.
-- Cada luns, a CI revisa de novo as dependencias contra a base de datos de vulnerabilidades, aínda que non cambiase nada.
+- Cada luns, a CI revisa de novo as dependencias contra a base de datos de vulnerabilidades, aínda que non cambiase nada, e comproba se hai unha versión estábel do ConPTY máis nova ca a fixada. Esta comprobación non é obrigatoria: unha versión nova non bloquea ningún PR.
 
 Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github-actions) e en [Código › .github](codigo/github.md).
 
@@ -187,6 +210,7 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0008](adr/0008-temporizador-dos-fotogramas.md) | Un temporizador de alta resolución para os fotogramas. |
 | [0009](adr/0009-xanela-que-non-se-ve.md) | Non debuxar coa xanela minimizada; as tapadas debúxanse. |
 | [0010](adr/0010-texto-con-directwrite.md) | Texto con DirectWrite, nunha caché de glifos do tamaño da cela. |
+| [0011](adr/0011-fin-e-peche-das-sesions.md) | O escritor de cada sesión espera tamén polo programa e pecha a pseudoconsola; cada sesión ten un *job*, e unha sesión pechada remata sempre. |
 
 ## 8. Medición do rendemento
 
@@ -240,15 +264,16 @@ O código explícase en [Código › escenarios de carga](codigo/escenarios.md).
 
 ## 9. Estado actual
 
-Despois da subfase 1.3:
+Despois da subfase 1.4:
 
-- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores, os rectángulos, as zonas que cambian (*damage*), o *pacer* dos fotogramas e as celas do texto; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, o bucle de mensaxes e o temporizador dos fotogramas.
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas e as celas do texto; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, o bucle de mensaxes, o temporizador dos fotogramas e as sesións de ConPTY.
+- `meiga-win` lanza calquera programa nunha pseudoconsola, cos seus dous fíos, que dormen mentres non hai nada que facer: le o que escribe, envíalle texto, sabe cando remata e co código de saída, e pecha a sesión sen esperar. Usa o ConPTY do Windows Terminal que vai no paquete ou, se non está, o de Windows. As probas lanzan programas de verdade cos dous, e un exemplo de consola mostra o que escribe calquera programa. `meiga.exe` aínda non o usa: a saída chegará á xanela na subfase 1.6.
 - `meiga.exe` abre unha xanela cunha demo: o mesmo texto ao 100 %, ao 125 % e ao 150 % de escala, con letras con acentos, símbolos, liñas de caixa, ideogramas CJK e cores, e por riba, os rectángulos que se debuxan arrastrando co rato. Cada fotograma presenta só as zonas que cambian, que se poden ver cun bordo magenta (tecla P). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e o seu fío dorme. Ao pechala, o programa remata co código 0.
 - Ten tres modos de medición, `--bench partial`, `--bench full` e `--bench text`, e un rexistro dos fotogramas, `--trace-frames`.
 - `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 330 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela, a escala por monitor, que presenta só o que cambia e que remata ben.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). As dependencias externas son `windows-sys`, `windows` e `windows-core`, de Microsoft, e `unicode-width`.
-- Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe`.
-- As decisións de arquitectura están escritas en dez ADR.
+- Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe` e o ConPTY (`conpty.dll` e `OpenConsole.exe`). `tools/fetch-conpty.ps1` descarga o ConPTY do seu paquete NuGet, cunha versión e un SHA-256 fixados, e comproba que está asinado por Microsoft; cada luns, a CI avisa se hai unha versión nova.
+- As decisións de arquitectura están escritas en once ADR.
 - O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, e `measure-frames.ps1`, canto custan os seus fotogramas: parciais, completos e completos de texto.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis.
 - Os scripts de `tools/` necesitan PowerShell 7. En Windows PowerShell 5.1 non se executan: só mostran o comando para facelo con `pwsh`.

@@ -1,12 +1,13 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 1.3.
+> Estado: subfase 1.4.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
 | Arquivo | Para que |
 |---|---|
 | [`package.ps1`](#toolspackageps1) | Compilar en modo *release* e crear o `.zip` que se distribúe. |
+| [`fetch-conpty.ps1`](#toolsfetch-conptyps1) | Descargar o ConPTY que vai con meiga, comprobalo e deixalo en `target\conpty\`; avisar se hai unha versión nova. |
 | [`check-imports.ps1`](#toolscheck-importsps1) | Comprobar que `meiga.exe` non depende do *runtime* de Visual C++. |
 | [`check-window.ps1`](#toolscheck-windowps1) | Comprobar que `meiga.exe` abre a súa xanela e se pecha ben. |
 | [`check-present.ps1`](#toolscheck-presentps1) | Comprobar que `meiga.exe` presenta só o que cambia e non debuxa en repouso nin minimizado. |
@@ -31,6 +32,7 @@ Contido do `.zip`:
 | Arquivo | Orixe |
 |---|---|
 | `meiga.exe` | `target\release\meiga.exe`. |
+| `conpty.dll` e `OpenConsole.exe` | O ConPTY do Windows Terminal, que copia [`fetch-conpty.ps1`](#toolsfetch-conptyps1) desde o paquete NuGet, desde a subfase 1.4. |
 | `LICENSE.txt` | `LICENSE`, coa extensión `.txt` para que Windows o abra cun dobre clic. |
 | `README.md` | `README.md`. |
 | `THIRD-PARTY-NOTICES.txt` | Xerado por `third-party-notices.ps1`. |
@@ -121,12 +123,13 @@ Compila desde a raíz do repositorio coas versións exactas do `Cargo.lock` (`--
 
 ```powershell
     Copy-Item -LiteralPath $exe -Destination $staging
+    & (Join-Path $PSScriptRoot 'fetch-conpty.ps1') -Destination $staging
     Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $staging 'LICENSE.txt')
     Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $staging
     & (Join-Path $PSScriptRoot 'third-party-notices.ps1') -OutFile (Join-Path $staging 'THIRD-PARTY-NOTICES.txt')
 ```
 
-Copia os arquivos e xera os avisos de terceiros. `&` é o operador de chamada: executa o script cuxa ruta se calcula na propia liña.
+Copia os arquivos e xera os avisos de terceiros. `&` é o operador de chamada: executa o script cuxa ruta se calcula na propia liña. `fetch-conpty.ps1` comproba o ConPTY e cópiao ao cartafol do paquete; se aínda non está descargado, descárgao, así que o paquete sempre o leva.
 
 ```powershell
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
@@ -142,6 +145,215 @@ Write-Host "Wrote $zip"
 
 - `Compress-Archive` crea o zip. Con `staging\*`, os arquivos quedan na raíz do zip, sen cartafol intermedio.
 - `-Force` substitúe un zip anterior co mesmo nome.
+
+## `tools/fetch-conpty.ps1`
+
+Desde a subfase 1.4. Descarga o ConPTY que vai con meiga ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)), o paquete NuGet `Microsoft.Windows.Console.ConPTY` na versión que fixa o propio script, e compróbao. Deixa os dous arquivos que usa meiga en `target\conpty\`, onde os buscan as [probas](meiga-win.md#cratesmeiga-wintestsconptyrs) e o [exemplo](meiga-win.md#cratesmeiga-winexamplesconptyrs) de `meiga-win`, e desde onde os copia [`package.ps1`](#toolspackageps1).
+
+```powershell
+.\tools\fetch-conpty.ps1                         # descarga e comproba; os arquivos quedan en target\conpty\
+.\tools\fetch-conpty.ps1 -Destination <cartafol> # ademais, copia os dous arquivos a <cartafol>
+.\tools\fetch-conpty.ps1 -CheckLatest            # só mira en nuget.org se hai unha versión estábel máis nova
+```
+
+A primeira vez descarga o paquete, de 1,7 MB. As seguintes, só comproba o que xa ten, sen descargar nada:
+
+```text
+Microsoft.Windows.Console.ConPTY 1.25.260930003: the package is already in …\target\conpty.
+conpty.dll: version 1.25.2609.30003, 119608 bytes, signed by Microsoft Corporation.
+OpenConsole.exe: version 1.25.2609.30003, 1089376 bytes, signed by Microsoft Corporation.
+conpty.dll and OpenConsole.exe are in …\target\conpty
+```
+
+`cargo test` necesita o ConPTY: sen el, as probas que o usan fallan cunha mensaxe que pide executar este script. Por iso a CI o executa antes das probas ([Código › GitHub](github.md#comprobacións)), e unha vez por semana comproba con `-CheckLatest` se hai unha versión nova ([job `conpty`](github.md#job-conpty)).
+
+Explicación por partes:
+
+```powershell
+$Package = 'Microsoft.Windows.Console.ConPTY'
+$Version = '1.25.260930003'
+$Sha256 = '02B07B349AF66D801159BDF9E440D4A1CE78BB951F37FC8609731665AFDAE7EE'
+# The files for x64, as they are in the package.
+$Files = [ordered]@{
+    'conpty.dll'      = 'runtimes/win-x64/native/conpty.dll'
+    'OpenConsole.exe' = 'build/native/runtimes/x64/OpenConsole.exe'
+}
+# The v2 API of www.nuget.org. The v3 API, on api.nuget.org, would do too,
+# but some networks block it.
+$Feed = 'https://www.nuget.org/api/v2'
+```
+
+- `$Version` e `$Sha256` son o único sitio onde se fixa a versión do ConPTY ([ADR 0004](../adr/0004-conpty-empaquetado.md)). O SHA-256 é o do `.nupkg` enteiro ([Tecnoloxías › NuGet](../tecnoloxias.md#33-nuget-e-as-sinaturas-authenticode)).
+- `$Files`: o nome de cada arquivo e a súa ruta dentro do paquete. Cada un está nun cartafol distinto: `conpty.dll` onde o buscan os proxectos de .NET, e `OpenConsole.exe` onde o buscan os de C++. `[ordered]` mantén a orde, para que as mensaxes saian sempre na mesma.
+- `$ProgressPreference = 'SilentlyContinue'`, antes destas liñas, oculta a barra de progreso de `Invoke-WebRequest`.
+
+```powershell
+if ($CheckLatest) {
+    $versions = [System.Collections.Generic.List[string]]::new()
+    $url = "$Feed/FindPackagesById()?id='$Package'&semVerLevel=2.0.0"
+    while ($url) {
+        $feedXml = [xml](Invoke-WebRequest -Uri $url -TimeoutSec 60 -MaximumRetryCount 3 -RetryIntervalSec 5).Content
+        $elements = @($feedXml.DocumentElement.ChildNodes | Where-Object { $_ -is [System.Xml.XmlElement] })
+        foreach ($entry in $elements | Where-Object LocalName -EQ 'entry') {
+            $versions.Add($entry.properties.Version)
+        }
+        # The feed comes in pages, each with a link to the next one.
+        $next = @($elements | Where-Object { $_.LocalName -eq 'link' -and $_.GetAttribute('rel') -eq 'next' })
+        $url = if ($next) { $next[0].GetAttribute('href') } else { $null }
+    }
+```
+
+Con `-CheckLatest`, o script non descarga o paquete: só lista as versións publicadas.
+
+- `FindPackagesById()` devolve un XML (Atom) cun elemento `entry` por versión. `semVerLevel=2.0.0` pide tamén as versións que só se poden escribir con SemVer 2.0, que sen el non aparecen.
+- `[xml]` converte o texto nun documento XML. Os fillos do elemento raíz (`feed`) son as versións (`entry`), as ligazóns (`link`) e outros datos. O script percorre os fillos en vez de ler `$feedXml.feed.entry` porque, co modo estrito, ler unha propiedade que non existe é un erro: pasaría nunha páxina sen versións.
+- `Where-Object { $_ -is [System.Xml.XmlElement] }` deixa só os elementos: entre eles pode haber texto, como os espazos, que non ten atributos.
+- `-MaximumRetryCount 3 -RetryIntervalSec 5`: se a petición falla, por exemplo por un problema momentáneo da rede, repítea ata tres veces, cada 5 s.
+- As versións chegan en páxinas. Cada páxina leva unha ligazón `link` con `rel="next"` á seguinte, e o bucle séguea ata a última. Hoxe todas caben nunha, pero o script non depende diso.
+
+```powershell
+    # Previews have a suffix, such as 1.26.260930004-preview.
+    $stable = @($versions | Where-Object { $_ -notmatch '-' } | Sort-Object { [version]$_ })
+    if ($stable.Count -eq 0) {
+        throw "nuget.org lists no stable version of $Package."
+    }
+    $latest = $stable[-1]
+    if ([version]$latest -gt [version]$Version) {
+        throw "$Package $latest is newer than the pinned $Version. Update `$Version and `$Sha256 in $(Split-Path $PSCommandPath -Leaf)."
+    }
+    Write-Host "OK: $Version is the latest stable version of $Package on nuget.org."
+    exit 0
+}
+```
+
+- As versións de proba levan un sufixo despois dun guión, e quedan fóra.
+- `Sort-Object { [version]$_ }` ordena as versións como números, parte por parte. Como texto, `1.9` iría despois de `1.25`.
+- `$stable[-1]` é o último elemento: a versión máis nova.
+- Se hai unha máis nova ca a fixada, falla e di o que hai que cambiar. Na mensaxe, `` `$ `` escribe un `$` en vez de ler a variábel.
+
+```powershell
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+Push-Location $root
+try {
+    $metadata = cargo metadata --format-version 1 --no-deps --locked | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0) {
+        throw "cargo metadata failed with exit code $LASTEXITCODE"
+    }
+}
+finally {
+    Pop-Location
+}
+$folder = Join-Path $metadata.target_directory 'conpty'
+New-Item -ItemType Directory -Force -Path $folder | Out-Null
+```
+
+O cartafol de compilación, coma en [`package.ps1`](#toolspackageps1): `cargo metadata` desde a raíz do repositorio. O paquete e os arquivos quedan en `conpty\`, dentro del: Git ignórao, e `cargo clean` bórrao.
+
+```powershell
+$nupkg = Join-Path $folder "$Package.$Version.nupkg"
+if ((Test-Path -LiteralPath $nupkg) -and (Get-FileHash -LiteralPath $nupkg -Algorithm SHA256).Hash -eq $Sha256) {
+    Write-Host "$Package ${Version}: the package is already in $folder."
+}
+else {
+    $partial = "$nupkg.partial"
+    Invoke-WebRequest -Uri "$Feed/package/$Package/$Version" -OutFile $partial -TimeoutSec 120 -MaximumRetryCount 3 -RetryIntervalSec 5
+    $hash = (Get-FileHash -LiteralPath $partial -Algorithm SHA256).Hash
+    if ($hash -ne $Sha256) {
+        Remove-Item -LiteralPath $partial
+        throw "The SHA-256 of the downloaded package is $hash, and it should be $Sha256."
+    }
+    Move-Item -LiteralPath $partial -Destination $nupkg -Force
+    Write-Host "$Package ${Version}: downloaded from nuget.org, $((Get-Item -LiteralPath $nupkg).Length) bytes, with the expected SHA-256."
+}
+```
+
+- Só descarga o paquete se non o ten, ou se o que ten non é exactamente o fixado.
+- Descárgao primeiro con outro nome (`.partial`), e dálle o definitivo só despois de comprobar o SHA-256. Así, unha descarga cortada ou un paquete distinto nunca quedan co nome do bo.
+- `${Version}`, coas chaves, porque despois vén `:`, que PowerShell lería como parte do nome da variábel.
+
+```powershell
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::OpenRead($nupkg)
+try {
+    foreach ($name in $Files.Keys) {
+        $entry = $zip.GetEntry($Files[$name])
+        if (-not $entry) {
+            throw "The package has no $($Files[$name])."
+        }
+        $path = Join-Path $folder $name
+        # Extract only what changed: a running session keeps its
+        # OpenConsole.exe in use, and Windows does not let it be replaced.
+        $stream = $entry.Open()
+        try {
+            $hash = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($stream))
+        }
+        finally {
+            $stream.Dispose()
+        }
+        if (-not (Test-Path -LiteralPath $path) -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $hash) {
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $path, $true)
+        }
+    }
+}
+finally {
+    $zip.Dispose()
+}
+```
+
+- Un `.nupkg` é un zip: `ZipFile.OpenRead` ábreo con .NET, sen descomprimilo enteiro. `GetEntry` busca cada arquivo pola súa ruta, e o script falla se non está, por exemplo se unha versión nova o cambiase de cartafol.
+- Só extrae o arquivo se non existe ou se é distinto do do paquete: compara o SHA-256 do que hai dentro do zip (`SHA256.HashData` le o arquivo comprimido sen gardalo) co do que xa está fóra. Mentres unha sesión está aberta (por exemplo, o exemplo de `meiga-win`), Windows non deixa substituír o seu `OpenConsole.exe`; así, executar o script nese momento non falla se o arquivo xa é o bo.
+- `[System.Convert]::ToHexString` escribe o *hash* en hexadecimal e en maiúsculas, coma `Get-FileHash`.
+- `ExtractToFile` co terceiro argumento a `$true` substitúe o arquivo que houbese.
+- Os `try`/`finally` pechan o zip e cada arquivo de dentro aínda que algo falle.
+
+```powershell
+foreach ($name in $Files.Keys) {
+    $path = Join-Path $folder $name
+    $signature = Get-AuthenticodeSignature -LiteralPath $path
+    if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch '(^|, )O=Microsoft Corporation(,|$)') {
+        throw "$name is not signed by Microsoft: $($signature.Status), $($signature.StatusMessage)"
+    }
+    $file = Get-Item -LiteralPath $path
+    Write-Host ("{0}: version {1}, {2} bytes, signed by Microsoft Corporation." -f $name, $file.VersionInfo.FileVersion, $file.Length)
+}
+Write-Host "conpty.dll and OpenConsole.exe are in $folder"
+```
+
+- Comproba a sinatura Authenticode dos dous arquivos ([Tecnoloxías › NuGet e as sinaturas Authenticode](../tecnoloxias.md#33-nuget-e-as-sinaturas-authenticode)): que é válida e que a organización (`O=`) do certificado é Microsoft Corporation.
+- A expresión regular quere `O=Microsoft Corporation` como un campo enteiro do nome do certificado: ao principio ou despois de `, `, e antes dunha coma ou do final. Non vale, por exemplo, `O=Microsoft Corporation Fake`.
+- A versión de cada arquivo (`VersionInfo.FileVersion`) é a do Windows Terminal do que sae: a do paquete, escrita doutra maneira.
+
+```powershell
+if ($Destination) {
+    # Resolve a relative path against the current PowerShell location, not
+    # the working directory of the process.
+    $Destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    foreach ($name in $Files.Keys) {
+        Copy-Item -LiteralPath (Join-Path $folder $name) -Destination $Destination
+    }
+    Write-Host "Copied to $Destination"
+}
+```
+
+Con `-Destination`, copia os dous arquivos a ese cartafol: é o que fai `package.ps1` co cartafol do paquete. A ruta resólvese coma en [`third-party-notices.ps1`](#toolsthird-party-noticesps1).
+
+**Actualizar o ConPTY.** Cando o job `conpty` falla, ou `-CheckLatest` di que hai unha versión nova:
+
+1. Ler as novidades da versión nova, nas notas da versión do Windows Terminal coa mesma serie.
+2. Descargar o paquete e calcular o seu SHA-256. nuget.org mostra o SHA-512 dos paquetes, non o SHA-256:
+
+   ```powershell
+   $new = '<versión nova>'
+   Invoke-WebRequest "https://www.nuget.org/api/v2/package/Microsoft.Windows.Console.ConPTY/$new" -OutFile "$env:TEMP\conpty.nupkg"
+   (Get-FileHash "$env:TEMP\conpty.nupkg" -Algorithm SHA256).Hash
+   ```
+
+3. Cambiar `$Version` e `$Sha256` no script e executalo: descarga o paquete novo e comproba as sinaturas.
+4. Pasar as probas (`cargo test --workspace`) e o exemplo de `meiga-win` con `cmd` e con `pwsh`.
+5. Comprobar que a licenza do paquete segue sendo a MIT, coma no modelo dos [avisos de terceiros](#toolsabouthbs), e cambiar a versión na documentación.
+
+Se o SHA-256 dun paquete xa fixado deixase de coincidir, o script falla. Nese caso, non se debe cambiar `$Sha256` sen saber antes por que cambiou o paquete.
 
 ## `tools/check-imports.ps1`
 
@@ -720,10 +932,10 @@ A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso 
    }
    ```
 
-`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.2 son 17:
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.4 son 18:
 
 ```text
-OK: the 17 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+OK: the 18 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
 ```
 
 | Comprobación | Como |
@@ -748,7 +960,7 @@ A CI execútao en cada PR (ver [Código › .github](github.md#job-windows)).
 
 ## `tools/third-party-notices.ps1`
 
-Xera `THIRD-PARTY-NOTICES.txt` coas licenzas de todas as dependencias. Uso:
+Xera `THIRD-PARTY-NOTICES.txt` coas licenzas de todas as dependencias e do ConPTY. Uso:
 
 ```powershell
 .\tools\third-party-notices.ps1                       # escribe target\THIRD-PARTY-NOTICES.txt
@@ -760,7 +972,8 @@ Explicación por partes:
 ```powershell
 <#
 .SYNOPSIS
-Generates THIRD-PARTY-NOTICES.txt for the crates that meiga ships.
+Generates THIRD-PARTY-NOTICES.txt for the crates and the ConPTY that meiga
+ships.
 ...
 #>
 ```
@@ -853,6 +1066,19 @@ Used by:
 
 {{{text}}}
 {{/each}}
+
+================================================================================
+MIT License (MIT)
+
+Used by:
+- Microsoft.Windows.Console.ConPTY, from NuGet: conpty.dll and OpenConsole.exe <https://github.com/microsoft/terminal>
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+...
 ```
 
 - Cabeceira fixa en inglés, porque este arquivo distribúese co programa.
@@ -861,6 +1087,7 @@ Used by:
   - a lista de crates que a usan, coa versión e o repositorio se o teñen;
   - o texto completo da licenza, co *copyright* do autor.
 - Úsanse sempre tres chaves para que o texto non se escape como HTML.
+- **O ConPTY**, desde a subfase 1.4. `conpty.dll` e `OpenConsole.exe` non son crates, así que `cargo-about` non os coñece: a súa licenza vai escrita ao final do modelo, co mesmo formato ca as demais. O texto é o do arquivo `LICENSE` do Windows Terminal, o proxecto do que saen, coa licenza MIT que declara o paquete NuGet ([ADR 0004](../adr/0004-conpty-empaquetado.md)). Non leva a versión do paquete, para que non haxa que cambiala en dous sitios: só está en [`fetch-conpty.ps1`](#toolsfetch-conptyps1).
 
 Exemplo do resultado real, xerado nunha copia do repositorio á que se lle engadiu unha dependencia de proba (`memchr`):
 
