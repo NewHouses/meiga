@@ -1,18 +1,25 @@
 # Código › `meiga-core`
 
-> Estado: subfase 1.4. Contén as cores, a xeometría (puntos, tamaños e rectángulos, e o tamaño da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas e as celas do texto.
+> Estado: subfase 1.5. Contén as cores, a xeometría (puntos, tamaños e rectángulos, e o tamaño da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto e o terminal: a fachada sobre `alacritty_terminal`, o escáner previo e as gravacións.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
 | Arquivo | Contido |
 |---|---|
-| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e a súa única dependencia, `unicode-width`. |
+| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr` e `unicode-width`. |
 | [`src/lib.rs`](#cratesmeiga-coresrclibrs) | A raíz do crate: os módulos. |
 | [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores. |
 | [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; e `GridSize`, o tamaño da grella en celas. |
 | [`src/damage.rs`](#cratesmeiga-coresrcdamagers) | `Damage`: as zonas da xanela que cambiaron desde o último fotograma. |
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
 | [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella. |
+| [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, e a copia do que cambia. |
+| [`src/term/screen.rs`](#cratesmeiga-coresrctermscreenrs) | `Screen`: o que mostra o terminal, en tipos de meiga, e as celas que cambiaron. |
+| [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
+| [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
+| [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
+| [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
+| [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
 
 ## `crates/meiga-core/Cargo.toml`
 
@@ -28,6 +35,10 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+# The terminal core, behind the facade of the term module (ADR 0003).
+alacritty_terminal.workspace = true
+# Finds ESC fast in the scanner that reads the output before the parser.
+memchr.workspace = true
 # The width of each character in cells, as alacritty_terminal measures it.
 unicode-width.workspace = true
 
@@ -38,7 +49,12 @@ workspace = true
 - `name`: o nome do crate. No código úsase con guión baixo: `meiga_core`.
 - `description`: unha liña que describe o crate.
 - As liñas `campo.workspace = true` herdan os valores de `[workspace.package]` do `Cargo.toml` raíz.
-- `[dependencies]`: desde a subfase 1.3, `unicode-width`, coa versión e as opcións do `Cargo.toml` raíz ([Código › workspace](workspace.md#cargotoml-raíz)). Dá o ancho de cada carácter en celas, como o mide `alacritty_terminal` ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)). É código Rust puro, sen `unsafe` nin APIs de ningún sistema, así que respecta as regras deste crate.
+- `[dependencies]`, coas versións e as opcións do `Cargo.toml` raíz ([Código › workspace](workspace.md#cargotoml-raíz)):
+  - desde a subfase 1.5, **`alacritty_terminal`**, o núcleo do terminal, que trae o seu parser, `vte` ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Só o usa o módulo `term`;
+  - desde a 1.5, **`memchr`**, que busca un byte nun texto moitos bytes á vez, con instrucións SIMD: o escáner busca así o seguinte ESC. `vte` faino igual co mesmo crate, así que non engade ningún crate novo;
+  - desde a 1.3, **`unicode-width`**, que dá o ancho de cada carácter en celas, como o mide `alacritty_terminal` ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)).
+
+  Os tres son código Rust que non usa APIs de ningún sistema desde o que chama meiga, así que respectan as regras deste crate. `alacritty_terminal` ten tamén un PTY propio con código de Windows, que meiga non usa e que o ligador elimina.
 - `[lints] workspace = true`: aplica as regras de calidade comúns.
 
 ## `crates/meiga-core/src/lib.rs`
@@ -57,13 +73,15 @@ pub mod color;
 pub mod damage;
 pub mod geometry;
 pub mod pacing;
+pub mod term;
 pub mod text;
 ```
 
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais. `term`, desde a subfase 1.5, ten submódulos, así que vai nun cartafol: o módulo está en `src/term/mod.rs`.
+- As dependencias, como `alacritty_terminal`, poden ter `unsafe` dentro: `forbid` só se aplica ao código deste crate.
 
 ## `crates/meiga-core/src/color.rs`
 
@@ -319,7 +337,7 @@ O que mostra unha cela:
 | `WideRight(c)` | A metade dereita dun carácter que ocupa a cela anterior e esta. |
 
 - **Por que dúas metades.** Así cada cela se pode debuxar soa: cando só cambia unha das dúas, ou cando só unha está dentro da zona que cambiou, só se debuxa esa. Na caché de glifos, cada metade ten o seu *slot* ([Código › meiga-render](meiga-render.md#glyphcache)).
-- Deriva `Clone`, `Copy`, `Debug`, `PartialEq`, `Eq` e `Hash`, como `Rgb`.
+- Deriva `Clone`, `Copy`, `Debug`, `Default`, `PartialEq`, `Eq` e `Hash`, como `Rgb`. O valor por defecto, desde a subfase 1.5, é `Blank` (`#[default]`): o dunha cela baleira do terminal ([`Cell`](#cratesmeiga-coresrctermscreenrs)).
 
 ```rust
 pub fn cells(text: &str) -> impl Iterator<Item = CellChar> + '_ {
@@ -349,3 +367,523 @@ pub fn width(text: &str) -> usize {
 - **`width`** conta as celas que ocupa un texto.
 
 **Probas.** Tres: as letras, `ñ` e `€` ocupan unha cela, e o espazo é unha cela en branco; `中` e `😀` ocupan dúas cada un, e `日本語 abc`, dez; e os caracteres de control (o tabulador) e os que non teñen ancho (un acento que se combina e o espazo de ancho cero) non ocupan ningunha.
+
+## `crates/meiga-core/src/term/mod.rs`
+
+O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra).
+
+```rust
+pub mod recording;
+mod scanner;
+mod screen;
+
+pub use screen::{Cell, CellFlags, Color, Columns, Cursor, CursorShape, Screen};
+```
+
+- Os outros arquivos do cartafol `src/term/` son os submódulos de `term`.
+- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner` e `screen` son privados, pero os tipos de `screen` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen`, sen saber en que arquivo están.
+
+### Constantes
+
+```rust
+pub const SCROLLBACK_LINES: usize = 10_000;
+
+pub const MIN_SIZE: GridSize =
+    GridSize::new(term::MIN_COLUMNS as u16, term::MIN_SCREEN_LINES as u16);
+```
+
+- **`SCROLLBACK_LINES`**: as liñas de historial que se gardan por riba da pantalla, as que mostrará o *scrollback* (subfase 1.9). `alacritty_terminal` non as reserva ao crear o terminal: a memoria do historial medra a medida que se enche, de 1 000 en 1 000 liñas.
+- **`MIN_SIZE`**: a grella máis pequena que admite `alacritty_terminal`, as súas constantes `MIN_COLUMNS` e `MIN_SCREEN_LINES`: 2 columnas e 1 fila. Un carácter ancho necesita dúas columnas: nunha grella dunha soa columna, `alacritty_terminal` falla (*panic*) ao escribilo. `as u16` converte os dous valores, que son `usize`, porque nunha constante non se pode usar `try_from`; son 2 e 1, así que caben.
+
+### `Changes` e `Modes`
+
+```rust
+pub struct Changes {
+    pub responses: bool,
+    pub title: bool,
+    pub bell: bool,
+    pub clipboard: bool,
+}
+```
+
+- **`Changes`**: o que pasou ao ler a saída, ademais dos cambios na pantalla: hai respostas para o programa (`take_responses`), cambiou o título (`title`), soou a campá ou hai texto para o portapapeis (`take_clipboard`). Devólveno `feed` e `end_sync`, e quen chama só ten que facer algo máis cando un campo é `true`.
+- **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). `win32_input` dío o escáner, porque `alacritty_terminal` non coñece ese modo; o resto, `alacritty_terminal`.
+
+### Os eventos: `Pending` e `Listener`
+
+```rust
+#[derive(Default)]
+struct Pending {
+    changes: Changes,
+    responses: Vec<u8>,
+    title: Option<String>,
+    clipboard: Option<String>,
+}
+
+struct Listener(Arc<Mutex<Pending>>);
+```
+
+Mentres le a saída, `alacritty_terminal` avisa do que pasa chamando a `send_event` do seu `EventListener`, un trait que implementa `Listener`. `send_event` recibe `&self`, unha referencia que non deixa cambiar nada, así que os eventos van a unha cola, `Pending`, que o `Listener` comparte co `Terminal` nun `Arc<Mutex<…>>`:
+
+- **`Arc`** é un punteiro con contador de referencias que se pode compartir entre fíos: o `Terminal` e o seu `Listener` apuntan á mesma cola, que se destrúe cando se destrúen os dous.
+- **`Mutex`** permite cambiar o que garda a través dunha referencia compartida, bloqueándoo mentres tanto. Ninguén máis o bloquea, así que nunca hai que esperar. Fai falta porque o terminal ten que poder pasar dun fío a outro (`Send`): `RefCell`, a alternativa sen bloqueo, non o permite dentro dun `Arc`.
+
+| Evento | Que fai meiga |
+|---|---|
+| `PtyWrite` | Unha resposta para o programa: os atributos do dispositivo (DA1 e DA2), o estado e a posición do cursor (DSR), o tamaño en celas… Engádese a `responses`. |
+| `Title` | O título que lle dá o programa á xanela (OSC 0 e 2). Un título baleiro é como non ter ningún: a tab mostrará o seu. |
+| `ResetTitle` | O programa recuperou un título gardado (`ESC [ 23 t`) que era ningún. |
+| `Bell` | A campá (BEL). |
+| `ClipboardStore(Clipboard, …)` | Texto para o portapapeis (OSC 52). Windows non ten selección primaria: só se garda o do portapapeis. |
+| Os demais | Ignóranse. Ler o portapapeis nunca se permite (`Osc52::OnlyCopy`), así que nunca se pide. As respostas que necesitan a paleta ou o tamaño dunha cela en píxeles chegarán co renderizador do terminal, na subfase 1.6. O resto son para o bucle de eventos do Alacritty, que meiga non usa. |
+
+```rust
+struct Size(GridSize);
+
+impl Dimensions for Size { … }
+```
+
+`alacritty_terminal` pide o tamaño a través do trait `Dimensions`: as filas que se ven (`screen_lines`), as columnas e as filas en total. `Size` envolve un `GridSize` para implementalo: implementalo directamente en `GridSize`, que é público, mostraría `alacritty_terminal` fóra da fachada. O historial non conta: `total_lines` é igual a `screen_lines`.
+
+### `Terminal`
+
+```rust
+pub struct Terminal {
+    term: Term<Listener>,
+    parser: Processor,
+    scanner: Scanner,
+    pending: Arc<Mutex<Pending>>,
+    size: GridSize,
+    title: Option<String>,
+    damaged: Vec<LineDamageBounds>,
+}
+```
+
+| Campo | Que é |
+|---|---|
+| `term` | O terminal de `alacritty_terminal`: a grella, o historial, o cursor e os modos. |
+| `parser` | O parser de `vte` (`Processor`), que le os bytes e chama aos métodos de `term`. Garda o estado entre lecturas: unha secuencia partida entre dous bloques, ou un carácter UTF-8 a medias. Tamén garda a saída dunha actualización sincronizada mentres non remata. |
+| `scanner` | O escáner propio ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). |
+| `pending` | A cola dos eventos, compartida co `Listener`. |
+| `size` | O tamaño da grella. |
+| `title` | O último título que deu o programa. |
+| `damaged` | As filas danadas, nun `Vec` que se reutiliza en cada copia para non reservar memoria. |
+
+```rust
+const _: () = {
+    const fn send<T: Send>() {}
+    send::<Terminal>();
+};
+```
+
+**Unha comprobación ao compilar.** Na subfase 1.6, o fío lector dunha tab alimentará o seu terminal e o fío da xanela copiará del: `Terminal` ten que poder pasar dun fío a outro, ser `Send`. `send::<Terminal>()` só compila se o é, e un `const _` avalíase ao compilar, sen deixar nada no programa. Se un cambio mete no terminal algo que non é `Send`, como un `Rc`, o erro sae eiquí, e non na 1.6.
+
+```rust
+pub fn new(size: GridSize) -> Self {
+    let size = at_least_min_size(size);
+    let pending = Arc::new(Mutex::new(Pending::default()));
+    let config = Config {
+        scrolling_history: SCROLLBACK_LINES,
+        osc52: Osc52::OnlyCopy,
+        kitty_keyboard: false,
+        ..Config::default()
+    };
+    Self {
+        term: Term::new(config, &Size(size), Listener(Arc::clone(&pending))),
+        parser: Processor::new(),
+        …
+    }
+}
+
+pub fn feed(&mut self, bytes: &[u8]) -> Changes {
+    self.scanner.scan(bytes);
+    self.parser.advance(&mut self.term, bytes);
+    self.take_changes()
+}
+```
+
+- **`new`** crea un terminal de polo menos `MIN_SIZE`, coa configuración de meiga:
+  - 10 000 liñas de historial;
+  - `Osc52::OnlyCopy`: os programas poden escribir no portapapeis, pero non lelo;
+  - sen o protocolo de teclado de kitty: meiga usará o win32-input-mode, que é o que pide o ConPTY (subfase 1.7);
+  - o resto, cos valores por defecto (`..Config::default()`).
+
+  `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
+- **`feed`** le o que escribiu o programa: primeiro o escáner e despois o parser, cos mesmos bytes, sen copialos nin cambialos. Devolve os `Changes`.
+
+| Método | Que fai |
+|---|---|
+| `size` | O tamaño da grella. |
+| `take_responses(into)` | Move as respostas ao final de `into`, para envialas ao programa. `Vec::append` deixa a cola baleira pero coa súa memoria: a seguinte resposta non reserva nada. |
+| `take_clipboard` | O último texto que o programa copiou ao portapapeis; despois, ningún. Se copiou varios antes de recollelos, só queda o último, como no portapapeis. |
+| `title` | O título que deu o programa, se deu algún. |
+| `modes` | Os modos, traducidos de `TermMode` (uns *bitflags*) aos campos de `Modes`. `win32_input` pregúntallo ao escáner. |
+| `resize(size)` | Cambia o tamaño da grella, con polo menos `MIN_SIZE`. `alacritty_terminal` reorganiza as liñas longas da pantalla principal (*reflow*), e todo queda danado. |
+| `sync_deadline` | Cando hai que mostrar a actualización sincronizada (`?2026`) que empezou o programa, aínda que non a remate: `vte` gárdaa como moito 150 ms desde o último `?2026h`, ou ata encher o búfer. Mentres tanto, a saída non chega á pantalla. |
+| `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador, e terao quen o use (subfase 1.6). |
+
+### `copy_damage`: copiar o que cambiou
+
+```rust
+pub fn copy_damage(&mut self, screen: &mut Screen) {
+    let resized = screen.size() != self.size;
+    if resized {
+        screen.resize(self.size);
+    }
+    self.damaged.clear();
+    let full = match self.term.damage() {
+        TermDamage::Full => true,
+        TermDamage::Partial(lines) => {
+            self.damaged.extend(lines);
+            resized
+        }
+    };
+    let grid = self.term.grid();
+    if full {
+        for row in 0..self.size.rows {
+            copy_row(grid, screen, row);
+        }
+    } else {
+        for damage in &self.damaged {
+            match u16::try_from(damage.line) {
+                Ok(row) if row < self.size.rows => copy_row(grid, screen, row),
+                _ => {}
+            }
+        }
+    }
+    let cursor = self.cursor();
+    let before = screen.cursor();
+    if cursor != before {
+        for Cursor {
+            row, column, shape, ..
+        } in [before, cursor]
+        {
+            if shape != CursorShape::Hidden {
+                let end = column.saturating_add(2).min(self.size.columns);
+                screen.mark_changed(row, Columns::new(column, end));
+            }
+        }
+        screen.set_cursor(cursor);
+    }
+    self.term.reset_damage();
+}
+```
+
+Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-fachada-do-terminal.md)):
+
+1. Se a `Screen` ten outro tamaño, cámbiao: todas as súas celas quedan en branco e cambiadas, e cópianse todas as filas.
+2. `term.damage()` dá as filas danadas desde a última copia: `Full`, todas, ou `Partial`, a lista das filas danadas. `alacritty_terminal` dá `Full` cando cambia moito: ao borrar a pantalla, ao desprazala (cada salto de liña na última fila), ao cambiar á pantalla alternativa ou de tamaño, nun reinicio…
+3. Cada fila danada cópiase **enteira** con `copy_row`, que compara cela a cela e só marca as que cambiaron. **Por que enteira:** `alacritty_terminal` dana as celas que escribe, pero non sempre outras da mesma fila que cambian con elas. Ao escribir sobre a metade dereita dun carácter ancho, por exemplo, borra tamén a esquerda, e esa non queda danada. Atopouno a proba aleatoria do terminal. Copiar e comparar unha fila custa pouco, e marcar só as celas distintas evita debuxar o que non cambiou, tamén co dano `Full`: despois de borrar a pantalla, as filas que xa estaban en branco non se marcan.
+4. **O cursor.** Se cambiou (a posición, a forma ou o pestanexo), márcanse as súas celas, onde estaba e onde está, se se debuxa: dúas celas, por se está sobre un carácter ancho, e só unha na última columna. O renderizador debuxará o cursor por riba delas. Oculto (`Hidden`), non marca nada: un *spinner* que oculta o cursor só redebuxa os seus caracteres, e unha copia sen saída nova non marca nada.
+5. `reset_damage` esquece o dano, para a seguinte copia.
+
+- `Ok(row) if row < self.size.rows => …` é un brazo de `match` cunha garda (`if`): só se copian as filas que existen.
+- `for Cursor { row, column, shape, .. } in [before, cursor]` desestrutura cada cursor no propio `for`; `..` ignora o resto dos campos.
+
+### `cursor` e `take_changes`
+
+- **`cursor`** le o cursor da grella (`grid.cursor.point`) e do estado do terminal:
+  - a forma é `Hidden` se o programa o ocultou (`?25l`); se non, a que pediu (`cursor_style()`), que tamén di se pestanexa;
+  - sobre a metade dereita dun carácter ancho, pasa á columna anterior, para debuxalo sobre o carácter enteiro, pero só se esa cela é a súa metade esquerda: coma en `copy_row`, unha metade dereita soa é unha cela en branco, e o cursor debúxase nela;
+  - `point_to_viewport` converte a posición na grella, que inclúe o historial, na fila que se ve: se queda fóra (mentres se mira o historial, na subfase 1.9), o cursor non se debuxa.
+
+  **Por que non `renderable_content()`**, que dá o cursor como o debuxa Alacritty: sobre unha metade dereita, pásao á columna anterior sen comprobar que exista. Borrar caracteres (`ESC [ P`) pode deixar unha metade dereita soa na primeira columna, co cursor enriba, e entón a resta baixa de cero: nas compilacións de depuración, que comproban os desbordamentos tamén nas dependencias, é un *panic*; en *release*, a columna dá a volta e o cursor desaparece. Atopouno a revisión do código, e compróbao a proba `the_cursor_on_a_lone_right_half_stays_in_its_cell`.
+- **`take_changes`** colle os `Changes` da cola e déixaa baleira: `mem::take` devolve o valor e deixa no seu sitio o valor por defecto. O título só se move se cambiou.
+
+### Os axudantes
+
+- **`lock`** bloquea a cola. Se un fío fallase (*panic*) mentres a tiña bloqueada, o `Mutex` quedaría «envelenado» (*poisoned*), e `lock()` daría un erro desde entón. Ningún cambio da cola pode quedar a medias, así que `unwrap_or_else(PoisonError::into_inner)` cóllea igual.
+- **`at_least_min_size`**: o tamaño, con polo menos 2 columnas e 1 fila.
+- **`copy_row`** copia unha fila que se ve e marca as celas que cambiaron:
+
+  ```rust
+  for ((cell, source), column) in cells.iter_mut().zip(sources).zip(0..columns) {
+      let char = if source.flags.contains(Flags::WIDE_CHAR) {
+          CellChar::WideLeft(source.c)
+      } else if source.flags.contains(Flags::WIDE_CHAR_SPACER) {
+          wide.map_or(CellChar::Blank, CellChar::WideRight)
+      } else if source.flags.contains(Flags::LEADING_WIDE_CHAR_SPACER)
+          || matches!(source.c, ' ' | '\t')
+      {
+          CellChar::Blank
+      } else {
+          CellChar::Narrow(source.c)
+      };
+      wide = source.flags.contains(Flags::WIDE_CHAR).then_some(source.c);
+      …
+  }
+  ```
+
+  - `viewport_to_point` converte a fila que se ve na liña da grella, contando o historial (`display_offset`), e `&grid[point.line][..]` son as súas celas.
+  - Percorre á vez as celas da `Screen` e as de `alacritty_terminal` (`zip`), e converte cada unha:
+
+    | Cela de `alacritty_terminal` | `CellChar` |
+    |---|---|
+    | Co *flag* `WIDE_CHAR` | `WideLeft(c)`. |
+    | Co *flag* `WIDE_CHAR_SPACER` | `WideRight(c)`, co carácter da cela anterior se esta é a súa metade esquerda; se non, `Blank`. |
+    | Co *flag* `LEADING_WIDE_CHAR_SPACER`, un espazo ou un tabulador | `Blank`. |
+    | Calquera outra | `Narrow(c)`. |
+
+  - **As metades soltas.** Inserir ou borrar caracteres (`ESC [ @` e `ESC [ P`) move as celas dunha fila e pode separar as dúas metades dun carácter ancho: unha metade dereita pode quedar sen a esquerda, mesmo na columna 0. `wide` lembra o carácter da cela anterior, se é unha metade esquerda; sen ela, a metade dereita é unha cela en branco.
+  - **`LEADING_WIDE_CHAR_SPACER`**: cando un carácter ancho non cabe ao final dunha fila, vai á seguinte, e a última cela queda baleira con este *flag*.
+  - **O tabulador**: `alacritty_terminal` garda `\t` na cela onde empezou, para poder copiar o texto con tabuladores; vese como unha cela en branco.
+  - Cada cela nova compárase coa que había, e só se cambia se é distinta. `changed` acumula as columnas, da primeira á última que cambiaron, e `mark_changed` engádeas aos cambios da fila.
+- **`color`**: as 16 cores con nome (`Named`) son as 16 primeiras da paleta, de `Indexed(0)` a `Indexed(15)`. Os outros nomes son as cores por defecto do texto e do fondo, e outras que só usa o renderizador do Alacritty (a do cursor, as atenuadas…), que ningunha secuencia lle dá a unha cela: `Default`. `Indexed` e `Spec` (*truecolor*) pasan igual. `Ok(index @ 0..16)` é un patrón: o valor ten que estar entre 0 e 15, e `@` gárdao en `index`.
+- **`flags`** traduce os estilos cunha táboa (`MAP`) de 11 pares, só os que debuxará meiga: os *flags* internos de `alacritty_terminal`, como os das metades dos caracteres anchos, non pasan. `fold` xúntaos con `|`.
+
+As probas están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs).
+
+## `crates/meiga-core/src/term/screen.rs`
+
+O que mostra o terminal, en tipos de meiga: as celas, as súas cores e estilos, o cursor e as celas que cambiaron. O renderizador debuxará desde eiquí sen coñecer `alacritty_terminal` (subfase 1.6).
+
+```rust
+pub enum Color {
+    Default,
+    Indexed(u8),
+    Rgb(Rgb),
+}
+```
+
+- **`Color`**: a cor do texto ou do fondo dunha cela, tal como a deu o programa: a por defecto, unha das 256 da paleta (0–7 as normais, 8–15 as brillantes, 16–231 un cubo de 6 × 6 × 6 e 232–255 grises), ou unha dada polos seus compoñentes (*truecolor*). A paleta do tema convertea en `Rgb` ao debuxala (subfase 1.6).
+- **`CellFlags`**: os estilos dunha cela, un bit cada un nun `u16`: negra, atenuada, cursiva, cinco subliñados (simple, dobre, ondulado, de puntos e de trazos), riscada, inversa (o texto e o fondo intercambian as cores) e oculta (só se debuxa o fondo). `contains`, `is_empty` e o operador `|` (o trait `BitOr`) chegan para combinalos e preguntar por eles.
+- **`Cell`**: unha cela: o carácter (`CellChar`, de [`text.rs`](#cratesmeiga-coresrctextrs)), a cor do texto, a do fondo e os estilos. A cela por defecto (`Default`) é unha cela en branco, coas cores por defecto e sen estilos.
+- **`CursorShape`**: bloque, subliñado, barra vertical, o contorno dun bloque, ou oculto.
+- **`Cursor`**: a fila, a columna, a forma e se o programa pediu que pestanexe. meiga só o fará pestanexar se Windows o permite (subfase 1.6).
+- **`Columns`**: as columnas dunha fila, de `start` (incluída) a `end` (excluída); ningunha se `end` non está despois de `start`. `union` dá as que cobren as dúas.
+
+```rust
+pub struct Screen {
+    size: GridSize,
+    cells: Vec<Cell>,
+    changed: Vec<Columns>,
+    all_changed: bool,
+    cursor: Cursor,
+}
+```
+
+**`Screen`** é unha copia do que mostra o terminal, e das celas que cambiaron desde o último `clear_changes`. Está pensada para gardarse entre fotogramas: o terminal só copia nela o que cambiou, e a súa memoria reutilízase.
+
+- `cells`: as celas, fila tras fila, nun só `Vec`: a da fila `f` e a columna `c` está na posición `f × columnas + c`. Unha soa reserva de memoria, coas filas seguidas.
+- `changed`: as columnas que cambiaron en cada fila. É un só intervalo por fila: se cambian as columnas 2 e 7, debúxanse tamén as do medio. Chega para o que fan os programas, que escriben seguido, e non reserva memoria.
+- `all_changed`: cambiaron todas as celas, por exemplo porque cambiou o tamaño.
+
+| Método | Que fai |
+|---|---|
+| `new` | Unha pantalla baleira, de 0 × 0. É `const` e non reserva nada: a memoria chega co primeiro cambio de tamaño. |
+| `size`, `cursor` | O tamaño e o cursor. |
+| `row(row)` | As celas dunha fila, ou ningunha se está fóra. |
+| `all_changed` | Se cambiaron todas as celas. |
+| `changes()` | As filas que cambiaron, coas súas columnas; se cambiaron todas, cada fila enteira. |
+| `clear_changes` | Esquece os cambios, despois de debuxalos. |
+| `row_text(row)` | O texto dunha fila sen os espazos do final: cada carácter unha vez, tamén os anchos, e as celas en branco como espazos. Úsano as probas e o exemplo `replay`. |
+
+Estes catro só os usa a fachada: son `pub(super)`, visíbeis no módulo pai, `term`, e non fóra del.
+
+| Método | Que fai |
+|---|---|
+| `resize(size)` | Cambia o tamaño: todas as celas en branco e cambiadas. Reutiliza a memoria se cabe. |
+| `cells_mut(row, columns)` | As celas dunha fila, para cambialas. |
+| `mark_changed(row, columns)` | Engade columnas aos cambios dunha fila. |
+| `set_cursor` | Cambia o cursor. |
+
+- `changes()` devolve `impl Iterator<…> + '_`, como `cells` en `text.rs`: un iterador que toma prestada a pantalla, sen reservar memoria. `filter_map` salta as filas sen cambios, e `then_some` converte a condición nun `Option`.
+
+**Probas.** Cinco:
+
+| Proba | Que comproba |
+|---|---|
+| `a_new_screen_is_empty` | Unha pantalla nova mide 0 × 0, sen filas nin cambios. |
+| `after_resizing_every_cell_is_blank_and_changed` | Despois de `resize`, todas as celas están en branco e cambiadas, e `clear_changes` esquece os cambios. |
+| `changes_add_up_until_they_are_cleared` | Dous cambios na mesma fila xúntanse nun intervalo (2–4 e 6–7 dan 2–7), e unha fila que non existe ignórase. |
+| `the_text_of_a_row_shows_each_character_once` | `row_text` mostra os caracteres anchos unha vez, e as celas en branco como espazos, sen os do final. |
+| `flags_combine` | Os estilos combínanse con `\|`, e `contains` comproba todos os que se piden. |
+
+## `crates/meiga-core/src/term/scanner.rs`
+
+O escáner que le a saída do programa antes do parser, para atopar as secuencias que `alacritty_terminal` ignora e meiga necesita ([ADR 0007](../adr/0007-integracion-coa-shell.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). Só le os bytes: o parser recibe exactamente os mesmos.
+
+Polo de agora segue unha: o **win32-input-mode** (`ESC [ ? 9001 h` e `l`), que o ConPTY activa ao arrancar para que meiga lle envíe eventos de tecla completos (subfase 1.7). O plan falaba tamén de `?1004`, os eventos de foco, pero ese xa o segue `alacritty_terminal`. As secuencias da integración coa shell (OSC 7, 9;9 e 133) chegarán na subfase 4.1.
+
+**Ler como `vte`.** Para ver un cambio de modo só cando `vte` o vería, tamén cando a secuencia chega partida entre dúas lecturas, o escáner segue os mesmos estados ca el ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)):
+
+| Estado | Onde está |
+|---|---|
+| `Ground` | No texto, ou nunha secuencia que non importa: ata o seguinte ESC. |
+| `Escape` | Despois de ESC. |
+| `CsiEntry` | Despois de `ESC [`. |
+| `CsiParam` | Lendo os números dunha secuencia privada, despois de `ESC [ ?`. |
+| `CsiIntermediate` | Despois doutro byte intermedio dunha secuencia privada, como `$`. |
+| `CsiIgnore` | Unha secuencia privada que `vte` ignora, ata o seu byte final. |
+
+```rust
+pub fn scan(&mut self, bytes: &[u8]) {
+    let mut rest = bytes;
+    loop {
+        if self.state == State::Ground {
+            let mut escapes = memchr::memchr_iter(ESC, rest);
+            let at = loop {
+                let Some(at) = escapes.next() else {
+                    return;
+                };
+                if let Some(&[b'[', next]) = rest.get(at + 1..at + 3)
+                    && Self::not_private(next)
+                {
+                    continue;
+                }
+                break at;
+            };
+            self.state = State::Escape;
+            rest = rest.get(at + 1..).unwrap_or_default();
+            continue;
+        }
+        let Some((&byte, after)) = rest.split_first() else {
+            return;
+        };
+        rest = after;
+        self.advance(byte);
+    }
+}
+```
+
+- **O camiño rápido.** No estado `Ground` nada importa ata o seguinte ESC, e `memchr_iter` atópao lendo moitos bytes á vez, con instrucións SIMD. Case todas as secuencias da saída son cores e movementos do cursor: `ESC [` e un díxito ou unha letra. Esas sáltaas sen saír do bucle (`continue`), porque non poden cambiar un modo privado. Só segue byte a byte (`advance`) as que empezan por `ESC [ ?`, e as que chegan partidas antes do byte despois do `[`.
+- **Por que dá o mesmo.** `vte` só le un `?` como a marca dun modo privado xusto despois de `ESC [`; os caracteres de control, DEL e os bytes desde 0x80 non contan, e decide o seguinte (`not_private`). Calquera outro byte nesa posición significa que a secuencia non pode cambiar un modo privado, e os bytes que lle quedan ata o seu final non teñen ningún ESC. Lelos como texto, ata o seguinte ESC, deixa o escáner no mesmo estado ca seguir a secuencia.
+- `if let Some(&[b'[', next]) = rest.get(at + 1..at + 3) && Self::not_private(next)` encadea un `if let` cunha condición (*let chains*, da edición 2024). `rest.get(at + 1..at + 3)` dá os dous bytes despois do ESC, se os hai, e o patrón `&[b'[', next]` comproba o primeiro e garda o segundo.
+
+**Byte a byte** (`advance`), como `vte`:
+
+- En calquera estado, ESC empeza unha secuencia nova, e CAN (0x18) e SUB (0x1a) cancelan a actual.
+- `advance_escape`: `[` pasa a `CsiEntry`, e `c` é un reinicio completo (RIS), que desactiva todos os modos. Os caracteres de control, DEL e os bytes desde 0x80 non rematan o escape: `vte` ignóraos, e o seguinte byte escolle a secuencia. Calquera outro byte volta a `Ground`: é outra secuencia de escape, ou o comezo dunha cadea (OSC, DCS…) que só remata cun ESC ou un carácter de control. Que os bytes desde 0x80 tamén se ignoran atopouno a revisión do código: antes, `ESC`, un byte desde 0x80 e `[ ? 9001 h` non activaban o modo, e `vte` si.
+- `advance_csi_entry`: se o byte non é `?`, volta a `Ground`, como no camiño rápido; con `?`, empeza unha secuencia privada (`start_private`).
+- `advance_csi_param`: os díxitos forman o número (`digit`), `;` separa parámetros e `:` subparámetros. Un byte intermedio (0x20–0x2f, como `$`) pasa a `CsiIntermediate`, e outra marca despois dos números (`<`, `=`, `>` ou `?`), a `CsiIgnore`. Un byte final (0x40–0x7e) remata a secuencia (`dispatch`).
+- `dispatch`: se a secuencia ten un parámetro 9001, o `?` é o seu único byte intermedio e `vte` non a ignora, `h` activa o modo e `l` desactívao.
+- **Os límites de `vte`.** Unha secuencia con máis de 32 números (`MAX_VALUES`, contando os subparámetros) ou con máis de 2 bytes intermedios (`MAX_INTERMEDIATES`, contando o `?`) ignórase, e o escáner tamén a ignora (`ignoring`). Só o primeiro número de cada parámetro é un modo: `?9001:1h` activa o modo, e `?1:9001h` non.
+- `digit` usa `saturating_mul` e `saturating_add`: un número enorme queda no máximo dun `u16`, en vez de desbordarse.
+
+**Probas.** Dez:
+
+| Proba | Que comproba |
+|---|---|
+| `it_follows_the_mode_on_and_off` | `?9001h` activa o modo e `?9001l` desactívao; un texto sen secuencias non o cambia. |
+| `it_finds_the_mode_among_others` | O modo atópase entre outros parámetros (`?1004;9001h`). |
+| `it_follows_the_mode_when_the_sequence_is_split` | O que escribe o ConPTY ao arrancar, partido en dous en todas as posicións posíbeis, e byte a byte. |
+| `only_a_private_set_or_reset_changes_the_mode` | Sen `?`, con outra marca, con outro byte intermedio, con dous `?` ou con outro byte final, nada. |
+| `only_the_first_number_of_a_parameter_is_a_mode` | `?9001:1h` si; `?1:9001h` non. |
+| `control_characters_cancel_or_restart_the_sequence` | CAN cancela a secuencia; ESC empeza outra; un salto de liña execútase e a secuencia segue; e unha cadea OSC remata no ESC seguinte. |
+| `a_full_reset_turns_the_mode_off` | `ESC c` desactiva o modo, e `ESC ( c`, que escolle un xogo de caracteres, non. |
+| `bytes_over_0x7e_do_not_end_an_escape` | Despois dun ESC, DEL e os bytes desde 0x80 ignóranse, tamén partidos entre dúas lecturas: `ESC`, 0x80 e `[ ? 9001 h` activan o modo, e `ESC`, `á` e `c` son un reinicio. |
+| `a_sequence_with_too_many_numbers_is_ignored` | Con 32 números, o modo cambia; con 33, `vte` ignora a secuencia, e o escáner tamén. |
+| `it_agrees_with_vte_on_random_output` | **A referencia.** 2 000 saídas aleatorias, de 1 a 100 anacos: bytes soltos dos que importan nas secuencias (ESC, `[`, `?`, `;`, `:`, díxitos, `h`, `l`, `c`, `p`, `$` e `>`), caracteres de control, DEL e bytes desde 0x80; e, un de cada catro, unha secuencia enteira ou o seu comezo (`ESC [ ? 9001 h`, `ESC [ ? 9001 l`, `ESC c`, `ESC [ ?`, unha cadea OSC…), para que o modo cambie a miúdo. A metade empezan co modo activo, para comprobar tamén que se desactiva cando toca. Cada saída lese en anacos aleatorios co escáner e co parser de `vte`, cun `Handler` que segue o modo como o faría `alacritty_terminal` se non o ignorase, e despois de cada anaco os dous teñen que coincidir. Non hai os díxitos 2 nin 6, para que non empece ningunha actualización sincronizada (`?2026`), que `vte` gardaría sen chamar ao `Handler`. Como nas outras probas aleatorias, a secuencia é fixa: un fallo pódese repetir. |
+
+## `crates/meiga-core/src/term/recording.rs`
+
+Gravacións do que escribe un programa no terminal, para reproducilo nas probas e nas medicións sen executar o programa outra vez ([ADR 0012](../adr/0012-fachada-do-terminal.md)). Cada bloque gárdase tal como chegou da pseudoconsola, co momento en que chegou: así pódese reproducir cos mesmos anacos e as mesmas pausas.
+
+O formato, cos números en *little-endian*:
+
+| Bytes | Contido |
+|---|---|
+| 8 | `MEIGAREC` (`MAGIC`). |
+| 2 | A versión do formato: 1 (`VERSION`). |
+| 2 + 2 | As columnas e as filas da pseudoconsola. |
+
+E despois, para cada bloque:
+
+| Bytes | Contido |
+|---|---|
+| 8 | Os microsegundos desde que empezou a gravación. |
+| 4 | A lonxitude do bloque. |
+| Esa lonxitude | Os bytes do bloque. |
+
+- **`Recorder<W: Write>`** escribe unha gravación en calquera saída que implemente `Write`: un arquivo, con `create`, ou un `Vec<u8>`, nas probas.
+  - `new` escribe a cabeceira e empeza a contar o tempo (`Instant::now()`).
+  - `record` engade un bloque, co tempo desde o comezo. Un bloque de 4 GiB ou máis non cabe na súa lonxitude (`u32`) e dá un erro.
+  - `blocks` e `bytes` contan os bloques e os bytes gravados.
+  - `finish` escribe o que quede na memoria e devolve a saída. `create` usa un `BufWriter`, que xunta as escrituras pequenas nunha grande. Destruílo tamén escribe o que quede, pero sen poder informar dun erro.
+- **`Recording`** le unha gravación enteira e compróbaa:
+  - `read` le un arquivo, e `from_bytes` comproba os datos: o tamaño da cabeceira, a marca `MEIGAREC`, a versión, e que ningún bloque estea cortado. Os erros son `io::Error` do tipo `InvalidData`, cunha mensaxe que di que falla, e en que byte.
+  - Garda os datos tal como están e, de cada bloque, só o tempo e onde empeza e remata (`Span`): ler os bloques non os copia.
+  - `blocks` dá os bloques en orde (`Block`: o tempo e os bytes, prestados dos datos); `size`, o tamaño da pseudoconsola; `output_len`, os bytes de saída sen as cabeceiras; e `duration`, cando chegou o último bloque.
+  - `first_chunk` dá os primeiros bytes como un *array* de tamaño fixo, se os hai, e o patrón `[magic @ .., v0, v1, c0, c1, r0, r1]` sepáraos sen índices: os 8 primeiros en `magic`, e os seguintes un a un.
+
+**Probas.** Catro:
+
+| Proba | Que comproba |
+|---|---|
+| `a_recording_gives_back_its_blocks_and_size` | Tres bloques, un deles baleiro, gravados nun `Vec` e lidos outra vez: os mesmos bytes, o tamaño, a lonxitude e os tempos en orde. |
+| `a_recording_without_blocks_is_valid` | Unha gravación só coa cabeceira é válida, e dura 0. |
+| `other_data_is_rejected` | Datos máis curtos ca a cabeceira, sen a marca `MEIGAREC` ou doutra versión dan cadanseu erro. |
+| `a_cut_block_is_rejected` | Un bloque cortado, na súa cabeceira ou nos seus bytes, dá `the block at byte 14 is cut`. |
+
+## `crates/meiga-core/src/term/tests.rs`
+
+As probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Tres axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; e `narrow` crea unha cela cun carácter, sen cores nin estilos.
+
+| Proba | Que comproba |
+|---|---|
+| `the_output_reaches_the_screen` | O texto e o salto de liña chegan ás celas, e o cursor queda despois do texto. |
+| `only_what_changed_is_copied_again` | Sen saída, unha copia non marca nada; despois de escribir noutra fila, só cambian o texto novo e as celas do cursor, onde estaba e onde está. |
+| `the_program_gets_its_answers` | As respostas a DA1, DSR 5, DSR 6, `ESC [ 18 t` e DA2, que leva a versión de `alacritty_terminal` (`2600`); e ningunha a `ESC [ 14 t`, que agarda á 1.6. |
+| `the_title_and_the_bell` | O título de OSC 0 e 2, sen os espazos dos extremos; gardalo e recuperalo (`ESC [ 22 t` e `ESC [ 23 t`); un título baleiro é ningún; e a campá. |
+| `osc_52_only_copies` | O texto en base64 de OSC 52 chega ao portapapeis; ler o portapapeis, a selección primaria e un texto que non é base64 non fan nada nin responden. |
+| `the_modes_follow_the_program` | Os modos por defecto; activar e desactivar cada un; os modos do rato, e os seus formatos, exclúense entre si; e un reinicio (RIS) déixaos como ao principio. |
+| `colours_and_styles_reach_the_cells` | As cores de 16, de 256 e *truecolor*, do texto e do fondo, e todos os estilos, tamén os cinco subliñados. |
+| `a_wide_character_takes_two_cells` | Un carácter ancho ocupa as súas dúas metades; se non cabe ao final da fila, vai á seguinte. |
+| `a_tab_leaves_blank_cells` | O tabulador deixa celas en branco. |
+| `the_cursor_follows_the_program` | As formas do cursor (DECSCUSR), o pestanexo (`?12h`), ocultalo e mostralo; e sobre a metade dereita dun carácter ancho, debúxase desde a esquerda. |
+| `the_cursor_on_a_lone_right_half_stays_in_its_cell` | Despois de borrar a metade esquerda dun carácter ancho (`ESC [ P`), a metade dereita que queda é unha cela en branco, e o cursor debúxase nela, tanto na primeira columna coma despois dun carácter estreito. Antes da revisión do código, na primeira columna era un *panic*. |
+| `the_cells_of_the_cursor_are_changes_when_it_is_drawn` | As celas do cursor márcanse só se cambia e se se debuxa: ao ocultalo, só onde estaba; mentres está oculto, nada; e na última columna, unha soa cela. |
+| `a_synchronized_update_waits_for_its_end` | A saída dunha actualización sincronizada non chega á pantalla ata que remata ou vence (como moito, 150 ms); `end_sync` móstraa e entrega as súas respostas. |
+| `after_a_resize_everything_is_copied_again` | Despois de cambiar o tamaño, a copia ten o tamaño novo e todas as celas cambiadas, co texto no seu sitio. |
+| `the_grid_is_never_smaller_than_two_columns_and_one_row` | Un terminal de 0 × 0 ou de 1 × 0 mide 2 × 1, e escribir caracteres anchos e inserir celas e liñas nel non falla. |
+| `copying_only_the_damage_gives_the_same_screen_as_copying_everything` | **A invariante da copia.** 300 casos aleatorios, de ata 79 anacos dunha lista de 70: texto, caracteres anchos e combinados, movementos do cursor, borrados, inserir e borrar caracteres e liñas, desprazamentos e rexións, a pantalla alternativa, estilos, reinicios… Cada caso lese en anacos de ata 16 bytes, por veces cambiando o tamaño, con grellas de 2 × 1 a 80 × 24. Despois de cada anaco, a pantalla copiada só co dano ten que ser igual, cela a cela e no cursor, á dun segundo terminal copiado enteiro. Esta proba atopou o oco do dano de `alacritty_terminal` cos caracteres anchos. |
+
+## `crates/meiga-core/tests/recordings.rs`
+
+Probas de integración: usan o crate desde fóra, como os outros crates, con gravacións reais do ConPTY que leva meiga, feitas co exemplo `conpty` de `meiga-win` e a súa opción `--record` ([Código › meiga-win](meiga-win.md#cratesmeiga-winexamplesconptyrs)). As gravacións están en `tests/data/` e entran no binario das probas con `include_bytes!`, así que as probas non len ningún arquivo:
+
+| Gravación | Que é | Tamaño |
+|---|---|---|
+| `cmd-echo.mrec` | `cmd /c echo ola`. | 140 bytes |
+| `spinner.mrec` | O escenario `tools\perf\scenarios\spinner.ps1`, durante 3 s. | 2 243 bytes |
+| `ai-stream.mrec` | O escenario `tools\perf\scenarios\ai-stream.ps1`, durante 12 s: texto con cores, un emoji, `❯` e unha táboa con liñas de caixa. | 45 838 bytes |
+
+- As tres son dunha pseudoconsola de 120 × 30, a do exemplo, e só levan a saída destes comandos, sen datos de ningunha máquina. Están marcadas como binarias no `.gitattributes` ([Código › workspace](workspace.md#gitattributes-e-gitignore)).
+- `feed` dálle uns anacos a un terminal novo, e devolve o que mostra (`Shown`): o texto e as celas de cada fila, o cursor, o título, os modos e as respostas.
+
+| Proba | Que comproba |
+|---|---|
+| `cmd_writes_ola` | A primeira fila é `ola`, e o resto están baleiras; o cursor, na seguinte. O win32-input-mode está activo mentres corre o programa, e ao final o ConPTY desactívao. A única resposta é a de DA1, que o ConPTY pide ao arrancar. |
+| `the_spinner_only_changes_what_it_draws_again` | O primeiro fotograma do *spinner* cambia a liña enteira (16 celas); os seguintes, co cursor oculto, só o símbolo, e o número dos segundos cando cambia: 1 ou 13 celas. Ao final, o símbolo nunha cor do cubo da paleta, `Thinking` en negra e os segundos atenuados, e o cursor visíbel outra vez, na fila seguinte. |
+| `the_ai_answer_keeps_its_text_and_colours` | O emoji 💡 nas súas dúas metades, `❯` en cian e en negra (`Indexed(6)`), un título na cor 141 da paleta, a táboa con liñas de caixa e o cursor ao final. |
+| `how_the_output_is_split_does_not_change_what_is_shown` | Cada gravación nun só anaco, byte a byte (cada secuencia e cada carácter de varios bytes partidos) e en 20 particións aleatorias mostra exactamente o mesmo. |
+| `copying_only_what_changed_gives_the_same_screen` | A mesma invariante ca en `tests.rs`, coa saída real: despois de cada bloque, a copia só do dano é igual á copia enteira. |
+
+## `crates/meiga-core/examples/replay.rs`
+
+Un exemplo de consola que lle dá unha gravación a un terminal de meiga tan rápido como pode, e mostra a que velocidade a leu: o que fará unha tab coa saída do seu programa, sen a pseudoconsola e sen debuxar.
+
+```text
+cargo run --release -p meiga-core --example replay -- <recording> [--rounds <n>] [--screen]
+```
+
+- Cada rolda dálle todos os bloques, en orde e tal como chegaron, a un terminal novo do tamaño da gravación, e mide o tempo, en MB de saída por segundo (1 MB = 1 000 000 bytes). Hai 5 roldas, salvo que `--rounds` diga outra cousa, e ao final mostra a mediana, a mínima e a máxima. A velocidade só di algo cunha gravación grande: as pequenas len en microsegundos.
+- **As actualizacións sincronizadas** que o programa non remata móstranse cando vence o seu tempo, contado cos momentos da gravación, como fará meiga cun temporizador: `sync_end` é o momento da gravación en que vence a que está pendente, e o primeiro bloque que chega despois remátaa con `end_sync`.
+- As respostas recóllense despois de cada bloque, como fará o fío lector para envialas ao programa.
+- **`--screen`** mostra ao final o que hai na pantalla: as filas con texto, numeradas desde 1 como nas secuencias de control; o cursor; o título; os modos activos; e as respostas, cos caracteres de control á vista (␛ é ESC, ␍ é CR…), como o exemplo `conpty`. Se queda unha actualización sincronizada pendente, móstraa antes.
+- Os erros de uso (sen gravación, unha opción que non existe, `--rounds` sen un número maior ca 0 ou dúas gravacións) mostran o uso e rematan co código 2; unha gravación que non se pode ler, co 1.
+
+Por exemplo, coa gravación de `cmd /c echo ola`:
+
+```text
+crates\meiga-core\tests\data\cmd-echo.mrec: 120 × 30, 6 blocks, 54 bytes of output in 0.1 s.
+Round 1: 0.0001 s, … MB/s.
+…
+Median: … MB/s (from … to …).
+Screen of 120 × 30, the rows with text:
+   1 │ola
+Cursor: row 2, column 1, Block.
+Title: (none)
+Modes: alternate_scroll, show_cursor
+Answers: ␛[?6c
+```

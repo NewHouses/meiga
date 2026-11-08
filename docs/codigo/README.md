@@ -1,6 +1,6 @@
 # Código
 
-> Estado: subfase 1.4.
+> Estado: subfase 1.5.
 
 Explicación detallada do código, arquivo por arquivo. Para o *porqué* das decisións xerais, ver [Arquitectura](../arquitectura.md) e [Tecnoloxías](../tecnoloxias.md).
 
@@ -38,9 +38,9 @@ meiga/
 |---|---|
 | [workspace.md](workspace.md) | Configuración da raíz: Cargo, versión de Rust, *lints*, formato, licenzas e Git. |
 | [github.md](github.md) | Integración continua (GitHub Actions) e Dependabot. |
-| [meiga-core.md](meiga-core.md) | Lóxica independente de Windows: as cores, os rectángulos, o tamaño da grella, as zonas que cambian, cando debuxar o seguinte fotograma e o ancho dos caracteres. |
+| [meiga-core.md](meiga-core.md) | Lóxica independente de Windows: as cores, os rectángulos, o tamaño da grella, as zonas que cambian, cando debuxar o seguinte fotograma, o ancho dos caracteres e o terminal: a fachada sobre `alacritty_terminal`, o escáner e as gravacións, coas súas probas e un exemplo. |
 | [meiga-render.md](meiga-render.md) | Renderizador por CPU: o lenzo, o *framebuffer* e a súa presentación na xanela, as fontes de DirectWrite, a caché de glifos e o debuxo do texto. |
-| [meiga-win.md](meiga-win.md) | Capa de plataforma de Windows: a xanela, a súa escala, os seus eventos, o bucle de mensaxes e o temporizador dos fotogramas; as sesións de ConPTY, coas súas probas e un exemplo. |
+| [meiga-win.md](meiga-win.md) | Capa de plataforma de Windows: a xanela, a súa escala, os seus eventos, o bucle de mensaxes e o temporizador dos fotogramas; as sesións de ConPTY, coas súas probas e un exemplo que tamén as grava. |
 | [meiga.md](meiga.md) | O programa executábel: as opcións, o fluxo de fotogramas, a demo de texto e rectángulos, os modos de medición e o rexistro dos fotogramas; o seu manifesto e o `build.rs` que o incrusta. |
 | [ferramentas.md](ferramentas.md) | Scripts e modelos de `tools/`: empaquetado, descarga do ConPTY, comprobación das DLL, da xanela, dos fotogramas, das ligazóns da documentación e de que os scripts piden PowerShell 7, e avisos de terceiros. |
 | [perf.md](perf.md) | Medición do rendemento (`tools/perf/`): o script que mide os terminais, o código C# que le os procesos, a súa proba e as medicións do arranque e dos fotogramas, tamén os de texto. |
