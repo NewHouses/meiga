@@ -16,6 +16,7 @@ use windows_sys::Win32::System::Threading::{
     CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, CancelWaitableTimer, CreateWaitableTimerExW, INFINITE,
     SetWaitableTimer, TIMER_ALL_ACCESS,
 };
+use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetCapture, ReleaseCapture, SetCapture};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA,
@@ -23,10 +24,10 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     LoadCursorW, MB_ICONERROR, MB_OK, MSG, MWMO_INPUTAVAILABLE, MessageBoxW,
     MsgWaitForMultipleObjectsEx, PM_REMOVE, PeekMessageW, PostQuitMessage, QS_ALLINPUT,
     RegisterClassExW, SM_REMOTESESSION, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER, SetTimer,
-    SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, USER_TIMER_MAXIMUM,
-    USER_TIMER_MINIMUM, WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE,
-    WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_TIMER, WNDCLASSEXW,
-    WS_OVERLAPPEDWINDOW,
+    SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, USER_DEFAULT_SCREEN_DPI,
+    USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP,
+    WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_TIMER,
+    WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
 };
 
 use crate::Error;
@@ -137,6 +138,17 @@ impl Window {
             rect.right.max(0) as u32,
             rect.bottom.max(0) as u32,
         ))
+    }
+
+    /// The dots per inch of the monitor of the window: 96 at a scale of
+    /// 100 %, 120 at 125 % and 144 at 150 %.
+    pub fn dpi(&self) -> u32 {
+        // SAFETY: GetDpiForWindow accepts any handle, and returns 0 for one
+        // that is not a window.
+        match unsafe { GetDpiForWindow(self.handle) } {
+            0 => USER_DEFAULT_SCREEN_DPI,
+            dpi => dpi,
+        }
     }
 
     /// Shows the window, paints it, and delivers its events to `handler`

@@ -10,6 +10,15 @@ publish.workspace = true
 
 [dependencies]
 meiga-core.workspace = true
+# DirectWrite is a COM API, which windows-sys does not cover.
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Graphics_DirectWrite",
+] }
+# The #[implement] macro, which implements a COM interface for the font
+# fallback, generates code that names this crate.
+windows-core.workspace = true
 windows-sys = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",

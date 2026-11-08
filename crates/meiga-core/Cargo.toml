@@ -8,5 +8,9 @@ license.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[dependencies]
+# The width of each character in cells, as alacritty_terminal measures it.
+unicode-width.workspace = true
+
 [lints]
 workspace = true
