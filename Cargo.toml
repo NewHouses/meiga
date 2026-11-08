@@ -11,9 +11,13 @@ repository = "https://github.com/NewHouses/meiga"
 publish = false
 
 [workspace.dependencies]
+# The terminal core: parser, grid and terminal logic (ADR 0003). Pinned, because
+# its API is 0.x, and without serde, which meiga does not use.
+alacritty_terminal = { version = "=0.26.0", default-features = false }
 meiga-core = { path = "crates/meiga-core" }
 meiga-render = { path = "crates/meiga-render" }
 meiga-win = { path = "crates/meiga-win" }
+memchr = "2.8.3"
 unicode-width = { version = "0.2.3", default-features = false }
 windows = "0.62.2"
 windows-core = "0.62.2"

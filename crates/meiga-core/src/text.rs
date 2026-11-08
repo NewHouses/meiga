@@ -8,9 +8,10 @@ use unicode_width::UnicodeWidthChar;
 /// A character that takes two cells, such as most CJK ideographs, is split
 /// in two halves, so that each cell can be drawn on its own: when only one of
 /// the two changes, only that one is drawn again.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum CellChar {
     /// Only the background, as a space.
+    #[default]
     Blank,
     /// A character that takes this cell.
     Narrow(char),
