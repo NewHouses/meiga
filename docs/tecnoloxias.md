@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 1.4. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 1.5. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -72,7 +72,7 @@ O perfil `profiling` herda de `release` e engade `debug = "limited"`: os nomes d
 
 **Configuración en meiga.** A opción `-C target-feature=+crt-static` mete o CRT dentro do propio `.exe`. Está en `.cargo/config.toml` (e non nunha variábel de contorno) para que forme parte do repo e se aplique sempre. A condición `cfg(all(windows, target_env = "msvc"))` limítaa ao compilador de Microsoft.
 
-**Comprobación.** `dumpbin /dependents target\release\meiga.exe` mostra que só depende de DLL do sistema. Da biblioteca estándar de Rust veñen `KERNEL32.dll`, `ntdll.dll` e `api-ms-win-core-synch-l1-2-0.dll`. Esta última non é unha DLL que haxa que instalar, senón un *API set*: un nome lóxico que Windows resolve internamente cara ás súas propias bibliotecas. Desde a subfase 1.1, a xanela engade `user32.dll` e `gdi32.dll` e, en minúsculas, outra vez `kernel32.dll` (ver a [sección 21](#21-windows-sys-as-apis-de-windows-desde-rust)). Ningunha é do *Visual C++ Redistributable*.
+**Comprobación.** `dumpbin /dependents target\release\meiga.exe` mostra que só depende de DLL do sistema. Da biblioteca estándar de Rust veñen `KERNEL32.dll`, `ntdll.dll` e `api-ms-win-core-synch-l1-2-0.dll`. Esta última non é unha DLL que haxa que instalar, senón un *API set*: un nome lóxico que Windows resolve internamente cara ás súas propias bibliotecas. Desde a subfase 1.1, a xanela engade `user32.dll` e `gdi32.dll` e, en minúsculas, outra vez `kernel32.dll`; desde a 1.5, as dúas entradas de `kernel32.dll` son unha soa (ver a [sección 21](#21-windows-sys-as-apis-de-windows-desde-rust)). Ningunha é do *Visual C++ Redistributable*.
 
 ## 6. Subsistema de Windows
 
@@ -139,7 +139,7 @@ Na validación úsase `cargo clippy … -- -D warnings`, que converte calquera a
 - `[licenses.private] ignore = true`: non revisa os nosos propios crates, que son propietarios e nunca se publican (`publish = false`).
 - `unused-allowed-license = "allow"`: a lista é unha política, non un inventario, así que non avisa das licenzas que aínda non usa ningunha dependencia.
 - `wildcards = "deny"`, con `allow-wildcard-paths = true`: prohíbe os comodíns nas versións, agás nas dependencias internas por ruta.
-- `multiple-versions = "warn"`: avisa, sen bloquear, se se compilan dúas versións dun mesmo crate. Cada copia engade código ao binario, pero ás veces é inevitábel (dúas dependencias piden versións incompatíbeis), así que se revisa caso a caso.
+- `multiple-versions = "warn"`: avisa, sen bloquear, se se compilan dúas versións dun mesmo crate. Cada copia engade código ao binario, pero ás veces é inevitábel (dúas dependencias piden versións incompatíbeis), así que se revisa caso a caso. Desde a subfase 1.5 hai un: `windows-sys` 0.59, que pide `alacritty_terminal` para o seu propio PTY, que meiga non usa, e 0.61, a de meiga e doutras dependencias. Do que non se chama, o ligador non deixa nada no binario.
 - `unknown-registry` e `unknown-git` = `"deny"`, con `allow-registry` apuntando ao índice de crates.io: só se admiten dependencias de crates.io.
 
 ## 10. cargo-about e Handlebars
@@ -442,7 +442,7 @@ Os escenarios debuxan con **secuencias de escape VT**, as mesmas que usan as fer
 
 **Features.** `windows-sys` divide as APIs nos mesmos espazos de nomes da documentación de Microsoft, e cada *feature* activa un (por exemplo, `Win32_UI_WindowsAndMessaging`). Só se compila o que se activa. As listas de cada crate explícanse en [Código › meiga-win](codigo/meiga-win.md#cratesmeiga-wincargotoml) e [Código › meiga-render](codigo/meiga-render.md#cratesmeiga-rendercargotoml).
 
-**Sen bibliotecas de importación.** Para chamar a unha función dunha DLL, o ligador necesita normalmente unha **biblioteca de importación** (`.lib`) que diga en que DLL está. `windows-sys` non as usa: declara cada función co nome da súa DLL, e o compilador de Rust xera a importación el mesmo (`raw-dylib`). Encárgase o pequeno crate `windows-link`, tamén de Microsoft. Por iso `dumpbin /dependents` mostra `kernel32.dll`, de `windows-sys`, e `KERNEL32.dll`, da biblioteca estándar, que usa a biblioteca de importación do Windows SDK: son dúas entradas para a mesma DLL, que Windows carga unha soa vez, porque non distingue maiúsculas nos nomes dos arquivos.
+**Sen bibliotecas de importación.** Para chamar a unha función dunha DLL, o ligador necesita normalmente unha **biblioteca de importación** (`.lib`) que diga en que DLL está. `windows-sys` non as usa: declara cada función co nome da súa DLL, e o compilador de Rust xera a importación el mesmo (`raw-dylib`). Encárgase o pequeno crate `windows-link`, tamén de Microsoft. Por iso `dumpbin /dependents` mostra `kernel32.dll`, de `windows-sys`, e `KERNEL32.dll`, da biblioteca estándar, que usa a biblioteca de importación do Windows SDK: son dúas entradas para a mesma DLL, que Windows carga unha soa vez, porque non distingue maiúsculas nos nomes dos arquivos. Iso foi así ata a subfase 1.4. Desde a 1.5, `alacritty_terminal` trae outra versión, `windows-sys` 0.59, que si usa unha biblioteca de importación, a do crate `windows-targets` (`windows.0.52.0.lib`), cos nomes en minúsculas. O ligador colle cada función da primeira biblioteca que a ten, e esta vai antes ca a do Windows SDK: as funcións da biblioteca estándar tamén saen dela, e `kernel32.dll` queda nunha soa entrada.
 
 **Versión.** A 0.61.2, declarada no `Cargo.toml` raíz ([Código › workspace](codigo/workspace.md#cargotoml-raíz)), coma a 0.62.2 do crate `windows`: as dúas usan a mesma versión de `windows-link`. Dependabot propón as versións novas.
 
@@ -642,7 +642,7 @@ Nun terminal, cada carácter ocupa unha cela ou dúas, e algúns ningunha. Unico
 
 - Os caracteres **ambiguos** (*Ambiguous*), como as letras gregas ou `°`, ocupan unha cela fóra dos contextos CJK, como recomenda o propio UAX #11.
 - **Por que importa.** O ancho co que meiga debuxa ten que ser o mesmo que usan o núcleo do terminal, para colocar os caracteres na grella, e ConPTY, para mover o cursor. Se non coinciden, o cursor desaxústase e o texto móvese. `alacritty_terminal` usa o crate **`unicode-width`** ([ADR 0003](adr/0003-nucleo-vt-alacritty-terminal.md)), e meiga usa o mesmo, na mesma versión 0.2. O ConPTY empaquetado mide igual co *flag* `PSEUDOCONSOLE_GLYPH_WIDTH_WCSWIDTH`; o de Windows ignórao ([§31](#31-conpty-a-pseudoconsola-de-windows)).
-- **Sen a *feature* `cjk`.** Por defecto, `unicode-width` trae tamén táboas para os contextos CJK, nos que os ambiguos ocupan dúas celas. meiga non as usa, e desactívaas (`default-features = false`).
+- **Sen a *feature* `cjk`.** Por defecto, `unicode-width` trae tamén táboas para os contextos CJK, nos que os ambiguos ocupan dúas celas. meiga non as usa, e desactívaas (`default-features = false`). Pero Cargo compila cada crate unha soa vez, coa unión das *features* que piden todos os que o usan, e desde a subfase 1.5 `alacritty_terminal` pide as de por defecto: as táboas CJK voltan estar, cerca de 1 KB máis en `meiga.exe`. O ancho que dá `width()`, o que usan meiga e `alacritty_terminal`, é o mesmo con elas ou sen elas.
 - **Os grafemas.** O que unha persoa ve como un carácter pode ser varios: unha letra e un acento que se combina con ela, unha bandeira (dous indicadores rexionais) ou unha familia de emoji unidos con *zero width joiner*. Xuntalos nunha cela é traballo da subfase 8.1; ata entón, os caracteres sen ancho non ocupan ningunha cela e non se debuxan.
 
 ## 30. Mesturar o texto co fondo: gamma e contraste
@@ -700,7 +700,7 @@ meiga usa o empaquetado se os dous arquivos están ao lado de `meiga.exe`, e se 
 
 O ConPTY empaquetado pásalle a medida ao seu anfitrión como unha opción (`--textMeasurement wcswidth`). O de Windows non coñece estes *flags*: a pseudoconsola créase igual, sen ningunha opción para o anfitrión.
 
-**O que escribe ao arrancar.** Antes de nada, o ConPTY empaquetado escribe `ESC [ 1 t`, unha orde *XTWINOPS* que di que a xanela non está minimizada. Despois pídelle ao terminal os seus atributos (*DA1*, `ESC [ c`) e activa os eventos de foco (`ESC [ ? 1004 h`) e o **win32-input-mode** (`ESC [ ? 9001 h`), co que o terminal pode enviar cada tecla como un evento completo de Windows ([ADR 0004](adr/0004-conpty-empaquetado.md)). Non espera a resposta de DA1. Ao rematar, desactiva os dous modos (`ESC [ ? 1004 l` e `ESC [ ? 9001 l`). O de Windows activa os mesmos modos, sen DA1, e empeza borrando a pantalla (`ESC [ 2 J`). meiga interpretará todo isto desde a subfase 1.5; ata entón, o exemplo da 1.4 móstrao tal cal ([Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winexamplesconptyrs)).
+**O que escribe ao arrancar.** Antes de nada, o ConPTY empaquetado escribe `ESC [ 1 t`, unha orde *XTWINOPS* que di que a xanela non está minimizada. Despois pídelle ao terminal os seus atributos (*DA1*, `ESC [ c`) e activa os eventos de foco (`ESC [ ? 1004 h`) e o **win32-input-mode** (`ESC [ ? 9001 h`), co que o terminal pode enviar cada tecla como un evento completo de Windows ([ADR 0004](adr/0004-conpty-empaquetado.md)). Non espera a resposta de DA1. Ao rematar, desactiva os dous modos (`ESC [ ? 1004 l` e `ESC [ ? 9001 l`). O de Windows activa os mesmos modos, sen DA1, e empeza borrando a pantalla (`ESC [ 2 J`). Desde a subfase 1.5, o terminal de meiga entende todo isto e responde a DA1 ([§35](#35-as-secuencias-de-control)); o exemplo da 1.4 móstrao tal cal ([Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winexamplesconptyrs)).
 
 **A entrada.** O ConPTY acepta tanto texto e secuencias VT clásicas como os eventos do win32-input-mode. Intro envíase como `CR` (`\r`), que é o que envía esa tecla nun terminal.
 
@@ -759,3 +759,106 @@ O ConPTY empaquetado pásalle a medida ao seu anfitrión como unha opción (`--t
 **O SHA-256** é unha función *hash* criptográfica: o mesmo arquivo dá sempre os mesmos 32 bytes, e na práctica é imposíbel atopar outro arquivo co mesmo resultado. O script garda a versión e o SHA-256 do paquete (`Get-FileHash`), e falla se o arquivo descargado non é exactamente o mesmo. Así, a versión fixada non pode cambiar sen que se note, nin por un erro nin por un ataque.
 
 **Authenticode** é a sinatura de código de Windows: unha sinatura dixital dentro do propio `.exe` ou `.dll`, co certificado de quen o asina. `Get-AuthenticodeSignature` comproba que o arquivo non cambiou despois de asinalo e que o certificado é de confianza (`Status` `Valid`), e di quen o asinou (`SignerCertificate.Subject`). O script comproba que `conpty.dll` e `OpenConsole.exe` están asinados por Microsoft Corporation: se algún día se fixase por erro un paquete que non fose de Microsoft, fallaría.
+
+## 34. `alacritty_terminal` e `vte`: o núcleo do terminal
+
+Dous crates do proxecto Alacritty fan o traballo central do terminal ([ADR 0003](adr/0003-nucleo-vt-alacritty-terminal.md)), detrás da fachada de meiga ([ADR 0012](adr/0012-fachada-do-terminal.md)):
+
+| Crate | Que fai | Licenza |
+|---|---|---|
+| `vte` 0.15.0 | O **parser**: separa o texto das secuencias de control e chama a unha función por cada orde. | Apache-2.0 ou MIT |
+| `alacritty_terminal` 0.26.0 | O **terminal**: a grella, o historial, o cursor, os modos e as respostas. Usa `vte`, e reexpórtao. | Apache-2.0 |
+
+**O parser.** `vte` é unha máquina de estados, a que describiu Paul Williams para os terminais VT de DEC: le byte a byte e, segundo o estado no que está (texto, despois dun ESC, dentro dunha secuencia CSI, dentro dunha cadea OSC…), cada byte é texto, parte dunha secuencia ou unha orde. Garda o estado entre unha lectura e a seguinte, así que unha secuencia partida en dúas lecturas lese igual. Tamén decodifica o UTF-8. Enriba, `ansi::Processor` entende cada secuencia e chama ao método correspondente dun `Handler`: `input` para cada carácter, `goto` para mover o cursor, `set_title`, `terminal_attribute` para as cores e os estilos… O `Term` de `alacritty_terminal` é un `Handler`.
+
+**A grella.** `Term` garda a pantalla nunha `Grid` de filas (`Row`) de celas (`Cell`), e enriba dela o historial, ata as liñas que se lle digan: meiga garda 10 000. Cada cela ten:
+
+| Campo | Que é |
+|---|---|
+| `c` | O carácter. Unha cela baleira ten un espazo, e a cela onde empezou un tabulador, `\t`. |
+| `fg`, `bg` | As cores do texto e do fondo: unha con nome (`Named`: as 16 da paleta e as cores por defecto), unha das 256 da paleta (`Indexed`) ou unha RGB (`Spec`). |
+| `flags` | Os estilos (negra, tenue, cursiva, os subliñados, riscado, inverso e oculto) e as marcas dos caracteres anchos: `WIDE_CHAR` na metade esquerda, `WIDE_CHAR_SPACER` na dereita, e `LEADING_WIDE_CHAR_SPACER` na última cela dunha fila cando un carácter ancho non cabía nela e pasou á seguinte. |
+| `extra` | O que teñen poucas celas: os caracteres de ancho cero que se combinan co anterior, a cor do subliñado e a ligazón (OSC 8). |
+
+**O tamaño.** `Term::new` e `Term::resize` reciben o tamaño a través do trait `Dimensions`: as filas da pantalla, as columnas e o total de liñas. O mínimo son dúas columnas (`MIN_COLUMNS`) e unha fila: un carácter ancho ocupa dúas celas, e nunha grella dunha columna escribiríase fóra da fila. Cando cambia o ancho, `alacritty_terminal` volta repartir o texto das liñas longas (*reflow*).
+
+**O que cambia (*damage*).** `Term::damage` di que cambiou desde que se lle dixo que xa se leu (`reset_damage`): a pantalla enteira (`Full`) ou, para cada fila, a columna da esquerda e a da dereita do que cambiou (`Partial`). Márcase a pantalla enteira cando todo se move ou pode cambiar: ao desprazar o texto (un salto de liña na última fila desprázao), ao cambiar á pantalla alternativa, ao borrala, ao cambiar o tamaño ou a paleta e ao reiniciar o terminal. O texto que se escribe non se marca cela a cela: márcanse as posicións polas que pasa o cursor, e as columnas do medio quedan dentro do rango da fila. Algúns efectos secundarios quedan fóra: escribir sobre unha metade dun carácter ancho borra a outra metade, e esa cela non se marca. Por iso meiga compara as filas enteiras que cambiaron ([ADR 0012](adr/0012-fachada-do-terminal.md)).
+
+**Os eventos.** O que non é a grella, o `Term` avísao a un `EventListener`, que recibe cada `Event` por referencia (`&self`):
+
+| Evento | Que é | En meiga |
+|---|---|---|
+| `PtyWrite` | Unha resposta para o programa ([§35](#35-as-secuencias-de-control)). | Gárdase, para enviarlla. |
+| `Title`, `ResetTitle` | O programa cambiou o título, ou volta ao do terminal. | O título que dá o programa. |
+| `Bell` | A campá. | Un aviso, desde a fase 2. |
+| `ClipboardStore` | Copiar un texto (OSC 52) ao portapapeis ou á selección primaria. | Só ao portapapeis. |
+| `ClipboardLoad` | Ler o portapapeis para o programa. | Nunca chega: `Osc52::OnlyCopy`. |
+| `ColorRequest`, `TextAreaSizeRequest` | Preguntas polas cores e polo tamaño en píxeles, que necesitan o renderizador. | Desde a subfase 1.6. |
+| `CursorBlinkingChange`, `MouseCursorDirty`, `Wakeup`, `Exit`, `ChildExit` | Para a interface e o bucle de eventos de Alacritty. | Non se usan. |
+
+**O que meiga non usa.** `alacritty_terminal` ten tamén o seu propio PTY e o seu bucle de eventos (`tty` e `event_loop`, cos crates `polling`, `miow` e `piper`), a selección, o modo vi e a busca con expresións regulares (`regex-automata`). meiga só usa o `Term` e o parser: compílase todo, pero o ligador elimina o que non se chama. Sen as *features* por defecto, non usa `serde`.
+
+**A memoria.** Cada `Processor` reserva 2 MiB ao crearse, para gardar a saída das actualizacións sincronizadas ([§35](#35-as-secuencias-de-control)), aínda que o programa nunca as use. Esa memoria cóntase como reservada (*commit*), pero non entra no *working set* mentres ninguén a escribe.
+
+## 35. As secuencias de control
+
+Os programas de consola mesturan co texto **secuencias de control**, que o terminal non mostra, senón que executa. Todas empezan cun carácter de control, case sempre ESC (`0x1B`):
+
+| Tipo | Forma | Exemplos |
+|---|---|---|
+| Carácter de control (C0) | Un byte de `0x00` a `0x1F` | `BEL` (`0x07`) fai soar a campá; `CR` leva o cursor ao principio da liña; `LF` báixao unha liña; `HT` é o tabulador e `BS` retrocede unha cela. |
+| Escape | `ESC` e un carácter | `ESC c` (*RIS*) reinicia o terminal; `ESC 7` e `ESC 8` gardan e recuperan a posición do cursor. |
+| CSI | `ESC [`, números separados por `;` (ou por `:`, os subparámetros), algún byte intermedio e un byte final | `ESC [ 2 ; 3 H` leva o cursor á fila 2, columna 3; `ESC [ 31 m` pon o texto en vermello. |
+| OSC | `ESC ]`, un número, `;`, un texto, e `BEL` ou `ESC \` ao final | `ESC ] 0 ; título BEL` cambia o título. |
+
+CAN (`0x18`) e SUB (`0x1A`) cancelan a secuencia que se estaba a ler, e un ESC no medio dunha secuencia empeza outra. Os outros caracteres de control execútanse sen interromper a secuencia. `vte` ignora unha secuencia CSI con máis de 32 números ou con máis de 2 bytes intermedios.
+
+**Cores e estilos** (*SGR*, `ESC [ … m`):
+
+| Código | Que fai |
+|---|---|
+| `0` | Volta ao texto normal. |
+| `1`, `2`, `3` | Negra, tenue, cursiva. |
+| `4`, e `4:2`, `4:3`, `4:4` ou `4:5` | Subliñado; dobre, ondulado, de puntos ou de trazos. |
+| `7`, `8`, `9` | Inverso (troca as cores do texto e do fondo), oculto, riscado. |
+| `30`–`37`, `90`–`97` | A cor do texto: as 8 normais e as 8 brillantes, as 16 primeiras da paleta. |
+| `40`–`47`, `100`–`107` | O mesmo, para o fondo. |
+| `38;5;n`, `48;5;n` | Unha das 256 cores da paleta: 0–15, as anteriores; 16–231, un cubo de 6 × 6 × 6; e 232–255, grises. |
+| `38;2;r;g;b`, `48;2;r;g;b` | Unha cor polas súas compoñentes (*truecolor*). |
+| `39`, `49` | A cor por defecto do texto e do fondo. |
+
+**Os modos.** `ESC [ ? n h` activa o modo privado *n*, e `ESC [ ? n l` desactívao (*DECSET* e *DECRST*). Os que meiga ofrece:
+
+| Modo | Para que |
+|---|---|
+| `1` | As frechas envían as secuencias do modo aplicación. |
+| `25` | Mostrar o cursor. |
+| `1000`, `1002`, `1003` | O programa quere os clics do rato; tamén os movementos cun botón premido; ou todos os movementos. Activar un desactiva os outros. |
+| `1004` | Avisar ao programa cando a xanela gaña ou perde o foco. |
+| `1005`, `1006` | Os informes do rato en UTF-8 ou co formato SGR. Activar un desactiva o outro. |
+| `1007` | Na pantalla alternativa, a roda do rato envía frechas. Está activo ao principio. |
+| `1049` | A pantalla alternativa, a dos programas a pantalla completa, como vim, htop ou less. |
+| `2004` | *Bracketed paste*: marcar o principio e o fin do texto pegado. |
+| `2026` | As actualizacións sincronizadas, máis abaixo. |
+| `9001` | *win32-input-mode*: as teclas como eventos completos de Windows ([§31](#31-conpty-a-pseudoconsola-de-windows)). `alacritty_terminal` ignórao, e sígueo o escáner de meiga. |
+
+Ademais, `ESC =` e `ESC >` activan e desactivan o modo aplicación do teclado numérico; `ESC [ 20 h`, que un salto de liña leve tamén o cursor ao principio da liña (*LNM*); e `ESC [ n SP q` (*DECSCUSR*) cambia a forma do cursor: bloque, subliñado ou barra, pestanexando ou fixo.
+
+**As respostas.** Algunhas secuencias son preguntas, e o terminal responde escribindo na entrada do programa, como se fose o teclado:
+
+| Pregunta | Resposta | Que di |
+|---|---|---|
+| `ESC [ c` (*DA1*) | `ESC [ ? 6 c` | Que terminal é: un compatíbel co VT102. O ConPTY pregunta ao arrancar. |
+| `ESC [ > c` (*DA2*) | `ESC [ > 0 ; 2600 ; 1 c` | A versión: a de `alacritty_terminal`, 0.26.0. |
+| `ESC [ 5 n` (*DSR*) | `ESC [ 0 n` | Que todo está ben. |
+| `ESC [ 6 n` (*DSR*) | `ESC [ fila ; columna R` | A posición do cursor. |
+| `ESC [ 18 t` (*XTWINOPS*) | `ESC [ 8 ; filas ; columnas t` | O tamaño da grella. |
+| `ESC [ 14 t`; `ESC ] 4 ; n ; ?`, `ESC ] 10 ; ?` e `ESC ] 11 ; ?` | Ningunha, ata a subfase 1.6 | O tamaño en píxeles e as cores. |
+
+`ESC [ 22 t` e `ESC [ 23 t` gardan e recuperan o título. `ESC [ 1 t`, que o ConPTY envía ao arrancar, pide restaurar a xanela se está minimizada, e ignórase.
+
+**O título e o portapapeis.** `ESC ] 0 ; texto BEL` e `ESC ] 2 ; texto BEL` cambian o título; con un texto baleiro, a tab volta ao seu. `ESC ] 52 ; c ; base64 BEL` copia ao portapapeis un texto codificado en base64. Con `?` no lugar do texto, pediría lelo, e meiga nunca o permite: calquera programa, tamén un servidor remoto ao que te conectas por SSH, podería ler o que copiaches. `p` e `s` no lugar de `c` son a selección primaria de X11, que Windows non ten.
+
+**As actualizacións sincronizadas.** Un programa que redebuxa moito, como un editor ou unha IA que reescribe a súa zona de estado, pode escribir `ESC [ ? 2026 h` antes e `ESC [ ? 2026 l` despois: o terminal garda o que hai entre as dúas e móstrao de vez, sen fotogramas a medio debuxar. Se o fin non chega, móstrao igual aos 150 ms, ou cando xa garda 2 MiB. `vte` garda a saída e coñece a hora límite, pero non ten temporizador: meiga consúltaa (`sync_deadline`) e remata a actualización (`end_sync`) desde o temporizador dos fotogramas, na subfase 1.6 ([ADR 0012](adr/0012-fachada-do-terminal.md)).
+
+**O escáner de meiga.** Antes do parser, un escáner le os mesmos bytes para seguir os modos que `alacritty_terminal` ignora, polo de agora só `?9001` ([ADR 0007](adr/0007-integracion-coa-shell.md)). Segue as mesmas regras ca `vte` (un ESC empeza outra secuencia, CAN e SUB cancelan, despois dun ESC os caracteres de control e os bytes desde 0x7f non contan, os mesmos límites, e `?` só conta xusto despois de `ESC [`), así que ve un cambio de modo só cando `vte` o vería. Só le byte a byte as secuencias `ESC [ ?`: para chegar á seguinte, busca o ESC con `memchr`, un crate que compara 16 ou 32 bytes á vez con instrucións SIMD ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrctermscannerrs)).

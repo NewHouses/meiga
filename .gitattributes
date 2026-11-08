@@ -3,3 +3,5 @@
 *.cmd text eol=crlf
 *.ico binary
 *.png binary
+# Recordings of terminal output (meiga_core::term::recording).
+*.mrec binary

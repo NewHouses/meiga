@@ -1,6 +1,6 @@
 # ADR 0003 · `alacritty_terminal` como núcleo, detrás dunha fachada
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0012](0012-fachada-do-terminal.md)
 - **Data:** 2026-11-06
 - **Relacionados:** [ADR 0001](0001-rust.md), [ADR 0006](0006-licenzas-e-dependencias.md), [ADR 0007](0007-integracion-coa-shell.md)
 

@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` opens a window with a demo: the same text at three scales, drawn with DirectWrite and a glyph cache, and rectangles that you draw by dragging the mouse, so that you can see that each frame presents only the areas that changed. It uses no CPU while idle or minimized. The platform layer can already run a shell in a pseudoconsole (ConPTY) and talk to it, but the window does not show shells yet: there is no terminal yet.
+> **Status:** early development. `meiga.exe` opens a window with a demo: the same text at three scales, drawn with DirectWrite and a glyph cache, and rectangles that you draw by dragging the mouse, so that you can see that each frame presents only the areas that changed. It uses no CPU while idle or minimized. The platform layer can already run a shell in a pseudoconsole (ConPTY) and talk to it, and the terminal core can already read its output, behind a facade over `alacritty_terminal`, but the window does not show shells yet.
 
 ## Goals
 
@@ -62,6 +62,13 @@ To see what a program sends through the ConPTY, run it in the console example of
 cargo run -p meiga-win --example conpty                     # cmd, in the ConPTY of meiga
 cargo run -p meiga-win --example conpty -- --system         # cmd, in the ConPTY of Windows
 cargo run -p meiga-win --example conpty -- pwsh -NoLogo     # any command line
+```
+
+With `--record <file>`, it also records the output, block by block, and with `--quiet` it only prints the end of the session. The console example of `meiga-core` gives a recording to the terminal of meiga as fast as it can, and prints how fast the terminal read it and, with `--screen`, what it shows at the end:
+
+```powershell
+cargo run --release -p meiga-win --example conpty -- --record ola.mrec cmd /c echo ola
+cargo run --release -p meiga-core --example replay -- ola.mrec --screen
 ```
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.

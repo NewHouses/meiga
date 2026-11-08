@@ -9,6 +9,10 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+# The terminal core, behind the facade of the term module (ADR 0003).
+alacritty_terminal.workspace = true
+# Finds ESC fast in the scanner that reads the output before the parser.
+memchr.workspace = true
 # The width of each character in cells, as alacritty_terminal measures it.
 unicode-width.workspace = true
 
