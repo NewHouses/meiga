@@ -1,6 +1,6 @@
 # ADR 0004 · ConPTY empaquetado con meiga
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0011](0011-fin-e-peche-das-sesions.md)
 - **Data:** 2026-11-06
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0006](0006-licenzas-e-dependencias.md)
 

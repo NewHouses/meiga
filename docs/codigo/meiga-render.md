@@ -609,7 +609,7 @@ pub fn new() -> Result<Self, Error> {
 ```
 
 - `DWriteCreateFactory` é xenérica no tipo da interface que devolve: `let factory: IDWriteFactory2` fai que pida esa versión.
-- `GetSystemFontCollection` devolve a colección nun parámetro de saída, un `Option`. `false`: non mira se se instalaron fontes mentres corre o programa. Se a colección volvese baleira sen ningún erro, que non debería pasar, o erro é `E_FAIL`.
+- `GetSystemFontCollection` devolve a colección nun parámetro de saída, un `Option`. `false`: non mira se se instalaron fontes mentres corre o programa. Se a colección voltase baleira sen ningún erro, que non debería pasar, o erro é `E_FAIL`.
 - Cada erro leva o nome do método, para saber cal fallou.
 
 ```rust
@@ -809,7 +809,7 @@ fn fallback(&self, c: char) -> Option<(IDWriteFontFace, u16, f32)> {
 - `MapCharacters` recibe o texto, a colección onde buscar, a familia preferida e o peso, o estilo e o ancho. Devolve cantos caracteres cobre a fonte escollida (`mapped_len`), a fonte (`font`, ou `None` se ningunha os ten) e unha escala (`scale`) para igualar o tamaño aparente das dúas fontes.
 - `.ok()?` converte cada erro en `None`: se o *fallback* falla, debúxase o glifo dos caracteres que faltan.
 - A escala só se aplica se é un número positivo.
-- Cada carácter que lle falta á fonte pasa por aquí unha vez por tamaño de fonte, a primeira vez que se debuxa: despois, o seu glifo xa está na caché.
+- Cada carácter que lle falta á fonte pasa por eiquí unha vez por tamaño de fonte, a primeira vez que se debuxa: despois, o seu glifo xa está na caché.
 
 ### Funcións auxiliares
 
