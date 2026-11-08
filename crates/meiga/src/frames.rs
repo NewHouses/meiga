@@ -21,6 +21,24 @@ const MARK_THICKNESS: u32 = 1;
 
 /// What the window shows.
 pub trait Scene {
+    /// Brings the scene up to date before a frame, at `now`: gives `damage`
+    /// the areas that changed. Returns when it has to be brought up to date
+    /// again, even if nothing else changes, if it has to: for example, when
+    /// the cursor blinks.
+    fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
+        let _ = (now, damage);
+        None
+    }
+
+    /// While the window is minimized nothing is drawn, and the scene is not
+    /// brought up to date: does at `now` only what cannot wait until the
+    /// window is restored, such as answering the program. Returns when it has
+    /// to do it again, if it has to.
+    fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
+        let _ = now;
+        None
+    }
+
     /// Draws everything that is inside the clip rectangle of `canvas`. It
     /// takes `&mut self` because drawing can fill caches, such as the one of
     /// the glyphs.
@@ -33,11 +51,17 @@ pub trait Scene {
 /// The window shows the framebuffer, except in the areas of `damage`: they
 /// changed, and the next frame composes them and presents them. The frames
 /// follow the pacer: at most one per interval, and the first change after a
-/// pause at once.
+/// pause at once. Each frame first brings the scene up to date
+/// ([`Scene::update`]), which adds the areas that changed in it.
 pub struct Frames {
     surface: Surface,
     damage: Damage,
     pacer: FramePacer,
+    /// The scene changed, and it gives the areas when it is brought up to
+    /// date: there has to be a frame, even if `damage` is empty.
+    changed: bool,
+    /// When the scene has to be brought up to date again, as it asked.
+    due: Option<Instant>,
     minimized: bool,
     /// Whether the user is moving or resizing the window.
     live_resize: bool,
@@ -48,23 +72,27 @@ pub struct Frames {
 }
 
 impl Frames {
-    /// The framebuffer of a window of `size`, with `scene` composed in it.
+    /// The framebuffer of `window`, with `scene` composed in it.
     pub fn new(
-        size: Size,
+        window: &Window,
         scene: &mut dyn Scene,
-        marks: bool,
         trace: Option<Trace>,
     ) -> Result<Self, HandlerError> {
         let mut frames = Self {
-            surface: Surface::new(size)?,
+            surface: Surface::new(window.client_size()?)?,
             damage: Damage::new(),
             pacer: FramePacer::new(),
+            changed: false,
+            due: None,
             minimized: false,
             live_resize: false,
-            marks: marks.then(Vec::new),
+            marks: None,
             trace,
         };
         frames.compose_all(scene)?;
+        // The first paint of the window copies all of it.
+        frames.damage.clear();
+        frames.wait_for_scene(window)?;
         Ok(frames)
     }
 
@@ -80,10 +108,20 @@ impl Frames {
         }
     }
 
+    /// The scene changed: a frame brings it up to date and draws what
+    /// changed in it, as [`Frames::request`].
+    pub fn changed(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
+        self.changed = true;
+        self.request(window, scene)
+    }
+
     /// Draws what changed, now or with the frame timer, as the pacer says.
     pub fn request(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
-        if self.damage.is_empty() || self.minimized {
-            return Ok(());
+        if self.minimized {
+            return self.hidden(window, scene);
+        }
+        if self.damage.is_empty() && !self.changed {
+            return self.wait_for_scene(window);
         }
         match self.pacer.request(Instant::now(), interval()) {
             Pace::Now => self.draw(window, scene, Cause::Now),
@@ -92,9 +130,15 @@ impl Frames {
         }
     }
 
-    /// The frame timer is due: draws what changed.
+    /// The frame timer is due: draws what changed or, if no frame was
+    /// waiting, the scene asked for this moment, which is a change like any
+    /// other. While the window is minimized, the scene does what cannot wait.
     pub fn timer(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
-        self.draw(window, scene, Cause::Timer)
+        if self.pacer.is_scheduled() {
+            return self.draw(window, scene, Cause::Timer);
+        }
+        self.due = None;
+        self.changed(window, scene)
     }
 
     /// Starts the frame timer for the first moment that the pacer allows,
@@ -122,11 +166,12 @@ impl Frames {
     ) -> Result<(), HandlerError> {
         if minimized {
             // Nothing is drawn while the window is minimized: the changes
-            // wait in `damage`.
+            // wait in `damage`, and in the scene, which is not brought up to
+            // date until the window is restored, except for what cannot wait.
             window.stop_frame_timer();
             self.pacer.cancel();
             self.minimized = true;
-            return Ok(());
+            return self.hidden(window, scene);
         }
         let restored = mem::take(&mut self.minimized);
         if size == self.surface.size() && !restored {
@@ -151,7 +196,10 @@ impl Frames {
                 marks.clear();
             }
             window.invalidate(None);
-            Ok(())
+            // The frame timer may still be set for what the scene had to do
+            // while the window was minimized: now it is for the frames.
+            window.stop_frame_timer();
+            self.wait_for_scene(window)
         } else {
             // Windows asks to paint (WM_PAINT) the parts of the window that
             // are new. The changes in the rest still have to be presented.
@@ -165,12 +213,18 @@ impl Frames {
 
     /// The user finished moving or resizing the window: the framebuffer
     /// gives back the memory that it does not need.
-    pub fn size_move_ended(&mut self, scene: &mut dyn Scene) -> Result<(), HandlerError> {
+    pub fn size_move_ended(
+        &mut self,
+        window: &Window,
+        scene: &mut dyn Scene,
+    ) -> Result<(), HandlerError> {
         self.live_resize = false;
         if self.surface.resize(self.surface.size(), Fit::Exact)? {
             // New memory, without the pixels: compose it again. The window
-            // already shows the same thing.
+            // already shows the same thing, except what changed in the scene
+            // meanwhile, which the next frame presents.
             self.compose_all(scene)?;
+            return self.request(window, scene);
         }
         Ok(())
     }
@@ -220,12 +274,17 @@ impl Frames {
     ) -> Result<(), HandlerError> {
         // The frame can come before its timer, when the timer is late.
         window.stop_frame_timer();
-        if self.damage.is_empty() || self.minimized {
+        if self.minimized {
             self.pacer.cancel();
             return Ok(());
         }
-
         let start = Instant::now();
+        self.update(scene, start);
+        if self.damage.is_empty() {
+            self.pacer.cancel();
+            return self.wait_for_scene(window);
+        }
+
         let mut canvas = self.surface.canvas();
         for &area in self.damage.rects() {
             scene.draw(&mut canvas.clipped(area));
@@ -269,12 +328,56 @@ impl Frames {
         )?;
         self.damage.clear();
         self.pacer.drawn(start);
-        Ok(())
+        self.wait_for_scene(window)
     }
 
-    /// Composes the whole framebuffer, without presenting it.
+    /// Brings `scene` up to date at `now`, and adds to `damage` the areas
+    /// that changed in it.
+    fn update(&mut self, scene: &mut dyn Scene, now: Instant) {
+        self.changed = false;
+        let bounds = Rect::from_size(self.surface.size());
+        let damage = &mut self.damage;
+        self.due = scene.update(now, &mut |area| {
+            let area = area.intersection(bounds);
+            if !area.is_empty() {
+                damage.add(area);
+            }
+        });
+    }
+
+    /// While the window is minimized, does what cannot wait in the scene,
+    /// and keeps the frame timer only for the next time that it has to,
+    /// without drawing anything.
+    fn hidden(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
+        let now = Instant::now();
+        match scene.update_hidden(now) {
+            Some(due) => Ok(window.start_frame_timer(due.saturating_duration_since(now))?),
+            None => {
+                window.stop_frame_timer();
+                Ok(())
+            }
+        }
+    }
+
+    /// If no frame is waiting, starts the frame timer for the moment that
+    /// the scene asked for, if it asked for one.
+    fn wait_for_scene(&mut self, window: &Window) -> Result<(), HandlerError> {
+        if self.minimized || self.pacer.is_scheduled() {
+            return Ok(());
+        }
+        match self.due {
+            Some(due) => {
+                Ok(window.start_frame_timer(due.saturating_duration_since(Instant::now()))?)
+            }
+            None => Ok(()),
+        }
+    }
+
+    /// Composes the whole framebuffer, with the scene up to date, without
+    /// presenting it.
     fn compose_all(&mut self, scene: &mut dyn Scene) -> Result<(), HandlerError> {
         let start = Instant::now();
+        self.update(scene, start);
         scene.draw(&mut self.surface.canvas());
         let compose = start.elapsed();
         let size = self.surface.size();

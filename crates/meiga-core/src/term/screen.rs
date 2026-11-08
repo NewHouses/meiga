@@ -4,13 +4,13 @@
 
 use std::ops::BitOr;
 
-use crate::color::Rgb;
+use crate::color::{Palette, Rgb};
 use crate::geometry::GridSize;
 use crate::text::CellChar;
 
 /// The colour of the text or of the background of a cell, as the program
-/// gave it. The palette of the theme turns it into an [`Rgb`] when it is
-/// drawn (subphase 1.6).
+/// gave it. The palette of the screen ([`Screen::palette`]) turns it into an
+/// [`Rgb`] when it is drawn: [`Color::rgb`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Color {
     /// The default colour: the one of the text, for the text, and the one of
@@ -22,6 +22,18 @@ pub enum Color {
     Indexed(u8),
     /// A colour given by its components (*truecolor*).
     Rgb(Rgb),
+}
+
+impl Color {
+    /// The colour to draw with `palette`: `default` if it is
+    /// [`Color::Default`].
+    pub fn rgb(self, palette: &Palette, default: Rgb) -> Rgb {
+        match self {
+            Color::Default => default,
+            Color::Indexed(index) => palette.colors[usize::from(index)],
+            Color::Rgb(rgb) => rgb,
+        }
+    }
 }
 
 /// The styles of a cell.
@@ -94,8 +106,8 @@ pub struct Cursor {
     pub row: u16,
     pub column: u16,
     pub shape: CursorShape,
-    /// The program asked for it to blink. meiga only makes it blink if
-    /// Windows allows it (subphase 1.6).
+    /// Whether it blinks: by default it does, unless the program asks for a
+    /// steady one. meiga only makes it blink if Windows allows it.
     pub blinking: bool,
 }
 
@@ -140,9 +152,11 @@ pub struct Screen {
     cells: Vec<Cell>,
     /// The columns that changed in each row.
     changed: Vec<Columns>,
-    /// Every cell changed, for example because the size changed.
+    /// Every cell changed, for example because the size or the palette
+    /// changed.
     all_changed: bool,
     cursor: Cursor,
+    palette: Palette,
 }
 
 impl Screen {
@@ -158,6 +172,7 @@ impl Screen {
                 shape: CursorShape::Block,
                 blinking: false,
             },
+            palette: Palette::MEIGA,
         }
     }
 
@@ -174,6 +189,12 @@ impl Screen {
 
     pub const fn cursor(&self) -> Cursor {
         self.cursor
+    }
+
+    /// The colours with which the cells are drawn: the ones of the theme,
+    /// with the changes of the program.
+    pub const fn palette(&self) -> &Palette {
+        &self.palette
     }
 
     /// Whether every cell changed.
@@ -245,6 +266,35 @@ impl Screen {
 
     pub(super) fn set_cursor(&mut self, cursor: Cursor) {
         self.cursor = cursor;
+    }
+
+    /// Adds to the changes the cells of the cursor, if it is drawn: two, in
+    /// case it is over a wide character. For when it changes how it looks
+    /// without moving, for example when it blinks.
+    pub fn mark_cursor_changed(&mut self) {
+        let Cursor {
+            row, column, shape, ..
+        } = self.cursor;
+        if shape != CursorShape::Hidden {
+            let end = column.saturating_add(2).min(self.size.columns);
+            self.mark_changed(row, Columns::new(column, end));
+        }
+    }
+
+    /// Takes `palette`. If its colours change, every cell changes; if only
+    /// the one of the cursor does, only the cells of the cursor.
+    pub(super) fn set_palette(&mut self, palette: &Palette) {
+        if self.palette.colors != palette.colors
+            || self.palette.foreground != palette.foreground
+            || self.palette.background != palette.background
+        {
+            self.all_changed = true;
+        } else if self.palette.cursor != palette.cursor {
+            self.mark_cursor_changed();
+        } else {
+            return;
+        }
+        self.palette.clone_from(palette);
     }
 }
 

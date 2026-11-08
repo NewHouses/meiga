@@ -9,7 +9,7 @@ use meiga_core::text::CellChar;
 
 use crate::Error;
 use crate::canvas::{Blending, Canvas, Shades};
-use crate::dwrite::{FontSystem, Typeface};
+use crate::dwrite::{Decorations, FontSystem, Typeface};
 use crate::glyphs::{CAPACITY, GlyphCache, SlotId};
 
 /// How text mixes with its background, until it can be configured
@@ -26,9 +26,44 @@ pub const BLENDING: Blending = Blending {
 /// comes back.
 const SHADES: usize = 64;
 
+/// How the glyphs of a cell are drawn: bold, slanted (italic), both or
+/// neither.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct FontStyle {
+    pub bold: bool,
+    pub italic: bool,
+}
+
+impl FontStyle {
+    pub const REGULAR: FontStyle = FontStyle {
+        bold: false,
+        italic: false,
+    };
+
+    /// From 0 to 3: 0 is the regular style, and the others are the place of
+    /// its typeface among the styled ones of the font, plus one. It is also
+    /// its style in the glyph cache.
+    const fn index(self) -> usize {
+        self.bold as usize | (self.italic as usize) << 1
+    }
+}
+
+/// The typeface of a style other than the regular one, created the first
+/// time that a cell in that style is drawn.
+enum Face {
+    NotYet,
+    Ready(Typeface),
+    /// It could not be created: the cells in that style are drawn with the
+    /// regular one.
+    Missing,
+}
+
 /// A font for the cells of a grid, at a size and a DPI, with its glyph cache.
 pub struct Font {
-    typeface: Typeface,
+    regular: Typeface,
+    /// Bold, italic, and bold and italic.
+    styled: [Face; 3],
+    /// The glyphs of every style.
     glyphs: GlyphCache,
     /// The two cells of the last wide character, which are rasterized
     /// together.
@@ -46,10 +81,11 @@ impl Font {
         points: f32,
         dpi: u32,
     ) -> Result<Self, Error> {
-        let typeface = Typeface::new(system, families, points, dpi)?;
-        let glyphs = GlyphCache::new(typeface.cell(), CAPACITY);
+        let regular = Typeface::new(system, families, points, dpi)?;
+        let glyphs = GlyphCache::new(regular.cell(), CAPACITY);
         Ok(Self {
-            typeface,
+            regular,
+            styled: [Face::NotYet, Face::NotYet, Face::NotYet],
             glyphs,
             wide: Vec::new(),
             shades: Vec::new(),
@@ -59,12 +95,17 @@ impl Font {
 
     /// The family that was found.
     pub fn family(&self) -> &str {
-        self.typeface.family()
+        self.regular.family()
     }
 
     /// The size of a cell, in pixels.
     pub const fn cell(&self) -> Size {
-        self.typeface.cell()
+        self.regular.cell()
+    }
+
+    /// Where the underline and the strikeout go in a cell.
+    pub const fn decorations(&self) -> Decorations {
+        self.regular.decorations()
     }
 
     /// How many glyphs are in its cache.
@@ -73,7 +114,7 @@ impl Font {
     }
 
     /// Draws `cells` in a row, from `at`, the top-left corner of the first
-    /// one, with the colours `text` and `background`.
+    /// one, in `style`, with the colours `text` and `background`.
     ///
     /// Only the cells inside the clip rectangle of `canvas` are drawn: first
     /// the background of all of them, and then the ink of their glyphs. A
@@ -84,6 +125,7 @@ impl Font {
         canvas: &mut Canvas<'_>,
         at: Point,
         cells: &[CellChar],
+        style: FontStyle,
         text: Rgb,
         background: Rgb,
     ) {
@@ -112,15 +154,17 @@ impl Font {
         let first = ((visible.left - at.x) / width) as usize;
         let last = ((visible.right - 1 - at.x) / width) as usize;
         let Self {
-            typeface,
+            regular,
+            styled,
             glyphs,
             wide,
             shades,
             blending,
         } = self;
+        let (typeface, style) = typeface_for(regular, styled, style);
         let shades = shades_for(shades, text, background, *blending);
         for (index, &c) in cells.iter().enumerate().take(last + 1).skip(first) {
-            let Some(slot) = slot(glyphs, typeface, wide, c) else {
+            let Some(slot) = slot(glyphs, typeface, style, wide, c) else {
                 continue;
             };
             let glyph = glyphs.glyph(slot);
@@ -134,6 +178,29 @@ impl Font {
                 shades,
             );
         }
+    }
+}
+
+/// The typeface of `style`, created the first time, and its style in the
+/// glyph cache: the regular one, if it cannot be created.
+fn typeface_for<'a>(
+    regular: &'a mut Typeface,
+    styled: &'a mut [Face; 3],
+    style: FontStyle,
+) -> (&'a mut Typeface, u8) {
+    let Some(face) = style.index().checked_sub(1).map(|index| &mut styled[index]) else {
+        return (regular, 0);
+    };
+    if matches!(face, Face::NotYet) {
+        *face = match regular.styled(style.bold, style.italic) {
+            Ok(typeface) => Face::Ready(typeface),
+            Err(_) => Face::Missing,
+        };
+    }
+    match face {
+        // The index is at most 3.
+        Face::Ready(typeface) => (typeface, style.index() as u8),
+        Face::NotYet | Face::Missing => (regular, 0),
     }
 }
 
@@ -165,23 +232,24 @@ fn shades_for(
     &cache[index].2
 }
 
-/// The slot of the glyph of `c`, rasterizing it if it is not in the cache,
-/// or `None` for a blank cell.
+/// The slot of the glyph of `c` in `style`, the style of `typeface`,
+/// rasterizing it if it is not in the cache, or `None` for a blank cell.
 fn slot(
     glyphs: &mut GlyphCache,
     typeface: &mut Typeface,
+    style: u8,
     wide: &mut Vec<u8>,
     c: CellChar,
 ) -> Option<SlotId> {
     if c == CellChar::Blank {
         return None;
     }
-    if let Some(slot) = glyphs.find(c) {
+    if let Some(slot) = glyphs.find(c, style) {
         return Some(slot);
     }
     match c {
         CellChar::Blank => None,
-        CellChar::Narrow(character) => Some(glyphs.insert(c, |coverage| {
+        CellChar::Narrow(character) => Some(glyphs.insert(c, style, |coverage| {
             // A glyph that cannot be rasterized stays blank, until the cache
             // drops it.
             let _ = typeface.rasterize(character, 1, coverage);
@@ -212,8 +280,8 @@ fn slot(
             } else {
                 CellChar::WideRight(character)
             };
-            glyphs.insert(other, half(!right));
-            Some(glyphs.insert(c, half(right)))
+            glyphs.insert(other, style, half(!right));
+            Some(glyphs.insert(c, style, half(right)))
         }
     }
 }
@@ -248,7 +316,14 @@ mod tests {
         let size = Size::new(cell.width * 4, cell.height);
         let row: Vec<CellChar> = cells("a b").collect();
         let pixels = draw(size, |canvas| {
-            font.draw(canvas, Point::new(0, 0), &row, TEXT, BACKGROUND);
+            font.draw(
+                canvas,
+                Point::new(0, 0),
+                &row,
+                FontStyle::REGULAR,
+                TEXT,
+                BACKGROUND,
+            );
         });
         // Three cells: the fourth one keeps its pixels.
         let at = |x: u32, y: u32| pixels[(y * size.width + x) as usize];
@@ -284,6 +359,7 @@ mod tests {
                 &mut canvas.clipped(clip),
                 Point::new(0, 0),
                 &row,
+                FontStyle::REGULAR,
                 TEXT,
                 BACKGROUND,
             );
@@ -314,13 +390,21 @@ mod tests {
                 &mut canvas.clipped(right),
                 Point::new(0, 0),
                 &row,
+                FontStyle::REGULAR,
                 TEXT,
                 BACKGROUND,
             );
         });
         assert_eq!(font.cached_glyphs(), 2);
         let pixels = draw(size, |canvas| {
-            font.draw(canvas, Point::new(0, 0), &row, TEXT, BACKGROUND);
+            font.draw(
+                canvas,
+                Point::new(0, 0),
+                &row,
+                FontStyle::REGULAR,
+                TEXT,
+                BACKGROUND,
+            );
         });
         assert_eq!(font.cached_glyphs(), 2);
         let inked = |range: std::ops::Range<u32>| {
@@ -329,6 +413,33 @@ mod tests {
             })
         };
         assert!(inked(0..cell.width) && inked(cell.width..2 * cell.width));
+    }
+
+    #[test]
+    fn each_style_has_its_glyphs() {
+        let mut font = font();
+        let cell = font.cell();
+        let size = Size::new(cell.width, cell.height);
+        let row = [CellChar::Narrow('M')];
+        let ink = |pixels: &[u32]| pixels.iter().filter(|&&p| p != pixel(BACKGROUND)).count();
+        let mut draw_in = |style| {
+            draw(size, |canvas| {
+                font.draw(canvas, Point::new(0, 0), &row, style, TEXT, BACKGROUND);
+            })
+        };
+        let regular = draw_in(FontStyle::REGULAR);
+        let bold = draw_in(FontStyle {
+            bold: true,
+            italic: false,
+        });
+        let italic = draw_in(FontStyle {
+            bold: false,
+            italic: true,
+        });
+        assert!(ink(&bold) > ink(&regular));
+        assert_ne!(italic, regular);
+        assert_eq!(font.cached_glyphs(), 3);
+        assert_eq!(font.decorations(), font.regular.decorations());
     }
 
     #[test]

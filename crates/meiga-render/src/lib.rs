@@ -16,7 +16,7 @@ mod glyphs;
 mod text;
 
 pub use canvas::{Blending, Canvas, Shades, pixel};
-pub use dwrite::FontSystem;
+pub use dwrite::{Decorations, FontSystem, Line};
 pub use error::Error;
 pub use gdi::{Fit, Surface};
-pub use text::{BLENDING, Font};
+pub use text::{BLENDING, Font, FontStyle};

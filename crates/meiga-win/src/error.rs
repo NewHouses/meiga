@@ -42,6 +42,13 @@ impl Error {
         };
         Self::new(function, error)
     }
+
+    /// The error that Windows gave, if it gave one: for example, the one of
+    /// `CreateProcessW` when the program does not exist, of kind
+    /// [`io::ErrorKind::NotFound`].
+    pub fn os_error(&self) -> Option<&io::Error> {
+        self.os_error.as_ref()
+    }
 }
 
 impl fmt::Display for Error {

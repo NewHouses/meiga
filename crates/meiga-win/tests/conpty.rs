@@ -11,7 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use meiga_core::geometry::GridSize;
-use meiga_win::conpty::{Conpty, Output, Pty, Source};
+use meiga_win::conpty::{Conpty, Input, Output, Pty, Source};
 
 /// How long a test waits for a session at most. A session that gets stuck
 /// while it closes ends after 10 or 20 s.
@@ -50,12 +50,32 @@ enum Event {
 struct Channel(Sender<Event>);
 
 impl Output for Channel {
-    fn received(&mut self, bytes: &[u8]) {
+    fn received(&mut self, bytes: &[u8], _input: &Input) {
         let _ = self.0.send(Event::Received(bytes.to_vec()));
     }
 
     fn ended(&mut self, exit_code: Option<u32>) {
         let _ = self.0.send(Event::Ended(exit_code));
+    }
+}
+
+/// Like [`Channel`], but it also types a line on the reader thread when
+/// the program first shows something, as a terminal answers a question.
+struct Answering {
+    channel: Channel,
+    line: Option<&'static [u8]>,
+}
+
+impl Output for Answering {
+    fn received(&mut self, bytes: &[u8], input: &Input) {
+        if let Some(line) = self.line.take() {
+            input.write(line);
+        }
+        self.channel.received(bytes, input);
+    }
+
+    fn ended(&mut self, exit_code: Option<u32>) {
+        self.channel.ended(exit_code);
     }
 }
 
@@ -162,6 +182,33 @@ fn what_is_written_reaches_the_program() {
     pty.write(b"echo %M%%M%\r");
     pty.write(b"exit 5\r");
     assert_eq!(transcript.wait_for_end(), Some(5));
+    assert!(
+        transcript.text().contains("olaola"),
+        "{:?}",
+        transcript.text()
+    );
+}
+
+#[test]
+fn the_reader_thread_can_answer_the_program() {
+    let (sender, events) = mpsc::channel();
+    let output = Answering {
+        channel: Channel(sender),
+        line: Some(b"ola\r"),
+    };
+    // cmd reads a line and shows it twice: "olaola" only comes from cmd.
+    let _pty = bundled()
+        .spawn(
+            "cmd /d /v:on /c \"set /p M=& echo !M!!M!\"",
+            GridSize::new(80, 25),
+            output,
+        )
+        .unwrap();
+    let mut transcript = Transcript {
+        events,
+        output: Vec::new(),
+    };
+    assert_eq!(transcript.wait_for_end(), Some(0));
     assert!(
         transcript.text().contains("olaola"),
         "{:?}",

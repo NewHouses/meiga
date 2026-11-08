@@ -7,7 +7,8 @@
 //! 0005 and ADR 0011):
 //!
 //! - the reader, blocked in `ReadFile` on the output pipe, gives each block
-//!   that it reads to an [`Output`];
+//!   that it reads to an [`Output`], which can answer the program at once
+//!   with an [`Input`];
 //! - the writer waits at the same time for input to send, for the session to
 //!   be closed and for the program to end. Then it closes the pseudoconsole,
 //!   and makes sure that the session ends.
@@ -273,12 +274,15 @@ impl Conpty {
             drop(console);
             return Err(Error::new("CreateThread", error));
         }
-        let pty = Pty { shared, process_id };
+        let pty = Pty {
+            input: Input { shared },
+            process_id,
+        };
         let reader = {
-            let shared = Arc::clone(&pty.shared);
+            let shared = Arc::clone(&pty.input.shared);
             thread::Builder::new()
                 .name(format!("conpty reader {process_id}"))
-                .spawn(move || read_output(output_read, &shared, output))
+                .spawn(move || read_output(output_read, shared, output))
         };
         match reader {
             Ok(_) => Ok(pty),
@@ -286,8 +290,8 @@ impl Conpty {
                 // Nobody reads the output: end the programs, and tell the
                 // writer, which closes the session when `pty` drops, not to
                 // wait for the output. `output` is never called.
-                pty.shared.terminate();
-                pty.shared.close_output();
+                pty.input.shared.terminate();
+                pty.input.shared.close_output();
                 Err(Error::new("CreateThread", error))
             }
         }
@@ -336,7 +340,11 @@ impl Conpty {
 pub trait Output: Send + 'static {
     /// The pseudoconsole wrote `bytes`: UTF-8 text with VT sequences. A
     /// sequence, or a character, can be split between two calls.
-    fn received(&mut self, bytes: &[u8]);
+    ///
+    /// `input` sends to the program the answers to the questions that it
+    /// asks in its output, such as the attributes of the terminal, at once,
+    /// from this thread.
+    fn received(&mut self, bytes: &[u8], input: &Input);
 
     /// The session ended: the pseudoconsole closed its output, after the
     /// last [`Output::received`]. `exit_code` is the exit code of the
@@ -352,14 +360,47 @@ pub trait Output: Send + 'static {
 /// calls [`Output::ended`] after the last output. If the session gets stuck,
 /// the writer ends the programs of its job.
 pub struct Pty {
-    shared: Arc<Shared>,
+    input: Input,
     process_id: u32,
 }
 
 impl Pty {
+    /// Sends `bytes` to the program, as if they were typed: see
+    /// [`Input::write`].
+    pub fn write(&self, bytes: &[u8]) {
+        self.input.write(bytes);
+    }
+
+    /// What sends input to the program, for another thread. It does not
+    /// keep the session open: dropping the `Pty` closes it.
+    pub fn input(&self) -> Input {
+        self.input.clone()
+    }
+
+    /// The identifier of the process of the program.
+    pub fn process_id(&self) -> u32 {
+        self.process_id
+    }
+}
+
+impl Drop for Pty {
+    fn drop(&mut self) {
+        self.input.shared.lock().closing = true;
+        self.input.shared.wake();
+    }
+}
+
+/// Sends input to the program of a session, from any thread. It is cheap to
+/// clone.
+#[derive(Clone)]
+pub struct Input {
+    shared: Arc<Shared>,
+}
+
+impl Input {
     /// Sends `bytes` to the program, as if they were typed. It does not
-    /// wait: the writer thread sends them. Once the session has ended, it
-    /// does nothing.
+    /// wait: the writer thread sends them. Once the session has been closed
+    /// or has ended, it does nothing.
     pub fn write(&self, bytes: &[u8]) {
         let wake = {
             let mut state = self.shared.lock();
@@ -374,18 +415,6 @@ impl Pty {
         if wake {
             self.shared.wake();
         }
-    }
-
-    /// The identifier of the process of the program.
-    pub fn process_id(&self) -> u32 {
-        self.process_id
-    }
-}
-
-impl Drop for Pty {
-    fn drop(&mut self) {
-        self.shared.lock().closing = true;
-        self.shared.wake();
     }
 }
 
@@ -602,7 +631,8 @@ fn write_all(pipe: &OwnedHandle, mut bytes: &[u8]) -> bool {
 
 /// The reader thread: gives what the program shows to `output`, until
 /// ConPTY ends and closes its end of the output pipe.
-fn read_output<O: Output>(pipe: OwnedHandle, shared: &Shared, mut output: O) {
+fn read_output<O: Output>(pipe: OwnedHandle, shared: Arc<Shared>, mut output: O) {
+    let input = Input { shared };
     let mut buffer = vec![0; READ_SIZE as usize];
     loop {
         let mut read = 0;
@@ -627,12 +657,12 @@ fn read_output<O: Output>(pipe: OwnedHandle, shared: &Shared, mut output: O) {
             .get(..read as usize)
             .filter(|bytes| !bytes.is_empty())
         {
-            output.received(bytes);
+            output.received(bytes, &input);
         }
     }
     drop(pipe);
-    shared.close_output();
-    output.ended(exit_code(&shared.process));
+    input.shared.close_output();
+    output.ended(exit_code(&input.shared.process));
 }
 
 /// The exit code of `process`, or `None` if it is still running after

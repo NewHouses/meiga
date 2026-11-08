@@ -87,18 +87,23 @@ impl GlyphCache {
         self.slots.len()
     }
 
-    /// The slot of `glyph`, if it is in the cache. Marks it as used, so that
-    /// the next insertions keep it.
-    pub fn find(&mut self, glyph: CellChar) -> Option<SlotId> {
-        let slot = *self.index.get(&key(glyph))?;
+    /// The slot of `glyph` in `style`, if it is in the cache. Marks it as
+    /// used, so that the next insertions keep it.
+    pub fn find(&mut self, glyph: CellChar, style: u8) -> Option<SlotId> {
+        let slot = *self.index.get(&key(glyph, style))?;
         self.slots[slot as usize].used = true;
         Some(SlotId(slot))
     }
 
-    /// Puts `glyph` in the cache, with the coverage that `rasterize` writes
-    /// in its slot: a cell of zeros, row after row.
-    pub fn insert(&mut self, glyph: CellChar, rasterize: impl FnOnce(&mut [u8])) -> SlotId {
-        let key = key(glyph);
+    /// Puts `glyph` in `style` in the cache, with the coverage that
+    /// `rasterize` writes in its slot: a cell of zeros, row after row.
+    pub fn insert(
+        &mut self,
+        glyph: CellChar,
+        style: u8,
+        rasterize: impl FnOnce(&mut [u8]),
+    ) -> SlotId {
+        let key = key(glyph, style);
         let slot = match self.index.get(&key) {
             Some(&slot) => slot as usize,
             None => self.free_slot(),
@@ -147,15 +152,17 @@ impl GlyphCache {
     }
 }
 
-/// The key of a glyph in the index: the character and, in the two low bits,
-/// which cell it is. Characters go up to 0x10FFFF, so it fits in 23 bits.
-fn key(glyph: CellChar) -> u32 {
-    match glyph {
-        CellChar::Blank => 0,
-        CellChar::Narrow(c) => u32::from(c) << 2 | 1,
-        CellChar::WideLeft(c) => u32::from(c) << 2 | 2,
-        CellChar::WideRight(c) => u32::from(c) << 2 | 3,
-    }
+/// The key of a glyph in the index: the character; its style, from 0 to 3,
+/// in the next two bits; and, in the two low bits, which cell it is.
+/// Characters go up to 0x10FFFF, so it fits in 25 bits.
+fn key(glyph: CellChar, style: u8) -> u32 {
+    let (c, cell) = match glyph {
+        CellChar::Blank => return 0,
+        CellChar::Narrow(c) => (c, 1),
+        CellChar::WideLeft(c) => (c, 2),
+        CellChar::WideRight(c) => (c, 3),
+    };
+    u32::from(c) << 4 | u32::from(style & 3) << 2 | cell
 }
 
 /// The smallest rectangle with all the pixels that have coverage, in rows
@@ -220,13 +227,13 @@ mod tests {
     fn a_glyph_is_rasterized_once_and_found_after() {
         let mut cache = GlyphCache::new(CELL, 8);
         let a = CellChar::Narrow('a');
-        assert_eq!(cache.find(a), None);
-        let slot = cache.insert(a, |coverage| {
+        assert_eq!(cache.find(a, 0), None);
+        let slot = cache.insert(a, 0, |coverage| {
             assert_eq!(coverage, [0; 12]);
             coverage[5] = 255;
             coverage[11] = 7;
         });
-        assert_eq!(cache.find(a), Some(slot));
+        assert_eq!(cache.find(a, 0), Some(slot));
         let glyph = cache.glyph(slot);
         assert_eq!(glyph.coverage[5], 255);
         assert_eq!(glyph.ink, Rect::new(1, 1, 4, 3));
@@ -236,26 +243,39 @@ mod tests {
     #[test]
     fn a_glyph_without_ink_has_an_empty_ink_box() {
         let mut cache = GlyphCache::new(CELL, 8);
-        let slot = cache.insert(CellChar::Narrow('\u{a0}'), |_| {});
+        let slot = cache.insert(CellChar::Narrow('\u{a0}'), 0, |_| {});
         assert!(cache.glyph(slot).ink.is_empty());
     }
 
     #[test]
     fn each_half_of_a_wide_character_has_its_slot() {
         let mut cache = GlyphCache::new(CELL, 8);
-        let left = cache.insert(CellChar::WideLeft('中'), dot(0, 0));
-        let right = cache.insert(CellChar::WideRight('中'), dot(3, 2));
+        let left = cache.insert(CellChar::WideLeft('中'), 0, dot(0, 0));
+        let right = cache.insert(CellChar::WideRight('中'), 0, dot(3, 2));
         assert_ne!(left, right);
         assert_eq!(cache.glyph(left).ink, Rect::new(0, 0, 1, 1));
         assert_eq!(cache.glyph(right).ink, Rect::new(3, 2, 4, 3));
-        assert_eq!(cache.find(CellChar::Narrow('中')), None);
+        assert_eq!(cache.find(CellChar::Narrow('中'), 0), None);
+    }
+
+    #[test]
+    fn each_style_of_a_character_has_its_slot() {
+        let mut cache = GlyphCache::new(CELL, 8);
+        let a = CellChar::Narrow('a');
+        let regular = cache.insert(a, 0, dot(0, 0));
+        let bold = cache.insert(a, 1, dot(1, 1));
+        assert_ne!(regular, bold);
+        assert_eq!(cache.find(a, 0), Some(regular));
+        assert_eq!(cache.find(a, 1), Some(bold));
+        assert_eq!(cache.find(a, 3), None);
+        assert_eq!(cache.glyph(bold).ink, Rect::new(1, 1, 2, 2));
     }
 
     #[test]
     fn inserting_again_reuses_the_slot() {
         let mut cache = GlyphCache::new(CELL, 8);
-        let first = cache.insert(CellChar::Narrow('x'), dot(0, 0));
-        let again = cache.insert(CellChar::Narrow('x'), dot(1, 1));
+        let first = cache.insert(CellChar::Narrow('x'), 0, dot(0, 0));
+        let again = cache.insert(CellChar::Narrow('x'), 0, dot(1, 1));
         assert_eq!(first, again);
         assert_eq!(cache.len(), 1);
         assert_eq!(cache.glyph(again).ink, Rect::new(1, 1, 2, 2));
@@ -265,28 +285,28 @@ mod tests {
     fn when_it_is_full_a_glyph_used_since_the_last_round_stays() {
         let mut cache = GlyphCache::new(CELL, 3);
         for c in ['a', 'b', 'c'] {
-            cache.insert(CellChar::Narrow(c), dot(0, 0));
+            cache.insert(CellChar::Narrow(c), 0, dot(0, 0));
         }
         // All three are marked: the first round removes the marks, and the
         // second one takes the slot of 'a'.
-        cache.insert(CellChar::Narrow('d'), dot(0, 0));
-        assert_eq!(cache.find(CellChar::Narrow('a')), None);
+        cache.insert(CellChar::Narrow('d'), 0, dot(0, 0));
+        assert_eq!(cache.find(CellChar::Narrow('a'), 0), None);
         // 'b' is used again, 'c' is not: 'e' takes the slot of 'c'.
-        assert!(cache.find(CellChar::Narrow('b')).is_some());
-        cache.insert(CellChar::Narrow('e'), dot(0, 0));
-        assert!(cache.find(CellChar::Narrow('b')).is_some());
-        assert_eq!(cache.find(CellChar::Narrow('c')), None);
-        assert!(cache.find(CellChar::Narrow('d')).is_some());
-        assert!(cache.find(CellChar::Narrow('e')).is_some());
+        assert!(cache.find(CellChar::Narrow('b'), 0).is_some());
+        cache.insert(CellChar::Narrow('e'), 0, dot(0, 0));
+        assert!(cache.find(CellChar::Narrow('b'), 0).is_some());
+        assert_eq!(cache.find(CellChar::Narrow('c'), 0), None);
+        assert!(cache.find(CellChar::Narrow('d'), 0).is_some());
+        assert!(cache.find(CellChar::Narrow('e'), 0).is_some());
         assert_eq!(cache.len(), 3);
     }
 
     #[test]
     fn a_reused_slot_is_cleared_first() {
         let mut cache = GlyphCache::new(CELL, 2);
-        cache.insert(CellChar::Narrow('a'), |coverage| coverage.fill(255));
-        cache.insert(CellChar::Narrow('b'), dot(0, 0));
-        let c = cache.insert(CellChar::Narrow('c'), |coverage| {
+        cache.insert(CellChar::Narrow('a'), 0, |coverage| coverage.fill(255));
+        cache.insert(CellChar::Narrow('b'), 0, dot(0, 0));
+        let c = cache.insert(CellChar::Narrow('c'), 0, |coverage| {
             assert_eq!(coverage, [0; 12]);
         });
         assert!(cache.glyph(c).ink.is_empty());
