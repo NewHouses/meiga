@@ -30,8 +30,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
 };
 
-use crate::Error;
 use crate::event::{Event, Handler, HandlerError, decode};
+use crate::{Error, wide};
 
 /// Name of the window class of meiga windows.
 const CLASS_NAME: &str = "meiga";
@@ -608,12 +608,6 @@ fn timer_millis(delay: Duration) -> u32 {
     u32::try_from(delay.as_nanos().div_ceil(1_000_000))
         .unwrap_or(USER_TIMER_MAXIMUM)
         .clamp(USER_TIMER_MINIMUM, USER_TIMER_MAXIMUM)
-}
-
-/// Converts `text` to the null-terminated UTF-16 that the `W` functions of
-/// Windows expect.
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain(Some(0)).collect()
 }
 
 #[cfg(test)]

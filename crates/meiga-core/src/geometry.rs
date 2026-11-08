@@ -1,4 +1,5 @@
-//! Points, sizes and rectangles, in pixels.
+//! Points, sizes and rectangles, in pixels, and the size of the terminal
+//! grid, in cells.
 
 /// A point, in pixels from the top-left corner.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -180,6 +181,20 @@ impl Rect {
             Rect::new(right_left, top_bottom, self.right, bottom_top),
         ]
         .map(|side| if side.is_empty() { Rect::EMPTY } else { side })
+    }
+}
+
+/// A size of the terminal grid, in cells: how many columns and rows of
+/// characters fit in it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct GridSize {
+    pub columns: u16,
+    pub rows: u16,
+}
+
+impl GridSize {
+    pub const fn new(columns: u16, rows: u16) -> Self {
+        Self { columns, rows }
     }
 }
 
