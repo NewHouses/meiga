@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` opens a window with a demo: dragging the mouse draws rectangles, and each frame presents only the areas that changed. It uses no CPU while idle or minimized; there is no terminal yet.
+> **Status:** early development. `meiga.exe` opens a window with a demo: the same text at three scales, drawn with DirectWrite and a glyph cache, and rectangles that you draw by dragging the mouse, so that you can see that each frame presents only the areas that changed. It uses no CPU while idle or minimized; there is no terminal yet.
 
 ## Goals
 
@@ -74,7 +74,7 @@ The latest build of each pull request can be downloaded from the artifacts of it
 .\tools\perf\measure-startup.ps1
 ```
 
-`tools\perf\measure-frames.ps1` measures what the frames of meiga cost to meiga, to the Desktop Window Manager and to Remote Desktop: it starts `meiga.exe` maximized with `--bench partial`, which moves a small square without a pause, and then with `--bench full`, which changes the whole window at each frame. Do not use the computer while it measures:
+`tools\perf\measure-frames.ps1` measures what the frames of meiga cost to meiga, to the Desktop Window Manager and to Remote Desktop: it starts `meiga.exe` maximized with `--bench partial`, which moves a small square without a pause, then with `--bench full`, which changes the whole window at each frame, and then with `--bench text`, which fills the whole window with text that changes at each frame. Do not use the computer while it measures:
 
 ```powershell
 .\tools\perf\measure-frames.ps1

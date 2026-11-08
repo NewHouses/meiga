@@ -69,6 +69,11 @@ impl Rect {
         Self::new(0, 0, saturate(size.width), saturate(size.height))
     }
 
+    /// The rectangle of `size` with its top-left corner at `origin`.
+    pub const fn at(origin: Point, size: Size) -> Self {
+        Self::from_size(size).offset(origin)
+    }
+
     /// The smallest rectangle that includes the pixels `a` and `b`.
     pub fn spanning(a: Point, b: Point) -> Self {
         Self::new(
@@ -144,6 +149,16 @@ impl Rect {
                 && self.top <= other.top
                 && self.right >= other.right
                 && self.bottom >= other.bottom)
+    }
+
+    /// The same rectangle, moved by `by`.
+    pub const fn offset(self, by: Point) -> Rect {
+        Rect::new(
+            self.left.saturating_add(by.x),
+            self.top.saturating_add(by.y),
+            self.right.saturating_add(by.x),
+            self.bottom.saturating_add(by.y),
+        )
     }
 
     /// The sides of a border `thickness` pixels wide, inside the rectangle:
@@ -248,6 +263,17 @@ mod tests {
         assert!(outer.contains(Rect::new(10, 10, 100, 100)));
         assert!(!outer.contains(Rect::new(10, 10, 101, 100)));
         assert!(outer.contains(Rect::EMPTY));
+    }
+
+    #[test]
+    fn rectangles_move_and_start_anywhere() {
+        let cell = Rect::at(Point::new(-3, 40), Size::new(9, 19));
+        assert_eq!(cell, Rect::new(-3, 40, 6, 59));
+        assert_eq!(cell.offset(Point::new(9, -40)), Rect::new(6, 0, 15, 19));
+        assert_eq!(
+            Rect::at(Point::new(i32::MAX - 1, 0), Size::new(5, 1)).right,
+            i32::MAX
+        );
     }
 
     #[test]

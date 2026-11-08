@@ -21,8 +21,10 @@ const MARK_THICKNESS: u32 = 1;
 
 /// What the window shows.
 pub trait Scene {
-    /// Draws everything that is inside the clip rectangle of `canvas`.
-    fn draw(&self, canvas: &mut Canvas<'_>);
+    /// Draws everything that is inside the clip rectangle of `canvas`. It
+    /// takes `&mut self` because drawing can fill caches, such as the one of
+    /// the glyphs.
+    fn draw(&mut self, canvas: &mut Canvas<'_>);
 }
 
 /// The framebuffer, and the decisions about when to draw it and what to
@@ -49,7 +51,7 @@ impl Frames {
     /// The framebuffer of a window of `size`, with `scene` composed in it.
     pub fn new(
         size: Size,
-        scene: &dyn Scene,
+        scene: &mut dyn Scene,
         marks: bool,
         trace: Option<Trace>,
     ) -> Result<Self, HandlerError> {
@@ -79,7 +81,7 @@ impl Frames {
     }
 
     /// Draws what changed, now or with the frame timer, as the pacer says.
-    pub fn request(&mut self, window: &Window, scene: &dyn Scene) -> Result<(), HandlerError> {
+    pub fn request(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
         if self.damage.is_empty() || self.minimized {
             return Ok(());
         }
@@ -91,7 +93,7 @@ impl Frames {
     }
 
     /// The frame timer is due: draws what changed.
-    pub fn timer(&mut self, window: &Window, scene: &dyn Scene) -> Result<(), HandlerError> {
+    pub fn timer(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
         self.draw(window, scene, Cause::Timer)
     }
 
@@ -116,7 +118,7 @@ impl Frames {
         window: &Window,
         size: Size,
         minimized: bool,
-        scene: &dyn Scene,
+        scene: &mut dyn Scene,
     ) -> Result<(), HandlerError> {
         if minimized {
             // Nothing is drawn while the window is minimized: the changes
@@ -163,7 +165,7 @@ impl Frames {
 
     /// The user finished moving or resizing the window: the framebuffer
     /// gives back the memory that it does not need.
-    pub fn size_move_ended(&mut self, scene: &dyn Scene) -> Result<(), HandlerError> {
+    pub fn size_move_ended(&mut self, scene: &mut dyn Scene) -> Result<(), HandlerError> {
         self.live_resize = false;
         if self.surface.resize(self.surface.size(), Fit::Exact)? {
             // New memory, without the pixels: compose it again. The window
@@ -213,7 +215,7 @@ impl Frames {
     fn draw(
         &mut self,
         window: &Window,
-        scene: &dyn Scene,
+        scene: &mut dyn Scene,
         cause: Cause,
     ) -> Result<(), HandlerError> {
         // The frame can come before its timer, when the timer is late.
@@ -271,7 +273,7 @@ impl Frames {
     }
 
     /// Composes the whole framebuffer, without presenting it.
-    fn compose_all(&mut self, scene: &dyn Scene) -> Result<(), HandlerError> {
+    fn compose_all(&mut self, scene: &mut dyn Scene) -> Result<(), HandlerError> {
         let start = Instant::now();
         scene.draw(&mut self.surface.canvas());
         let compose = start.elapsed();

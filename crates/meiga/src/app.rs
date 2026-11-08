@@ -2,25 +2,26 @@
 //! frames.
 
 use meiga_core::geometry::Rect;
-use meiga_render::Canvas;
+use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::HDC;
 use meiga_win::event::{Event, Handler, HandlerError, Key};
 use meiga_win::window::Window;
 
 use crate::bench::Bench;
-use crate::demo::{Demo, Mouse};
+use crate::demo::{Demo, FONT_FAMILIES, FONT_POINTS, Mouse};
 use crate::frames::{Frames, Scene};
 use crate::options::BenchMode;
 use crate::trace::Trace;
 
-/// What the window shows.
+/// What the window shows. The benchmark holds a whole font, so it goes in
+/// a box: the enum is as small as the demo.
 enum Content {
     Demo(Demo),
-    Bench(Bench),
+    Bench(Box<Bench>),
 }
 
 impl Scene for Content {
-    fn draw(&self, canvas: &mut Canvas<'_>) {
+    fn draw(&mut self, canvas: &mut Canvas<'_>) {
         match self {
             Content::Demo(demo) => demo.draw(canvas),
             Content::Bench(bench) => bench.draw(canvas),
@@ -41,13 +42,19 @@ impl App {
         bench: Option<BenchMode>,
         trace: Option<Trace>,
     ) -> Result<Self, HandlerError> {
-        let content = match bench {
-            Some(mode) => Content::Bench(Bench::new(mode)),
-            None => Content::Demo(Demo::new()),
+        // Only the content with text reads the fonts of the system.
+        let mut content = match bench {
+            Some(BenchMode::Text) => {
+                let system = FontSystem::new()?;
+                let font = Font::new(&system, &FONT_FAMILIES, FONT_POINTS, window.dpi())?;
+                Content::Bench(Box::new(Bench::new(BenchMode::Text, Some(font))))
+            }
+            Some(mode) => Content::Bench(Box::new(Bench::new(mode, None))),
+            None => Content::Demo(Demo::new(&FontSystem::new()?)?),
         };
         // The marks would add work to the frames that a benchmark measures.
         let marks = bench.is_none();
-        let mut frames = Frames::new(window.client_size()?, &content, marks, trace)?;
+        let mut frames = Frames::new(window.client_size()?, &mut content, marks, trace)?;
         if bench.is_some() {
             frames.schedule(window)?;
         }
@@ -64,20 +71,20 @@ impl Handler for App {
         match event {
             Event::Resized { size, minimized } => {
                 self.frames
-                    .resized(window, size, minimized, &self.content)?;
+                    .resized(window, size, minimized, &mut self.content)?;
                 if self.is_bench() {
                     self.frames.schedule(window)?;
                 }
             }
             Event::SizeMoveStarted => self.frames.size_move_started(),
-            Event::SizeMoveEnded => self.frames.size_move_ended(&self.content)?,
+            Event::SizeMoveEnded => self.frames.size_move_ended(&mut self.content)?,
             Event::FrameTimer => {
                 if let Content::Bench(bench) = &mut self.content {
                     for area in bench.step(self.frames.size()) {
                         self.frames.damage(area);
                     }
                 }
-                self.frames.timer(window, &self.content)?;
+                self.frames.timer(window, &mut self.content)?;
                 if self.is_bench() {
                     self.frames.schedule(window)?;
                 }
@@ -95,7 +102,7 @@ impl Handler for App {
                         Some(Mouse::Release) => window.release_mouse(),
                         None => {}
                     }
-                    self.frames.request(window, &self.content)?;
+                    self.frames.request(window, &mut self.content)?;
                 }
             }
         }

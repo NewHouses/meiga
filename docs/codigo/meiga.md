@@ -1,6 +1,6 @@
 # Código › `meiga` (o programa)
 
-> Estado: subfase 1.2. O programa abre unha xanela cunha demo que debuxa rectángulos co rato e presenta só as zonas que cambian. Tamén ten dous modos de medición (`--bench`) e un rexistro dos fotogramas (`--trace-frames`).
+> Estado: subfase 1.3. O programa abre unha xanela cunha demo que mostra o mesmo texto a tres escalas e debuxa rectángulos co rato, e presenta só as zonas que cambian. Tamén ten tres modos de medición (`--bench`) e un rexistro dos fotogramas (`--trace-frames`).
 
 **Responsabilidade:** unir as pezas. Crea a xanela e o fluxo de fotogramas, usando os outros tres crates. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -14,8 +14,8 @@
 | [`src/app.rs`](#cratesmeigasrcapprs) | `App`, o *handler* da xanela: leva os eventos ao contido e aos fotogramas. |
 | [`src/frames.rs`](#cratesmeigasrcframesrs) | `Frames`, o fluxo de fotogramas: que cambiou, cando debuxalo e como chega á xanela. |
 | [`src/trace.rs`](#cratesmeigasrctracers) | O rexistro dos fotogramas, en CSV. |
-| [`src/demo.rs`](#cratesmeigasrcdemors) | A demo dos rectángulos, ata que meiga mostre un terminal (subfase 1.6). |
-| [`src/bench.rs`](#cratesmeigasrcbenchrs) | Os dous modos de medición: fotogramas parciais e completos sen parar. |
+| [`src/demo.rs`](#cratesmeigasrcdemors) | A demo: o mesmo texto a tres escalas e os rectángulos do rato, ata que meiga mostre un terminal (subfase 1.6). |
+| [`src/bench.rs`](#cratesmeigasrcbenchrs) | Os tres modos de medición: fotogramas parciais, completos e completos de texto, sen parar. |
 
 Así se reparten o traballo:
 
@@ -230,15 +230,18 @@ fn report(text: &str) {
 ## `crates/meiga/src/options.rs`
 
 ```rust
-pub const USAGE: &str = "Usage: meiga [--trace-frames <file>] [--bench partial|full]
+pub const USAGE: &str = "Usage: meiga [--trace-frames <file>] [--bench partial|full|text]
 
   --trace-frames <file>  Write a line per frame to <file> (CSV).
   --bench partial        Instead of the demo, move a small square without stopping.
-  --bench full           Instead of the demo, change the whole window without stopping.";
+  --bench full           Instead of the demo, change the whole window without stopping.
+  --bench text           Instead of the demo, fill the whole window with text that
+                         changes at every frame.";
 
 pub enum BenchMode {
     Partial,
     Full,
+    Text,
 }
 
 pub struct Options {
@@ -254,6 +257,7 @@ As opcións da liña de comandos. Sen ningunha, meiga abre a demo.
 | `--trace-frames <arquivo>` | Escribe unha liña por fotograma nese arquivo CSV (ver [`trace.rs`](#cratesmeigasrctracers)). É o que usan `check-present.ps1` e `measure-frames.ps1`. |
 | `--bench partial` | En vez da demo, un cadrado de 64 píxeles que cruza a xanela sen parar: fotogramas parciais. |
 | `--bench full` | En vez da demo, a xanela enteira cambia de cor en cada fotograma: fotogramas completos. |
+| `--bench text` | En vez da demo, a xanela enteira chea de texto que cambia en cada fotograma: fotogramas completos de texto. |
 
 ```rust
 pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Self, String> {
@@ -269,7 +273,8 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Self, String> {
                 options.bench = Some(match args.next().as_deref().and_then(OsStr::to_str) {
                     Some("partial") => BenchMode::Partial,
                     Some("full") => BenchMode::Full,
-                    _ => return Err("--bench needs 'partial' or 'full'.".into()),
+                    Some("text") => BenchMode::Text,
+                    _ => return Err("--bench needs 'partial', 'full' or 'text'.".into()),
                 });
             }
             _ => return Err(format!("Unknown option: {}", arg.to_string_lossy())),
@@ -286,18 +291,18 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Self, String> {
 - `to_string_lossy` mostra o argumento descoñecido, cambiando os caracteres que non sexan UTF-8 válido por �.
 - `Options` deriva `Default` (as dúas opcións a `None`) e `PartialEq`, para comparalas nas probas.
 
-**Probas:** sen opcións, a demo; as dúas opcións cos seus valores, en calquera orde; e catro erros: unha opción descoñecida, `--trace-frames` sen arquivo, `--bench` sen modo e cun modo que non existe.
+**Probas:** sen opcións, a demo; as dúas opcións cos seus valores, en calquera orde, e o modo `text`; e catro erros: unha opción descoñecida, `--trace-frames` sen arquivo, `--bench` sen modo e cun modo que non existe.
 
 ## `crates/meiga/src/app.rs`
 
 ```rust
 enum Content {
     Demo(Demo),
-    Bench(Bench),
+    Bench(Box<Bench>),
 }
 
 impl Scene for Content {
-    fn draw(&self, canvas: &mut Canvas<'_>) {
+    fn draw(&mut self, canvas: &mut Canvas<'_>) {
         match self {
             Content::Demo(demo) => demo.draw(canvas),
             Content::Bench(bench) => bench.draw(canvas),
@@ -314,15 +319,21 @@ pub struct App {
 `App` é o *handler* da xanela ([`Handler`](meiga-win.md#handler)): recibe os eventos, pásallos ao contido e decide os fotogramas con `Frames`.
 
 - `Content` é o que mostra a xanela: a demo ou un dos modos de medición. Implementa [`Scene`](#scene), así que `Frames` pode debuxalo sen saber cal é.
+- **`Box<Bench>`.** Un `enum` ocupa en memoria o que a súa variante máis grande. Desde a subfase 1.3, un `Bench` leva dentro unha fonte enteira, e sería moito maior ca a demo, que garda as súas fontes nun `Vec`. Na `Box` vai na memoria dinámica, e o `enum` só garda un punteiro. É o que pide o aviso `large_enum_variant` de Clippy.
 
 ```rust
 pub fn new(window: &Window, bench: Option<BenchMode>, trace: Option<Trace>) -> Result<Self, HandlerError> {
-    let content = match bench {
-        Some(mode) => Content::Bench(Bench::new(mode)),
-        None => Content::Demo(Demo::new()),
+    let mut content = match bench {
+        Some(BenchMode::Text) => {
+            let system = FontSystem::new()?;
+            let font = Font::new(&system, &FONT_FAMILIES, FONT_POINTS, window.dpi())?;
+            Content::Bench(Box::new(Bench::new(BenchMode::Text, Some(font))))
+        }
+        Some(mode) => Content::Bench(Box::new(Bench::new(mode, None))),
+        None => Content::Demo(Demo::new(&FontSystem::new()?)?),
     };
     let marks = bench.is_none();
-    let mut frames = Frames::new(window.client_size()?, &content, marks, trace)?;
+    let mut frames = Frames::new(window.client_size()?, &mut content, marks, trace)?;
     if bench.is_some() {
         frames.schedule(window)?;
     }
@@ -330,7 +341,9 @@ pub fn new(window: &Window, bench: Option<BenchMode>, trace: Option<Trace>) -> R
 }
 ```
 
-- `Frames::new` crea o *framebuffer* co tamaño da xanela e compón nel o contido enteiro. Así, cando Windows pide o primeiro `WM_PAINT`, só hai que copialo.
+- **As fontes.** Só o contido con texto le as fontes do sistema ([`FontSystem`](meiga-render.md#fontsystem)): a demo, coas súas tres escalas, e o modo `text`, cunha fonte ao DPI da xanela ([`Window::dpi`](meiga-win.md#windowdpi)). Os modos `partial` e `full` non cargan nada de DirectWrite, e miden o mesmo ca na subfase 1.2.
+- Os erros de `meiga-render` convértense en `HandlerError` con `?`, como os de `meiga-win`: se non hai ningunha das fontes, meiga para cunha caixa de mensaxe que o di.
+- `Frames::new` crea o *framebuffer* co tamaño da xanela e compón nel o contido enteiro. Así, cando Windows pide o primeiro `WM_PAINT`, só hai que copialo. Na demo, ese primeiro fotograma rasteriza todos os glifos das tres escalas.
 - As **marcas** (o bordo magenta das zonas presentadas) están activadas na demo e desactivadas nos modos de medición, porque engadirían traballo aos fotogramas que se miden.
 - Un modo de medición pide xa o seu primeiro fotograma (`schedule`), que chegará en canto a xanela empece o seu bucle de mensaxes.
 
@@ -338,20 +351,20 @@ pub fn new(window: &Window, bench: Option<BenchMode>, trace: Option<Trace>) -> R
 fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
     match event {
         Event::Resized { size, minimized } => {
-            self.frames.resized(window, size, minimized, &self.content)?;
+            self.frames.resized(window, size, minimized, &mut self.content)?;
             if self.is_bench() {
                 self.frames.schedule(window)?;
             }
         }
         Event::SizeMoveStarted => self.frames.size_move_started(),
-        Event::SizeMoveEnded => self.frames.size_move_ended(&self.content)?,
+        Event::SizeMoveEnded => self.frames.size_move_ended(&mut self.content)?,
         Event::FrameTimer => {
             if let Content::Bench(bench) = &mut self.content {
                 for area in bench.step(self.frames.size()) {
                     self.frames.damage(area);
                 }
             }
-            self.frames.timer(window, &self.content)?;
+            self.frames.timer(window, &mut self.content)?;
             if self.is_bench() {
                 self.frames.schedule(window)?;
             }
@@ -366,7 +379,7 @@ fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
                     Some(Mouse::Release) => window.release_mouse(),
                     None => {}
                 }
-                self.frames.request(window, &self.content)?;
+                self.frames.request(window, &mut self.content)?;
             }
         }
     }
@@ -388,7 +401,7 @@ fn paint(&mut self, _window: &Window, dc: HDC, area: Rect) -> Result<(), Handler
 
 - `WM_PAINT` (`paint`) copia a zona que pide Windows desde o *framebuffer*. `_window`: o guión baixo indica que o parámetro non se usa.
 - `is_bench` di se o contido é un modo de medición: `matches!` compara un valor cun patrón e dá `true` ou `false`.
-- **Os préstamos.** `demo` é unha referencia `&mut` a unha parte de `self` (`self.content`), e a *closure* `|area| frames.damage(area)` necesita outra a outra parte (`self.frames`). Rust permíteo porque son campos distintos. Despois, `self.frames.request(window, &self.content)` volta usar `self.content`, cando `demo` xa non se usa máis.
+- **Os préstamos.** `demo` é unha referencia `&mut` a unha parte de `self` (`self.content`), e a *closure* `|area| frames.damage(area)` necesita outra a outra parte (`self.frames`). Rust permíteo porque son campos distintos. Despois, `self.frames.request(window, &mut self.content)` volta usar `self.content`, cando `demo` xa non se usa máis.
 - `if let Content::Bench(bench) = &mut self.content`: entra só se o contido é un modo de medición, e dá unha referencia a el.
 
 ## `crates/meiga/src/frames.rs`
@@ -399,12 +412,16 @@ O **fluxo de fotogramas**: que cambiou, cando debuxalo e como chega á xanela. A
 
 ```rust
 pub trait Scene {
-    /// Draws everything that is inside the clip rectangle of `canvas`.
-    fn draw(&self, canvas: &mut Canvas<'_>);
+    /// Draws everything that is inside the clip rectangle of `canvas`. It
+    /// takes `&mut self` because drawing can fill caches, such as the one of
+    /// the glyphs.
+    fn draw(&mut self, canvas: &mut Canvas<'_>);
 }
 ```
 
 O que mostra a xanela. Unha escena debuxa todo o que cae dentro do recorte do lenzo, sen preocuparse de que cambiou: `Frames` pásalle un lenzo recortado a cada zona que cambiou ([`Canvas::clipped`](meiga-render.md#canvas)), e así só se tocan eses píxeles.
+
+- **`&mut self`.** Desde a subfase 1.3, debuxar pode cambiar a escena: o texto garda na caché os glifos que rasteriza a primeira vez ([`Font`](meiga-render.md#font-e-blending)). Por iso `Frames` recibe a escena como `&mut dyn Scene` en todos os seus métodos.
 
 ### `Frames`
 
@@ -442,7 +459,7 @@ pub fn damage(&mut self, area: Rect) {
     }
 }
 
-pub fn request(&mut self, window: &Window, scene: &dyn Scene) -> Result<(), HandlerError> {
+pub fn request(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
     if self.damage.is_empty() || self.minimized {
         return Ok(());
     }
@@ -453,7 +470,7 @@ pub fn request(&mut self, window: &Window, scene: &dyn Scene) -> Result<(), Hand
     }
 }
 
-pub fn timer(&mut self, window: &Window, scene: &dyn Scene) -> Result<(), HandlerError> {
+pub fn timer(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
     self.draw(window, scene, Cause::Timer)
 }
 ```
@@ -482,7 +499,7 @@ Para os modos de medición: pide un fotograma para o primeiro momento que permit
 ### `draw`
 
 ```rust
-fn draw(&mut self, window: &Window, scene: &dyn Scene, cause: Cause) -> Result<(), HandlerError> {
+fn draw(&mut self, window: &Window, scene: &mut dyn Scene, cause: Cause) -> Result<(), HandlerError> {
     window.stop_frame_timer();
     if self.damage.is_empty() || self.minimized {
         self.pacer.cancel();
@@ -538,7 +555,7 @@ Un fotograma, paso a paso:
 ### O tamaño da xanela
 
 ```rust
-pub fn resized(&mut self, window: &Window, size: Size, minimized: bool, scene: &dyn Scene) -> Result<(), HandlerError> {
+pub fn resized(&mut self, window: &Window, size: Size, minimized: bool, scene: &mut dyn Scene) -> Result<(), HandlerError> {
     if minimized {
         window.stop_frame_timer();
         self.pacer.cancel();
@@ -573,7 +590,7 @@ pub fn resized(&mut self, window: &Window, size: Size, minimized: bool, scene: &
 - **Compóñese enteiro**, porque despois dun cambio de tamaño o *framebuffer* pode ter memoria nova, sen píxeles, ou zonas que antes quedaban fóra da xanela. É máis sinxelo ca levar a conta das partes que seguen ben, e o contido pode depender do tamaño: o do terminal dependerá, desde a 1.6. Mentres se redimensiona co rato, cada paso compón a xanela enteira, pero só presenta a parte nova.
 
 ```rust
-pub fn size_move_ended(&mut self, scene: &dyn Scene) -> Result<(), HandlerError> {
+pub fn size_move_ended(&mut self, scene: &mut dyn Scene) -> Result<(), HandlerError> {
     self.live_resize = false;
     if self.surface.resize(self.surface.size(), Fit::Exact)? {
         self.compose_all(scene)?;
@@ -687,7 +704,110 @@ fn write_millis(line: &mut String, duration: Duration) {
 
 ## `crates/meiga/src/demo.rs`
 
-Unha demo para ver que zonas presenta cada fotograma: debuxar rectángulos co rato. Desaparecerá cando meiga mostre un terminal, na subfase 1.6.
+Unha demo para ver o texto e que zonas presenta cada fotograma: o mesmo texto a tres escalas e, por riba, os rectángulos que se debuxan co rato. Desaparecerá cando meiga mostre un terminal, na subfase 1.6.
+
+```rust
+pub const BACKGROUND: Rgb = Rgb::new(0x16, 0x18, 0x1d);
+pub const TEXT: Rgb = Rgb::new(0xd4, 0xd7, 0xdd);
+const DIM: Rgb = Rgb::new(0x80, 0x87, 0x94);
+
+pub const FONT_FAMILIES: [&str; 2] = ["Cascadia Mono", "Consolas"];
+pub const FONT_POINTS: f32 = 12.0;
+
+const SCALES: [(u32, u32); 3] = [(100, 96), (125, 120), (150, 144)];
+const MARGIN: i32 = 12;
+```
+
+- **As cores:** o fondo de sempre, `#16181D`; o texto, un gris moi claro; e un gris medio (`DIM`) para os textos que explican o resto.
+- **A fonte:** Cascadia Mono ou, se non está, Consolas, a 12 puntos, como no Windows Terminal. O modo `--bench text` usa as mesmas.
+- **As tres escalas** van fixas, co seu DPI, en vez de usar o da xanela: así vese nun mesmo monitor como queda o texto ao 100 %, ao 125 % e ao 150 %, e o tamaño de cela de cada un.
+- `MARGIN`: o espazo arredor dos bloques de texto e entre eles, en píxeles.
+
+```rust
+const SAMPLE: &[&[(&str, Style)]] = &[
+    &[("ASCII    ", Style::Dim), ("The quick brown fox jumps over the lazy dog. 0123456789", Style::Plain)],
+    &[("Latin    ", Style::Dim), ("á é í ó ú à ü ñ ç Á É Ñ Ç · «Ola, mundo!» ¿Que tal? € £ ¥ ° ± × ÷", Style::Plain)],
+    &[("Symbols  ", Style::Dim), ("✓ ✗ ★ ☆ ♥ ♦ → ← ↑ ↓ ⇒ ∞ ≠ ≤ ≥ λ π Σ Ω √ ∑", Style::Plain)],
+    &[("Boxes    ", Style::Dim), ("┌──┬──┐ ╔══╗ ░░▒▒▓▓██ ▀▄▌▐", Style::Plain)],
+    &[("         └──┴──┘ ╚══╝ ░░▒▒▓▓██ ▀▄▌▐", Style::Plain)],
+    &[("CJK      ", Style::Dim), ("中文 日本語 한국어 😀", Style::Plain)],
+    &[("         [][] [][][] [][][] []", Style::Dim)],
+    &[("Colours  ", Style::Dim), ("blue", Style::Color(PALETTE[0])), …, (" dark text on a light background ", Style::Inverse)],
+];
+```
+
+O texto de cada escala, que proba os casos que importan nun terminal:
+
+| Liña | Que proba |
+|---|---|
+| ASCII | As letras, os díxitos e a puntuación. |
+| Latin | Os acentos, a `ñ` e a `ç`, as comiñas angulares e outros símbolos, como o euro. |
+| Symbols | Símbolos, algúns dos cales non están en Cascadia Mono: o *fallback*. |
+| Boxes | As liñas de caixa e os bloques, en dúas liñas seguidas, para ver se se unen. |
+| CJK | Ideogramas chineses e xaponeses, hangul e un emoji: caracteres de dúas celas, doutras fontes. Na liña seguinte, un par de corchetes debaixo de cada un, para ver que ocupan exactamente dúas celas. |
+| Colours | O texto nas oito cores da paleta e, ao final, texto escuro sobre fondo claro, co contraste para o texto escuro. |
+
+- Cada liña é unha lista de anacos, cada un co seu estilo (`Style`): o texto normal (`Plain`), o que explica (`Dim`), unha cor da paleta (`Color`) ou as cores ao revés (`Inverse`).
+- Antes do texto da primeira escala vai a liña que explica como usar a demo (`HINT`) e unha liña baleira. Antes de cada escala, a súa cabeceira: a escala, o DPI, a fonte atopada e o tamaño da cela, como `150 % · 144 DPI · Cascadia Mono 12 pt · cell 14 × 28 pixels`.
+
+```rust
+pub struct Demo {
+    blocks: Vec<Block>,
+    rectangles: Rectangles,
+}
+
+struct Block {
+    font: Font,
+    origin: Point,
+    lines: Vec<Vec<Run>>,
+}
+
+struct Run {
+    column: i32,
+    cells: Vec<CellChar>,
+    text: Rgb,
+    background: Rgb,
+}
+```
+
+- **`Demo`**: un bloque de texto por escala, e os rectángulos do rato.
+- **`Block`**: o texto a unha escala, coa súa fonte ([`Font`](meiga-render.md#font-e-blending)) e, con ela, a súa caché de glifos. `origin` é a esquina superior esquerda da primeira liña.
+- **`Run`**: celas seguidas dunha liña coas mesmas cores, desde a columna `column`. As celas calcúlanse unha vez, ao crear a demo, con [`cells`](meiga-core.md#cratesmeiga-coresrctextrs), e `line` coloca cada anaco onde remata o anterior.
+
+```rust
+pub fn new(system: &FontSystem) -> Result<Self, Error> {
+    let mut blocks = Vec::new();
+    let mut top = MARGIN;
+    for (percent, dpi) in SCALES {
+        let font = Font::new(system, &FONT_FAMILIES, FONT_POINTS, dpi)?;
+        …
+        let block = Block { font, origin: Point::new(MARGIN, top), lines };
+        top = block.bounds().bottom + MARGIN;
+        blocks.push(block);
+    }
+    Ok(Self { blocks, rectangles: Rectangles::new() })
+}
+```
+
+Crea unha fonte por escala e coloca os bloques un debaixo do outro, do máis pequeno ao máis grande, separados por `MARGIN`. `bounds` dá o rectángulo que ocupa un bloque: tantas liñas coma ten, e tan ancho coma a liña máis longa.
+
+```rust
+pub fn draw(&mut self, canvas: &mut Canvas<'_>) {
+    canvas.fill(canvas.clip(), BACKGROUND);
+    for block in &mut self.blocks {
+        block.draw(canvas);
+    }
+    self.rectangles.draw(canvas);
+}
+```
+
+- Primeiro o fondo do recorte, despois o texto e, por último, os rectángulos, por riba.
+- Un bloque que non toca o recorte non fai nada. Un que o toca debuxa as súas liñas, e [`Font::draw`](meiga-render.md#font-e-blending) só as celas que están dentro. Así, arrastrar un rectángulo só redebuxa o texto que ten debaixo.
+- `canvas.fill(canvas.clip(), …)`: Rust permite ler `canvas.clip()` como argumento dunha función que toma `canvas` como `&mut`, porque o argumento se avalía antes (*two-phase borrows*).
+
+### Os rectángulos
+
+`Rectangles` é a demo da subfase 1.2, sen cambios: rectángulos que se debuxan co rato, por riba do texto.
 
 | Acción | Que pasa |
 |---|---|
@@ -697,7 +817,7 @@ Unha demo para ver que zonas presenta cada fotograma: debuxar rectángulos co ra
 | P | Activa ou desactiva as marcas (en `app.rs`). |
 
 ```rust
-pub fn event(&mut self, event: Event, size: Size, mut damage: impl FnMut(Rect)) -> Option<Mouse> {
+fn event(&mut self, event: Event, size: Size, mut damage: impl FnMut(Rect)) -> Option<Mouse> {
     match event {
         Event::MouseDown { button: MouseButton::Left, at } => {
             …
@@ -724,28 +844,13 @@ pub fn event(&mut self, event: Event, size: Size, mut damage: impl FnMut(Rect)) 
 - Ao soltar, o rectángulo queda na lista, e sóltase o rato.
 - `self.drag.as_mut()?`: o `?` dun `Option` dentro dunha función que devolve `Option` remata con `None` se non hai arrastre.
 - `CaptureLost`: outra xanela colleu o rato, e o arrastre cancélase sen rectángulo.
+- `draw` enche cada rectángulo coa súa cor, recortado ao lenzo. A paleta ten oito cores, e ningunha é magenta, a cor das marcas.
 
-```rust
-pub fn draw(&self, canvas: &mut Canvas<'_>) {
-    canvas.fill(canvas.clip(), BACKGROUND);
-    for &(rect, color) in &self.rects {
-        canvas.fill(rect, color);
-    }
-    if let Some(drag) = &self.drag {
-        canvas.fill(drag.rect, drag.color);
-    }
-}
-```
-
-- O fondo enche só o recorte do lenzo, e os rectángulos recórtanse a el: debuxar a escena custa o que mide a zona que cambiou, máis percorrer a lista de rectángulos.
-- `canvas.fill(canvas.clip(), …)`: Rust permite ler `canvas.clip()` como argumento dunha función que toma `canvas` como `&mut`, porque o argumento se avalía antes (*two-phase borrows*).
-- O fondo é `#16181D`, o mesmo gris escuro da subfase 1.1. A paleta ten oito cores, e ningunha é magenta, a cor das marcas.
-
-**Probas.** Cinco: arrastrar debuxa un rectángulo e só cambian as súas zonas (e mover ao mesmo sitio non cambia nada); os movementos sen arrastre ou sen o botón esquerdo non cambian nada; Esc e a perda do rato cancelan o arrastre; o botón dereito borra a xanela enteira; e cada rectángulo colle a seguinte cor. As probas debuxan nun lenzo en memoria e comproban as cores dos píxeles.
+**Probas.** Sete. As cinco dos rectángulos, da subfase 1.2: arrastrar debuxa un rectángulo e só cambian as súas zonas (e mover ao mesmo sitio non cambia nada); os movementos sen arrastre ou sen o botón esquerdo non cambian nada; Esc e a perda do rato cancelan o arrastre; o botón dereito borra a xanela enteira; e cada rectángulo colle a seguinte cor. E dúas do texto: as tres escalas van unha debaixo da outra, da máis pequena á máis grande, separadas por `MARGIN`, coa axuda e unha liña baleira ao principio; e cada anaco dunha liña empeza onde remata o anterior, contando as dúas celas dos caracteres anchos.
 
 ## `crates/meiga/src/bench.rs`
 
-Os **modos de medición** (`--bench`): fotogramas sen parar, ao máximo que permite o intervalo, para medir que custa un fotograma parcial e un completo a meiga e ao resto do sistema. Úsaos [`measure-frames.ps1`](perf.md#toolsperfmeasure-framesps1).
+Os **modos de medición** (`--bench`): fotogramas sen parar, ao máximo que permite o intervalo, para medir que custa un fotograma parcial, un completo e un completo de texto a meiga e ao resto do sistema. Úsaos [`measure-frames.ps1`](perf.md#toolsperfmeasure-framesps1).
 
 ```rust
 pub fn step(&mut self, size: Size) -> [Rect; 2] {
@@ -756,7 +861,7 @@ pub fn step(&mut self, size: Size) -> [Rect; 2] {
             self.square = square_at(self.frame, size);
             [old, self.square]
         }
-        BenchMode::Full => [Rect::from_size(size), Rect::EMPTY],
+        BenchMode::Full | BenchMode::Text => [Rect::from_size(size), Rect::EMPTY],
     }
 }
 
@@ -770,17 +875,49 @@ fn square_at(frame: u64, size: Size) -> Rect {
 
 - **`partial`**: un cadrado azul de 64 × 64 píxeles cruza o medio da xanela, 16 píxeles por fotograma, e ao chegar á dereita empeza de novo. Cambian o sitio onde estaba e o sitio onde está: dous rectángulos que `Damage` xunta nun de 80 × 64, ou deixa separados cando o cadrado volta á esquerda.
 - **`full`**: a xanela enteira cambia entre dúas cores moi parecidas (`#16181D` e `#1C1F26`) en cada fotograma. Preséntase toda: o peor caso, como desprazar unha saída masiva. As cores son parecidas para que a xanela non pestanexe.
+- **`text`**: a xanela enteira chea de texto, que cambia en cada fotograma. Tamén se presenta toda, pero agora cada cela busca o seu glifo na caché e debuxa a súa tinta: o peor caso do texto.
 - `step` devolve as zonas que cambian nun *array* de dous, sen reservar memoria. `Rect::EMPTY` non engade nada a `Damage`.
 - `wrapping_mul` multiplica sen comprobar o desbordamento: a 30 fotogramas por segundo, tardaría máis de mil millóns de anos en chegar. `%` dá a posición dentro das que caben.
 
-**Probas.** Tres: o cadrado avanza e marca o sitio vello e o novo; volta á esquerda ao chegar á dereita (tamén nunha xanela máis estreita ca el); e os fotogramas completos marcan a xanela enteira e alternan as dúas cores.
+```rust
+BenchMode::Text => {
+    let Some((font, row)) = &mut self.text else {
+        canvas.fill(canvas.clip(), BACKGROUND);
+        return;
+    };
+    let cell = font.cell();
+    let size = canvas.size();
+    let columns = size.width.div_ceil(cell.width);
+    for y in 0..size.height.div_ceil(cell.height) {
+        row.clear();
+        row.extend((0..columns).map(|x| text_at(self.frame, y, x)));
+        let top = i32::try_from(y * cell.height).unwrap_or(i32::MAX);
+        font.draw(canvas, Point::new(0, top), row, TEXT, BACKGROUND);
+    }
+}
+
+fn text_at(frame: u64, row: u32, column: u32) -> CellChar {
+    let index = (u64::from(row) * 7 + u64::from(column) + frame) % CHARS;
+    CellChar::Narrow(char::from(FIRST_CHAR + index as u8))
+}
+```
+
+O debuxo dun fotograma de texto:
+
+- **Os caracteres** son os 94 visíbeis de ASCII, de `!` a `~`, que nunca deixan unha cela en branco. En cada fotograma, o texto móvese unha cela á esquerda (`+ frame`), así que cambian todas as celas. Cada fila vai 7 caracteres por diante da anterior, para que as columnas non repitan o mesmo carácter.
+- **As filas cobren a xanela enteira**, as últimas cortadas polos bordos (`div_ceil` divide redondeando cara arriba), así que non fai falta pintar ningún outro fondo: cada fila pinta o seu.
+- `row` gárdase entre fotogramas para encher a seguinte fila sen reservar memoria.
+- **A fonte** chega en `Bench::new(mode, font)`: créaa [`App`](#cratesmeigasrcapprs) co DPI da xanela, e só a usa este modo. Sen fonte, os fotogramas de texto só pintan o fondo: o programa sempre lla dá, pero o tipo non o pode garantir. Como a fonte se crea antes do primeiro fotograma, os glifos rasterízanse nel, e os fotogramas que se miden só os buscan na caché.
+
+**Probas.** Catro: o cadrado avanza e marca o sitio vello e o novo; volta á esquerda ao chegar á dereita (tamén nunha xanela máis estreita ca el); os fotogramas completos marcan a xanela enteira e alternan as dúas cores; e os de texto cobren a xanela enteira, con píxeles da cor do texto, e cada cela cambia dun fotograma ao seguinte, sen quedar nunca en branco (`!` e `~` son o primeiro e o último carácter).
 
 ## Comprobacións feitas
 
-- `cargo build --release` xera `target\release\meiga.exe`, duns 260 KB.
-- Ao abrilo, aparece a xanela, co fondo escuro e o título «meiga», sen ningunha consola. Arrastrar co rato debuxa rectángulos, cun bordo magenta arredor das zonas que presentou o último fotograma. Ao pechala, o proceso remata co código 0.
-- `tools/check-window.ps1` comproba o subsistema, a xanela, a escala por monitor e o código de saída, e `tools/check-present.ps1`, os fotogramas (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)).
-- `check-present.ps1` detecta os erros: comprobouse con copias de `frames.rs` con erros feitos a propósito. Debuxando cada cambio no momento, sen agrupalos, o clic e os 40 movementos enviados de golpe dan 41 fotogramas; e debuxando coa xanela minimizada, aparecen fotogramas. Nos dous casos, a comprobación falla. Sen pedir o repintado ao restaurar a xanela, pasa igual, porque Windows xa o pide.
+- `cargo build --release` xera `target\release\meiga.exe`, duns 330 KB.
+- Ao abrilo, aparece a xanela, co fondo escuro e o título «meiga», sen ningunha consola, e o texto da demo ás tres escalas. Arrastrar co rato debuxa rectángulos por riba do texto, cun bordo magenta arredor das zonas que presentou o último fotograma. Ao pechala, o proceso remata co código 0.
+- O texto compárase co do Windows Terminal coa mesma fonte, o mesmo tamaño e as mesmas cores: os glifos teñen exactamente os mesmos píxeles cubertos, enteiros e parciais, e a tinta dunha liña é a mesma, cunha diferenza menor do 0,5 % ([Tecnoloxías › Mesturar o texto co fondo](../tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste)).
+- `tools/check-window.ps1` comproba o subsistema, a xanela, a escala por monitor e o código de saída, e `tools/check-present.ps1`, os fotogramas (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Coa demo de texto pasan igual.
+- `check-present.ps1` detecta os erros: comprobouse na subfase 1.2 con copias de `frames.rs` con erros feitos a propósito. Debuxando cada cambio no momento, sen agrupalos, o clic e os 40 movementos enviados de golpe dan 41 fotogramas; e debuxando coa xanela minimizada, aparecen fotogramas. Nos dous casos, a comprobación falla. Sen pedir o repintado ao restaurar a xanela, pasa igual, porque Windows xa o pide.
 - Os modos de medición funcionan: o temporizador dá os fotogramas ao ritmo pedido, tamén mentres se move a xanela, aínda que entón máis lentos (ver [ADR 0008](../adr/0008-temporizador-dos-fotogramas.md)).
 - O manifesto que leva dentro, extraído con `mt.exe`, ten as tres declaracións, e un só `trustInfo`.
-- `dumpbin /dependents` mostra que só depende de DLL do sistema: `gdi32.dll`, `kernel32.dll`, `user32.dll`, `api-ms-win-core-synch-l1-2-0.dll`, `ntdll.dll` e `KERNEL32.dll`. `kernel32.dll` aparece dúas veces porque a biblioteca estándar de Rust e `windows-sys` declaran as súas funcións de forma distinta (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)); Windows cárgaa unha soa vez.
+- `dumpbin /dependents` mostra que só depende de DLL do sistema: `gdi32.dll`, `kernel32.dll`, `user32.dll`, `api-ms-win-core-synch-l1-2-0.dll`, `ntdll.dll`, `oleaut32.dll`, `dwrite.dll`, `combase.dll` e `KERNEL32.dll`. As tres novas da subfase 1.3 son DirectWrite e as dúas que usa o crate `windows` (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). `kernel32.dll` aparece dúas veces porque a biblioteca estándar de Rust e `windows-sys` declaran as súas funcións de forma distinta (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)); Windows cárgaa unha soa vez.

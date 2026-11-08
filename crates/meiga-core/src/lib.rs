@@ -11,3 +11,4 @@ pub mod color;
 pub mod damage;
 pub mod geometry;
 pub mod pacing;
+pub mod text;

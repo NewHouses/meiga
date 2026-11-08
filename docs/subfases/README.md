@@ -21,3 +21,4 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 0.8 | Liña base | Local, sen cambios no repositorio | As medicións do Warp e do Windows Terminal e os orzamentos de rendemento quedan fóra do repositorio, porque describen unha máquina concreta. |
 | 1.1 | Xanela baleira | [PR #7](https://github.com/NewHouses/meiga/pull/7) | [1.1-xanela.md](1.1-xanela.md) |
 | 1.2 | *Framebuffer* e presentación | [PR #8](https://github.com/NewHouses/meiga/pull/8) | [1.2-framebuffer.md](1.2-framebuffer.md) |
+| 1.3 | Texto: fontes e caché de glifos | [PR #9](https://github.com/NewHouses/meiga/pull/9) | [1.3-texto.md](1.3-texto.md) |
