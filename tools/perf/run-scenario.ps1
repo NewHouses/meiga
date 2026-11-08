@@ -10,7 +10,8 @@ Run it in a terminal other than the one that you measure. It:
    tells the scenarios that this script coordinates them;
 2. shows the command that starts the scenario in the terminal that you
    measure, in PowerShell or in WSL, and waits until -Instances copies of the
-   scenario have started, for example one per tab;
+   scenario have started, for example one per tab. With -Start, it starts
+   the terminal itself, with the scenario as its program;
 3. waits -Warmup seconds and measures -Runs windows in a row with
    measure.ps1, and after each window prints the CPU and the cycles of the
    terminal. For bigfile, each window lasts what printing the file takes,
@@ -28,7 +29,8 @@ not CPU time, because Windows charges CPU time in clock ticks of 15.6 ms,
 which is too coarse for the small amounts that a terminal uses.
 
 idle runs no scenario: it measures the terminal as you leave it, for example
-with 5 tabs open, after -Delay seconds to bring it to the front.
+with 5 tabs open, after -Delay seconds to bring it to the front. With -Start,
+it starts the terminal without a program, with its default shell.
 
 .PARAMETER Scenario
 idle, spinner, ai-stream or bigfile.
@@ -39,6 +41,11 @@ meiga...
 
 .PARAMETER Id
 Process ids of the terminal, instead of -Name.
+
+.PARAMETER Start
+Instead of -Name, the path of a terminal that runs the program of its
+command line, such as meiga. The script starts it with the scenario as its
+program, measures that process, and closes its window at the end.
 
 .PARAMETER Shell
 Shell of the terminal where the scenario runs: pwsh or wsl. It only changes
@@ -77,6 +84,9 @@ pwsh -File .\tools\perf\run-scenario.ps1 ai-stream -Name warp -Shell wsl
 
 .EXAMPLE
 pwsh -File .\tools\perf\run-scenario.ps1 spinner -Name warp -Instances 5 -Label warp-spinner-5-tabs
+
+.EXAMPLE
+pwsh -File .\tools\perf\run-scenario.ps1 bigfile -Start .\target\release\meiga.exe
 #>
 [CmdletBinding(DefaultParameterSetName = 'Name')]
 param(
@@ -89,6 +99,9 @@ param(
 
     [Parameter(Mandatory, ParameterSetName = 'Id')]
     [int[]]$Id,
+
+    [Parameter(Mandatory, ParameterSetName = 'Start')]
+    [string]$Start,
 
     [ValidateSet('pwsh', 'wsl')]
     [string]$Shell = 'pwsh',
@@ -155,6 +168,16 @@ if ($PSCmdlet.ParameterSetName -eq 'Id') {
     }
     $terminalLabel = "pid$($Id[0])"
 }
+elseif ($PSCmdlet.ParameterSetName -eq 'Start') {
+    $Start = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Start)
+    if (-not (Test-Path -LiteralPath $Start -PathType Leaf)) {
+        throw "$Start does not exist."
+    }
+    if ($Instances -ne 1) {
+        throw '-Start opens a single terminal: use -Instances 1.'
+    }
+    $terminalLabel = [IO.Path]::GetFileNameWithoutExtension($Start)
+}
 else {
     $Name = $Name -replace '\.exe$', ''
     $target = @{ Name = $Name }
@@ -173,8 +196,10 @@ if (-not $Label) {
     }
 }
 
-# The command that starts the scenario in the terminal that is measured.
+# The command that starts the scenario in the terminal that is measured, and
+# its parts, for -Start.
 $command = $null
+$program = @()
 if ($Scenario -ne 'idle') {
     if ($Scenario -eq 'bigfile') {
         $bigfile = Join-Path $PSScriptRoot '../../.perf/bigfile.txt'
@@ -186,6 +211,7 @@ if ($Scenario -ne 'idle') {
     if ($Shell -eq 'pwsh') {
         $script = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "scenarios/$Scenario.ps1"))
         $command = "pwsh -NoProfile -File `"$script`""
+        $program = 'pwsh', '-NoProfile', '-File', $script
     }
     else {
         $script = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "scenarios/$Scenario.sh"))
@@ -194,6 +220,7 @@ if ($Scenario -ne 'idle') {
             throw 'WSL does not answer: check that wsl.exe opens your Linux distribution.'
         }
         $command = "bash '$($linuxPath -replace "'", "'\''")'"
+        $program = 'wsl.exe', '-e', 'bash', $linuxPath
     }
 }
 
@@ -207,19 +234,45 @@ function Get-StartedCount {
     @(Get-ChildItem -LiteralPath $runDirectory -Filter "started-$Scenario-*").Count
 }
 
+# Starts the terminal of -Start with $program, which it runs, and measures
+# that process. ProcessStartInfo quotes each argument, as Start-Process does
+# not.
+function Start-Terminal {
+    $info = [Diagnostics.ProcessStartInfo]::new($Start)
+    $info.UseShellExecute = $false
+    foreach ($argument in $program) {
+        $info.ArgumentList.Add($argument)
+    }
+    $process = [Diagnostics.Process]::Start($info)
+    $script:target = @{ Id = $process.Id }
+    $process
+}
+
 $windows = [Collections.Generic.List[object]]::new()
+$terminalProcess = $null
 try {
-    if ($Scenario -eq 'idle') {
+    if ($Start) {
+        $terminalProcess = Start-Terminal
+        $shown = if ($command) { " with the scenario: $command" } else { '' }
+        Write-Host "Started $(Split-Path -Leaf $Start) (process $($terminalProcess.Id))$shown"
+    }
+    if ($Scenario -eq 'idle' -and $Start) {
+        Write-Host "Measuring starts in $Delay s."
+        Start-Sleep -Seconds $Delay
+    }
+    elseif ($Scenario -eq 'idle') {
         Write-Host "Leave the terminal as you want to measure it, for example with 5 tabs open, and bring it to the front."
         Write-Host "Measuring starts in $Delay s."
         Start-Sleep -Seconds $Delay
     }
     else {
-        $copies = if ($Instances -gt 1) { "in $Instances tabs" } else { 'once' }
-        Write-Host "In the terminal that you measure, run this $($copies):"
-        Write-Host ''
-        Write-Host "    $command" -ForegroundColor Cyan
-        Write-Host ''
+        if (-not $Start) {
+            $copies = if ($Instances -gt 1) { "in $Instances tabs" } else { 'once' }
+            Write-Host "In the terminal that you measure, run this $($copies):"
+            Write-Host ''
+            Write-Host "    $command" -ForegroundColor Cyan
+            Write-Host ''
+        }
         Write-Host 'Waiting for the scenario. Press Ctrl+C to cancel.'
         $count = -1
         while ($count -lt $Instances) {
@@ -230,7 +283,12 @@ try {
             }
             Start-Sleep -Milliseconds 250
         }
-        Write-Host "Leave the terminal as you want to measure it, for example with the right tab in front. Measuring starts in $Warmup s."
+        if ($Start) {
+            Write-Host "Measuring starts in $Warmup s."
+        }
+        else {
+            Write-Host "Leave the terminal as you want to measure it, for example with the right tab in front. Measuring starts in $Warmup s."
+        }
         Start-Sleep -Seconds $Warmup
     }
     Write-Host "Do not touch anything until the end: $Runs windows, then the summary."
@@ -281,6 +339,16 @@ finally {
         Write-Warning "$left copies of the scenario are still running: stop them with Ctrl+C."
     }
     Remove-Item -LiteralPath (Join-Path $runDirectory 'controller') -ErrorAction Ignore
+    # The terminal that this script started closes as the X button does.
+    if ($terminalProcess) {
+        if (-not $terminalProcess.HasExited -and $terminalProcess.CloseMainWindow()) {
+            $null = $terminalProcess.WaitForExit(5000)
+        }
+        if (-not $terminalProcess.HasExited) {
+            $terminalProcess.Kill()
+        }
+        $terminalProcess.Dispose()
+    }
 }
 
 function Get-Statistic([object[]]$Values, [string]$Kind, [int]$Digits) {

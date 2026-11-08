@@ -6,6 +6,8 @@ Builds meiga in release mode and packages it into a zip file.
 Creates dist\meiga-<version>-x86_64-pc-windows-msvc.zip with meiga.exe, the
 ConPTY that meiga uses (conpty.dll and OpenConsole.exe, from
 tools\fetch-conpty.ps1), THIRD-PARTY-NOTICES.txt, LICENSE.txt and README.md.
+It also copies the ConPTY next to target\release\meiga.exe, which looks for
+it in its own folder, so that the tools run meiga with its own ConPTY too.
 Requires cargo-about:
     cargo install --locked cargo-about --features cli
 
@@ -68,7 +70,7 @@ try {
     New-Item -ItemType Directory -Force -Path $staging | Out-Null
 
     Copy-Item -LiteralPath $exe -Destination $staging
-    & (Join-Path $PSScriptRoot 'fetch-conpty.ps1') -Destination $staging
+    & (Join-Path $PSScriptRoot 'fetch-conpty.ps1') -Destination $staging, (Split-Path -Parent $exe)
     Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $staging 'LICENSE.txt')
     Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $staging
     & (Join-Path $PSScriptRoot 'third-party-notices.ps1') -OutFile (Join-Path $staging 'THIRD-PARTY-NOTICES.txt')
