@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 1.7. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 1.8. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -941,6 +941,8 @@ Windows chama *caret* ao cursor do texto (o *cursor* é o do rato), e ten catro 
 
 **O foco** é a xanela que recibe o teclado. Cando unha xanela o gaña, Windows envíalle [`WM_SETFOCUS`](https://learn.microsoft.com/windows/win32/inputdev/wm-setfocus), e cando o perde, `WM_KILLFOCUS`. meiga usa o foco para o cursor ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)) e, desde a subfase 1.7, para avisar ao programa que o pediu (`ESC [ ? 1004 h`, [§42](#42-as-teclas-no-terminal-win32-input-mode-e-vt)). Só a xanela que ten o foco recibe o teclado ([§41](#41-o-teclado-en-windows)).
 
+**O primeiro plano.** A xanela de primeiro plano é a que está a usar a persoa, a da barra de título activa ([`GetForegroundWindow`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getforegroundwindow)). Cada fío ten a súa xanela activa e a súa xanela co foco, que normalmente son a de primeiro plano ou ningunha. Pero unha xanela que abre un programa en segundo plano, coma unha comprobación automática, pode ser a activa do seu fío e recibir `WM_SETFOCUS` sen estar en primeiro plano; e pode non haber ningunha en primeiro plano, por exemplo co cliente do Escritorio remoto minimizado. Por iso, antes de deixar que un programa copie ao portapapeis, meiga mira as dúas cousas ([ADR 0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+
 **O título.** [`SetWindowTextW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setwindowtextw) cambia o texto da barra de título, que tamén mostra a barra de tarefas. Envíalle `WM_SETTEXT` á xanela, así que meiga chámaa desde o fío da interface, cando o fío lector avisa de que o programa cambiou o título ([§36](#36-avisar-á-xanela-desde-outro-fío-postmessage)). Se o programa non pon ningún, o título é «meiga».
 
 ## 40. A liña de comandos en Windows
@@ -1034,3 +1036,86 @@ En VT non hai teclas que soben nin modificadoras soas, e moitas combinacións en
 **O que custa.** Windows carga a pila de entrada de texto, uns 11 módulos, cando se crea a xanela, non cando recibe o foco. Despois non fai nada mentres non se usa: con foco e en repouso, meiga segue sen espertar. [`ImmDisableIME`](https://learn.microsoft.com/windows/win32/api/imm/nf-imm-immdisableime), antes de crear a xanela, evitaría cargala e aforraría uns milisegundos no arranque, pero o panel de emoji deixaría de escribir, e os IME non funcionarían. meiga mantena ([ADR 0014](adr/0014-o-teclado.md)).
 
 **A xanela de composición** vai onde Windows decide, porque meiga non lle di onde está o cursor: queda para as melloras futuras.
+
+## 44. O rato en Windows
+
+**As mensaxes do rato.** Windows envíalle á xanela que está debaixo do punteiro unha mensaxe por cada cousa que fai o rato ([*About Mouse Input*](https://learn.microsoft.com/windows/win32/inputdev/about-mouse-input)):
+
+| Mensaxe | Cando |
+|---|---|
+| [`WM_LBUTTONDOWN`](https://learn.microsoft.com/windows/win32/inputdev/wm-lbuttondown) e `WM_LBUTTONUP` | O botón esquerdo baixa ou sobe. Co dereito, `WM_RBUTTONDOWN` e `WM_RBUTTONUP`, e co do medio, `WM_MBUTTONDOWN` e `WM_MBUTTONUP`. |
+| [`WM_MOUSEMOVE`](https://learn.microsoft.com/windows/win32/inputdev/wm-mousemove) | O punteiro móvese por riba da área cliente. |
+| [`WM_MOUSEWHEEL`](https://learn.microsoft.com/windows/win32/inputdev/wm-mousewheel) e [`WM_MOUSEHWHEEL`](https://learn.microsoft.com/windows/win32/inputdev/wm-mousehwheel) | A roda xira, ou inclínase cara a un lado. |
+
+Levan o punto no `lParam`, en píxeles desde a esquina superior esquerda da área cliente e con signo: fóra da xanela pode ser negativo. No `wParam`, os botóns que están premidos (`MK_LBUTTON`, `MK_RBUTTON` e `MK_MBUTTON`), Maiús (`MK_SHIFT`) e Ctrl (`MK_CONTROL`). Alt non vai nas mensaxes: dio o estado da tecla, `GetKeyState(VK_MENU)`, tal como estaba cando se publicou a mensaxe ([§41](#41-o-teclado-en-windows)). As da roda son distintas: van á xanela que ten o foco ou, coa opción de Windows que despraza as xanelas inactivas ao pasar por riba delas, activa por defecto, á que está debaixo do punteiro; o punto vén en coordenadas da pantalla, e hai que pasalo á área cliente (`ScreenToClient`); e o xiro, con signo, vai na metade alta do `wParam`, en 120 avos dunha parte (*notch*, `WHEEL_DELTA`): adiante e á dereita son positivos. Algúns ratos e *touchpads* xiran a anacos, que hai que sumar ata facer unha parte enteira.
+
+**A captura.** Cando o punteiro sae da xanela, ela deixa de recibir as mensaxes do rato. Unha xanela que chama a [`SetCapture`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setcapture) cando baixa un botón recíbeas todas, tamén fóra dela, ata que chama a `ReleaseCapture` ou outra xanela colle o rato; entón recibe [`WM_CAPTURECHANGED`](https://learn.microsoft.com/windows/win32/inputdev/wm-capturechanged). Así pode seguir unha selección que se arrastra ata fóra da xanela. Windows tamén envía `WM_MOUSEMOVE` sen que o rato se mova, por exemplo cando cambia a captura, coa posición do punteiro nese momento: un programa non pode supor que cada `WM_MOUSEMOVE` é un movemento.
+
+**Os dobres clics.** Se a clase da xanela ten `CS_DBLCLKS`, Windows converte o segundo clic en `WM_LBUTTONDBLCLK` cando chega dentro do tempo do dobre clic ([`GetDoubleClickTime`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getdoubleclicktime), 500 ms por defecto) e dentro dun rectángulo arredor do primeiro (`SM_CXDOUBLECLK` e `SM_CYDOUBLECLK`, 4 × 4 píxeles por defecto). Non detecta os triplos clics. meiga non usa `CS_DBLCLKS`: conta os clics coas mesmas medidas ([ADR 0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+
+**A roda.** As preferencias do rato din cantas liñas despraza cada parte da roda ([`SystemParametersInfoW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-systemparametersinfow) con `SPI_GETWHEELSCROLLLINES`: 3 por defecto, ou unha pantalla, se dá `WHEEL_PAGESCROLL`) e cantos caracteres cara aos lados (`SPI_GETWHEELSCROLLCHARS`: 3). Estas preferencias e as dos dobres clics poden cambiar mentres meiga corre, por exemplo ao conectarse por Escritorio remoto: meiga léas outra vez cada vez que a xanela recupera o foco, coma as do cursor ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)).
+
+**O punteiro.** Cada vez que o rato se move por riba dunha xanela, Windows envíalle [`WM_SETCURSOR`](https://learn.microsoft.com/windows/win32/menurc/wm-setcursor) para que escolla o punteiro, e `DefWindowProcW` pon o da clase. meiga pon a barra de texto (`IDC_IBEAM`) cando os clics seleccionan texto, e a frecha (`IDC_ARROW`) cando van ao programa, só na área cliente (`HTCLIENT`): nos bordos e na barra de título, Windows pon os seus. O punteiro novo vese no seguinte movemento.
+
+**Simular o rato.** Coma coas teclas ([§41](#41-o-teclado-en-windows)), outro programa pode publicar as mensaxes do rato nunha xanela con `PostMessageW`, sen mover o punteiro. Hai dúas trampas. Windows escala as coordenadas coa escala do fío que as publica: a comprobación pon o seu fío *per monitor* v2, coma meiga ([§23](#23-manifesto-da-aplicación-e-dpi)). E os `WM_MOUSEMOVE` que crea Windows coa posición real do punteiro poden mesturarse coas mensaxes publicadas: por iso `check-mouse.ps1` publica cada acción de vez, co fío de meiga suspendido, e aparta o punteiro á barra de título ([Código › ferramentas](codigo/ferramentas.md#toolscheck-mouseps1)).
+
+## 45. O rato nos programas: modos e formatos
+
+**Os modos.** Un programa que quere o rato pídeo cun modo privado ([§35](#35-as-secuencias-de-control)): `?1000`, os clics e a roda; `?1002`, tamén os movementos cun botón premido; e `?1003`, todos os movementos. Mentres un está activo, o terminal non selecciona texto co rato: envíalle ao programa un **informe** de cada clic ou movemento, na súa entrada, coma se fose unha tecla ([*Mouse Tracking*](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking)). O modo máis antigo, `?9`, só cos clics, non o ofrece `alacritty_terminal`.
+
+**O informe** leva o que fixo o rato nun número, e a columna e a fila:
+
+| Número | Que fixo |
+|---|---|
+| 0, 1, 2 | Premeu o botón esquerdo, o do medio ou o dereito. |
+| 3 | Soltou un botón, nos formatos que non din cal. |
+| 32 + o botón, ou 35 | Moveuse cun botón premido, ou sen ningún. |
+| 64, 65 | A roda, adiante e atrás; 66 e 67, cara á esquerda e cara á dereita. |
+| + 4, + 8, + 16 | Con Maiús, con Alt e con Ctrl. |
+
+**Os formatos.** A columna e a fila contan desde 1:
+
+| Formato | Modo | Forma | Ata |
+|---|---|---|---|
+| O do primeiro xterm | ningún | `ESC [ M` e tres bytes: o número, a columna e a fila, cada un con 32 máis | A columna e a fila 223, que caben nun byte. |
+| UTF-8 | `?1005` | O mesmo, coa columna e a fila coma caracteres en UTF-8 | 2 015: os caracteres de ata dous bytes. |
+| SGR | `?1006` | `ESC [ < número ; columna ; fila M`, en decimal, e `m` ao soltar | Sen límite, e a soltura di o botón. |
+
+Un clic co botón dereito na columna 5 e na fila 3 é `ESC [ M " % #` no primeiro formato (34, 37 e 35) e `ESC [ < 2 ; 5 ; 3 M` en SGR, e ao soltalo, `ESC [ M # % #` e `ESC [ < 2 ; 5 ; 3 m`.
+
+**O que fai o ConPTY.** Comprobado de extremo a extremo co 1.25:
+
+- **Os programas que len a entrada coma un terminal**, coma os de WSL: o ConPTY pásalle ao terminal os modos que activan, e a eles, os informes tal cal, en calquera formato.
+- **Os programas da consola de Windows** len o rato coma eventos ([`MOUSE_EVENT_RECORD`](https://learn.microsoft.com/windows/console/mouse-event-record-str)), se activan `ENABLE_MOUSE_INPUT` e desactivan a edición rápida con [`SetConsoleMode`](https://learn.microsoft.com/windows/console/setconsolemode). Entón, o ConPTY pídelle ao terminal `ESC [ ? 1003 ; 1006 h`, e converte cada informe SGR nun evento: a posición desde 0, os botóns que están premidos (`0x1` o esquerdo e `0x2` o dereito), as teclas modificadoras e un *flag*: `MOUSE_MOVED`, `MOUSE_WHEELED`, co xiro na metade alta dos botóns, ou `DOUBLE_CLICK`, que calcula o ConPTY. Só le os informes SGR: os outros chegarían ao programa coma texto.
+- **A entrada é UTF-8.** Un byte desde 128 só non é un carácter, e o ConPTY convérteo noutro: no primeiro formato, a columna 96 (o byte 128) xa non chega ben. meiga non envía os informes que non caben: nese formato, alén da columna ou da fila 95.
+
+**A roda sen o rato** (`?1007`). Na pantalla alternativa, un programa que non pediu o rato, coma `less`, recibe a roda coma frechas: por cada parte, as liñas das preferencias de Windows ([§44](#44-o-rato-en-windows)). Está activo ao principio, coma no xterm e no Windows Terminal.
+
+**Maiús.** Con Maiús, os clics seleccionan texto aínda que o programa teña o rato, coma no xterm e no Windows Terminal.
+
+## 46. O portapapeis de Windows
+
+**Os formatos.** O portapapeis garda un dato en varios formatos á vez ([*Standard Clipboard Formats*](https://learn.microsoft.com/windows/win32/dataxchg/standard-clipboard-formats)). O texto vai en `CF_UNICODETEXT`, en UTF-16, con CR LF ao final de cada liña e un NUL ao final de todo, e Windows convérteo aos formatos antigos (`CF_TEXT` e `CF_OEMTEXT`) para os programas que os piden. A constante, 13, está na *feature* `Win32_System_Ole` de `windows-sys`, que traería miles de declaracións por ela: meiga defínea no seu código ([§21](#21-windows-sys-as-apis-de-windows-desde-rust)).
+
+**Copiar e pegar** ([*Using the Clipboard*](https://learn.microsoft.com/windows/win32/dataxchg/using-the-clipboard)):
+
+1. [`OpenClipboard`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-openclipboard) abre o portapapeis para unha xanela. Só o pode ter aberto un programa á vez: se outro o ten, falla. meiga téntao outra vez despois de 10, 20, 40 e 80 ms, como moito 150 ms, coma o Windows Terminal.
+2. Para copiar, `EmptyClipboard` baleira o portapapeis e fai a xanela a súa dona, e [`SetClipboardData`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setclipboarddata) pon o texto: unha memoria global ([`GlobalAlloc`](https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-globalalloc) con `GMEM_MOVEABLE`), que desde ese momento é do portapapeis.
+3. Para pegar, `GetClipboardData(CF_UNICODETEXT)` dá a memoria do texto, que se le entre `GlobalLock` e `GlobalUnlock` mentres o portapapeis está aberto. Se non hai texto, por exemplo cunha imaxe, non dá nada.
+4. `CloseClipboard` pécha o portapapeis.
+
+**Quen máis o le.** O historial do portapapeis (Win + V) e a sincronización entre dispositivos len cada texto novo, e para iso abren o portapapeis un intre. O Escritorio remoto tamén o le, para levalo ao outro equipo.
+
+## 47. Pegar no terminal: o filtro e o *bracketed paste*
+
+**Pegar é teclear.** O terminal envía o texto pegado á entrada do programa, coma se se tecleara. Un texto podería levar caracteres de control que o programa tomaría por teclas, coma Esc ou Ctrl+C, ou secuencias enteiras. E cada fin de liña é un Intro: nunha shell, executa a liña.
+
+**O filtro,** o mesmo do Windows Terminal: quítanse os caracteres de control C0 (`0x00`–`0x1F`), DEL (`0x7F`) e C1 (`0x80`–`0x9F`), salvo o tabulador e os fins de liña; CR LF e LF pasan a ser CR, o que envía Intro. Se o programa non pediu o *bracketed paste*, un texto dunha liña perde tamén os brancos do final, e con eles o seu fin de liña: unha liña copiada enteira non se executa soa.
+
+**O *bracketed paste*** (`?2004`, [*Bracketed Paste Mode*](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Bracketed-Paste-Mode)). O programa pídelle ao terminal que marque o texto pegado entre `ESC [ 200 ~` e `ESC [ 201 ~`. Así sabe que non se tecleou, e non executa as liñas ao recibilas: bash e vim, por exemplo. Como o filtro quita os ESC, o texto non pode pechar a marca antes de tempo. Un pegado baleiro envíase igual: algúns programas, ao recibilo, len unha imaxe do portapapeis.
+
+**Na consola de Windows non hai *bracketed paste*.** O ConPTY non o coñece: aos programas que len a entrada coma un terminal pásalles as marcas tal cal, pero aos da consola de Windows quítallas, e o texto chega coma teclas. PSReadLine, por exemplo, executa cada liña cando lle chega o seu Intro. Por iso, se o programa non pediu o *bracketed paste*, meiga pregunta antes de pegar varias liñas ([ADR 0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+
+**A caixa de mensaxe.** [`MessageBoxW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-messageboxw) mostra unha caixa de Windows cun texto e uns botóns, coma *OK* e *Cancel*, cun deles escollido, e espera a resposta. Mentres está aberta, o seu propio bucle de mensaxes reparte tamén as da xanela de meiga, pero o código que a abriu segue esperando: as mensaxes da xanela non chegan a el. Ao pechala, meiga redebuxa a xanela e le o que cambiou mentres tanto.
+
+**OSC 52.** Un programa pode copiar texto ao portapapeis ([§35](#35-as-secuencias-de-control)). meiga só o permite desde a xanela que se está a usar, a que ten o foco e está en primeiro plano ([§39](#39-o-foco-e-o-título-da-xanela)).

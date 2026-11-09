@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` is already a terminal: it runs a program in a pseudoconsole (ConPTY), by default PowerShell 7, shows its output with colours, bold and italic text, underlines, wide characters, a cursor and the title that the program sets, and sends it the keys that you type as the Windows console does, also the dead keys and AltGr of layouts such as the Spanish one. Each frame presents only the cells that changed, and it uses no CPU while idle or minimized. Selecting, copying and pasting text come next.
+> **Status:** early development. `meiga.exe` is already a terminal: it runs a program in a pseudoconsole (ConPTY), by default PowerShell 7, shows its output with colours, bold and italic text, underlines, wide characters, a cursor and the title that the program sets, and sends it the keys that you type as the Windows console does, also the dead keys and AltGr of layouts such as the Spanish one. The mouse selects text, which goes to the clipboard, and pastes it, and programs that ask for the mouse, such as vim or htop, get it. Each frame presents only the cells that changed, and it uses no CPU while idle or minimized. Resizing the grid with the window, the scrollback and zoom come next.
 
 ## Goals
 
@@ -49,13 +49,14 @@ cargo deny check
 .\tools\check-window.ps1
 .\tools\check-present.ps1
 .\tools\check-keyboard.ps1
+.\tools\check-mouse.ps1
 .\tools\perf\test-measure.ps1
 .\tools\perf\test-scenarios.ps1
 ```
 
 `fetch-conpty.ps1` downloads the ConPTY that meiga ships, the NuGet package `Microsoft.Windows.Console.ConPTY` at a pinned version, checks its SHA-256 and its Microsoft signatures, and extracts it to `target\conpty\`. It downloads it only once. The tests of `meiga-win` run programs in it, and fail with a message that asks for the script when it is missing. `.\tools\fetch-conpty.ps1 -CheckLatest` tells whether nuget.org has a newer stable version; CI checks it every Monday.
 
-`check-imports.ps1`, `check-window.ps1`, `check-present.ps1` and `check-keyboard.ps1` check the release build: build it first with `.\tools\package.ps1`, which also puts the ConPTY of meiga next to it. `check-window.ps1` runs cmd in meiga, and checks that cmd sets the title of the window and ends with it; `check-present.ps1` runs a PowerShell script in meiga that writes to it step by step, and checks the frames; `check-keyboard.ps1` types keys in the window of meiga, with the Spanish or the US keyboard layout, and checks what a PowerShell script in its terminal reads. Their windows appear for a moment: do not click or type while `check-present.ps1` or `check-keyboard.ps1` runs. With `-Layout`, `check-keyboard.ps1` may change the keyboard layout of the whole session until it ends. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
+`check-imports.ps1`, `check-window.ps1`, `check-present.ps1`, `check-keyboard.ps1` and `check-mouse.ps1` check the release build: build it first with `.\tools\package.ps1`, which also puts the ConPTY of meiga next to it. `check-window.ps1` runs cmd in meiga, and checks that cmd sets the title of the window and ends with it; `check-present.ps1` runs a PowerShell script in meiga that writes to it step by step, and checks the frames; `check-keyboard.ps1` types keys in the window of meiga, with the Spanish or the US keyboard layout, and checks what a PowerShell script in its terminal reads; `check-mouse.ps1` clicks, drags and pastes in the window of meiga, and checks the clipboard and what PowerShell scripts in its terminal read. Their windows appear for a moment: do not click or type while `check-present.ps1`, `check-keyboard.ps1` or `check-mouse.ps1` runs. With `-Layout`, `check-keyboard.ps1` may change the keyboard layout of the whole session until it ends. `check-mouse.ps1` uses the clipboard, and puts its text back at the end. `test-scenarios.ps1` also checks the bash version of the load scenarios in WSL, and skips it with a warning when WSL has no bash 5. On Linux, CI checks the bash scripts with [ShellCheck](https://www.shellcheck.net/) and runs them.
 
 To see what a program sends through the ConPTY, run it in the console example of `meiga-win`. It prints each block of output with the control characters in sight, and sends each line that you type, followed by Enter; Ctrl+Z and Enter close the session:
 
@@ -83,6 +84,8 @@ The latest build of each pull request can be downloaded from the artifacts of it
 ```
 
 The command line is `meiga [--trace-frames <file>] [--marks] [--] [<program> [<arguments>]]`: the options of meiga go before the program, everything after the program is for it, and `--` ends the options. `--marks` draws a magenta border around the areas that each frame presents. Type in the window as in any terminal: the keys reach the program as in the Windows console, and Alt+F4 and Alt+Space close the window and open its menu, as in any other window. When the program ends, meiga shows its exit code and keeps the window open until you close it.
+
+Drag with the left button to select text, double-click to select a word or a whole path, and triple-click to select a line: the selection goes to the clipboard when the button goes up. Ctrl+C or Ctrl+Shift+C copy the selection and remove it (without a selection, Ctrl+C reaches the program), Esc removes it, and Ctrl+V, Ctrl+Shift+V or a right click paste the clipboard. Before pasting more than one line into a program that did not turn on bracketed paste, such as PowerShell, meiga asks. Programs that ask for the mouse, such as vim or htop, get the clicks and the wheel: hold Shift to select text in them.
 
 meiga uses the `conpty.dll` and `OpenConsole.exe` next to `meiga.exe`, as in the zip file, and the ConPTY of Windows when they are missing. `package.ps1` also copies them next to `target\release\meiga.exe`. `tools\terminal-sample.ps1` writes a sample of colours, styles and wide characters, to check a terminal by eye.
 

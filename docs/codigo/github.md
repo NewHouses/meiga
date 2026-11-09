@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 1.7.
+> Estado: subfase 1.8.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -210,6 +210,9 @@ Desde a subfase 1.4, as probas de `meiga-win` lanzan programas no ConPTY que vai
           ./tools/check-keyboard.ps1 -Layout Spanish
           ./tools/check-keyboard.ps1 -Layout US
 
+      - name: Check the mouse, the selection and the clipboard
+        run: ./tools/check-mouse.ps1
+
       - name: Check the start-up measurement
         run: ./tools/perf/measure-startup.ps1 -Runs 3 -Warmup 1
 
@@ -222,6 +225,7 @@ Desde a subfase 1.4, as probas de `meiga-win` lanzan programas no ConPTY que vai
 - Ata a subfase 1.5, o paso de `check-window.ps1` chamábase *Check that meiga.exe opens its window and closes it cleanly*. O nome novo di o que comproba desde a 1.6: tamén o programa do terminal. Os nomes dos pasos, ao contrario ca o do job, non os esixen as regras da rama `main`, así que cambialo non obriga a cambiar nada máis.
 - `check-present.ps1` lanza en meiga un script de PowerShell que escribe na pantalla paso a paso, e comproba no rexistro dos fotogramas que meiga presenta só o que cambia, agrupa os cambios, presenta a xanela enteira cando cambia a cor do fondo e non debuxa en repouso nin coa xanela minimizada, tamén cando o programa escribe mentres tanto; e que, coa xanela minimizada, meiga remata á súa hora límite unha actualización sincronizada que o programa deixa aberta: o título escrito nela chega á xanela (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Ata a subfase 1.5 debuxaba na demo con eventos do rato. Leva uns segundos.
 - `check-keyboard.ps1`, desde a subfase 1.7, teclea na xanela de meiga e comproba o que le PowerShell no terminal: o carácter, a tecla e as modificadoras de cada tecla (ver [Código › ferramentas](ferramentas.md#toolscheck-keyboardps1)). Corre dúas veces, co teclado español, coas teclas mortas e AltGr, e co estadounidense. O *runner* ten o estadounidense, así que na primeira a comprobación cambia ao español, cargándoo se fai falta, e ao rematar volta poñer o de antes. `run: |` executa as dúas liñas no mesmo paso, unha despois da outra: se a primeira falla, o paso falla sen executar a segunda.
+- `check-mouse.ps1`, desde a subfase 1.8, selecciona, copia e pega na xanela de meiga, e comproba o que chega ao portapapeis e o que len tres scripts de PowerShell no terminal: un coma un programa que le o teclado, outro coma un programa da consola de Windows que pide o rato e outro coma un programa de WSL (ver [Código › ferramentas](ferramentas.md#toolscheck-mouseps1)). No *runner*, a xanela de meiga está en primeiro plano, así que comproba que un programa pode copiar ao portapapeis (OSC 52); nunha máquina onde non o está, comproba o contrario. Leva uns segundos.
 - `measure-startup.ps1` arranca meiga 4 veces e mide o tempo ata o primeiro fotograma, que desde a subfase 1.6 inclúe lanzar a shell por defecto (ver [Código › medición](perf.md#toolsperfmeasure-startupps1)), e `measure-frames.ps1` mide 3 s de cada tipo de fotograma: parciais, completos e completos de texto (ver [Código › medición](perf.md#toolsperfmeasure-framesps1)). Só comproban que os scripts seguen funcionando: igual que co arnés de medición, os números dunha máquina compartida non se comparan con nada.
 
 #### Subir o artefacto

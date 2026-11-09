@@ -1,6 +1,6 @@
 # ADR 0012 · A fachada do terminal
 
-- **Estado:** Aceptado; concretado polo [ADR 0013](0013-da-saida-a-pantalla.md)
+- **Estado:** Aceptado; concretado polos [ADR 0013](0013-da-saida-a-pantalla.md) e [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md)
 - **Data:** 2026-11-08
 - **Relacionados:** [ADR 0003](0003-nucleo-vt-alacritty-terminal.md), [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0007](0007-integracion-coa-shell.md)
 
