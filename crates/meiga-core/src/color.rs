@@ -56,13 +56,16 @@ pub const CAMPBELL: [Rgb; 16] = [
 pub const FOREGROUND: Rgb = Rgb::new(0xd4, 0xd7, 0xdd);
 /// The colour of the background of meiga.
 pub const BACKGROUND: Rgb = Rgb::new(0x16, 0x18, 0x1d);
+/// The colour of the background of the selected text: the one of the dark
+/// theme of Visual Studio Code. The text keeps its colour.
+pub const SELECTION: Rgb = Rgb::new(0x26, 0x4f, 0x78);
 
 /// The levels of each component in the cube of the 256 colours of xterm.
 const CUBE_LEVELS: [u8; 6] = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff];
 
 /// The colours of a terminal: the 256 that the programs choose by number,
-/// and the ones that the text, the background and the cursor have when the
-/// program does not choose.
+/// the ones that the text, the background and the cursor have when the
+/// program does not choose, and the one of the background of the selection.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Palette {
     /// 0–15 are the named colours, 16–231 a cube of 6 × 6 × 6 and 232–255
@@ -71,16 +74,25 @@ pub struct Palette {
     pub foreground: Rgb,
     pub background: Rgb,
     pub cursor: Rgb,
+    /// The background of the selected cells. The programs cannot change it.
+    pub selection: Rgb,
 }
 
 impl Palette {
     /// The colours of meiga until it has themes (subphase 8.3): the 16 of
     /// Campbell, with the text and the background of meiga. The cursor has
     /// the colour of the text.
-    pub const MEIGA: Palette = Palette::new(CAMPBELL, FOREGROUND, BACKGROUND, FOREGROUND);
+    pub const MEIGA: Palette =
+        Palette::new(CAMPBELL, FOREGROUND, BACKGROUND, FOREGROUND, SELECTION);
 
     /// The palette of xterm with the 16 colours `named`.
-    pub const fn new(named: [Rgb; 16], foreground: Rgb, background: Rgb, cursor: Rgb) -> Self {
+    pub const fn new(
+        named: [Rgb; 16],
+        foreground: Rgb,
+        background: Rgb,
+        cursor: Rgb,
+        selection: Rgb,
+    ) -> Self {
         let mut colors = [Rgb::new(0, 0, 0); 256];
         let mut index = 0;
         while index < 256 {
@@ -107,6 +119,7 @@ impl Palette {
             foreground,
             background,
             cursor,
+            selection,
         }
     }
 }
@@ -133,8 +146,13 @@ mod tests {
         assert_eq!(palette.colors[232], Rgb::new(8, 8, 8));
         assert_eq!(palette.colors[255], Rgb::new(238, 238, 238));
         assert_eq!(
-            (palette.foreground, palette.background, palette.cursor),
-            (FOREGROUND, BACKGROUND, FOREGROUND)
+            (
+                palette.foreground,
+                palette.background,
+                palette.cursor,
+                palette.selection
+            ),
+            (FOREGROUND, BACKGROUND, FOREGROUND, SELECTION)
         );
         assert_eq!(Palette::default(), palette);
     }

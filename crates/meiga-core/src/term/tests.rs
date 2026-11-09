@@ -1,4 +1,5 @@
 use super::*;
+use crate::geometry::GridPoint;
 
 fn copy(terminal: &mut Terminal) -> Screen {
     let mut screen = Screen::new();
@@ -516,6 +517,193 @@ fn the_grid_is_never_smaller_than_two_columns_and_one_row() {
     assert_eq!(screen.row_text(0), "中");
 }
 
+/// The selected cells of `row`: `#` for each one, and `.` for the others.
+fn marks(screen: &Screen, row: u16) -> String {
+    screen
+        .row(row)
+        .iter()
+        .map(|cell| {
+            if cell.flags.contains(CellFlags::SELECTED) {
+                '#'
+            } else {
+                '.'
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn a_selection_of_cells_marks_them_and_gives_their_text() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"ola mundo\r\nadeus");
+    let mut screen = Screen::new();
+    terminal.copy_damage(&mut screen);
+    screen.clear_changes();
+
+    // A click that does not move selects nothing.
+    terminal.select(SelectionKind::Cells, GridPoint::new(1, 0), Side::Left);
+    assert!(!terminal.has_selection());
+    assert_eq!(terminal.selection_text(), None);
+    terminal.copy_damage(&mut screen);
+    assert_eq!(screen.changes().count(), 0);
+
+    // From the left of the second cell to the right of the sixth one.
+    terminal.select_to(GridPoint::new(5, 0), Side::Right);
+    assert!(terminal.has_selection());
+    assert_eq!(terminal.selection_text().as_deref(), Some("la mu"));
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 0), ".#####....");
+    assert_eq!(
+        screen.changes().collect::<Vec<_>>(),
+        [(0, Columns::new(1, 6))]
+    );
+    screen.clear_changes();
+
+    // To the left of the third cell of the next row: the rest of the first
+    // row, with an LF at its end, and two cells of the second one.
+    terminal.select_to(GridPoint::new(2, 1), Side::Left);
+    assert_eq!(terminal.selection_text().as_deref(), Some("la mundo\nad"));
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 0), ".#########");
+    assert_eq!(marks(&screen, 1), "##........");
+    assert_eq!(
+        screen.changes().collect::<Vec<_>>(),
+        [(0, Columns::new(6, 10)), (1, Columns::new(0, 2))]
+    );
+    screen.clear_changes();
+
+    // Backwards, from where it started.
+    terminal.select_to(GridPoint::new(0, 0), Side::Left);
+    assert_eq!(terminal.selection_text().as_deref(), Some("o"));
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 0), "#.........");
+    assert_eq!(marks(&screen, 1), "..........");
+    screen.clear_changes();
+
+    assert!(terminal.clear_selection());
+    assert!(!terminal.clear_selection());
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 0), "..........");
+    assert_eq!(
+        screen.changes().collect::<Vec<_>>(),
+        [(0, Columns::new(0, 1))]
+    );
+    assert_eq!(screen.row_text(0), "ola mundo");
+}
+
+#[test]
+fn a_double_click_selects_a_word_a_path_or_up_to_the_other_bracket() {
+    let mut terminal = Terminal::new(GridSize::new(40, 2));
+    terminal.feed("cat C:\\x\\f.rs:12:5 (ok, \"si\") a  b\r\n中文 ok".as_bytes());
+    let mut word = |column, row| {
+        terminal.select(
+            SelectionKind::Words,
+            GridPoint::new(column, row),
+            Side::Left,
+        );
+        terminal.selection_text()
+    };
+    assert_eq!(word(1, 0).as_deref(), Some("cat"));
+    // Neither the colons nor the backslashes end a word.
+    assert_eq!(word(9, 0).as_deref(), Some("C:\\x\\f.rs:12:5"));
+    assert_eq!(word(20, 0).as_deref(), Some("ok"));
+    assert_eq!(word(25, 0).as_deref(), Some("si"));
+    // On a bracket, up to the other one, in both directions.
+    assert_eq!(word(19, 0).as_deref(), Some("(ok, \"si\")"));
+    assert_eq!(word(28, 0).as_deref(), Some("(ok, \"si\")"));
+    // On a space or a separator, only it.
+    assert_eq!(word(3, 0).as_deref(), Some(" "));
+    assert_eq!(word(31, 0).as_deref(), Some(" "));
+    assert_eq!(word(22, 0).as_deref(), Some(","));
+    // Past the end of the text, a cell without text.
+    assert_eq!(word(36, 0), None);
+    // On either half of a wide character.
+    assert_eq!(word(1, 1).as_deref(), Some("中文"));
+    assert_eq!(word(2, 1).as_deref(), Some("中文"));
+}
+
+#[test]
+fn a_triple_click_selects_the_rows_of_a_line() {
+    let mut terminal = Terminal::new(GridSize::new(10, 4));
+    // The first line does not fit in a row.
+    terminal.feed(b"0123456789abc\r\nnext");
+    terminal.select(SelectionKind::Lines, GridPoint::new(1, 1), Side::Left);
+    // Without an LF at the end: pasted into a shell, it does not run.
+    assert_eq!(terminal.selection_text().as_deref(), Some("0123456789abc"));
+    let screen = copy(&mut terminal);
+    assert_eq!(marks(&screen, 0), "##########");
+    assert_eq!(marks(&screen, 1), "##########");
+    assert_eq!(marks(&screen, 2), "..........");
+
+    // Dragging to the next line adds it.
+    terminal.select_to(GridPoint::new(0, 2), Side::Left);
+    assert_eq!(
+        terminal.selection_text().as_deref(),
+        Some("0123456789abc\nnext")
+    );
+}
+
+#[test]
+fn a_wide_character_is_selected_whole() {
+    let mut terminal = Terminal::new(GridSize::new(10, 2));
+    terminal.feed("a中b".as_bytes());
+    // From its right half.
+    terminal.select(SelectionKind::Cells, GridPoint::new(2, 0), Side::Left);
+    terminal.select_to(GridPoint::new(3, 0), Side::Right);
+    assert_eq!(terminal.selection_text().as_deref(), Some("中b"));
+    assert_eq!(marks(&copy(&mut terminal), 0), ".###......");
+    // To its left half.
+    terminal.select(SelectionKind::Cells, GridPoint::new(0, 0), Side::Left);
+    terminal.select_to(GridPoint::new(1, 0), Side::Right);
+    assert_eq!(terminal.selection_text().as_deref(), Some("a中"));
+    assert_eq!(marks(&copy(&mut terminal), 0), "###.......");
+}
+
+#[test]
+fn the_selection_moves_with_the_text_and_goes_away_with_it() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"ab\r\ncd\r\nef");
+    let mut screen = Screen::new();
+    terminal.select(SelectionKind::Cells, GridPoint::new(0, 1), Side::Left);
+    terminal.select_to(GridPoint::new(0, 1), Side::Right);
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 1), "#.........");
+    screen.clear_changes();
+
+    // The screen scrolls up: the selection goes up with its text.
+    terminal.feed(b"\r\ngh");
+    assert_eq!(terminal.selection_text().as_deref(), Some("c"));
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 0), "#.........");
+    assert_eq!(marks(&screen, 1), "..........");
+    screen.clear_changes();
+
+    // From the first row to the second one, and the program clears the
+    // first one: the selection goes away, also from the second row, which
+    // did not change.
+    terminal.select(SelectionKind::Cells, GridPoint::new(0, 0), Side::Left);
+    terminal.select_to(GridPoint::new(1, 1), Side::Right);
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 0), "##########");
+    assert_eq!(marks(&screen, 1), "##........");
+    screen.clear_changes();
+    terminal.feed(b"\x1b[1;1H\x1b[K");
+    assert!(!terminal.has_selection());
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 0), "..........");
+    assert_eq!(marks(&screen, 1), "..........");
+    assert_eq!(screen.row_text(1), "ef");
+
+    // Writing over it does not remove it, but clearing the screen does.
+    terminal.select(SelectionKind::Lines, GridPoint::new(0, 2), Side::Left);
+    terminal.feed(b"\x1b[3;1Hxy");
+    assert_eq!(terminal.selection_text().as_deref(), Some("xy"));
+    terminal.feed(b"\x1b[2J");
+    assert!(!terminal.has_selection());
+    terminal.copy_damage(&mut screen);
+    assert_eq!(marks(&screen, 2), "..........");
+}
+
 /// Pieces of output that change the grid in many ways.
 const PIECES: &[&str] = &[
     "ab",
@@ -625,6 +813,37 @@ fn copying_only_the_damage_gives_the_same_screen_as_copying_everything() {
                 let size = SIZES[random(SIZES.len())];
                 damaged.resize(size);
                 whole.resize(size);
+            }
+            // The selection changes, sometimes with points outside the grid.
+            let size = damaged.size();
+            let point = GridPoint::new(
+                random(usize::from(size.columns) + 2) as u16,
+                random(usize::from(size.rows) + 2) as u16,
+            );
+            let side = if random(2) == 0 {
+                Side::Left
+            } else {
+                Side::Right
+            };
+            match random(8) {
+                0 => {
+                    let kind = [
+                        SelectionKind::Cells,
+                        SelectionKind::Words,
+                        SelectionKind::Lines,
+                    ][random(3)];
+                    damaged.select(kind, point, side);
+                    whole.select(kind, point, side);
+                }
+                1 | 2 => {
+                    damaged.select_to(point, side);
+                    whole.select_to(point, side);
+                }
+                3 => {
+                    damaged.clear_selection();
+                    whole.clear_selection();
+                }
+                _ => {}
             }
             damaged.feed(piece);
             whole.feed(piece);

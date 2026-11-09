@@ -198,6 +198,20 @@ impl GridSize {
     }
 }
 
+/// A cell of the terminal grid: its column and its row, from the top-left
+/// cell, which is (0, 0).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct GridPoint {
+    pub column: u16,
+    pub row: u16,
+}
+
+impl GridPoint {
+    pub const fn new(column: u16, row: u16) -> Self {
+        Self { column, row }
+    }
+}
+
 /// Number of pixels from `from` to `to`, or 0 if `to` is not after `from`.
 const fn span(from: i32, to: i32) -> u32 {
     if to > from {
