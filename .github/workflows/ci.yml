@@ -89,6 +89,11 @@ jobs:
       - name: Check that meiga.exe presents only what changes
         run: ./tools/check-present.ps1
 
+      - name: Check the keys with the Spanish and US keyboard layouts
+        run: |
+          ./tools/check-keyboard.ps1 -Layout Spanish
+          ./tools/check-keyboard.ps1 -Layout US
+
       - name: Check the start-up measurement
         run: ./tools/perf/measure-startup.ps1 -Runs 3 -Warmup 1
 
