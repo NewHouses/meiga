@@ -7,7 +7,9 @@
 
 mod app;
 mod bench;
+mod clipboard;
 mod frames;
+mod mouse;
 mod options;
 mod session;
 mod trace;

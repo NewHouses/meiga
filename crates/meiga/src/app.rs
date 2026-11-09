@@ -9,12 +9,14 @@ use meiga_core::geometry::{GridSize, Rect};
 use meiga_core::term::Terminal;
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::HDC;
+use meiga_win::clipboard;
 use meiga_win::conpty::Pty;
 use meiga_win::event::{Event, Handler, HandlerError};
-use meiga_win::window::Window;
+use meiga_win::window::{Pointer, Window};
 
 use crate::bench::Bench;
 use crate::frames::{Frames, Scene};
+use crate::mouse::Response;
 use crate::options::{BenchMode, Options};
 use crate::session::{self, Shared, lock};
 use crate::trace::Trace;
@@ -96,21 +98,48 @@ impl App {
     }
 
     /// The reader thread of the session woke the window up: the title, the
-    /// screen, or both, changed.
+    /// screen, the clipboard, or more than one, changed.
     fn wake(&mut self, window: &Window) -> Result<(), HandlerError> {
         let Content::Terminal(view) = &self.content else {
             return Ok(());
         };
-        let (title, screen) = {
+        let (title, clipboard, screen) = {
             let mut shared = lock(view.shared());
             let title = mem::take(&mut shared.title_changed)
                 .then(|| shared.terminal.title().map(str::to_owned));
-            (title, shared.screen_changed)
+            let clipboard = mem::take(&mut shared.clipboard_changed)
+                .then(|| shared.terminal.take_clipboard())
+                .flatten();
+            (title, clipboard, shared.screen_changed)
         };
         if let Some(title) = title {
             window.set_title(title.as_deref().unwrap_or(TITLE));
         }
+        // A program cannot change the clipboard from a window that the user
+        // is not using: the window needs the focus, and to be the foreground
+        // window. If another program keeps the clipboard open, the text is
+        // lost, as in Windows Terminal.
+        if let Some(text) = clipboard
+            && view.is_focused()
+            && window.is_foreground()
+        {
+            let _ = clipboard::write_text(window, &text);
+        }
         if screen {
+            self.frames.changed(window, &mut self.content)?;
+        }
+        Ok(())
+    }
+
+    /// Does what the view asks after a key or a mouse event.
+    fn respond(&mut self, window: &Window, response: Response) -> Result<(), HandlerError> {
+        if response.dialog {
+            // While the message box was open, the window lost its wakes, and
+            // maybe some paint: what changed meanwhile is shown now.
+            window.invalidate(None);
+            self.wake(window)?;
+        }
+        if response.redraw {
             self.frames.changed(window, &mut self.content)?;
         }
         Ok(())
@@ -152,6 +181,8 @@ fn terminal(
     };
     let input = session.as_ref().map(Pty::input);
     let view = TerminalView::new(shared, input, waker, font, window.dpi());
+    // The clicks select text until the program asks for the mouse.
+    window.set_pointer(Pointer::Text);
     Ok((Content::Terminal(Box::new(view)), session))
 }
 
@@ -187,10 +218,20 @@ impl Handler for App {
             }
             Event::Key(key) => {
                 if let Content::Terminal(view) = &mut self.content {
-                    view.key(&key);
+                    let response = view.key(window, &key);
+                    self.respond(window, response)?;
                 }
             }
-            _ => {}
+            Event::MouseDown { .. }
+            | Event::MouseUp { .. }
+            | Event::MouseMoved { .. }
+            | Event::Wheel { .. }
+            | Event::CaptureLost => {
+                if let Content::Terminal(view) = &mut self.content {
+                    let response = view.mouse(window, &event);
+                    self.respond(window, response)?;
+                }
+            }
         }
         Ok(())
     }

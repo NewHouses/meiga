@@ -14,9 +14,12 @@ use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, Screen};
 use meiga_core::text::CellChar;
 use meiga_render::{Canvas, Decorations, Font, FontStyle};
 use meiga_win::conpty::Input;
-use meiga_win::window::{self, CaretSettings, Waker};
+use meiga_win::event::Event;
+use meiga_win::window::{self, CaretSettings, Waker, Window};
 
+use crate::clipboard;
 use crate::frames::Scene;
+use crate::mouse::{Context, Mouse, Response};
 use crate::session::{Shared, lock};
 
 /// The font: the first of these families that is installed, at 12 points,
@@ -31,6 +34,11 @@ const DIM: u8 = 85;
 /// The dots per inch at a scale of 100 %.
 const BASE_DPI: u32 = 96;
 
+/// The virtual-key codes of the keys that meiga takes for itself.
+const VK_C: u16 = 0x43;
+const VK_V: u16 = 0x56;
+const VK_ESCAPE: u16 = 0x1b;
+
 /// The terminal of the session, as the window shows it.
 pub struct TerminalView {
     shared: Arc<Mutex<Shared>>,
@@ -43,6 +51,10 @@ pub struct TerminalView {
     cell: Size,
     screen: Screen,
     caret: Caret,
+    mouse: Mouse,
+    /// The keys that meiga took when they went down: when they go up, the
+    /// program does not get them either.
+    taken: Vec<u16>,
     /// The characters of a run of cells, kept to avoid an allocation for
     /// each one.
     run: Vec<CellChar>,
@@ -71,6 +83,8 @@ impl TerminalView {
             font,
             screen: Screen::new(),
             caret: Caret::new(dpi, Instant::now()),
+            mouse: Mouse::new(),
+            taken: Vec::new(),
             run: Vec::new(),
             answers: Vec::new(),
             encoder: KeyEncoder::new(),
@@ -82,15 +96,87 @@ impl TerminalView {
         &self.shared
     }
 
-    /// Sends a key to the program, as the modes that it turned on say.
-    pub fn key(&mut self, event: &KeyEvent) {
+    pub const fn is_focused(&self) -> bool {
+        self.caret.focused
+    }
+
+    /// A key went down or up. Ctrl+C copies the selection, if there is
+    /// one; Ctrl+V pastes; and Esc removes the selection, if there is one.
+    /// The rest go to the program, as the modes that it turned on say, and
+    /// a key that goes down removes the selection, unless it is a modifier
+    /// key.
+    pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
+        // A key that meiga took does not reach the program while it repeats,
+        // nor when it goes up.
+        if let Some(taken) = self.taken.iter().position(|&key| key == event.key) {
+            if !event.down {
+                self.taken.swap_remove(taken);
+            }
+            return Response::default();
+        }
+        if event.down
+            && let Some(response) = self.shortcut(window, event)
+        {
+            // With a message box, the key goes up in it.
+            if !response.dialog {
+                self.taken.push(event.key);
+            }
+            return response;
+        }
+        let mut response = Response::default();
+        if event.down && !is_modifier(event.key) {
+            response.redraw = lock(&self.shared).terminal.clear_selection();
+        }
         let Some(input) = &self.input else {
-            return;
+            return response;
         };
         let modes = lock(&self.shared).terminal.modes();
         self.keys.clear();
         self.encoder.encode(event, &modes, &mut self.keys);
         input.write(&self.keys);
+        response
+    }
+
+    /// What a key that goes down does if meiga takes it.
+    fn shortcut(&mut self, window: &Window, event: &KeyEvent) -> Option<Response> {
+        let controls = event.controls;
+        // Ctrl, and Shift or not, but not Alt, nor AltGr.
+        let ctrl = controls.ctrl() && !controls.alt();
+        match event.key {
+            VK_C if ctrl => clipboard::copy(window, &self.shared, true).then_some(Response {
+                redraw: true,
+                dialog: false,
+            }),
+            VK_V if ctrl => {
+                let redraw = lock(&self.shared).terminal.clear_selection();
+                let dialog = self
+                    .input
+                    .as_ref()
+                    .is_some_and(|input| clipboard::paste(window, &self.shared, input));
+                Some(Response { redraw, dialog })
+            }
+            VK_ESCAPE if !controls.ctrl() && !controls.alt() && !controls.shift() => {
+                lock(&self.shared)
+                    .terminal
+                    .clear_selection()
+                    .then_some(Response {
+                        redraw: true,
+                        dialog: false,
+                    })
+            }
+            _ => None,
+        }
+    }
+
+    /// A mouse event of the window.
+    pub fn mouse(&mut self, window: &Window, event: &Event) -> Response {
+        let context = Context {
+            window,
+            shared: &self.shared,
+            input: self.input.as_ref(),
+            cell: self.cell,
+        };
+        self.mouse.event(&context, event)
     }
 
     /// The window gained or lost the focus, at `now`. With it, the cursor
@@ -101,10 +187,13 @@ impl TerminalView {
         if focused == self.caret.focused {
             return;
         }
+        // The keys that meiga took go up in another window.
+        self.taken.clear();
         if focused {
             // The settings can change while meiga runs: for example, when
             // the user connects to the session through Remote Desktop.
             self.caret.read_settings();
+            self.mouse.read_settings();
             self.caret.since = now;
         }
         self.caret.focused = focused;
@@ -246,6 +335,17 @@ fn cell_size(cell: Size) -> (i32, i32) {
     (cell.width as i32, cell.height as i32)
 }
 
+/// Whether `key` is only a modifier or a lock key, or Print Screen: they do
+/// not remove the selection.
+const fn is_modifier(key: u16) -> bool {
+    matches!(
+        key,
+        // Shift, Ctrl, Alt, Caps Lock, Print Screen, the Windows keys, Num
+        // Lock, Scroll Lock, and the left and right Shift, Ctrl and Alt.
+        0x10..=0x12 | 0x14 | 0x2c | 0x5b | 0x5c | 0x90 | 0x91 | 0xa0..=0xa5
+    )
+}
+
 /// How a cell is drawn.
 struct Style {
     font: FontStyle,
@@ -265,6 +365,10 @@ impl Style {
         }
         if flags.contains(CellFlags::DIM) {
             text = text.mix(background, DIM);
+        }
+        // The selected text keeps its colour.
+        if flags.contains(CellFlags::SELECTED) {
+            background = palette.selection;
         }
         Self {
             font: FontStyle {
