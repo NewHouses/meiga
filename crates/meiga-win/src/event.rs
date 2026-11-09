@@ -6,11 +6,13 @@ use std::error::Error as StdError;
 
 use meiga_core::geometry::{Point, Rect, Size};
 use meiga_core::input::KeyEvent;
+use meiga_core::mouse::{Button, Modifiers};
 use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::HDC;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     SIZE_MINIMIZED, WM_APP, WM_CAPTURECHANGED, WM_KILLFOCUS, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MOUSEMOVE, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
+    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN,
+    WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
 };
 
 use crate::window::Window;
@@ -19,10 +21,14 @@ use crate::window::Window;
 /// Windows leaves to the programs for their own windows.
 pub(crate) const WM_WAKE: u32 = WM_APP;
 
-/// The `wParam` flag of mouse messages for a pressed left button. It is in
-/// the `Win32_System_SystemServices` feature of `windows-sys`, which would
-/// bring thousands of declarations for this one constant.
+// The flags of the buttons and of the modifier keys in the `wParam` of the
+// mouse messages. They are in the `Win32_System_SystemServices` feature of
+// `windows-sys`, which would bring thousands of declarations for them.
 const MK_LBUTTON: WPARAM = 0x0001;
+const MK_RBUTTON: WPARAM = 0x0002;
+const MK_SHIFT: WPARAM = 0x0004;
+const MK_CONTROL: WPARAM = 0x0008;
+const MK_MBUTTON: WPARAM = 0x0010;
 
 /// An error from the code that handles the events. It ends the message loop.
 pub type HandlerError = Box<dyn StdError>;
@@ -49,28 +55,40 @@ pub trait Handler {
 pub enum Event {
     /// The client area changed size, or the window was minimized or
     /// restored. A minimized window has size 0 × 0.
-    Resized {
-        size: Size,
-        minimized: bool,
-    },
+    Resized { size: Size, minimized: bool },
     /// The user started to move or resize the window with the mouse or the
     /// keyboard. Until [`Event::SizeMoveEnded`], Windows runs its own message
     /// loop.
     SizeMoveStarted,
     /// The user finished moving or resizing the window.
     SizeMoveEnded,
+    /// A button of the mouse went down, with the modifier keys that were
+    /// down.
     MouseDown {
-        button: MouseButton,
+        button: Button,
         at: Point,
+        modifiers: Modifiers,
     },
     MouseUp {
-        button: MouseButton,
+        button: Button,
         at: Point,
+        modifiers: Modifiers,
     },
-    /// The mouse moved, with the left button pressed or not.
+    /// The mouse moved, with the first of its buttons that is down, if
+    /// any: the left one, the middle one or the right one.
     MouseMoved {
         at: Point,
-        left_down: bool,
+        button: Option<Button>,
+        modifiers: Modifiers,
+    },
+    /// The wheel turned `delta` 120ths of a notch: forward, or to the right
+    /// if it is `horizontal`, when it is positive. `at` is where the
+    /// pointer is.
+    Wheel {
+        at: Point,
+        delta: i16,
+        horizontal: bool,
+        modifiers: Modifiers,
     },
     /// The window no longer receives all the mouse input
     /// ([`Window::capture_mouse`]), for example because another window took
@@ -81,9 +99,7 @@ pub enum Event {
     /// close the window and to open its menu.
     Key(KeyEvent),
     /// The window gained or lost the keyboard focus.
-    Focus {
-        focused: bool,
-    },
+    Focus { focused: bool },
     /// The frame timer ([`Window::start_frame_timer`]) is due.
     FrameTimer,
     /// Another thread woke the window up with its
@@ -91,41 +107,64 @@ pub enum Event {
     Wake,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MouseButton {
-    Left,
-    Right,
-}
-
 /// The event of a window message, or `None` if it is not one of them. The
 /// keyboard messages are not: they become events in the window, which asks
-/// Windows more about them.
-pub(crate) fn decode(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<Event> {
+/// Windows more about them. `alt` says whether Alt is down, which the mouse
+/// messages do not say. The point of [`Event::Wheel`] is from the top-left
+/// corner of the screen: the window makes it of its client area.
+pub(crate) fn decode(
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    alt: impl FnOnce() -> bool,
+) -> Option<Event> {
     let at = || point(lparam);
+    let modifiers = |alt: bool| Modifiers {
+        shift: wparam & MK_SHIFT != 0,
+        alt,
+        ctrl: wparam & MK_CONTROL != 0,
+    };
     Some(match message {
         WM_SIZE => Event::Resized {
             size: Size::new(u32::from(low_word(lparam)), u32::from(high_word(lparam))),
             minimized: wparam == SIZE_MINIMIZED as WPARAM,
         },
-        WM_LBUTTONDOWN => Event::MouseDown {
-            button: MouseButton::Left,
+        WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN => Event::MouseDown {
+            button: match message {
+                WM_LBUTTONDOWN => Button::Left,
+                WM_MBUTTONDOWN => Button::Middle,
+                _ => Button::Right,
+            },
             at: at(),
+            modifiers: modifiers(alt()),
         },
-        WM_LBUTTONUP => Event::MouseUp {
-            button: MouseButton::Left,
+        WM_LBUTTONUP | WM_MBUTTONUP | WM_RBUTTONUP => Event::MouseUp {
+            button: match message {
+                WM_LBUTTONUP => Button::Left,
+                WM_MBUTTONUP => Button::Middle,
+                _ => Button::Right,
+            },
             at: at(),
-        },
-        WM_RBUTTONDOWN => Event::MouseDown {
-            button: MouseButton::Right,
-            at: at(),
-        },
-        WM_RBUTTONUP => Event::MouseUp {
-            button: MouseButton::Right,
-            at: at(),
+            modifiers: modifiers(alt()),
         },
         WM_MOUSEMOVE => Event::MouseMoved {
             at: at(),
-            left_down: wparam & MK_LBUTTON != 0,
+            button: [
+                (MK_LBUTTON, Button::Left),
+                (MK_MBUTTON, Button::Middle),
+                (MK_RBUTTON, Button::Right),
+            ]
+            .into_iter()
+            .find_map(|(flag, button)| (wparam & flag != 0).then_some(button)),
+            modifiers: modifiers(alt()),
+        },
+        // The flags are in the low word of wParam, and the turn, signed, in
+        // the high one.
+        WM_MOUSEWHEEL | WM_MOUSEHWHEEL => Event::Wheel {
+            at: at(),
+            delta: (wparam >> 16) as u16 as i16,
+            horizontal: message == WM_MOUSEHWHEEL,
+            modifiers: modifiers(alt()),
         },
         WM_CAPTURECHANGED => Event::CaptureLost,
         WM_SETFOCUS => Event::Focus { focused: true },
@@ -162,6 +201,16 @@ mod tests {
         (x as u16 as LPARAM) | (y as u16 as LPARAM) << 16
     }
 
+    fn decode(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<Event> {
+        super::decode(message, wparam, lparam, || false)
+    }
+
+    const NONE: Modifiers = Modifiers {
+        shift: false,
+        alt: false,
+        ctrl: false,
+    };
+
     #[test]
     fn size_comes_from_the_two_words_of_lparam() {
         assert_eq!(
@@ -185,22 +234,79 @@ mod tests {
         assert_eq!(
             decode(WM_LBUTTONDOWN, MK_LBUTTON, xy(-3, 40)),
             Some(Event::MouseDown {
-                button: MouseButton::Left,
-                at: Point::new(-3, 40)
+                button: Button::Left,
+                at: Point::new(-3, 40),
+                modifiers: NONE,
             })
         );
         assert_eq!(
             decode(WM_MOUSEMOVE, 0, xy(10, -20)),
             Some(Event::MouseMoved {
                 at: Point::new(10, -20),
-                left_down: false
+                button: None,
+                modifiers: NONE,
+            })
+        );
+    }
+
+    #[test]
+    fn mouse_messages_say_the_buttons_and_the_modifier_keys() {
+        assert_eq!(
+            decode(WM_MBUTTONUP, MK_SHIFT | MK_CONTROL, xy(1, 2)),
+            Some(Event::MouseUp {
+                button: Button::Middle,
+                at: Point::new(1, 2),
+                modifiers: Modifiers {
+                    shift: true,
+                    alt: false,
+                    ctrl: true,
+                },
             })
         );
         assert_eq!(
-            decode(WM_MOUSEMOVE, MK_LBUTTON, xy(10, 20)),
-            Some(Event::MouseMoved {
-                at: Point::new(10, 20),
-                left_down: true
+            super::decode(WM_RBUTTONDOWN, MK_RBUTTON, xy(1, 2), || true),
+            Some(Event::MouseDown {
+                button: Button::Right,
+                at: Point::new(1, 2),
+                modifiers: Modifiers { alt: true, ..NONE },
+            })
+        );
+        // While moving, the first button that is down.
+        for (wparam, button) in [
+            (MK_RBUTTON | MK_MBUTTON, Some(Button::Middle)),
+            (MK_RBUTTON | MK_LBUTTON, Some(Button::Left)),
+            (MK_RBUTTON | MK_SHIFT, Some(Button::Right)),
+            (MK_SHIFT, None),
+        ] {
+            assert!(
+                matches!(
+                    decode(WM_MOUSEMOVE, wparam, xy(1, 2)),
+                    Some(Event::MouseMoved { button: moved, .. }) if moved == button
+                ),
+                "{wparam:#x}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_wheel_turns_forward_or_back() {
+        let turn = |delta: i16| (delta as u16 as WPARAM) << 16;
+        assert_eq!(
+            decode(WM_MOUSEWHEEL, turn(-240) | MK_CONTROL, xy(500, 300)),
+            Some(Event::Wheel {
+                at: Point::new(500, 300),
+                delta: -240,
+                horizontal: false,
+                modifiers: Modifiers { ctrl: true, ..NONE },
+            })
+        );
+        assert_eq!(
+            decode(WM_MOUSEHWHEEL, turn(30), xy(-5, 7)),
+            Some(Event::Wheel {
+                at: Point::new(-5, 7),
+                delta: 30,
+                horizontal: true,
+                modifiers: NONE,
             })
         );
     }

@@ -4,6 +4,7 @@
 //! Win32 window and DPI handling. Every `unsafe` block in this crate must
 //! explain why it is sound in a `// SAFETY:` comment.
 
+pub mod clipboard;
 pub mod conpty;
 mod error;
 pub mod event;
