@@ -4,8 +4,10 @@
 //! As in Windows Terminal, Shift keeps the mouse for meiga: with it, the
 //! clicks select text also in a program that asked for the mouse. A button
 //! whose press went to the program sends it its moves and its release too,
-//! with Shift or without it.
+//! with Shift or without it. If the window loses the mouse first, the
+//! program gets the release then.
 
+use std::mem;
 use std::sync::Mutex;
 use std::time::Instant;
 
@@ -106,7 +108,10 @@ impl Mouse {
                 horizontal,
                 modifiers,
             } => self.turned(context, at, delta, horizontal, modifiers),
-            Event::CaptureLost => self.capture_lost(context),
+            Event::CaptureLost => {
+                self.forget_buttons(context);
+                Response::default()
+            }
             _ => Response::default(),
         }
     }
@@ -300,14 +305,32 @@ impl Mouse {
         Response::default()
     }
 
-    /// Another window took the mouse: the selection ends where it was, and
-    /// the buttons of the program are no longer followed.
-    fn capture_lost(&mut self, context: &Context<'_>) -> Response {
-        self.reported = [false; 3];
+    /// The window can no longer follow the buttons: another window took the
+    /// mouse, or a message box had it while it was open. The program gets
+    /// the release of each button whose press it got, on the last cell that
+    /// it got, and the selection ends where it was.
+    pub fn forget_buttons(&mut self, context: &Context<'_>) {
+        let pressed = mem::take(&mut self.reported);
+        if let Some(cell) = self.reported_at
+            && pressed.contains(&true)
+        {
+            let modes = lock(context.shared).terminal.modes();
+            for button in [Button::Left, Button::Middle, Button::Right] {
+                if pressed[index(button)] {
+                    self.report(
+                        context,
+                        MouseAction::Release(button),
+                        cell,
+                        Modifiers::default(),
+                        &modes,
+                    );
+                }
+            }
+        }
         if self.selecting.take().is_some() {
             clipboard::copy(context.window, context.shared, false);
         }
-        Response::default()
+        self.release(context);
     }
 
     /// Sends the report of `action` on `cell` to the program, if it asked

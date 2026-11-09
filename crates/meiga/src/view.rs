@@ -179,6 +179,21 @@ impl TerminalView {
         self.mouse.event(&context, event)
     }
 
+    /// A message box of the view closed. While it was open, the events of
+    /// the window did not reach the view: the keys that meiga took went up
+    /// in the box, and the mouse buttons maybe too, so none is followed
+    /// any more.
+    pub fn dialog_closed(&mut self, window: &Window) {
+        self.taken.clear();
+        let context = Context {
+            window,
+            shared: &self.shared,
+            input: self.input.as_ref(),
+            cell: self.cell,
+        };
+        self.mouse.forget_buttons(&context);
+    }
+
     /// The window gained or lost the focus, at `now`. With it, the cursor
     /// starts blinking again; without it, it is an outline that does not
     /// blink. The next update gives its cells as changed. The program

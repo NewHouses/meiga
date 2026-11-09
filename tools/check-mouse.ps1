@@ -13,19 +13,23 @@ with the ones of the user. The window does not need the focus.
    dragging, and checks what reaches the clipboard. It checks Ctrl+C,
    Ctrl+Shift+C and Esc with a selection and without one; the right click,
    which pastes; Ctrl+V and Ctrl+Shift+V with more than one line, which ask
-   first in a message box; and the text that a program copies to the
-   clipboard (OSC 52), which only changes it while the window has the
-   focus.
+   first in a message box; a key that meiga takes and that goes up while
+   the message box is open, which reaches the program the next time; and
+   the text that a program copies to the clipboard (OSC 52), which only
+   changes it while the window is in the foreground.
 2. Mouse events. The script asks the console for the mouse, as the programs
    for Windows do, and writes the mouse events that it reads. The check
    moves the mouse, clicks, turns the wheel and drags; and drags with Shift,
    which selects text instead.
 3. Terminal input. The script reads its input as a terminal sends it, as
    the programs of WSL do, and asks for the mouse in SGR. The check clicks;
-   the script asks for the format of the first xterm, and the check clicks
-   again; the script turns the alternate screen on, without the mouse, and
-   the check turns the wheel, which sends arrows; and the script asks for
-   bracketed paste, and the check pastes more than one line.
+   it presses the left button, and the window loses the mouse, to another
+   window or to a message box, before the button goes up, which sends the
+   release then; the script asks for the format of the first xterm, and the
+   check clicks again; the script turns the alternate screen on, without
+   the mouse, and the check turns the wheel, which sends arrows; and the
+   script asks for bracketed paste, and the check pastes more than one
+   line.
 
 Each time, it checks that meiga.exe ends with exit code 0 when its window
 closes.
@@ -224,6 +228,7 @@ $WM_LBUTTONUP = 0x0202
 $WM_RBUTTONDOWN = 0x0204
 $WM_RBUTTONUP = 0x0205
 $WM_MOUSEWHEEL = 0x020A
+$WM_CAPTURECHANGED = 0x0215
 $MK_LBUTTON = 0x0001
 $MK_RBUTTON = 0x0002
 $MK_SHIFT = 0x0004
@@ -479,27 +484,40 @@ function Send-Wheel([int]$Column, [int]$Row, [int]$Notches) {
     Send-Messages @($WM_MOUSEWHEEL, $turn, (($point.X -band 0xFFFF) -bor (($point.Y -band 0xFFFF) -shl 16)))
 }
 
-# Types a key, such as "Ctrl+Shift+V": sets its modifier keys down, and posts
-# the messages of the key going down and up. With -Keep, the modifier keys
-# stay as they are. The key state is the one of the thread of the window, so
-# a key must reach it before the next one changes the state: see
+# Sets down the modifier keys of $Modifiers, such as "Ctrl" and "Shift", and
+# no other key. The key state is the one of the thread of the window, so a
+# key must reach it before the next one changes the state: see
 # Connect-Keyboard.
-function Send-Key([string]$Key, [switch]$Keep) {
-    $parts = $Key -split '\+'
-    $code = [int][ConsoleKey]$parts[-1]
-    if (-not $Keep) {
-        $state = [byte[]]::new(256)
-        foreach ($modifier in @($parts | Select-Object -SkipLast 1)) {
-            foreach ($down in $modifierKeys[$modifier]) { $state[$down] = 0x80 }
-        }
-        if (-not $api::SetKeyboardState($state)) {
-            throw "SetKeyboardState failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
-        }
+function Set-Modifiers([string[]]$Modifiers) {
+    $state = [byte[]]::new(256)
+    foreach ($modifier in @($Modifiers)) {
+        foreach ($down in $modifierKeys[$modifier]) { $state[$down] = 0x80 }
     }
+    if (-not $api::SetKeyboardState($state)) {
+        throw "SetKeyboardState failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+}
+
+# The message of a key, such as "V", going down, or up with -Up: the
+# message, its wParam and its lParam.
+function Get-Key([string]$Key, [switch]$Up) {
+    $code = [int][ConsoleKey]$Key
     $scan = $api::MapVirtualKeyExW($code, $MAPVK_VK_TO_VSC, $api::GetKeyboardLayout($thread))
     [long]$bits = 1 -bor ($scan -shl 16)
     # Going up: the key was down (bit 30), and goes up (bit 31).
-    Send-Messages @($WM_KEYDOWN, $code, $bits, $WM_KEYUP, $code, ($bits -bor 0xC0000000L))
+    if ($Up) { $WM_KEYUP, $code, ($bits -bor 0xC0000000L) }
+    else { $WM_KEYDOWN, $code, $bits }
+}
+
+# Types a key, such as "Ctrl+Shift+V": sets its modifier keys down, and posts
+# the messages of the key going down and up. With -Keep, the modifier keys
+# stay as they are.
+function Send-Key([string]$Key, [switch]$Keep) {
+    $parts = $Key -split '\+'
+    if (-not $Keep) {
+        Set-Modifiers @($parts | Select-Object -SkipLast 1)
+    }
+    Send-Messages @((Get-Key $parts[-1]) + (Get-Key $parts[-1] -Up))
 }
 
 # Does $Action, which types or pastes in the script, and then types Z with
@@ -545,9 +563,14 @@ function Get-Dialog {
     else { [IntPtr]::Zero }
 }
 
-# Waits for the message box that asks before pasting, and presses $Button.
-function Close-Dialog([int]$Button) {
+# Waits for the message box that asks before pasting, posts $Messages to the
+# window while it is open, and presses $Button. The window does not get
+# those messages: meiga is busy with the message box.
+function Close-Dialog([int]$Button, [long[]]$Messages = @()) {
     Wait-For { (Get-Dialog) -ne [IntPtr]::Zero } { "$exe did not ask before pasting more than one line." }
+    if ($Messages.Count -gt 0) {
+        Send-Messages $Messages
+    }
     if (-not $api::PostMessageW((Get-Dialog), $WM_COMMAND, [UIntPtr]::new([uint64]$Button), [IntPtr]::Zero)) {
         throw "PostMessageW failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
     }
@@ -654,21 +677,21 @@ try {
     Write-Host "The grid has $($grid.Columns) x $($grid.Rows) cells of $($cell.Width) x $($cell.Height) pixels."
 
     Set-Text 'meiga-check'
-    $focused = $api::GetForegroundWindow() -eq $window
+    $foreground = $api::GetForegroundWindow() -eq $window
     Connect-Keyboard
     Send-Key 'Q'
     Wait-Title 'meiga-mouse-osc52'
-    if ($focused) {
+    if ($foreground) {
         Wait-Clipboard "OSC 52 `u{2713}" 'A program copied text to the clipboard (OSC 52)'
-        Write-Host 'OK: a program copies text to the clipboard (OSC 52) while the window has the focus.'
+        Write-Host 'OK: a program copies text to the clipboard (OSC 52) while the window is in the foreground.'
     }
     else {
         # meiga read the text to copy before the title.
         Start-Sleep -Milliseconds 300
         if ((Get-Text) -cne 'meiga-check') {
-            throw "A program copied text to the clipboard (OSC 52) while the window did not have the focus: '$(Get-Text)'."
+            throw "A program copied text to the clipboard (OSC 52) while the window was not in the foreground: '$(Get-Text)'."
         }
-        Write-Host 'OK: a program does not copy text to the clipboard (OSC 52) while the window does not have the focus.'
+        Write-Host 'OK: a program does not copy text to the clipboard (OSC 52) while the window is not in the foreground.'
     }
 
     Send-Click 15 0 -Times 2
@@ -744,6 +767,22 @@ try {
         throw "Ctrl+V, cancelled, and Ctrl+Shift+V pasted '$(Show-Text $typed)' instead of 'un\rdous'."
     }
     Write-Host 'OK: Ctrl+V and Ctrl+Shift+V ask before pasting more than one line: Cancel pastes nothing, and OK pastes each line with Enter.'
+
+    # Ctrl+C copies two lines and meiga takes the C; then, with the C still
+    # down, Ctrl+V asks before pasting them, and the C goes up while the
+    # message box is open.
+    Send-Drag 4 0 4 1
+    Wait-Clipboard ("mundo C:\x\f.rs:12:5 (ok, si)`r`n" + $line.Substring(0, 5)) 'Dragging to the next row'
+    $read = @(Read-Keys {
+            Set-Modifiers 'Ctrl'
+            Send-Messages @((Get-Key 'C') + (Get-Key 'V'))
+            Close-Dialog $IDCANCEL -Messages @((Get-Key 'C' -Up) + (Get-Key 'V' -Up))
+            Send-Key 'C'
+        })
+    if (($read -join ' | ') -cne 'U+0063 C 0') {
+        throw "After Ctrl+C, and Ctrl+V with the C still down, a C reached the program as: $($read -join ' | ')."
+    }
+    Write-Host 'OK: a key that meiga takes, and that goes up while a message box is open, reaches the program the next time.'
     Stop-Meiga
 
     # 2. The mouse events of a program for Windows.
@@ -785,6 +824,27 @@ try {
     $start = @(Get-Lines).Count
     Send-Click 4 2
     Wait-Input $start "`e[<0;5;3M`e[<0;5;3m" 'A click in SGR'
+
+    # The left button goes down, and another window takes the mouse before
+    # it goes up. Then, a message box does: the button goes up while it is
+    # open. The Z goes after what meiga sends.
+    $start = @(Get-Lines).Count
+    Send-Messages @(
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON (Get-X 4) (Get-Y 2)
+        $WM_CAPTURECHANGED, 0, 0
+        Get-Mouse $WM_LBUTTONUP 0 (Get-X 6) (Get-Y 2)
+    )
+    Send-Key 'Z'
+    Wait-Input $start "`e[<0;5;3M`e[<0;5;3mz" 'A press, and another window that takes the mouse before the button goes up'
+    Set-Text "un`r`ndous"
+    $start = @(Get-Lines).Count
+    Send-Messages (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON (Get-X 4) (Get-Y 2))
+    Send-Key 'Ctrl+V'
+    Close-Dialog $IDCANCEL -Messages (Get-Mouse $WM_LBUTTONUP 0 (Get-X 6) (Get-Y 2))
+    Send-Key 'Z'
+    Wait-Input $start "`e[<0;5;3M`e[<0;5;3mz" 'A press, and a message box that opens before the button goes up'
+    Write-Host 'OK: if the window loses the mouse while a button is down, to another window or to a message box, the program gets the release then, once.'
+
     Send-Key 'X'
     Wait-Title 'meiga-mouse-x10'
     $start = @(Get-Lines).Count

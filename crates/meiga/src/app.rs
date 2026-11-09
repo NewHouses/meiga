@@ -134,6 +134,9 @@ impl App {
     /// Does what the view asks after a key or a mouse event.
     fn respond(&mut self, window: &Window, response: Response) -> Result<(), HandlerError> {
         if response.dialog {
+            if let Content::Terminal(view) = &mut self.content {
+                view.dialog_closed(window);
+            }
             // While the message box was open, the window lost its wakes, and
             // maybe some paint: what changed meanwhile is shown now.
             window.invalidate(None);
