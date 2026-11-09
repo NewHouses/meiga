@@ -5,11 +5,12 @@
 use std::error::Error as StdError;
 
 use meiga_core::geometry::{Point, Rect, Size};
+use meiga_core::input::KeyEvent;
 use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::HDC;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    SIZE_MINIMIZED, WM_APP, WM_CAPTURECHANGED, WM_KEYDOWN, WM_KILLFOCUS, WM_LBUTTONDOWN,
-    WM_LBUTTONUP, WM_MOUSEMOVE, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
+    SIZE_MINIMIZED, WM_APP, WM_CAPTURECHANGED, WM_KILLFOCUS, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_MOUSEMOVE, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
 };
 
 use crate::window::Window;
@@ -22,10 +23,6 @@ pub(crate) const WM_WAKE: u32 = WM_APP;
 /// the `Win32_System_SystemServices` feature of `windows-sys`, which would
 /// bring thousands of declarations for this one constant.
 const MK_LBUTTON: WPARAM = 0x0001;
-
-/// The bit of the `lParam` of `WM_KEYDOWN` that is set when the key was
-/// already down: the keyboard repeats it while it is held.
-const KEY_WAS_DOWN: LPARAM = 1 << 30;
 
 /// An error from the code that handles the events. It ends the message loop.
 pub type HandlerError = Box<dyn StdError>;
@@ -79,12 +76,10 @@ pub enum Event {
     /// ([`Window::capture_mouse`]), for example because another window took
     /// it.
     CaptureLost,
-    /// A key was pressed. `repeat` is set when the keyboard repeats a key
-    /// that is held down.
-    KeyDown {
-        key: Key,
-        repeat: bool,
-    },
+    /// A key went down or up, with the character that it writes, if any.
+    /// Alt+F4 and Alt+Space never come as events: Windows handles them, to
+    /// close the window and to open its menu.
+    Key(KeyEvent),
     /// The window gained or lost the keyboard focus.
     Focus {
         focused: bool,
@@ -102,16 +97,9 @@ pub enum MouseButton {
     Right,
 }
 
-/// A key, as a Windows virtual-key code.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Key(pub u16);
-
-impl Key {
-    pub const ESCAPE: Key = Key(0x1b);
-    pub const P: Key = Key(0x50);
-}
-
-/// The event of a window message, or `None` if it is not one of them.
+/// The event of a window message, or `None` if it is not one of them. The
+/// keyboard messages are not: they become events in the window, which asks
+/// Windows more about them.
 pub(crate) fn decode(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<Event> {
     let at = || point(lparam);
     Some(match message {
@@ -140,11 +128,6 @@ pub(crate) fn decode(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<Eve
             left_down: wparam & MK_LBUTTON != 0,
         },
         WM_CAPTURECHANGED => Event::CaptureLost,
-        WM_KEYDOWN => Event::KeyDown {
-            // The virtual-key code is in the low 16 bits.
-            key: Key(wparam as u16),
-            repeat: lparam & KEY_WAS_DOWN != 0,
-        },
         WM_SETFOCUS => Event::Focus { focused: true },
         WM_KILLFOCUS => Event::Focus { focused: false },
         WM_WAKE => Event::Wake,
@@ -218,24 +201,6 @@ mod tests {
             Some(Event::MouseMoved {
                 at: Point::new(10, 20),
                 left_down: true
-            })
-        );
-    }
-
-    #[test]
-    fn keys_tell_when_they_repeat() {
-        assert_eq!(
-            decode(WM_KEYDOWN, 0x50, 1),
-            Some(Event::KeyDown {
-                key: Key::P,
-                repeat: false
-            })
-        );
-        assert_eq!(
-            decode(WM_KEYDOWN, 0x1b, 1 | KEY_WAS_DOWN),
-            Some(Event::KeyDown {
-                key: Key::ESCAPE,
-                repeat: true
             })
         );
     }

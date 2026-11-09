@@ -7,6 +7,7 @@
 pub mod conpty;
 mod error;
 pub mod event;
+mod keyboard;
 pub mod window;
 
 pub use error::Error;

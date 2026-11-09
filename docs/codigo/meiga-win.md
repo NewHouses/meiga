@@ -1,6 +1,6 @@
 # Código › `meiga-win`
 
-> Estado: subfase 1.6. Contén a xanela, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, o DPI e o título da xanela, o aviso que a esperta desde outro fío, os axustes do cursor de Windows, as sesións de ConPTY, cun exemplo que as mostra e as grava, e o tipo dos erros de Windows.
+> Estado: subfase 1.7. Contén a xanela, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o DPI e o título da xanela, o aviso que a esperta desde outro fío, os axustes do cursor de Windows, as sesións de ConPTY, cun exemplo que as mostra e as grava, e o tipo dos erros de Windows.
 
 **Responsabilidade:** a capa de plataforma. Envolve todo o que é específico de Windows: ConPTY, a detección das shells instaladas, o sistema de arquivos, o portapapeis, a xanela Win32 e a xestión do DPI. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -10,12 +10,13 @@
 | [`src/lib.rs`](#cratesmeiga-winsrclibrs) | A raíz do crate: os módulos, os tipos que se publican e a conversión dos textos a UTF-16. |
 | [`src/error.rs`](#cratesmeiga-winsrcerrorrs) | `Error`: unha chamada a Windows que fallou, e o erro que deu. |
 | [`src/event.rs`](#cratesmeiga-winsrceventrs) | Os eventos da xanela e o *trait* `Handler`, que os recibe. |
+| [`src/keyboard.rs`](#cratesmeiga-winsrckeyboardrs) | O teclado da xanela: as mensaxes das teclas e dos seus caracteres, xuntas en eventos de tecla, e as que son para Windows. |
 | [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o seu DPI e o seu título, o bucle de mensaxes, o temporizador dos fotogramas, o `Waker` que a esperta desde outro fío, os axustes do cursor de Windows e a mensaxe de erro. |
 | [`src/conpty.rs`](#cratesmeiga-winsrcconptyrs) | As sesións: un programa nunha pseudoconsola, cos seus fíos lector e escritor, e a súa entrada, que se pode usar desde calquera fío. |
 | [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) | Probas de integración: programas de verdade nos dous ConPTY. |
 | [`examples/conpty.rs`](#cratesmeiga-winexamplesconptyrs) | Un programa de consola que mostra o que escribe un programa nunha pseudoconsola, e envíalle o que se teclea. |
 
-Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); e o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos).
+Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); e o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos).
 
 ## `crates/meiga-win/Cargo.toml`
 
@@ -76,12 +77,12 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 | `Win32_System_Pipes` | As tubaxes. | `CreatePipe`, desde a 1.4. |
 | `Win32_System_Threading` | Fíos, procesos e obxectos de sincronización. | O temporizador: `CreateWaitableTimerExW`, `SetWaitableTimer`, `CancelWaitableTimer` e `INFINITE`. Desde a 1.4, tamén os procesos e os eventos: `CreateProcessW`, `STARTUPINFOEXW`, a lista de atributos e os seus dous atributos, `OpenProcess` e `PROCESS_SYNCHRONIZE`, `CreateEventW`, `SetEvent`, as esperas e `GetExitCodeProcess`. A estrutura dos límites estendidos dos *jobs* tamén a necesita, porque leva uns `IO_COUNTERS`. |
 | `Win32_UI_HiDpi` | A escala e o DPI. | `GetDpiForWindow`, desde a subfase 1.3. |
-| `Win32_UI_Input_KeyboardAndMouse` | O teclado e o rato. | `SetCapture`, `GetCapture` e `ReleaseCapture`. |
+| `Win32_UI_Input_KeyboardAndMouse` | O teclado e o rato. | `SetCapture`, `GetCapture` e `ReleaseCapture` e, desde a subfase 1.7, o teclado: `GetKeyboardState`, `ToUnicodeEx`, `GetKeyboardLayout`, `MapVirtualKeyW` e os códigos de tecla virtual (`VK_…`). |
 | `Win32_UI_WindowsAndMessaging` | As xanelas, as mensaxes, os temporizadores das xanelas, os cursores e as caixas de mensaxe. | O resto. |
 
 Unha constante, `MK_LBUTTON`, defínese no propio código en vez de activar a súa *feature*, `Win32_System_SystemServices`, que traería milleiros de declaracións por un único número (ver [`event.rs`](#cratesmeiga-winsrceventrs)). O tipo `HRESULT` está en `windows_sys::core`, que non necesita ningunha *feature*.
 
-A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`.
+A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`.
 
 ## `crates/meiga-win/src/lib.rs`
 
@@ -95,6 +96,7 @@ A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowT
 pub mod conpty;
 mod error;
 pub mod event;
+mod keyboard;
 pub mod window;
 
 pub use error::Error;
@@ -115,6 +117,7 @@ pub(crate) fn wide(text: &str) -> Vec<u16> {
 - `mod error;` declara o módulo `error` (`src/error.rs`) sen `pub`: é privado.
 - `pub use error::Error;` publica o tipo `Error` na raíz do crate. Os outros crates escriben `meiga_win::Error`, e non `meiga_win::error::Error`: o módulo só contén ese tipo, e non achega nada ao nome.
 - `pub mod conpty;`, `pub mod event;` e `pub mod window;` declaran os tres módulos públicos: `meiga_win::conpty::Conpty`, `meiga_win::event::Event`, `meiga_win::window::Window`. `conpty` existe desde a subfase 1.4.
+- `mod keyboard;`, desde a subfase 1.7, é privado coma `error`: só o usa a xanela, e os outros crates reciben as teclas coma eventos.
 - **`HWND` e `HDC`.** O programa (`meiga`) recibe destes tipos de `meiga-win` e pásaos a `meiga-render`, que presenta o *framebuffer* na xanela. Publicalos eiquí permite que o programa os nomee sen depender de `windows-sys`. En `windows-sys`, os dous son o mesmo tipo, `*mut c_void`, un punteiro sen tipo: copialos é seguro, e só os usan as funcións de Windows, sempre dentro dos crates que teñen `unsafe`. Por iso o programa segue con `#![forbid(unsafe_code)]`.
 - **`wide`.** As funcións de Windows que rematan en `W` (de *wide*) usan textos en UTF-16 rematados nun 0, como en C. Os textos de Rust son UTF-8 e levan a súa lonxitude, sen 0 ao final. `encode_utf16()` dá as unidades UTF-16 do texto, `.chain(Some(0))` engade o 0 ao final e `collect()` xúntaas nun `Vec<u16>`. Quen chama ten que manter o vector vivo mentres Windows usa o punteiro (`as_ptr()`). Ata a subfase 1.3 estaba en `window.rs`; desde a 1.4 está eiquí, porque tamén a usa `conpty.rs`. Con `pub(crate)`, véna todos os módulos do crate, pero non os outros crates.
 
@@ -242,7 +245,7 @@ pub trait Handler {
 - `HandlerError` é un **alias**, outro nome para un tipo: `Box<dyn StdError>`, calquera erro nunha caixa. `dyn StdError` significa «un valor de calquera tipo que implemente `std::error::Error`», e a caixa (`Box`) gárdao na memoria dinámica, porque cada tipo de erro ten un tamaño distinto. Así, o *handler* pode devolver erros de `meiga-win`, de `meiga-render` ou de entrada e saída, e `?` convérteos solos.
 - **Unha regra importante**, na documentación do *trait*: o *handler* non pode chamar a funcións que envían unha mensaxe á xanela e agardan a resposta, como `SetWindowPos`. A xanela chamaría ao *handler* de novo antes de que remate a primeira chamada, e Rust non permite dúas referencias `&mut` ao mesmo valor á vez; ese evento perderíase (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). [`set_title`](#windowset_title) si se pode chamar, porque a mensaxe que envía non chega ao *handler*.
 
-### `Event`, `MouseButton` e `Key`
+### `Event` e `MouseButton`
 
 ```rust
 pub enum Event {
@@ -253,7 +256,7 @@ pub enum Event {
     MouseUp { button: MouseButton, at: Point },
     MouseMoved { at: Point, left_down: bool },
     CaptureLost,
-    KeyDown { key: Key, repeat: bool },
+    Key(KeyEvent),
     Focus { focused: bool },
     FrameTimer,
     Wake,
@@ -262,13 +265,6 @@ pub enum Event {
 pub enum MouseButton {
     Left,
     Right,
-}
-
-pub struct Key(pub u16);
-
-impl Key {
-    pub const ESCAPE: Key = Key(0x1b);
-    pub const P: Key = Key(0x50);
 }
 ```
 
@@ -281,14 +277,14 @@ Un `enum` de Rust é un tipo que pode ser **unha** de varias variantes, e cada v
 | `MouseDown` e `MouseUp` | `WM_LBUTTONDOWN`, `WM_LBUTTONUP`, `WM_RBUTTONDOWN` e `WM_RBUTTONUP` | Premer e soltar o botón esquerdo ou o dereito. |
 | `MouseMoved` | `WM_MOUSEMOVE` | O rato moveuse; `left_down` di se o botón esquerdo está premido. |
 | `CaptureLost` | `WM_CAPTURECHANGED` | A xanela deixa de recibir todo o rato (ver [`capture_mouse`](#o-rato-e-o-repintado)), por exemplo porque outra xanela o colleu. |
-| `KeyDown` | `WM_KEYDOWN` | Premeuse unha tecla; `repeat` indica que é a repetición automática dunha tecla que segue premida. |
+| `Key` | `WM_KEYDOWN`, `WM_KEYUP`, `WM_SYSKEYDOWN`, `WM_SYSKEYUP` e as mensaxes dos caracteres | Desde a subfase 1.7. Unha tecla baixou ou subiu, co carácter que escribe, se escribe algún: un [`KeyEvent`](meiga-core.md#keyevent), coma os da consola de Windows. Non os dá `decode`, senón o [teclado da xanela](#cratesmeiga-winsrckeyboardrs). Alt+F4 e Alt+Espazo nunca chegan coma eventos: trátaos Windows, que pecha a xanela e abre o seu menú. |
 | `Focus` | `WM_SETFOCUS` e `WM_KILLFOCUS` | Desde a subfase 1.6. A xanela gañou o foco do teclado (`focused: true`) ou perdeuno (`false`): por exemplo, ao facer clic nela ou noutra xanela, ou con Alt+Tab. |
 | `FrameTimer` | — | Venceu o temporizador dos fotogramas (ver [o temporizador](#o-temporizador-dos-fotogramas)). |
 | `Wake` | `WM_WAKE` | Desde a 1.6. Outro fío espertou a xanela co seu [`Waker`](#windowwaker-e-waker). |
 
-- `Key` garda un **código de tecla virtual** de Windows (*virtual-key code*), o número que identifica unha tecla física: `0x1B` é Esc e `0x50`, a P. É un `struct` cun único campo (`Key(pub u16)`), un ***newtype***: un tipo novo para un número, que impide confundilo con calquera outro `u16`. Polo de agora só hai dúas teclas: a P, coa que o programa mostra ou oculta as marcas dos fotogramas, e Esc, que usaba a demo ata a subfase 1.6 e agora só usan as probas. O teclado completo chega na subfase 1.7.
+- **`Key`** leva un [`KeyEvent`](meiga-core.md#keyevent) de `meiga-core`: a tecla, onde está no teclado, o seu carácter, se baixou ou subiu, as teclas modificadoras e as repeticións. Ata a subfase 1.6, o evento era `KeyDown`, só co código de tecla virtual e se se repetía, e o programa só usaba a P, para as marcas dos fotogramas. Desde a 1.7, todas as teclas van ao programa do terminal, e as marcas actívanse coa opción `--marks` ([Código › meiga › `options.rs`](meiga.md#cratesmeigasrcoptionsrs)).
 - Os tipos derivan `Clone`, `Copy`, `Debug`, `PartialEq` e `Eq`: son pequenos, cópianse ao pasalos, móstranse nas mensaxes de diagnóstico e compáranse nas probas.
-- **O foco.** O programa úsao para o cursor do terminal, coma o Windows Terminal: só pestanexa coa xanela enfocada, e sen o foco é un rectángulo baleiro. Ao recuperalo, volta ler os [axustes do cursor](#caretsettings-e-caret_settings), que poden cambiar mentres meiga corre ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela), [Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a subfase 1.7, tamén lle avisará ao programa da sesión, se o pide (`ESC [ ? 1004 h`).
+- **O foco.** O programa úsao para o cursor do terminal, coma o Windows Terminal: só pestanexa coa xanela enfocada, e sen o foco é un rectángulo baleiro. Ao recuperalo, volta ler os [axustes do cursor](#caretsettings-e-caret_settings), que poden cambiar mentres meiga corre ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela), [Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a subfase 1.7, tamén lle avisa ao programa da sesión, se o pediu (`ESC [ ? 1004 h`).
 - **`Wake` non leva datos.** Só di «mira o que cambiou»: o que cambiou gárdao quen avisa nun lugar que comparte co *handler*, baixo un *lock*. No programa, o fío lector da sesión garda así se cambiaron a pantalla ou o título ([Código › meiga](meiga.md#cratesmeigasrcsessionrs)). Deste xeito, moitos cambios seguidos caben nun só aviso, e o evento segue sendo pequeno e `Copy`, coma os outros.
 
 ### `decode`
@@ -308,10 +304,6 @@ pub(crate) fn decode(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<Eve
             left_down: wparam & MK_LBUTTON != 0,
         },
         WM_CAPTURECHANGED => Event::CaptureLost,
-        WM_KEYDOWN => Event::KeyDown {
-            key: Key(wparam as u16),
-            repeat: lparam & KEY_WAS_DOWN != 0,
-        },
         WM_SETFOCUS => Event::Focus { focused: true },
         WM_KILLFOCUS => Event::Focus { focused: false },
         WM_WAKE => Event::Wake,
@@ -320,7 +312,7 @@ pub(crate) fn decode(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<Eve
 }
 ```
 
-Traduce unha mensaxe ao seu evento, ou devolve `None` se non é ningunha destas. É unha función pura, sen ningunha chamada a Windows, e por iso ten probas.
+Traduce unha mensaxe ao seu evento, ou devolve `None` se non é ningunha destas. É unha función pura, sen ningunha chamada a Windows, e por iso ten probas. As mensaxes do teclado non pasan por eiquí desde a subfase 1.7: o seu evento necesita saber máis cousas, que lle pregunta a Windows o [teclado da xanela](#cratesmeiga-winsrckeyboardrs).
 
 - Cada mensaxe leva os seus datos en dous números, `wParam` e `lParam`, de 64 bits. Que significa cada bit depende da mensaxe:
 
@@ -328,13 +320,12 @@ Traduce unha mensaxe ao seu evento, ou devolve `None` se non é ningunha destas.
 |---|---|---|
 | `WM_SIZE` | O tipo de cambio: `SIZE_MINIMIZED` (1) se se minimizou. | O ancho nos 16 bits baixos e o alto nos 16 seguintes. |
 | Rato | Os botóns e teclas premidos: o bit `MK_LBUTTON` (1) é o botón esquerdo. | A *x* nos 16 bits baixos e a *y* nos 16 seguintes, **con signo**. |
-| `WM_KEYDOWN` | O código de tecla virtual. | Detalles da pulsación; o bit 30 (`KEY_WAS_DOWN`) indica que a tecla xa estaba premida. |
 
 - As mensaxes do foco e `WM_WAKE` non necesitan os seus datos. En `WM_SETFOCUS` e `WM_KILLFOCUS`, `wParam` é a outra xanela, a que perde ou a que recibe o foco, e meiga non o usa; e o [`Waker`](#windowwaker-e-waker) envía `WM_WAKE` con 0 e 0.
 - `low_word` e `high_word` collen os 16 bits baixos (`value as u16`) e os 16 seguintes (`(value >> 16) as u16`). `as` en Rust trunca: quedan os bits baixos.
 - **As coordenadas con signo.** Mentres a xanela ten o rato capturado, recibe tamén os movementos fóra dela: á esquerda ou por riba, as coordenadas son negativas. `point` convérteas primeiro a `i16`, que interpreta os 16 bits como un número con signo (`0xFFFD` é -3), e despois a `i32`.
 - `let at = || point(lparam);` é un ***closure***, unha función pequena sen nome que usa as variábeis de onde se define. Só se chama nas mensaxes do rato.
-- `MK_LBUTTON` e `KEY_WAS_DOWN` son constantes do propio módulo. `MK_LBUTTON` está na *feature* `Win32_System_SystemServices` de `windows-sys`, que traería milleiros de declaracións por un único número.
+- `MK_LBUTTON` é unha constante do propio módulo: en `windows-sys` está na *feature* `Win32_System_SystemServices`, que traería milleiros de declaracións por un único número.
 
 ### `WM_WAKE`
 
@@ -358,19 +349,471 @@ Desde a subfase 1.6. A mensaxe que publica o [`Waker`](#windowwaker-e-waker) par
 
 ### Probas
 
-Cinco probas de `decode` con mensaxes construídas a man:
+Catro probas de `decode` con mensaxes construídas a man:
 
 | Proba | Que comproba |
 |---|---|
 | `size_comes_from_the_two_words_of_lparam` | O ancho e o alto de `WM_SIZE`, e que `SIZE_MINIMIZED` dá `minimized: true`. |
 | `mouse_coordinates_can_be_negative` | As coordenadas negativas (-3, -20) e o botón esquerdo de `WM_MOUSEMOVE`. |
-| `keys_tell_when_they_repeat` | O código da tecla e o bit da repetición. |
 | `focus_and_wake_messages_are_events` | Desde a subfase 1.6. `WM_SETFOCUS` dá `Focus { focused: true }`, `WM_KILLFOCUS` dá `Focus { focused: false }` e `WM_WAKE` dá `Wake`. |
 | `other_messages_are_not_events` | Unha mensaxe calquera (`0x0400`, `WM_USER`) dá `None`, e desde a 1.6 tamén a seguinte a `WM_WAKE`: dos números do programa, só `WM_WAKE` é un evento. |
 
+A quinta, `keys_tell_when_they_repeat`, que comprobaba `KeyDown`, desapareceu con ese evento na subfase 1.7: as probas do teclado están en [`keyboard.rs`](#probas-do-teclado).
+
+## `crates/meiga-win/src/keyboard.rs`
+
+Desde a subfase 1.7. O **teclado da xanela**: xunta as mensaxes das teclas e dos seus caracteres en eventos de tecla enteiros, coma os que le un programa da consola de Windows ([ADR 0014](../adr/0014-o-teclado.md), [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)). O programa convérteos despois no que le a sesión ([Código › meiga-core › `input.rs`](meiga-core.md#cratesmeiga-coresrcinputrs)). É un módulo privado: só o usa o [*window procedure*](#window_proc), que lle pasa as mensaxes do teclado e envía ao *handler* os eventos que dá. Os fragmentos de código levan os comentarios `// SAFETY:`, porque explican as opcións das funcións de Windows.
+
+**Por que hai que xuntar dúas mensaxes.** Un evento da consola leva a tecla e o carácter que escribe, pero Windows dáos en mensaxes distintas: `WM_KEYDOWN`, coa tecla, e despois o `WM_CHAR` que publica `TranslateMessage`, co carácter. O evento dunha tecla que escribe algo espera polo seu carácter:
+
+```mermaid
+sequenceDiagram
+    participant S as Windows
+    participant L as bucle de mensaxes
+    participant K as Keyboard
+    participant H as handler (App)
+    S->>L: WM_KEYDOWN da A
+    L->>S: TranslateMessage: publica WM_CHAR 'a'
+    L->>K: DispatchMessageW → window_proc → message
+    K->>S: PeekMessageW (PM_NOREMOVE): hai un carácter na cola?
+    Note over K: si: o evento da A espera
+    S->>L: WM_CHAR 'a'
+    L->>K: DispatchMessageW → window_proc → message
+    K->>H: Event::Key: A, 'a', baixa
+    S->>L: WM_KEYUP da A
+    L->>K: DispatchMessageW → window_proc → message
+    K->>S: ToUnicodeEx: que escribe a A?
+    K->>H: Event::Key: A, 'a', sobe
+```
+
+### `is_keyboard_message` e `Destination`
+
+```rust
+pub(crate) const fn is_keyboard_message(message: u32) -> bool {
+    matches!(
+        message,
+        WM_KEYDOWN
+            | WM_KEYUP
+            | WM_SYSKEYDOWN
+            | WM_SYSKEYUP
+            | WM_CHAR
+            | WM_DEADCHAR
+            | WM_SYSCHAR
+            | WM_SYSDEADCHAR
+    )
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Destination {
+    Program,
+    Windows,
+}
+```
+
+- **`is_keyboard_message`** di se unha mensaxe é do teclado: as oito que trata este módulo. `matches!` compara un valor cun patrón, eiquí varias constantes separadas por `|`.
+- **`Destination`** di quen trata a mensaxe. `Program`: o programa, aínda que o evento chegue máis tarde, ou non chegue. `Windows`: o *window procedure* pásalla a `DefWindowProcW`, que pecha a xanela con Alt+F4 e abre o seu menú con Alt+Espazo. As outras teclas do sistema, coma Alt só ou F10, van ao programa, e Windows non as ve: non entran no modo do menú ([ADR 0014](../adr/0014-o-teclado.md)).
+
+### `Keyboard` e `Waiting`
+
+```rust
+#[derive(Default)]
+pub(crate) struct Keyboard {
+    waiting: Cell<Option<Waiting>>,
+}
+
+#[derive(Clone, Copy)]
+struct Waiting {
+    event: KeyEvent,
+    system: bool,
+}
+```
+
+- **`waiting`** é o evento dunha tecla que espera polo seu carácter, se o hai. Nunca hai máis dun: a mensaxe seguinte, sexa o carácter ou outra tecla, despáchao.
+- **`system`** di en que mensaxes chega o carácter: `WM_SYSCHAR` e `WM_SYSDEADCHAR`, se Alt está premido, e `WM_CHAR` e `WM_DEADCHAR`, se non.
+- **`Cell`.** O *window procedure* só ten unha referencia compartida ao estado da xanela ([`State`](#state-e-installed-o-handler-dentro-do-window-procedure)), e `Cell` permite cambiar o seu contido a través dela: `take` saca o valor e deixa `None`, e `set` pon outro. Abonda con `Cell`, sen o `RefCell` do *handler*: o valor sácase e ponse enteiro, e nunca se presta o seu interior.
+
+### `message` e `handle`
+
+```rust
+pub(crate) fn message(
+    &self,
+    window: HWND,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    send: &mut dyn FnMut(KeyEvent),
+) -> Destination {
+    self.handle(&Windows(window), message, wparam, lparam, send)
+}
+
+fn handle(
+    &self,
+    system: &impl System,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    send: &mut dyn FnMut(KeyEvent),
+) -> Destination {
+    // The virtual-key code, or the UTF-16 unit of the character, is in
+    // the low 16 bits; the details of the key, in the low 32 bits.
+    let (value, bits) = (wparam as u16, KeyBits(lparam as u32));
+    match message {
+        WM_KEYDOWN | WM_KEYUP | WM_SYSKEYDOWN | WM_SYSKEYUP => {
+            self.key(system, message, value, bits, send)
+        }
+        _ => self.character(system, message, value, bits, send),
+    }
+}
+```
+
+- **`message`** é o que chama o *window procedure*. Cada mensaxe dá ningún evento, un ou dous, e van a `send`: o *window procedure* pásalle un *closure* que os envía ao *handler* coma `Event::Key`.
+- **`handle`** fai o traballo, e pregúntalle a Windows a través dun [`System`](#system-e-windows-o-que-se-lle-pregunta-a-windows): `message` dálle o de verdade, e as probas, un falso. `&impl System` acepta calquera tipo que implemente o *trait*, e o compilador crea unha copia da función para cada un, sen custo ao executar.
+- `wparam as u16` colle os 16 bits baixos, e `lparam as u32`, os 32 que teñen datos ([`KeyBits`](#keybits-e-keystate)).
+
+### `key`: unha tecla baixa ou sobe
+
+```rust
+fn key(
+    &self,
+    system: &impl System,
+    message: u32,
+    key: u16,
+    bits: KeyBits,
+    send: &mut dyn FnMut(KeyEvent),
+) -> Destination {
+    if let Some(waiting) = self.waiting.take() {
+        let character = system.take_character(waiting.system);
+        send(KeyEvent {
+            character,
+            ..waiting.event
+        });
+    }
+    let keys = system.key_state();
+    let controls = control_keys(&keys, bits.extended());
+    if matches!(message, WM_SYSKEYDOWN | WM_SYSKEYUP) && for_windows(key, controls) {
+        return Destination::Windows;
+    }
+    // The Windows keys are for the shortcuts of Windows, as in Windows
+    // Terminal, and the keys that an IME takes, for the IME.
+    if matches!(key, 0 | VK_LWIN | VK_RWIN | VK_PROCESSKEY) || key >= 0xff {
+        return Destination::Program;
+    }
+    let mut event = KeyEvent {
+        key,
+        scan: bits.scan(),
+        character: 0,
+        down: !bits.up(),
+        controls,
+        repeat: bits.repeat(),
+    };
+    // Of the keys that go up, only Alt writes a character: the one of
+    // the code typed with it on the numeric keypad. A character in the
+    // queue when another key goes up is of a key before it, such as the
+    // second one of a dead key that does not join, posted with the keys.
+    if (event.down || key == VK_MENU)
+        && let Some(system) = system.posted_character()
+    {
+        self.waiting.set(Some(Waiting { event, system }));
+        return Destination::Program;
+    }
+    // A key that goes up writes nothing, but its event says what it
+    // writes, as in Windows Terminal.
+    if !event.down {
+        event.character = system.character(key, event.scan, &keys);
+    }
+    send(event);
+    Destination::Program
+}
+```
+
+Paso a paso:
+
+1. **Se unha tecla espera polo seu carácter,** esta mensaxe chegou antes ca el. Pasa coas teclas que publica outro programa, coma `check-keyboard.ps1`: `TranslateMessage` deixa os caracteres despois das mensaxes que xa estaban na cola ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows), *Simular teclas*). O carácter da tecla que espera é o primeiro da cola: `take_character` sácao, e o seu evento vai antes ca o desta tecla.
+2. **As modificadoras** saen do estado das teclas de cando se publicou a mensaxe ([`control_keys`](#for_windows-e-control_keys)).
+3. **Alt+F4 e Alt+Espazo** son para Windows. Só chegan en `WM_SYSKEYDOWN` e `WM_SYSKEYUP`, as mensaxes das teclas con Alt.
+4. **As teclas que non van a ningures:** as de Windows (`VK_LWIN` e `VK_RWIN`), que xa usa o sistema para os seus atallos, coma no Windows Terminal; `VK_PROCESSKEY`, unha tecla que colleu un IME ([Tecnoloxías › O IME](../tecnoloxias.md#43-o-ime-e-o-panel-de-emoji)); e os códigos 0 e desde `0xFF`, que non son teclas.
+5. **O evento,** cos datos do `lParam`, aínda sen carácter.
+6. **Se hai un carácter na cola** e a tecla baixa, é o seu: o evento espera por el. Das teclas que soben só espera Alt (`VK_MENU`), que escribe o carácter do código que se tecleou con el no teclado numérico. Calquera outra tecla que sobe deixa na cola os caracteres que hai, que son das teclas de antes: por exemplo, o segundo de ´ e x, que non se xuntan, cando a X sobe antes de que cheguen os seus dous caracteres. Pasa coas teclas publicadas. A primeira versión facía esperar tamén a tecla que sobe, que levaba ese carácter, e a CI atopouno ([Subfases › 1.7](../subfases/1.7-teclado.md#resultados)).
+7. **Se non, o evento vai xa.** Unha tecla sen carácter, coma unha frecha, non espera. Ao subir, o evento leva o carácter que escribe a tecla, coma no Windows Terminal: pregúntaselle a Windows con [`character`](#system-e-windows-o-que-se-lle-pregunta-a-windows).
+
+- `..waiting.event` é a **sintaxe de actualización** dun `struct`: un `KeyEvent` cos campos que se escriben e, os demais, os de `waiting.event`.
+- `if (…) && let Some(system) = …` é unha ***let chain***, da edición 2024 de Rust: unha condición e un patrón no mesmo `if`. O corpo só se executa se se cumpren os dous, e `system` só existe dentro del. Clippy pídea en vez de dous `if` aniñados (`collapsible_if`).
+
+### `character`: o carácter dunha tecla
+
+```rust
+fn character(
+    &self,
+    system: &impl System,
+    message: u32,
+    unit: u16,
+    bits: KeyBits,
+    send: &mut dyn FnMut(KeyEvent),
+) -> Destination {
+    // The space of Alt+Space opens the menu of the window, as its key.
+    if message == WM_SYSCHAR && unit == u16::from(b' ') {
+        let controls = control_keys(&system.key_state(), bits.extended());
+        if for_windows(VK_SPACE, controls) {
+            return Destination::Windows;
+        }
+    }
+    // A dead key writes nothing yet: its character goes with the next
+    // key, as in the console of Windows.
+    let dead = matches!(message, WM_DEADCHAR | WM_SYSDEADCHAR);
+    let character = if dead { 0 } else { unit };
+    if let Some(waiting) = self.waiting.take() {
+        send(KeyEvent {
+            character,
+            ..waiting.event
+        });
+    } else if !dead {
+        // A character without a key waiting for it: the second one of a
+        // dead key and a key that do not join (´ and x write ´x), or one
+        // from an IME. The key comes from the scan code, if it has one.
+        let scan = bits.scan();
+        let key = if scan == 0 {
+            0
+        } else {
+            system.key_at(scan, bits.extended())
+        };
+        send(KeyEvent {
+            key,
+            scan,
+            character,
+            down: !bits.up(),
+            controls: control_keys(&system.key_state(), bits.extended()),
+            repeat: bits.repeat(),
+        });
+    }
+    Destination::Program
+}
+```
+
+- **O espazo de Alt+Espazo** vai a Windows, coma a súa tecla: con el, `DefWindowProcW` abre o menú da xanela.
+- **Unha tecla morta** non escribe nada aínda: o seu evento vai co carácter 0, e o carácter composto chega coa tecla seguinte, coma na consola de Windows. O seu `WM_DEADCHAR` sempre chega despois da tecla, que o espera; sen ela, non fai nada.
+- **Un carácter coa súa tecla esperando** completa o evento, que vai xa.
+- **Un carácter sen tecla** vai nun evento propio: o segundo de ´ e x, que escriben ´x, porque a X só espera polo primeiro; ou un do IME ou do panel de emoji, que chega sen ningunha tecla ([Tecnoloxías › O IME](../tecnoloxias.md#43-o-ime-e-o-panel-de-emoji)). A tecla sae do código de exploración do `lParam` ([`key_at`](#system-e-windows-o-que-se-lle-pregunta-a-windows)); os do IME, que non o teñen, van coa tecla 0.
+
+### `for_windows` e `control_keys`
+
+```rust
+fn for_windows(key: u16, controls: ControlKeys) -> bool {
+    controls.alt() && !controls.ctrl() && matches!(key, VK_F4 | VK_SPACE)
+}
+
+fn control_keys(keys: &KeyState, extended: bool) -> ControlKeys {
+    let mut controls = ControlKeys::empty();
+    for (key, control) in [
+        (VK_RMENU, ControlKeys::RIGHT_ALT),
+        (VK_LMENU, ControlKeys::LEFT_ALT),
+        (VK_RCONTROL, ControlKeys::RIGHT_CTRL),
+        (VK_LCONTROL, ControlKeys::LEFT_CTRL),
+        (VK_SHIFT, ControlKeys::SHIFT),
+    ] {
+        if keys.down(key) {
+            controls |= control;
+        }
+    }
+    for (key, control) in [
+        (VK_NUMLOCK, ControlKeys::NUM_LOCK),
+        (VK_SCROLL, ControlKeys::SCROLL_LOCK),
+        (VK_CAPITAL, ControlKeys::CAPS_LOCK),
+    ] {
+        if keys.toggled(key) {
+            controls |= control;
+        }
+    }
+    if extended {
+        controls |= ControlKeys::ENHANCED;
+    }
+    controls
+}
+```
+
+- **`for_windows`**: Alt+F4 e Alt+Espazo, coma no Windows Terminal. Con Ctrl, non: Ctrl e Alt son tamén AltGr ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)), e Ctrl+Alt+F4 vai ao programa.
+- **`control_keys`** converte o estado das teclas nos bits da consola. Windows garda as modificadoras de cada lado (`VK_LMENU` e `VK_RMENU`, `VK_LCONTROL` e `VK_RCONTROL`), e o evento di cal está premida; de Maiús abonda con saber se o está, coma na consola. Das teclas de bloqueo, mira se están activadas. AltGr dá o Ctrl esquerdo e o Alt dereito, coma o describe Windows.
+- Os pares nun *array* e o `for` evitan repetir oito veces o mesmo `if`.
+
+### `KeyBits` e `KeyState`
+
+```rust
+#[derive(Clone, Copy)]
+struct KeyBits(u32);
+
+impl KeyBits {
+    fn repeat(self) -> u16 {
+        (self.0 as u16).max(1)
+    }
+
+    fn scan(self) -> u16 {
+        ((self.0 >> 16) & 0xff) as u16
+    }
+
+    fn extended(self) -> bool {
+        self.0 & (1 << 24) != 0
+    }
+
+    fn up(self) -> bool {
+        self.0 & (1 << 31) != 0
+    }
+}
+
+struct KeyState([u8; 256]);
+
+impl KeyState {
+    fn down(&self, key: u16) -> bool {
+        self.0[usize::from(key & 0xff)] & 0x80 != 0
+    }
+
+    fn toggled(&self, key: u16) -> bool {
+        self.0[usize::from(key & 0xff)] & 0x01 != 0
+    }
+}
+```
+
+- **`KeyBits`** le o `lParam` dunha mensaxe de tecla ou de carácter ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)): as repeticións, nos bits 0–15, e polo menos 1; o código de exploración, nos 16–23; se a tecla é estendida, no 24; e se sobe, no 31. As mensaxes dos caracteres levan os da súa tecla.
+- **`KeyState`** son os 256 bytes de `GetKeyboardState`, un por código de tecla virtual: o bit alto (`0x80`), se a tecla está abaixo, e o baixo (`0x01`), se está activada. `key & 0xff` deixa o índice dentro do *array*, así que nunca falla.
+
+### `System` e `Windows`: o que se lle pregunta a Windows
+
+```rust
+trait System {
+    fn key_state(&self) -> KeyState;
+    fn posted_character(&self) -> Option<bool>;
+    fn take_character(&self, system: bool) -> u16;
+    fn character(&self, key: u16, scan: u16, keys: &KeyState) -> u16;
+    fn key_at(&self, scan: u16, extended: bool) -> u16;
+}
+
+const fn character_messages(system: bool) -> (u32, u32) {
+    if system {
+        (WM_SYSCHAR, WM_SYSDEADCHAR)
+    } else {
+        (WM_CHAR, WM_DEADCHAR)
+    }
+}
+```
+
+**`System`** son as cinco preguntas que o teclado lle fai a Windows:
+
+| Función | Que responde |
+|---|---|
+| `key_state` | O estado das teclas. |
+| `posted_character` | Se hai un carácter na cola: `Some(false)` en `WM_CHAR` ou `WM_DEADCHAR`, `Some(true)` en `WM_SYSCHAR` ou `WM_SYSDEADCHAR`, e `None` se non hai ningún. |
+| `take_character` | Saca da cola o primeiro carácter dun tipo ou do outro: a súa unidade UTF-16, ou 0 se é dunha tecla morta ou se non hai ningún. |
+| `character` | O que escribe unha tecla co estado das teclas, ou 0. |
+| `key_at` | A tecla dun código de exploración, ou 0. |
+
+- **`character_messages`** dá o rango das mensaxes dos caracteres, sen Alt ou con el. Cada par vai seguido, `WM_CHAR` (`0x0102`) e `WM_DEADCHAR` (`0x0103`), e `WM_SYSCHAR` (`0x0106`) e `WM_SYSDEADCHAR` (`0x0107`): o rango colle o carácter e a tecla morta, e ningunha outra mensaxe.
+
+```rust
+struct Windows(HWND);
+
+impl Windows {
+    fn peek(&self, (first, last): (u32, u32), remove: u32) -> Option<MSG> {
+        let mut message = MSG::default();
+        // SAFETY: `message` is a valid MSG for PeekMessageW to fill in. The
+        // range only has character messages, which are posted, not input.
+        let found = unsafe { PeekMessageW(&mut message, self.0, first, last, remove) } != 0;
+        found.then_some(message)
+    }
+}
+
+impl System for Windows {
+    fn key_state(&self) -> KeyState {
+        let mut keys = KeyState([0; 256]);
+        // SAFETY: GetKeyboardState fills in the 256 bytes of the array. If it
+        // fails, they stay 0: every key is up.
+        unsafe { GetKeyboardState(keys.0.as_mut_ptr()) };
+        keys
+    }
+
+    fn posted_character(&self) -> Option<bool> {
+        [false, true]
+            .into_iter()
+            .find(|&system| self.peek(character_messages(system), PM_NOREMOVE).is_some())
+    }
+
+    fn take_character(&self, system: bool) -> u16 {
+        let (first, last) = character_messages(system);
+        match self.peek((first, last), PM_REMOVE) {
+            // The UTF-16 unit is in the low 16 bits.
+            Some(message) if message.message == first => message.wParam as u16,
+            _ => 0,
+        }
+    }
+```
+
+- **`peek`** busca na cola da xanela a primeira mensaxe do rango con [`PeekMessageW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-peekmessagew): con `PM_NOREMOVE` déixaa alí, e con `PM_REMOVE` sácaa, e a xanela xa non a recibe. Os caracteres son mensaxes publicadas, e o rango non colle ningunha mensaxe de entrada: as teclas e o rato que esperan na cola seguen alí, na súa orde. `then_some` converte o `bool` nun `Option`.
+- **`key_state`**: se `GetKeyboardState` falla, todas as teclas quedan arriba, e o evento vai sen modificadoras, en vez de non ir.
+- **`posted_character`** mira primeiro os caracteres sen Alt e despois os con Alt. `find` dá o primeiro valor que cumpre a condición, ou `None`.
+- **`take_character`**: a garda do `match` (`if message.message == first`) distingue o carácter, `WM_CHAR` ou `WM_SYSCHAR`, da tecla morta, que dá 0.
+
+```rust
+    fn character(&self, key: u16, scan: u16, keys: &KeyState) -> u16 {
+        let mut buffer = [0_u16; 2];
+        // SAFETY: the state has the 256 bytes of every key, and the buffer
+        // has room for the 2 units that it says. Bit 0 of the flags: as if a
+        // menu were open, so that the keys of the keypad with Alt do not
+        // count for a character code. Bit 2: the state of the keyboard does
+        // not change, as a dead key that went down before (Windows 10 1607
+        // and later). GetKeyboardLayout(0): the layout of this thread.
+        let written = unsafe {
+            ToUnicodeEx(
+                u32::from(key),
+                u32::from(scan),
+                keys.0.as_ptr(),
+                buffer.as_mut_ptr(),
+                2,
+                0b101,
+                GetKeyboardLayout(0),
+            )
+        };
+        // -1: a dead key. 2: a dead key went down before, and the key does
+        // not join with it: it is not the character of this key alone.
+        if matches!(written, 1 | -1) {
+            buffer[0]
+        } else {
+            0
+        }
+    }
+
+    fn key_at(&self, scan: u16, extended: bool) -> u16 {
+        // The scan codes of the extended keys start with E0.
+        let code = u32::from(scan) | if extended { 0xe000 } else { 0 };
+        // SAFETY: MapVirtualKeyW has no preconditions, and returns 0 if no
+        // key has the scan code.
+        let key = unsafe { MapVirtualKeyW(code, MAPVK_VSC_TO_VK_EX) };
+        u16::try_from(key).unwrap_or(0)
+    }
+}
+```
+
+- **`character`** pregunta con [`ToUnicodeEx`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-tounicodeex) que escribe a tecla, co estado das teclas da mensaxe e a distribución do fío (`GetKeyboardLayout(0)`). Os *flags* `0b101`: o bit 0, coma se houbese un menú aberto, para que as teclas do teclado numérico con Alt non conten coma un código de carácter; e o bit 2, para non cambiar o estado do teclado: sen el, preguntar por unha tecla morta deixaríaa pendente, e a tecla seguinte escribiría outra cousa. Devolve cantas unidades escribiu: 1, un carácter; -1, unha tecla morta, co seu acento; e 2, que unha tecla morta pendente non se xunta con esta tecla, así que eses dous caracteres non son os da tecla soa: dá 0, coma cando non escribe nada.
+- **`key_at`** pregunta con [`MapVirtualKeyW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-mapvirtualkeyw) que tecla está nun código de exploración. `MAPVK_VSC_TO_VK_EX` distingue as teclas de cada lado, coma `VK_LSHIFT` e `VK_RSHIFT`, e as estendidas van co prefixo `0xE0`. O resultado é un `u32`: `u16::try_from` convérteo, e dá 0 se non cabe.
+
+### Probas do teclado
+
+Dez probas, cun Windows falso, `Fake`, que responde ás preguntas de `System`: ten as teclas que están abaixo e as activadas, unha cola coas mensaxes dos caracteres que publicaría `TranslateMessage`, o que escribe cada tecla ao subir e a tecla de cada código de exploración. `Test` pásalle as mensaxes ao teclado e garda os eventos que envía, e `next_character` fai coma o bucle de mensaxes: dálle á xanela a seguinte mensaxe da cola.
+
+| Proba | Que comproba |
+|---|---|
+| `a_key_that_writes_a_character_waits_for_it` | A A baixa e non envía nada ata que chega o seu `WM_CHAR`; entón, o evento co carácter. Ao subir, o evento leva o carácter sen ningunha mensaxe máis. |
+| `keys_without_a_character_go_at_once` | A frecha esquerda, unha tecla estendida, vai de inmediato; e unha repetida tres veces máis rápido do que a xanela a colle, nun evento coas tres. |
+| `posted_key_messages_keep_the_order_of_their_keys` | A e B publicadas á vez, coma as envía un programa, cos caracteres despois de todas: cada evento leva o seu, na orde das teclas. |
+| `a_dead_key_goes_down_without_its_character` | ´ baixa co carácter 0, e o seu `WM_DEADCHAR` non envía nada máis. |
+| `a_character_without_its_key_takes_the_key_of_its_scan_code` | ´ e x: o evento da X leva o ´, e o x vai noutro, coa tecla do seu código de exploración. Un carácter do IME, sen código, vai coa tecla 0. |
+| `a_key_that_goes_up_leaves_the_characters_of_the_keys_before_it` | ´ e x publicadas: a X sobe antes de que cheguen os seus dous caracteres, e o segundo non é para o evento de subir. O caso que atopou a CI. |
+| `the_character_of_alt_and_the_keypad_goes_when_alt_goes_up` | Alt+0225: o á vai no evento de Alt ao subir, coma o espera .NET. |
+| `the_control_keys_come_from_the_state_of_the_keys` | AltGr+2 con Bloq Maiús e Bloq Num activados, e a frecha esquerda co Alt esquerdo, o Ctrl dereito, Maiús e Bloq Despr: os bits de cada caso. |
+| `alt_f4_and_alt_space_go_to_windows` | Alt+F4, Alt+Espazo e o seu espazo van a Windows, sen eventos; Alt só, F10 e Ctrl+Alt+F4, ao programa. |
+| `the_windows_keys_and_the_keys_of_an_ime_do_not_go_to_the_program` | As teclas de Windows e `VK_PROCESSKEY` non dan ningún evento. |
+
+Co Windows de verdade compróbao [`tools/check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1): publica as mensaxes das teclas na xanela de meiga e mira o que le PowerShell no terminal.
+
 ## `crates/meiga-win/src/window.rs`
 
-A xanela de meiga, o bucle de mensaxes, o temporizador dos fotogramas e unha mensaxe de erro. Desde a subfase 1.6, tamén o seu título, o aviso que a esperta desde outro fío e os axustes do cursor de Windows. Os fragmentos de código desta sección son extractos: omiten os comentarios `// SAFETY:`, que no arquivo van antes de cada bloque `unsafe`, e algún outro comentario.
+A xanela de meiga, o bucle de mensaxes, o temporizador dos fotogramas e unha mensaxe de erro. Desde a subfase 1.6, tamén o seu título, o aviso que a esperta desde outro fío e os axustes do cursor de Windows; e desde a 1.7, as mensaxes do teclado van ao [teclado da xanela](#cratesmeiga-winsrckeyboardrs). Os fragmentos de código desta sección son extractos: omiten os comentarios `// SAFETY:`, que no arquivo van antes de cada bloque `unsafe`, e algún outro comentario.
 
 Así vive a xanela, desde que se crea ata que a pecha o usuario:
 
@@ -547,6 +990,7 @@ pub fn run(&self, handler: &mut dyn Handler) -> Result<(), HandlerError> {
         window: self,
         handler: RefCell::new(handler),
         failure: RefCell::new(None),
+        keyboard: Keyboard::default(),
     };
     let _installed = Installed::new(self.handle, &state);
 
@@ -606,7 +1050,7 @@ fn pump(&self, state: &State<'_>) -> Result<(), Error> {
 
 O **bucle de mensaxes**, o corazón dun programa de Windows. Na subfase 1.1 era `GetMessageW`, que só sabe esperar mensaxes; agora ten que esperar tamén o temporizador dos fotogramas ([ADR 0008](../adr/0008-temporizador-dos-fotogramas.md)):
 
-1. **Baleirar a cola.** `PeekMessageW` con `PM_REMOVE` colle a seguinte mensaxe, se a hai, e devolve 0 se a cola está baleira. Cada mensaxe pasa por `TranslateMessage`, que converte as pulsacións de teclas (`WM_KEYDOWN`) en caracteres (`WM_CHAR`) segundo a distribución do teclado, e por `DispatchMessageW`, que chama ao *window procedure* da súa xanela. Ao chegar `WM_QUIT`, o aviso de que o programa debe rematar, o bucle remata.
+1. **Baleirar a cola.** `PeekMessageW` con `PM_REMOVE` colle a seguinte mensaxe, se a hai, e devolve 0 se a cola está baleira. Cada mensaxe pasa por `TranslateMessage`, que converte as pulsacións de teclas (`WM_KEYDOWN`) en caracteres (`WM_CHAR`) segundo a distribución do teclado e os publica na cola, onde os busca o [teclado da xanela](#cratesmeiga-winsrckeyboardrs), e por `DispatchMessageW`, que chama ao *window procedure* da súa xanela. Ao chegar `WM_QUIT`, o aviso de que o programa debe rematar, o bucle remata.
 2. **Durmir.** `MsgWaitForMultipleObjectsEx` bloquea o fío ata que pasa unha destas cousas: chega unha mensaxe (`QS_ALLINPUT`: calquera tipo de mensaxe, tamén as que publica outro fío, como a do [`Waker`](#windowwaker-e-waker)) ou se sinala algún dos obxectos da lista, que eiquí é só o temporizador. `INFINITE`: sen tempo máximo. Mentres espera, **o fío non usa a CPU**, igual ca con `GetMessageW`: se non hai ningún fotograma pendente, o temporizador non está activo, e só esperta unha mensaxe.
 3. **Que o espertou.** `WAIT_OBJECT_0` (o primeiro obxecto da lista) é o temporizador: `frame_timer_due` entrega o evento. Calquera outro valor bo, `WAIT_OBJECT_0 + 1`, significa que hai mensaxes, e o bucle volta ao paso 1. `WAIT_FAILED` é un erro.
 
@@ -817,7 +1261,7 @@ impl Waker {
 }
 ```
 
-Desde a subfase 1.6. O que esperta a xanela desde outro fío: `wake` deixa unha mensaxe, [`WM_WAKE`](#wm_wake), na cola da xanela, e o *handler* recibe [`Event::Wake`](#event-mousebutton-e-key) cando o bucle de mensaxes a colle. O programa dálle un ao fío lector da sesión, que avisa así de que o programa cambiou a pantalla ou o título ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)):
+Desde a subfase 1.6. O que esperta a xanela desde outro fío: `wake` deixa unha mensaxe, [`WM_WAKE`](#wm_wake), na cola da xanela, e o *handler* recibe [`Event::Wake`](#event-e-mousebutton) cando o bucle de mensaxes a colle. O programa dálle un ao fío lector da sesión, que avisa así de que o programa cambiou a pantalla ou o título ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)):
 
 ```mermaid
 sequenceDiagram
@@ -870,7 +1314,7 @@ pub fn show_error(title: &str, text: &str) {
 
 Mostra unha caixa de mensaxe co botón Aceptar (`MB_OK`) e a icona de erro (`MB_ICONERROR`). `|` combina as dúas opcións, que son bits dun mesmo número. Non ten xanela dona (`ptr::null_mut()`), porque se pode mostrar cando a xanela de meiga aínda non existe ou xa non existe. A función non volta ata que o usuario a pecha.
 
-- **O `WM_QUIT` pendente.** A caixa ten o seu propio bucle de mensaxes, que remata en canto atopa un `WM_QUIT`. Se meiga falla ao arrancar, a xanela destrúese antes de mostrar o erro (o `Drop` de `Window`), e `WM_DESTROY` deixa un `WM_QUIT` na cola: a caixa pecharíase soa, sen que se vise. Por iso, antes de mostrala, `PeekMessageW` saca o `WM_QUIT` que haxa (o filtro de `WM_QUIT` a `WM_QUIT` só colle esa mensaxe) e, despois, `PostQuitMessage` vólveo publicar co mesmo código, que vai no seu `wParam`. Comprobouse cunha copia de meiga que falla despois de crear a xanela: sen isto, remataba co código 1 sen mostrar nada.
+- **O `WM_QUIT` pendente.** A caixa ten o seu propio bucle de mensaxes, que remata en canto atopa un `WM_QUIT`. Se meiga falla ao arrancar, a xanela destrúese antes de mostrar o erro (o `Drop` de `Window`), e `WM_DESTROY` deixa un `WM_QUIT` na cola: a caixa pecharíase soa, sen que se vise. Por iso, antes de mostrala, `PeekMessageW` saca o `WM_QUIT` que haxa (o filtro de `WM_QUIT` a `WM_QUIT` só colle esa mensaxe) e, despois, `PostQuitMessage` publícao outra vez co mesmo código, que vai no seu `wParam`. Comprobouse cunha copia de meiga que falla despois de crear a xanela: sen isto, remataba co código 1 sen mostrar nada.
 
 ### `CaretSettings` e `caret_settings`
 
@@ -918,7 +1362,7 @@ Desde a subfase 1.6. Como quere o usuario o cursor do texto, que Windows chama *
 | `timeout` | `SystemParametersInfoW(SPI_GETCARETTIMEOUT)` | Canto tempo pestanexa despois da última actividade, antes de quedar fixo e visíbel. |
 | `width` | `SystemParametersInfoW(SPI_GETCARETWIDTH)` | O grosor en píxeles á escala do 100 %: o «grosor do cursor de texto» da accesibilidade. |
 
-- **Unha función, e non un método de `Window`:** os axustes son do usuario, non da xanela, coma [`is_remote_session`](#is_remote_session-e-show_error). Cada chamada le os valores dese momento, porque poden cambiar mentres meiga corre: por exemplo, cando o usuario se conecta á sesión por Escritorio remoto, que desactiva o pestanexo. Por iso o programa chámaa ao arrancar e cada vez que a xanela recupera o foco ([`Focus`](#event-mousebutton-e-key), [Código › meiga](meiga.md#cratesmeigasrcviewrs)).
+- **Unha función, e non un método de `Window`:** os axustes son do usuario, non da xanela, coma [`is_remote_session`](#is_remote_session-e-show_error). Cada chamada le os valores dese momento, porque poden cambiar mentres meiga corre: por exemplo, cando o usuario se conecta á sesión por Escritorio remoto, que desactiva o pestanexo. Por iso o programa chámaa ao arrancar e cada vez que a xanela recupera o foco ([`Focus`](#event-e-mousebutton), [Código › meiga](meiga.md#cratesmeigasrcviewrs)).
 - **O pestanexo, coma no Windows Terminal.** O cursor só pestanexa se `SM_CARETBLINKINGENABLED` non é 0 e `GetCaretBlinkTime` dá un tempo de 1 a 10 000 ms (`MAX_BLINK_MS`). Os outros valores non son tempos: `GetCaretBlinkTime` dá `INFINITE` cando o usuario quita o pestanexo, e 0 cando falla. Windows só deixa escoller entre 200 e 1 200 ms; o límite de 10 s é o do Windows Terminal, e deixa fóra eses dous casos e calquera outro valor sen sentido.
   - `SM_CARETBLINKINGENABLED` é un `u32` en `windows-sys`, e `GetSystemMetrics` recibe un `i32`: `as i32` convérteo, e o número, `0x2002`, cabe.
   - `(1..=MAX_BLINK_MS).contains(&blink)` comproba que o tempo está no rango, cos dous extremos (`..=`).
@@ -938,12 +1382,14 @@ struct State<'a> {
     window: &'a Window,
     handler: RefCell<&'a mut dyn Handler>,
     failure: RefCell<Option<HandlerError>>,
+    keyboard: Keyboard,
 }
 ```
 
 - `window`: a `Window`, que o *handler* recibe en cada evento.
 - `handler`: o *handler*, dentro dun `RefCell`. Como `Cell`, permite cambiar o seu contido a través dunha referencia compartida (`&State`), pero dando referencias ao interior: `borrow_mut()` dá unha referencia `&mut`, e o `RefCell` comproba **ao executar** que non hai outra á vez.
 - `failure`: o primeiro erro do *handler*.
+- `keyboard`: desde a subfase 1.7, o [teclado da xanela](#cratesmeiga-winsrckeyboardrs), coa tecla que espera polo seu carácter. Vive en `State`, coma o *handler*, porque o necesita o *window procedure* en cada mensaxe do teclado.
 
 ```rust
 fn deliver(
@@ -1029,6 +1475,15 @@ unsafe extern "system" fn window_proc(
         }
         WM_ENTERMENULOOP => this.enter_modal_loop(),
         WM_EXITMENULOOP => this.leave_modal_loop(),
+        _ if is_keyboard_message(message) => {
+            let mut send = |key| state.dispatch(Event::Key(key));
+            let destination = state
+                .keyboard
+                .message(window, message, wparam, lparam, &mut send);
+            if destination == Destination::Windows {
+                return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+            }
+        }
         _ => match decode(message, wparam, lparam) {
             Some(event) => state.dispatch(event),
             None => return unsafe { DefWindowProcW(window, message, wparam, lparam) },
@@ -1059,6 +1514,7 @@ O ***window procedure***: a función que trata as mensaxes das xanelas de meiga.
 | `WM_TIMER` co número `FRAME_TIMER_ID` | O temporizador de xanela dun bucle modal: [`frame_timer_due`](#o-temporizador-dos-fotogramas). `if wparam == …` é unha **garda** do `match`: a rama só se escolle se, ademais, se cumpre a condición. Os outros temporizadores irían a `DefWindowProcW`. |
 | `WM_ENTERSIZEMOVE` e `WM_EXITSIZEMOVE` | Empeza ou remata un [bucle modal](#os-bucles-modais-de-windows), e o *handler* recibe `SizeMoveStarted` ou `SizeMoveEnded`. |
 | `WM_ENTERMENULOOP` e `WM_EXITMENULOOP` | Empeza ou remata o bucle modal do menú. |
+| As do teclado (`is_keyboard_message`) | Desde a subfase 1.7. O [teclado da xanela](#cratesmeiga-winsrckeyboardrs) xúntaas en eventos de tecla, e o *closure* `send` envía cada un ao *handler* coma `Event::Key`. As de Alt+F4 e Alt+Espazo van a `DefWindowProcW`, que pecha a xanela ou abre o seu menú. `_ if …` é unha garda sen patrón: a rama colle calquera mensaxe que cumpra a condición. |
 | As de [`decode`](#decode) | O *handler* recibe o evento. Desde a subfase 1.6, tamén os cambios do foco e os avisos doutros fíos (`WM_WAKE`). |
 | Calquera outra | `DefWindowProcW`, o comportamento por defecto de Windows: mover, redimensionar, minimizar, maximizar, pechar (`WM_CLOSE` destrúe a xanela), cambiar o título (`WM_SETTEXT`, ver [`set_title`](#windowset_title))… |
 
@@ -1114,11 +1570,11 @@ A conversión dos textos a UTF-16, `wide`, que estaba neste arquivo ata a subfas
 | `waitable_timers_count_in_hundreds_of_nanoseconds_from_now` | 33 334 µs son -333 340 unidades de 100 ns; 150 ns redondean a -2; e cero dá -1. |
 | `window_timers_round_up_within_their_limits` | 33 334 µs son 34 ms; 2 ms suben ao mínimo de 10; e o máximo de `Duration` queda no máximo de `SetTimer`. |
 
-O resto deste arquivo necesita unha xanela de verdade. Compróbano `tools/check-window.ps1` e `tools/check-present.ps1` co `meiga.exe` de *release* (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Desde a subfase 1.6, [`check-window.ps1`](ferramentas.md#toolscheck-windowps1) comproba tamén que o título da xanela pasa a ser o que pon `cmd` no terminal, o que proba o `Waker` e `set_title`; e `check-present.ps1` cambia a pantalla escribindo no terminal, así que eses cambios chegan á xanela cun `Wake`. `caret_settings` depende da configuración de cada Windows, e non ten probas eiquí: as decisións que se toman cos seus valores próbanse no programa, con axustes escritos a man ([Código › meiga](meiga.md#cratesmeigasrcviewrs)).
+O resto deste arquivo necesita unha xanela de verdade. Compróbano `tools/check-window.ps1` e `tools/check-present.ps1` co `meiga.exe` de *release* (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Desde a subfase 1.6, [`check-window.ps1`](ferramentas.md#toolscheck-windowps1) comproba tamén que o título da xanela pasa a ser o que pon `cmd` no terminal, o que proba o `Waker` e `set_title`; e `check-present.ps1` cambia a pantalla escribindo no terminal, así que eses cambios chegan á xanela cun `Wake`. `caret_settings` depende da configuración de cada Windows, e non ten probas eiquí: as decisións que se toman cos seus valores próbanse no programa, con axustes escritos a man ([Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a 1.7, [`check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) publica as mensaxes das teclas na xanela, e comproba que as do teclado chegan ao *handler* e, a través del, ao programa do terminal.
 
 ## `crates/meiga-win/src/conpty.rs`
 
-Desde a subfase 1.4. As **sesións**: un programa, normalmente unha shell, que corre nunha pseudoconsola e fala con meiga por dúas tubaxes ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). meiga le da tubaxe de saída o que mostra o programa, texto UTF-8 con secuencias VT, e escribe na tubaxe de entrada as respostas ás preguntas que fai o programa e, desde a subfase 1.7, o que se teclea. Cada sesión ten dous fíos, que dormen mentres non hai nada que facer ([ADR 0005](../adr/0005-fios-e-fotogramas.md)), e pódese pechar en calquera momento sen esperar. O programa, e os que este arranque, corren nun *job* da sesión, para poder rematalos todos se a sesión se bloquea ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). O seu sitio na arquitectura explícase en [Arquitectura › Sesións](../arquitectura.md#sesións-a-shell-o-conpty-e-os-dous-fíos).
+Desde a subfase 1.4. As **sesións**: un programa, normalmente unha shell, que corre nunha pseudoconsola e fala con meiga por dúas tubaxes ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). meiga le da tubaxe de saída o que mostra o programa, texto UTF-8 con secuencias VT, e escribe na tubaxe de entrada as respostas ás preguntas que fai o programa e, desde a subfase 1.7, as teclas. Cada sesión ten dous fíos, que dormen mentres non hai nada que facer ([ADR 0005](../adr/0005-fios-e-fotogramas.md)), e pódese pechar en calquera momento sen esperar. O programa, e os que este arranque, corren nun *job* da sesión, para poder rematalos todos se a sesión se bloquea ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). O seu sitio na arquitectura explícase en [Arquitectura › Sesións](../arquitectura.md#sesións-a-shell-o-conpty-e-os-dous-fíos).
 
 Así se usa:
 
@@ -1472,7 +1928,7 @@ impl Drop for Pty {
 O `Pty` é a sesión desde o lado de meiga: o que devolve `spawn`. Non garda os fíos, senón dúas cousas: a entrada da sesión, [`Input`](#input), que leva dentro o estado que comparte con eles, coa pseudoconsola, que pecha o fío escritor; e o identificador do proceso (`process_id`). Pechar a sesión é destruílo.
 
 - **`write`** envía bytes ao programa, como se se teclearan: é o [`write`](#input) da súa entrada, que nunca espera. Ata a subfase 1.5, o código de `write` estaba eiquí.
-- **`input`**, desde a 1.6, dá unha copia da entrada, para quen ten que escribirlle ao programa sen ser o dono da sesión, neste fío ou noutro. En meiga, a vista do terminal garda unha, coa que responde as poucas preguntas que atopa ela, ao rematar unha actualización sincronizada ([ADR 0013](../adr/0013-da-saida-a-pantalla.md), [Código › meiga](meiga.md#cratesmeigasrcviewrs)); desde a subfase 1.7, tamén enviará o teclado.
+- **`input`**, desde a 1.6, dá unha copia da entrada, para quen ten que escribirlle ao programa sen ser o dono da sesión, neste fío ou noutro. En meiga, a vista do terminal garda unha, coa que responde as poucas preguntas que atopa ela, ao rematar unha actualización sincronizada ([ADR 0013](../adr/0013-da-saida-a-pantalla.md), [Código › meiga](meiga.md#cratesmeigasrcviewrs)), e desde a subfase 1.7 envía as teclas e os eventos de foco.
 - **A entrada non mantén aberta a sesión.** As copias da entrada poden estar en calquera parte, tamén no fío lector, que ten a súa ata que remata a sesión. Se a sesión se pechase ao destruírse a última copia, non se pecharía nunca: o fío lector non solta a súa ata o final. Por iso o peche está no `Drop` do `Pty`, que é un só. Despois, as copias que queden xa non envían nada.
 - **`Drop`** marca a sesión como pechada e esperta o fío escritor, que fai o resto. Non espera por nada ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Chega ao estado a través da súa entrada, `self.input.shared`: os campos privados de `Input` vense desde todo o módulo.
 

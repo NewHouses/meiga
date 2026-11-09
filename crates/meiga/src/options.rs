@@ -6,14 +6,17 @@ use std::path::PathBuf;
 use meiga_core::shell;
 
 /// How to run meiga.
-pub const USAGE: &str = "Usage: meiga [--trace-frames <file>] [--] [<program> [<arguments>]]
-       meiga [--trace-frames <file>] --bench partial|full|text
+pub const USAGE: &str =
+    "Usage: meiga [--trace-frames <file>] [--marks] [--] [<program> [<arguments>]]
+       meiga [--trace-frames <file>] [--marks] --bench partial|full|text
 
   <program>              The program to run in the terminal, and its arguments.
                          Without it, PowerShell 7 (pwsh) or, if it is not
                          installed, Windows PowerShell.
   --                     The end of the options: what follows is the program.
   --trace-frames <file>  Write a line per frame to <file> (CSV).
+  --marks                Draw a magenta border around the areas that each frame
+                         presents.
   --bench partial        Instead of a terminal, move a small square without stopping.
   --bench full           Instead of a terminal, change the whole window without stopping.
   --bench text           Instead of a terminal, fill the whole window with text that
@@ -35,6 +38,8 @@ pub enum BenchMode {
 pub struct Options {
     /// The file of the frame log.
     pub trace_frames: Option<PathBuf>,
+    /// Whether the window shows the areas that each frame presents.
+    pub marks: bool,
     pub bench: Option<BenchMode>,
     /// The command line of the program, quoted for Windows, or `None` for
     /// the default shell.
@@ -57,6 +62,7 @@ impl Options {
                         .ok_or("--trace-frames needs the path of a file.")?;
                     options.trace_frames = Some(PathBuf::from(path));
                 }
+                Some("--marks") => options.marks = true,
                 Some("--bench") => {
                     options.bench = Some(match args.next().as_deref().and_then(OsStr::to_str) {
                         Some("partial") => BenchMode::Partial,
@@ -125,10 +131,12 @@ mod tests {
             parse(&["--bench", "full", "--trace-frames", r"C:\perf\frames.csv"]),
             Ok(Options {
                 trace_frames: Some(PathBuf::from(r"C:\perf\frames.csv")),
+                marks: false,
                 bench: Some(BenchMode::Full),
                 command: None,
             })
         );
+        assert!(parse(&["--marks", "cmd"]).unwrap().marks);
         assert_eq!(
             parse(&["--bench", "partial"]).unwrap().bench,
             Some(BenchMode::Partial)

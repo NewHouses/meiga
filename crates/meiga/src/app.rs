@@ -10,7 +10,7 @@ use meiga_core::term::Terminal;
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::HDC;
 use meiga_win::conpty::Pty;
-use meiga_win::event::{Event, Handler, HandlerError, Key};
+use meiga_win::event::{Event, Handler, HandlerError};
 use meiga_win::window::Window;
 
 use crate::bench::Bench;
@@ -80,7 +80,7 @@ impl App {
             Some(mode) => (Content::Bench(Box::new(Bench::new(mode, None))), None),
             None => terminal(window, options.command.as_deref())?,
         };
-        let mut frames = Frames::new(window, &mut content, trace)?;
+        let mut frames = Frames::new(window, &mut content, trace, options.marks)?;
         if options.bench.is_some() {
             frames.schedule(window)?;
         }
@@ -185,11 +185,11 @@ impl Handler for App {
                     self.frames.changed(window, &mut self.content)?;
                 }
             }
-            // Until the keyboard reaches the program (subphase 1.7).
-            Event::KeyDown {
-                key: Key::P,
-                repeat: false,
-            } => self.frames.toggle_marks(window),
+            Event::Key(key) => {
+                if let Content::Terminal(view) = &mut self.content {
+                    view.key(&key);
+                }
+            }
             _ => {}
         }
         Ok(())

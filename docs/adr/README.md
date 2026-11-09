@@ -18,7 +18,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0001](0001-rust.md) | Rust como linguaxe | Aceptado |
 | [0002](0002-windows-e-renderizado-cpu.md) | Só Windows, con renderizado por CPU | Aceptado; concretado polos [0009](0009-xanela-que-non-se-ve.md) e [0010](0010-texto-con-directwrite.md) |
 | [0003](0003-nucleo-vt-alacritty-terminal.md) | `alacritty_terminal` como núcleo, detrás dunha fachada | Aceptado; concretado polo [0012](0012-fachada-do-terminal.md) |
-| [0004](0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga | Aceptado; concretado polo [0011](0011-fin-e-peche-das-sesions.md) |
+| [0004](0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga | Aceptado; concretado polos [0011](0011-fin-e-peche-das-sesions.md) e [0014](0014-o-teclado.md) |
 | [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polos [0008](0008-temporizador-dos-fotogramas.md), [0011](0011-fin-e-peche-das-sesions.md) e [0013](0013-da-saida-a-pantalla.md) |
 | [0006](0006-licenzas-e-dependencias.md) | Licenzas e dependencias | Aceptado |
 | [0007](0007-integracion-coa-shell.md) | Integración coa shell | Aceptado |
@@ -28,6 +28,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado |
 | [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polo [0013](0013-da-saida-a-pantalla.md) |
 | [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado |
+| [0014](0014-o-teclado.md) | O teclado | Aceptado |
 
 ## Como se relacionan
 
@@ -57,6 +58,9 @@ graph TD
     A10 --> A13
     A11 --> A13
     A12 --> A13
+    A4 --> A14["0014 O teclado"]
+    A12 --> A14
+    A13 --> A14
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.

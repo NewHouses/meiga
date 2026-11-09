@@ -9,6 +9,7 @@ use std::time::Instant;
 
 use meiga_core::color::{Palette, Rgb};
 use meiga_core::geometry::{Point, Rect, Size};
+use meiga_core::input::{KeyEncoder, KeyEvent, focus_sequence};
 use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, Screen};
 use meiga_core::text::CellChar;
 use meiga_render::{Canvas, Decorations, Font, FontStyle};
@@ -33,8 +34,9 @@ const BASE_DPI: u32 = 96;
 /// The terminal of the session, as the window shows it.
 pub struct TerminalView {
     shared: Arc<Mutex<Shared>>,
-    /// Sends to the program the answers that the window finds when it ends a
-    /// synchronized update. `None` if the program did not start.
+    /// Sends to the program the keys, and the answers that the window finds
+    /// when it ends a synchronized update. `None` if the program did not
+    /// start.
     input: Option<Input>,
     waker: Waker,
     font: Font,
@@ -46,6 +48,10 @@ pub struct TerminalView {
     run: Vec<CellChar>,
     /// The answers for the program, kept for the same reason.
     answers: Vec<u8>,
+    /// Turns the keys into what the program reads.
+    encoder: KeyEncoder,
+    /// What the program reads for a key, kept for the same reason.
+    keys: Vec<u8>,
 }
 
 impl TerminalView {
@@ -67,6 +73,8 @@ impl TerminalView {
             caret: Caret::new(dpi, Instant::now()),
             run: Vec::new(),
             answers: Vec::new(),
+            encoder: KeyEncoder::new(),
+            keys: Vec::new(),
         }
     }
 
@@ -74,9 +82,21 @@ impl TerminalView {
         &self.shared
     }
 
+    /// Sends a key to the program, as the modes that it turned on say.
+    pub fn key(&mut self, event: &KeyEvent) {
+        let Some(input) = &self.input else {
+            return;
+        };
+        let modes = lock(&self.shared).terminal.modes();
+        self.keys.clear();
+        self.encoder.encode(event, &modes, &mut self.keys);
+        input.write(&self.keys);
+    }
+
     /// The window gained or lost the focus, at `now`. With it, the cursor
     /// starts blinking again; without it, it is an outline that does not
-    /// blink. The next update gives its cells as changed.
+    /// blink. The next update gives its cells as changed. The program
+    /// learns it too, if it asked.
     pub fn focus(&mut self, focused: bool, now: Instant) {
         if focused == self.caret.focused {
             return;
@@ -89,6 +109,10 @@ impl TerminalView {
         }
         self.caret.focused = focused;
         self.screen.mark_cursor_changed();
+        if let Some(input) = &self.input {
+            let modes = lock(&self.shared).terminal.modes();
+            input.write(focus_sequence(focused, &modes));
+        }
     }
 
     /// Sends the program the answers that ending a synchronized update gave,

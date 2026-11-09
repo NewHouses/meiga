@@ -32,6 +32,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::event::{Event, Handler, HandlerError, WM_WAKE, decode};
+use crate::keyboard::{Destination, Keyboard, is_keyboard_message};
 use crate::{Error, wide};
 
 /// Name of the window class of meiga windows.
@@ -174,6 +175,7 @@ impl Window {
             window: self,
             handler: RefCell::new(handler),
             failure: RefCell::new(None),
+            keyboard: Keyboard::default(),
         };
         let _installed = Installed::new(self.handle, &state);
 
@@ -561,6 +563,7 @@ struct State<'a> {
     handler: RefCell<&'a mut dyn Handler>,
     /// The first error of the handler.
     failure: RefCell<Option<HandlerError>>,
+    keyboard: Keyboard,
 }
 
 impl State<'_> {
@@ -685,6 +688,17 @@ unsafe extern "system" fn window_proc(
         }
         WM_ENTERMENULOOP => this.enter_modal_loop(),
         WM_EXITMENULOOP => this.leave_modal_loop(),
+        _ if is_keyboard_message(message) => {
+            let mut send = |key| state.dispatch(Event::Key(key));
+            let destination = state
+                .keyboard
+                .message(window, message, wparam, lparam, &mut send);
+            if destination == Destination::Windows {
+                // SAFETY: the arguments are the ones that Windows passed to
+                // this window procedure.
+                return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+            }
+        }
         _ => match decode(message, wparam, lparam) {
             Some(event) => state.dispatch(event),
             // SAFETY: the arguments are the ones that Windows passed to this

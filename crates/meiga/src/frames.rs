@@ -65,18 +65,20 @@ pub struct Frames {
     minimized: bool,
     /// Whether the user is moving or resizing the window.
     live_resize: bool,
-    /// While the marks are on, the areas that the last frame presented,
-    /// which have a border in the window.
+    /// With `--marks`, the areas that the last frame presented, which have
+    /// a border in the window.
     marks: Option<Vec<Rect>>,
     trace: Option<Trace>,
 }
 
 impl Frames {
-    /// The framebuffer of `window`, with `scene` composed in it.
+    /// The framebuffer of `window`, with `scene` composed in it, and with
+    /// the marks if `marks`.
     pub fn new(
         window: &Window,
         scene: &mut dyn Scene,
         trace: Option<Trace>,
+        marks: bool,
     ) -> Result<Self, HandlerError> {
         let mut frames = Self {
             surface: Surface::new(window.client_size()?)?,
@@ -86,7 +88,7 @@ impl Frames {
             due: None,
             minimized: false,
             live_resize: false,
-            marks: None,
+            marks: marks.then(Vec::new),
             trace,
         };
         frames.compose_all(scene)?;
@@ -251,18 +253,6 @@ impl Frames {
                 present,
             },
         )
-    }
-
-    /// Shows or hides the marks: a border around each area that a frame
-    /// presents, drawn only in the window. The next frame erases them.
-    pub fn toggle_marks(&mut self, window: &Window) {
-        match self.marks.take() {
-            Some(marks) => {
-                // If it fails, they stay until that area is painted again.
-                let _ = erase(&self.surface, window.handle(), &marks);
-            }
-            None => self.marks = Some(Vec::new()),
-        }
     }
 
     /// Composes the areas that changed and presents them.

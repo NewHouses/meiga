@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 1.6. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 1.7. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -939,7 +939,7 @@ Windows chama *caret* ao cursor do texto (o *cursor* é o do rato), e ten catro 
 
 ## 39. O foco e o título da xanela
 
-**O foco** é a xanela que recibe o teclado. Cando unha xanela o gaña, Windows envíalle [`WM_SETFOCUS`](https://learn.microsoft.com/windows/win32/inputdev/wm-setfocus), e cando o perde, `WM_KILLFOCUS`. meiga usa o foco para o cursor ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)) e, desde a subfase 1.7, para avisar ao programa que o pediu (`ESC [ ? 1004 h`, [§35](#35-as-secuencias-de-control)).
+**O foco** é a xanela que recibe o teclado. Cando unha xanela o gaña, Windows envíalle [`WM_SETFOCUS`](https://learn.microsoft.com/windows/win32/inputdev/wm-setfocus), e cando o perde, `WM_KILLFOCUS`. meiga usa o foco para o cursor ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)) e, desde a subfase 1.7, para avisar ao programa que o pediu (`ESC [ ? 1004 h`, [§42](#42-as-teclas-no-terminal-win32-input-mode-e-vt)). Só a xanela que ten o foco recibe o teclado ([§41](#41-o-teclado-en-windows)).
 
 **O título.** [`SetWindowTextW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setwindowtextw) cambia o texto da barra de título, que tamén mostra a barra de tarefas. Envíalle `WM_SETTEXT` á xanela, así que meiga chámaa desde o fío da interface, cando o fío lector avisa de que o programa cambiou o título ([§36](#36-avisar-á-xanela-desde-outro-fío-postmessage)). Se o programa non pon ningún, o título é «meiga».
 
@@ -956,3 +956,81 @@ Windows chama *caret* ao cursor do texto (o *cursor* é o do rato), e ten catro 
 **Onde busca o programa.** Se o nome non leva ruta, `CreateProcessW` búscao no cartafol de `meiga.exe`, no cartafol actual, nos cartafoles do sistema e de Windows e, por último, nos do `PATH`, e engádelle `.exe` se non ten extensión. Se non o atopa, falla co erro 2, «non se atopa o arquivo»: é o que fai que meiga probe Windows PowerShell (`powershell`) cando PowerShell 7 (`pwsh`) non está instalado.
 
 **O fin das opcións.** `--` é un costume dos programas de Unix, que tamén segue meiga: o que vén despois non son opcións, aínda que empece por `-`. meiga le as súas opcións ata o primeiro argumento que non o é, que é o programa: as opcións que veñen despois son do programa.
+
+## 41. O teclado en Windows
+
+**As mensaxes das teclas.** A xanela que ten o foco ([§39](#39-o-foco-e-o-título-da-xanela)) recibe unha mensaxe cando unha tecla baixa e outra cando sobe ([*Keyboard Input Overview*](https://learn.microsoft.com/windows/win32/inputdev/about-keyboard-input)):
+
+| Mensaxe | Cando |
+|---|---|
+| [`WM_KEYDOWN`](https://learn.microsoft.com/windows/win32/inputdev/wm-keydown) e `WM_KEYUP` | Unha tecla baixa ou sobe. Mentres segue premida, o teclado repítea, e chegan máis `WM_KEYDOWN`. |
+| [`WM_SYSKEYDOWN`](https://learn.microsoft.com/windows/win32/inputdev/wm-syskeydown) e `WM_SYSKEYUP` | O mesmo, con Alt premido, e para F10: as **teclas do sistema**. |
+| [`WM_CHAR`](https://learn.microsoft.com/windows/win32/inputdev/wm-char) e `WM_SYSCHAR` | O carácter que escribe unha tecla, sen Alt ou con el. |
+| [`WM_DEADCHAR`](https://learn.microsoft.com/windows/win32/inputdev/wm-deadchar) e `WM_SYSDEADCHAR` | Unha tecla morta, máis abaixo. |
+
+As das teclas levan dous datos:
+
+- **O código de tecla virtual** (*virtual-key code*, `VK_…`, no `wParam`): que tecla é na distribución do teclado. A tecla que escribe A é `0x41` en calquera distribución; as que non teñen unha letra nin un número levan códigos `OEM`, e a ñ do teclado español é `VK_OEM_3` ([lista](https://learn.microsoft.com/windows/win32/inputdev/virtual-key-codes)). Alt é `VK_MENU`.
+- **O `lParam`:** as repeticións (bits 0–15), o **código de exploración** (*scan code*, bits 16–23), que di onde está a tecla no teclado, sexa cal sexa a distribución; se é unha **tecla estendida** (bit 24): as que non tiñan os primeiros teclados do PC, coma as frechas, Insert, Supr, Inicio, Fin, RePáx e AvPáx fóra do teclado numérico, o Ctrl e o Alt dereitos, e o Intro e a / do teclado numérico; se Alt está premido (bit 29); se a tecla xa estaba abaixo (bit 30); e se sobe (bit 31).
+
+**Os caracteres.** O bucle de mensaxes chama a [`TranslateMessage`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-translatemessage) antes de lle dar a mensaxe á xanela ([§22](#22-xanelas-win32-e-o-bucle-de-mensaxes)). Se a tecla que baixa escribe algo na distribución do fío, `TranslateMessage` publica na cola `WM_CHAR`, co carácter en UTF-16: unha unidade ou, para os de fóra do plano básico, coma a maioría dos emoji, dúas mensaxes, unha con cada metade (*surrogate*). Ctrl cunha letra escribe o seu código de control (Ctrl+C, `0x03`). Na cola, as mensaxes publicadas van antes ca as do teclado e do rato, así que, co teclado de verdade, o carácter é a seguinte mensaxe que recibe a xanela.
+
+**As teclas mortas.** No teclado español e galego, ´ e ¨ non escriben nada ao baixar: `TranslateMessage` publica `WM_DEADCHAR`, e a tecla seguinte escribe o carácter composto (´ e a, á). Se non se poden xuntar, a tecla seguinte escribe dous: ´ e x escriben ´x. A tecla morta pendente é parte do estado do teclado do fío.
+
+**AltGr.** Windows describe AltGr coma o Ctrl esquerdo e o Alt dereito premidos á vez. Por iso Ctrl e Alt cunha tecla poden escribir un carácter: AltGr+2, @, no teclado español.
+
+**O teclado numérico con Alt.** Alt e un número no teclado numérico, por exemplo 0225, escriben ese carácter, á, cando Alt sobe: o `WM_CHAR` chega despois de soltar Alt, a única tecla que escribe ao subir.
+
+**O estado das teclas.** [`GetKeyboardState`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getkeyboardstate) dá 256 bytes, un por tecla: o bit alto, se está abaixo, e o baixo, se está activada (Bloq Maiús, Bloq Num e Bloq Despr). É o estado de cando se publicou a mensaxe que se está a tratar, non o do teclado neste instante. [`ToUnicodeEx`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-tounicodeex) di que escribe unha tecla cun estado; desde Windows 10 1607, cun *flag* (o bit 2), sen cambiar a tecla morta pendente.
+
+**As teclas do sistema.** `DefWindowProcW` dálles significado: Alt+F4 pecha a xanela; Alt+Espazo abre o seu menú; Alt só e F10 entran no modo do menú; e Alt cunha letra busca no menú unha tecla de acceso e, se non a hai, fai soar un aviso. meiga só lle pasa as dúas primeiras ([ADR 0014](adr/0014-o-teclado.md)).
+
+**A distribución do teclado.** Cada fío ten unha distribución activa, que identifica un número (*HKL*): o idioma na metade baixa e o teclado na alta. `040A0456`, por exemplo, é o galego (`0x0456`) co teclado español (`0x040A`). Por defecto, cambiar a distribución cámbiaa en toda a sesión, salvo que se permita unha por xanela (en *Configuración*, *Hora e idioma*, *Escritura*, *Configuración avanzada do teclado*). Unha xanela pídelle a outra que cambie a súa con `WM_INPUTLANGCHANGEREQUEST`.
+
+**Simular teclas.** `SendInput` simula o teclado de verdade, pero as teclas van á xanela que ten o foco. Outro programa tamén pode publicar as mensaxes das teclas nunha xanela, sen o foco, con `PostMessageW`, e `TranslateMessage` convérteas en caracteres coma as de verdade. Hai dúas diferenzas: as mensaxes publicadas non cambian o estado das teclas, así que as modificadoras hai que poñelas á parte, con [`AttachThreadInput`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-attachthreadinput), que fai que dous fíos compartan ese estado, e [`SetKeyboardState`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setkeyboardstate); e os caracteres que publica `TranslateMessage` quedan despois das mensaxes que xa estaban publicadas, así que a seguinte mensaxe pode ser outra tecla. Así funciona `check-keyboard.ps1` ([Código › ferramentas](codigo/ferramentas.md#toolscheck-keyboardps1)).
+
+## 42. As teclas no terminal: win32-input-mode e VT
+
+**Os eventos da consola.** Os programas de consola de Windows len cada tecla coma un evento ([`KEY_EVENT_RECORD`](https://learn.microsoft.com/windows/console/key-event-record-str)): se baixa ou sobe, as repeticións, o código de tecla virtual, o de exploración, o carácter en UTF-16 e as teclas modificadoras e de bloqueo:
+
+| Bit | Tecla |
+|---|---|
+| `0x0001`, `0x0002` | Alt dereito, Alt esquerdo. |
+| `0x0004`, `0x0008` | Ctrl dereito, Ctrl esquerdo. |
+| `0x0010` | Maiús. |
+| `0x0020`, `0x0040`, `0x0080` | Bloq Num, Bloq Despr e Bloq Maiús activados. |
+| `0x0100` | Unha tecla estendida ([§41](#41-o-teclado-en-windows)). |
+
+Cada pulsación son polo menos dous eventos, ao baixar e ao subir, e tamén as teclas modificadoras teñen os seus. Ao subir, o evento leva o carácter que escribe a tecla.
+
+**O win32-input-mode.** O ConPTY pídelle ao terminal eses eventos tal cal ao arrancar, con `ESC [ ? 9001 h` ([§31](#31-conpty-a-pseudoconsola-de-windows)): cada un nunha secuencia `ESC [ Vk ; Sc ; Uc ; Kd ; Cs ; Rc _`, co código de tecla virtual, o de exploración, o carácter, 1 ou 0 para baixar ou subir, as modificadoras e as repeticións, en decimal ([especificación](https://github.com/microsoft/terminal/blob/v1.25.2733.0/doc/specs/%234999%20-%20Improved%20keyboard%20handling%20in%20Conpty.md)). A tecla A do teclado español, por exemplo, é `ESC [ 65 ; 30 ; 97 ; 1 ; 0 ; 1 _` ao baixar e `ESC [ 65 ; 30 ; 97 ; 0 ; 0 ; 1 _` ao subir. Un número que falta vale 0, e as repeticións, 1. O ConPTY convérteas de novo en eventos para os programas.
+
+**Como as le .NET.** PowerShell e PSReadLine len as teclas con `[Console]::ReadKey`, que dá un `ConsoleKeyInfo`: o carácter, a tecla (`ConsoleKey`, que son os códigos de tecla virtual) e as modificadoras, Alt, Maiús e Ctrl. Só dá os eventos das teclas que baixan, e non os das modificadoras soas; dos que soben, só o de Alt cun carácter, o do teclado numérico. AltGr chega coma Ctrl e Alt, e unha tecla morta, coma unha tecla sen carácter.
+
+**As teclas en VT.** Un terminal de Unix só envía texto: o carácter da tecla, en UTF-8, ou unha secuencia para as que non escriben ningún. Son as do xterm ([*XTerm Control Sequences*](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html), *PC-Style Function Keys*):
+
+| Tecla | Envía |
+|---|---|
+| Intro, Tab, Esc | `CR`, `HT`, `ESC`. Maiús+Tab, `ESC [ Z`. |
+| Retroceso | `DEL` (`0x7F`); con Ctrl, `BS` (`0x08`). |
+| Frechas, Inicio e Fin | `ESC [ A`–`D`, `H` e `F`; no modo aplicación (`?1`, [§35](#35-as-secuencias-de-control)), `ESC O` en vez de `ESC [`. |
+| Insert, Supr, RePáx, AvPáx | `ESC [ 2 ~`, `3 ~`, `5 ~` e `6 ~`. |
+| F1–F4 | `ESC O P`–`S`. |
+| F5–F12 | `ESC [ 15 ~`, `17 ~`, `18 ~`, `19 ~`, `20 ~`, `21 ~`, `23 ~` e `24 ~`: saltan algúns números por razóns históricas. |
+| Coas modificadoras | Un parámetro, 1 máis 1 por Maiús, 2 por Alt e 4 por Ctrl: Ctrl+frecha esquerda é `ESC [ 1 ; 5 D`, e Maiús+Supr, `ESC [ 3 ; 2 ~`. |
+| Alt cunha tecla | Un `ESC` diante do que envía a tecla: Alt+f é `ESC f`. |
+| Ctrl cunha tecla | O código de control: Ctrl+A–Z, do 1 ao 26; Ctrl+Espazo e Ctrl+2, `NUL`; Ctrl+3 a Ctrl+7, de `ESC` a `US`; Ctrl+8, `DEL`. |
+
+En VT non hai teclas que soben nin modificadoras soas, e moitas combinacións envían o mesmo: Maiús+Intro e Intro, ou Ctrl+Espazo e Ctrl+2. Por iso o ConPTY prefire o win32-input-mode, e por iso meiga só usa VT antes de que o ConPTY o active, ou se un programa o desactiva ([ADR 0014](adr/0014-o-teclado.md)).
+
+**Os eventos de foco.** Se o programa os pide (`ESC [ ? 1004 h`), o terminal envíalle `ESC [ I` cando a xanela gaña o foco e `ESC [ O` cando o perde. O ConPTY pídeos ao arrancar ([§31](#31-conpty-a-pseudoconsola-de-windows)).
+
+## 43. O IME e o panel de emoji
+
+**Que é un IME.** Un método de entrada (*Input Method Editor*) serve para escribir en linguas con moitos caracteres, coma o chinés, o xaponés ou o coreano: as teclas compoñen un texto nunha xanela de composición, e o usuario escolle os caracteres que van ao programa. O panel de emoji (Win + .) e o ditado (Win + H) tamén son servizos de texto. Windows ofrece dúas APIs para os programas: a moderna, o [*Text Services Framework*](https://learn.microsoft.com/windows/win32/tsf/text-services-framework) (TSF), e a antiga, o [*Input Method Manager*](https://learn.microsoft.com/windows/win32/intl/input-method-manager) (IMM32). Cun programa que non coñece o TSF, Windows tradúceo a IMM32.
+
+**Como lle chega o texto a meiga.** meiga non usa ningunha das dúas: as mensaxes do IME (`WM_IME_STARTCOMPOSITION`, `WM_IME_COMPOSITION`…) van a `DefWindowProcW`, que mostra a composición nunha xanela propia e converte o texto escollido en `WM_IME_CHAR` e despois en `WM_CHAR`: caracteres que chegan sen ningunha tecla. Mentres un IME colle unha tecla, a xanela recibe `VK_PROCESSKEY` no seu lugar, que meiga non envía ao programa.
+
+**O que custa.** Windows carga a pila de entrada de texto, uns 11 módulos, cando se crea a xanela, non cando recibe o foco. Despois non fai nada mentres non se usa: con foco e en repouso, meiga segue sen espertar. [`ImmDisableIME`](https://learn.microsoft.com/windows/win32/api/imm/nf-imm-immdisableime), antes de crear a xanela, evitaría cargala e aforraría uns milisegundos no arranque, pero o panel de emoji deixaría de escribir, e os IME non funcionarían. meiga mantena ([ADR 0014](adr/0014-o-teclado.md)).
+
+**A xanela de composición** vai onde Windows decide, porque meiga non lle di onde está o cursor: queda para as melloras futuras.

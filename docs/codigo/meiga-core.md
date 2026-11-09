@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 1.6. Contén as cores e a paleta, a xeometría (puntos, tamaños e rectángulos, e o tamaño da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas e a súa paleta, o escáner previo e as gravacións.
+> Estado: subfase 1.7. Contén as cores e a paleta, a xeometría (puntos, tamaños e rectángulos, e o tamaño da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas e a súa paleta, o escáner previo e as gravacións.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -14,6 +14,7 @@
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
 | [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella. |
 | [`src/shell.rs`](#cratesmeiga-coresrcshellrs) | `command_line`: a liña de comandos dun programa cos seus argumentos, entre comiñas segundo as regras de Windows. |
+| [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
 | [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, e a copia do que cambia. |
 | [`src/term/screen.rs`](#cratesmeiga-coresrctermscreenrs) | `Screen`: o que mostra o terminal, en tipos de meiga, coa súa paleta, e as celas que cambiaron. |
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
@@ -73,6 +74,7 @@ workspace = true
 pub mod color;
 pub mod damage;
 pub mod geometry;
+pub mod input;
 pub mod pacing;
 pub mod shell;
 pub mod term;
@@ -82,7 +84,7 @@ pub mod text;
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6. `term`, desde a 1.5, ten submódulos, así que vai nun cartafol: o módulo está en `src/term/mod.rs`.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, e `input`, na 1.7. `term`, desde a 1.5, ten submódulos, así que vai nun cartafol: o módulo está en `src/term/mod.rs`.
 - As dependencias, como `alacritty_terminal`, poden ter `unsafe` dentro: `forbid` só se aplica ao código deste crate.
 
 ## `crates/meiga-core/src/color.rs`
@@ -583,6 +585,440 @@ fn push_argument(line: &mut String, arg: &str) {
 | `quotes_and_the_backslashes_before_them_are_escaped` | As comiñas dentro dun argumento, as barras antes delas, as que non van antes de ningunhas, e as do final dun argumento con e sen comiñas: os exemplos da táboa. |
 | `a_program_cannot_have_quotes` | Un programa con comiñas dá `None`, e un baleiro, `""`. |
 
+## `crates/meiga-core/src/input.rs`
+
+Desde a subfase 1.7: as teclas que meiga lle envía ao programa ([ADR 0014](../adr/0014-o-teclado.md)). Windows describe cada tecla que baixa ou sobe cun evento, e o teclado da xanela ([Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)) dálle a meiga eses eventos. Este módulo convérteos nos bytes que le o programa: o evento enteiro en **win32-input-mode**, se o ConPTY o activou, ou o que enviaría un terminal VT ([Tecnoloxías › As teclas no terminal](../tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt)). Está en `meiga-core` porque só traballa con números e bytes: as súas probas non necesitan ningún teclado.
+
+### `ControlKeys`
+
+```rust
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct ControlKeys(u16);
+
+impl ControlKeys {
+    pub const RIGHT_ALT: Self = Self(0x0001);
+    pub const LEFT_ALT: Self = Self(0x0002);
+    pub const RIGHT_CTRL: Self = Self(0x0004);
+    pub const LEFT_CTRL: Self = Self(0x0008);
+    pub const SHIFT: Self = Self(0x0010);
+    pub const NUM_LOCK: Self = Self(0x0020);
+    pub const SCROLL_LOCK: Self = Self(0x0040);
+    pub const CAPS_LOCK: Self = Self(0x0080);
+    pub const ENHANCED: Self = Self(0x0100);
+
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
+    pub const fn bits(self) -> u16 {
+        self.0
+    }
+
+    pub const fn contains(self, other: Self) -> bool {
+        self.0 & other.0 == other.0
+    }
+
+    pub const fn alt(self) -> bool {
+        self.0 & (Self::LEFT_ALT.0 | Self::RIGHT_ALT.0) != 0
+    }
+
+    pub const fn ctrl(self) -> bool {
+        self.0 & (Self::LEFT_CTRL.0 | Self::RIGHT_CTRL.0) != 0
+    }
+
+    pub const fn shift(self) -> bool {
+        self.contains(Self::SHIFT)
+    }
+
+    const fn alt_gr(self) -> bool {
+        let all = Self::LEFT_ALT.0 | Self::RIGHT_ALT.0 | Self::LEFT_CTRL.0 | Self::RIGHT_CTRL.0;
+        self.0 & all == Self::LEFT_CTRL.0 | Self::RIGHT_ALT.0
+    }
+}
+
+impl BitOr for ControlKeys {
+    type Output = Self;
+
+    fn bitor(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
+}
+
+impl BitOrAssign for ControlKeys {
+    fn bitor_assign(&mut self, other: Self) {
+        self.0 |= other.0;
+    }
+}
+```
+
+- As teclas modificadoras e as de bloqueo dun evento, cos bits que usa Windows nos eventos da consola (`dwControlKeyState`). Gardar os mesmos bits fai que o win32-input-mode os envíe tal cal, con `bits`.
+- `ENHANCED` marca unha **tecla estendida**, das que non tiñan os primeiros teclados do PC: as frechas, Insert, Supr, Inicio, Fin, RePáx e AvPáx de fóra do teclado numérico, o Ctrl e o Alt dereitos, e o Intro e a `/` do teclado numérico ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)).
+- `alt` e `ctrl` son certos con calquera dos dous, o esquerdo ou o dereito; `contains`, se están todas as de outro valor. `BitOr` e `BitOrAssign` permiten xuntalas con `|` e `|=`.
+- **`alt_gr`**, privada, di se o Ctrl e o Alt premidos son só os de AltGr: Windows dá AltGr coma o Ctrl esquerdo e o Alt dereito. Se ademais está o Ctrl dereito ou o Alt esquerdo, hai un Ctrl ou un Alt de verdade. Úsaa [`push_vt_character`](#keyencoder).
+- É un *newtype* sobre `u16`: o número non se confunde con outro, e os bits só se nomean coas constantes. As funcións son `const`, así que tamén se poden usar para definir outras constantes, coma nas probas.
+
+### `KeyEvent`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KeyEvent {
+    pub key: u16,
+    pub scan: u16,
+    pub character: u16,
+    pub down: bool,
+    pub controls: ControlKeys,
+    pub repeat: u16,
+}
+```
+
+Unha tecla que baixou ou subiu, coma a describe Windows:
+
+| Campo | Que é |
+|---|---|
+| `key` | O código de tecla virtual (`VK_…`): que tecla é na distribución do teclado. 0 para un carácter sen tecla, coma os dun IME. |
+| `scan` | O código de exploración: onde está a tecla no teclado. |
+| `character` | O carácter que escribe, unha unidade UTF-16, ou 0. Un carácter de fóra do plano básico, coma a maioría dos emoji, chega en dous eventos, cada un cunha metade (*surrogate*). |
+| `down` | Se baixou. Cada tecla que baixa sobe despois, noutro evento. |
+| `controls` | As teclas modificadoras e de bloqueo. |
+| `repeat` | Cantas veces baixou: máis dunha se o teclado a repetiu máis rápido do que a xanela a colleu. |
+
+É `Copy`, de 12 bytes: vai por valor no evento da xanela, `Event::Key` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)).
+
+### `KeyEncoder`
+
+```rust
+#[derive(Debug, Default)]
+pub struct KeyEncoder {
+    high_surrogate: Option<u16>,
+}
+
+impl KeyEncoder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn encode(&mut self, event: &KeyEvent, modes: &Modes, out: &mut Vec<u8>) {
+        if modes.win32_input {
+            // The ConPTY joins the two halves of a character by itself.
+            self.high_surrogate = None;
+            push_win32(event, out);
+            return;
+        }
+        // A VT terminal only sends something when a key goes down, and the
+        // character that Alt brings when it goes up: the one of the code
+        // typed with it on the numeric keypad. Only with Num Lock on, as
+        // Windows Terminal.
+        if !event.down {
+            if event.key == vk::MENU
+                && event.controls.contains(ControlKeys::NUM_LOCK)
+                && let Some(character) = char::from_u32(u32::from(event.character))
+                && character != '\0'
+            {
+                push_utf8(out, character);
+            }
+            return;
+        }
+        let start = out.len();
+        self.push_vt(event, modes, out);
+        let end = out.len();
+        for _ in 1..event.repeat {
+            out.extend_from_within(start..end);
+        }
+    }
+}
+```
+
+**`encode`** engade a `out` o que le o programa para `event`, cos modos que activou ([`Modes`](#changes-e-modes)). Quen chama reutiliza o mesmo `Vec`, así que codificar unha tecla non reserva memoria.
+
+- **Co win32-input-mode,** o evento vai enteiro, tamén ao subir e tamén as teclas modificadoras soas ([`push_win32`](#os-axudantes-das-secuencias)). As dúas metades dun carácter van en dous eventos, e o ConPTY xúntaas.
+- **Sen el,** só envían algo as teclas que baixan, coma nun terminal VT. Se o teclado repetiu a tecla, `extend_from_within` copia o que escribiu a primeira vez as veces que falten, sen calculalo de novo.
+- **A excepción é Alt cando sobe,** se trae un carácter: o do código que se escribiu con el no teclado numérico, coma Alt+0225, que escribe á. Windows dálle ese carácter á tecla Alt cando sobe, e as teclas do teclado numérico non escriben nada ([Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)). Vai tal cal, sen o ESC de Alt, e só co Bloq Num activado, coma no Windows Terminal. `char::from_u32` descarta unha metade dun carácter, que un código así non pode dar.
+- **`high_surrogate`**, o único estado: a primeira metade dun carácter, que espera pola segunda en VT. Cambiar ao win32-input-mode descártaa.
+
+```rust
+fn push_vt(&mut self, event: &KeyEvent, modes: &Modes, out: &mut Vec<u8>) {
+    // The first half of a character only waits for the second one.
+    let high_surrogate = self.high_surrogate.take();
+    // A key that brings a character that is not its own sends the
+    // character, not its sequence.
+    if !own_character(event.key, event.character) {
+        self.push_vt_character(event, high_surrogate, out);
+        return;
+    }
+    let controls = event.controls;
+    let (alt, ctrl) = (controls.alt(), controls.ctrl());
+    // The parameter of the modifiers in the sequences of xterm: 1, plus
+    // 1 for Shift, 2 for Alt and 4 for Ctrl.
+    let modifiers = 1 + u16::from(controls.shift()) + 2 * u16::from(alt) + 4 * u16::from(ctrl);
+    // Alt adds ESC before the keys that have no parameter for it.
+    let with_alt = |out: &mut Vec<u8>, bytes: &[u8]| {
+        if alt {
+            out.push(ESC);
+        }
+        out.extend_from_slice(bytes);
+    };
+    match event.key {
+        vk::UP => push_cursor_key(out, b'A', modifiers, modes.app_cursor),
+        vk::DOWN => push_cursor_key(out, b'B', modifiers, modes.app_cursor),
+        vk::RIGHT => push_cursor_key(out, b'C', modifiers, modes.app_cursor),
+        vk::LEFT => push_cursor_key(out, b'D', modifiers, modes.app_cursor),
+        vk::HOME => push_cursor_key(out, b'H', modifiers, modes.app_cursor),
+        vk::END => push_cursor_key(out, b'F', modifiers, modes.app_cursor),
+        vk::INSERT => push_tilde_key(out, 2, modifiers),
+        vk::DELETE => push_tilde_key(out, 3, modifiers),
+        vk::PRIOR => push_tilde_key(out, 5, modifiers),
+        vk::NEXT => push_tilde_key(out, 6, modifiers),
+        // F1 to F4 always go as in the application cursor mode.
+        vk::F1..=vk::F4 => {
+            let last = b'P' + (event.key - vk::F1) as u8;
+            push_cursor_key(out, last, modifiers, true);
+        }
+        vk::F5..=vk::F12 => {
+            let number = F5_TO_F12[usize::from(event.key - vk::F5)];
+            push_tilde_key(out, number, modifiers);
+        }
+        // Backspace sends DEL, and Ctrl+Backspace, BS.
+        vk::BACK => with_alt(out, if ctrl { b"\x08" } else { b"\x7f" }),
+        vk::TAB if controls.shift() => out.extend_from_slice(b"\x1b[Z"),
+        vk::TAB => with_alt(out, b"\t"),
+        vk::RETURN => with_alt(
+            out,
+            if ctrl {
+                b"\n"
+            } else if modes.line_feed_new_line {
+                b"\r\n"
+            } else {
+                b"\r"
+            },
+        ),
+        vk::ESCAPE => with_alt(out, &[ESC]),
+        vk::PAUSE => out.push(0x1a),
+        // Ctrl+Break.
+        vk::CANCEL => out.push(0x03),
+        _ => self.push_vt_character(event, high_surrogate, out),
+    }
+}
+```
+
+**`push_vt`** escribe o que envía o xterm cando a tecla baixa unha vez:
+
+| Tecla | Envía |
+|---|---|
+| Frechas, Inicio e Fin | `ESC [ A`–`D`, `H` e `F`, ou `ESC O …` no modo aplicación (`app_cursor`). |
+| Insert, Supr, RePáx e AvPáx | `ESC [ 2 ~`, `3 ~`, `5 ~` e `6 ~`. |
+| F1–F4 | `ESC O P`–`S`, sempre coma no modo aplicación. |
+| F5–F12 | `ESC [ n ~`, cos números de `F5_TO_F12`: 15, 17, 18, 19, 20, 21, 23 e 24. |
+| Retroceso | `DEL` (`0x7F`); con Ctrl, `BS` (`0x08`). Windows escribe ao revés, `BS` sen Ctrl e `DEL` con el, pero os terminais VT, coma o Windows Terminal, envían `DEL`. |
+| Tab e Maiús+Tab | `HT` e `ESC [ Z`. |
+| Intro | `CR`; co modo *LNM* (`line_feed_new_line`), `CR LF`; con Ctrl, `LF`. |
+| Esc | `ESC`. |
+| Pausa | `SUB` (`0x1A`), o Ctrl+Z, coma no Windows Terminal: Pausa non ten secuencia VT. |
+| Ctrl+Inter | `ETX` (`0x03`), coma Ctrl+C. |
+| As demais | O seu carácter, en `push_vt_character`. |
+
+- **`modifiers`** é o parámetro das modificadoras do xterm: 1, máis 1 por Maiús, 2 por Alt e 4 por Ctrl. Con algunha, as frechas e as teclas con `~` lévano: Ctrl+frecha esquerda é `ESC [ 1 ; 5 D`.
+- **`with_alt`** pon un ESC diante, coma fan os terminais VT con Alt, nas teclas que non teñen o parámetro.
+- `high_surrogate` cóllese ao principio con `take`: se esta tecla non é a segunda metade dun carácter, a primeira pérdese, porque xa non ten con que xuntarse.
+- **Unha tecla que trae un carácter que non é seu** envía o carácter, non a súa secuencia ([`own_character`](#os-axudantes-das-secuencias)). Pasa cando unha tecla morta non se xunta coa seguinte: Windows escribe os dous caracteres coa segunda tecla, o primeiro chega con ela e o segundo chega despois, só, coa tecla do seu código de exploración. Despois de ´, Intro trae o ´, e o `CR` chega só: sen esta comprobación irían dous `CR`. E se a seguinte é o 7 do teclado numérico, o 7 chega coa tecla Inicio, e iría `ESC [ H`.
+
+```rust
+fn push_vt_character(
+    &mut self,
+    event: &KeyEvent,
+    high_surrogate: Option<u16>,
+    out: &mut Vec<u8>,
+) {
+    let (alt, ctrl) = (event.controls.alt(), event.controls.ctrl());
+    let unit = event.character;
+    // Windows writes a space for Ctrl+Space, and nothing for some keys
+    // with Ctrl, such as Ctrl+2: a VT terminal sends control codes.
+    if ctrl && (unit == 0 || unit == u16::from(b' ')) {
+        // But AltGr writes characters: with a key that writes nothing
+        // with it, as a dead key, it sends nothing.
+        if unit == 0 && event.controls.alt_gr() {
+            return;
+        }
+        if let Some(code) = control_code(event.key) {
+            if alt {
+                out.push(ESC);
+            }
+            out.push(code);
+        }
+        return;
+    }
+    let character = match unit {
+        0 => return,
+        0xd800..=0xdbff => {
+            self.high_surrogate = Some(unit);
+            return;
+        }
+        0xdc00..=0xdfff => {
+            // A second half without its first one is lost.
+            let Some(high) = high_surrogate else {
+                return;
+            };
+            let code = 0x10000 + (u32::from(high - 0xd800) << 10) + u32::from(unit - 0xdc00);
+            char::from_u32(code)
+        }
+        _ => char::from_u32(u32::from(unit)),
+    };
+    let Some(character) = character else {
+        return;
+    };
+    // AltGr writes its characters with Ctrl and Alt down: they go as
+    // they are. With Alt, a VT terminal sends ESC first.
+    let alt_gr = ctrl && alt && character > ' ' && character != '\x7f';
+    if alt && !alt_gr {
+        out.push(ESC);
+    }
+    push_utf8(out, character);
+}
+```
+
+**`push_vt_character`** envía o carácter da tecla en UTF-8:
+
+- **Ctrl sen carácter.** Windows dá o código de control de Ctrl cunha letra (Ctrl+C escribe `0x03`), pero nada para Ctrl+2 e un espazo para Ctrl+Espazo. Para esas, [`control_code`](#os-axudantes-das-secuencias) dá o que envía un terminal VT, e se a tecla non ten ningún, non se envía nada.
+- **AltGr sen carácter** non envía nada. AltGr é o Ctrl esquerdo e o Alt dereito ([`alt_gr`](#controlkeys)), pero serve para escribir caracteres. Unha tecla que con AltGr non escribe nada é unha tecla morta, coma o ~ de AltGr+4 no teclado español, cuxo carácter vai coa tecla seguinte, ou unha sen carácter con AltGr, coma a A. Ctrl+Alt co Alt esquerdo segue enviando os códigos de control: Ctrl+Alt+A é `ESC` e `0x01`.
+- **As dúas metades.** A primeira (`0xD800`–`0xDBFF`) gárdase; a segunda (`0xDC00`–`0xDFFF`) xúntase con ela no carácter enteiro. Unha segunda metade sen a primeira, ou unha primeira que non vai seguida da segunda, pérdese.
+- **AltGr** escribe os seus caracteres con Ctrl e Alt premidos ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)): un carácter imprimíbel con Ctrl e Alt é de AltGr e vai tal cal. Con Alt só, vai un ESC diante: Alt+f é `ESC f`.
+- [`push_utf8`](#os-axudantes-das-secuencias) escribe o carácter en UTF-8.
+
+### Os eventos de foco
+
+```rust
+pub fn focus_sequence(focused: bool, modes: &Modes) -> &'static [u8] {
+    match (modes.focus_events, focused) {
+        (false, _) => b"",
+        (true, true) => b"\x1b[I",
+        (true, false) => b"\x1b[O",
+    }
+}
+```
+
+**`focus_sequence`** di que enviarlle ao programa cando a xanela gaña ou perde o foco: `ESC [ I` ou `ESC [ O` se o pediu (`?1004`, que segue `alacritty_terminal`), e nada se non. Úsaa a vista do terminal ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
+
+### Os axudantes das secuencias
+
+```rust
+fn push_win32(event: &KeyEvent, out: &mut Vec<u8>) {
+    out.extend_from_slice(b"\x1b[");
+    for number in [
+        event.key,
+        event.scan,
+        event.character,
+        u16::from(event.down),
+        event.controls.bits(),
+    ] {
+        push_decimal(out, number);
+        out.push(b';');
+    }
+    // The ConPTY stores a 0 as it is, and a program could lose the key.
+    push_decimal(out, event.repeat.max(1));
+    out.push(b'_');
+}
+
+fn push_cursor_key(out: &mut Vec<u8>, last: u8, modifiers: u16, application: bool) {
+    if modifiers > 1 {
+        out.extend_from_slice(b"\x1b[1;");
+        push_decimal(out, modifiers);
+    } else if application {
+        out.extend_from_slice(b"\x1bO");
+    } else {
+        out.extend_from_slice(b"\x1b[");
+    }
+    out.push(last);
+}
+
+fn push_tilde_key(out: &mut Vec<u8>, number: u16, modifiers: u16) {
+    out.extend_from_slice(b"\x1b[");
+    push_decimal(out, number);
+    if modifiers > 1 {
+        out.push(b';');
+        push_decimal(out, modifiers);
+    }
+    out.push(b'~');
+}
+```
+
+- **`push_win32`** escribe o evento coma `ESC [ Vk ; Sc ; Uc ; Kd ; Cs ; Rc _`, sempre cos seis números, coma o Windows Terminal. As repeticións van polo menos a 1: o ConPTY garda un 0 tal cal, e un programa que conta as repeticións non vería a tecla.
+- **`push_cursor_key`**, para as frechas, Inicio, Fin e F1–F4: `ESC [ X`, ou `ESC O X` no modo aplicación; con modificadoras, `ESC [ 1 ; m X`, tamén no modo aplicación.
+- **`push_tilde_key`**, para Insert, Supr, RePáx, AvPáx e F5–F12: `ESC [ n ~`, e `ESC [ n ; m ~` con modificadoras.
+
+```rust
+fn control_code(key: u16) -> Option<u8> {
+    Some(match key {
+        // Ctrl+Space and Ctrl+2, which is Ctrl+@: NUL.
+        vk::SPACE | 0x32 => 0x00,
+        // Ctrl+3 to Ctrl+7, which are Ctrl+[, \, ], ^ and _: ESC to US.
+        0x33..=0x37 => (key - 0x33) as u8 + ESC,
+        // Ctrl+8: DEL.
+        0x38 => 0x7f,
+        // Ctrl+A to Ctrl+Z, when the layout gives no character with them,
+        // as with Ctrl+Alt: 1 to 26.
+        0x41..=0x5a => (key - 0x40) as u8,
+        _ => return None,
+    })
+}
+
+fn push_decimal(out: &mut Vec<u8>, value: u16) {
+    let mut digits = [0; 5];
+    let mut start = digits.len();
+    let mut rest = value;
+    loop {
+        start -= 1;
+        digits[start] = b'0' + (rest % 10) as u8;
+        rest /= 10;
+        if rest == 0 {
+            break;
+        }
+    }
+    out.extend_from_slice(&digits[start..]);
+}
+```
+
+- **`control_code`** dá o código de control de Ctrl cunha tecla que non o ten en Windows: Ctrl+Espazo e Ctrl+2, `NUL`; Ctrl+3 a Ctrl+7, de `ESC` a `US` (son Ctrl+[, \, ], ^ e _ no teclado estadounidense); Ctrl+8, `DEL`; e Ctrl+A–Z, do 1 ao 26, para cando a distribución non dá ningún, coma con Ctrl+Alt.
+- **`push_decimal`** escribe as cifras de atrás cara a diante nun *array* de 5, as que ten como moito un `u16`, sen `format!`, que reservaría un texto.
+- O módulo **`vk`** ten os códigos de tecla virtual que a codificación VT trata á parte, e `F5_TO_F12`, os números das teclas de función, que saltan algúns por razóns históricas. `meiga-core` non depende de `windows-sys`, así que define os seus.
+
+```rust
+fn own_character(key: u16, unit: u16) -> bool {
+    match key {
+        vk::BACK => matches!(unit, 0 | 0x08 | 0x7f),
+        vk::TAB => matches!(unit, 0 | 0x09),
+        vk::RETURN => matches!(unit, 0 | 0x0a | 0x0d),
+        vk::ESCAPE => matches!(unit, 0 | 0x1b),
+        vk::CANCEL => matches!(unit, 0 | 0x03),
+        vk::PAUSE | vk::PRIOR..=vk::DOWN | vk::INSERT | vk::DELETE | vk::F1..=vk::F12 => unit == 0,
+        _ => true,
+    }
+}
+
+fn push_utf8(out: &mut Vec<u8>, character: char) {
+    let mut utf8 = [0; 4];
+    out.extend_from_slice(character.encode_utf8(&mut utf8).as_bytes());
+}
+```
+
+- **`own_character`** di se o carácter dun evento é da súa tecla, ou se non trae ningún: só entón envían a súa secuencia as teclas que a teñen ([`push_vt`](#keyencoder)). Retroceso escribe `BS`, e con Ctrl `DEL`; Tab, `HT`; Intro, `CR`, e con Ctrl `LF`; Esc, `ESC`; e Ctrl+Inter, `ETX`. As frechas, Inicio, Fin, Insert, Supr, RePáx, AvPáx, Pausa e as teclas de función non escriben ningún. As outras teclas non teñen secuencia, e envían sempre o seu carácter.
+- **`push_utf8`** escribe o carácter en UTF-8 nun *array* de 4 bytes, sen reservar memoria. Úsano `encode`, para o carácter de Alt cando sobe, e `push_vt_character`.
+
+**Probas.** Doce:
+
+| Proba | Que comproba |
+|---|---|
+| `win32_input_mode_sends_the_whole_key_events` | Eventos que enviou o Windows Terminal co teclado español: a A ao baixar e ao subir, AltGr+2 (@), Maiús+Intro, a frecha esquerda, unha tecla morta e Maiús só; as repeticións, e un 0 que vai coma 1; e os números máis grandes. |
+| `vt_sends_the_characters_in_utf8_when_keys_go_down` | a, ñ e €, en UTF-8; unha tecla morta non envía nada, e a seguinte, á; nin as teclas que soben nin Maiús só envían nada. |
+| `vt_joins_the_two_halves_of_a_character` | 😀 en dous eventos dá os seus 4 bytes, tamén cos eventos de subir no medio e con Alt; unha metade soa pérdese. |
+| `vt_sends_the_character_of_an_alt_code_when_alt_goes_up` | Alt+0225: Alt e as teclas do teclado numérico non envían nada ao baixar, e Alt envía á ao subir; sen Bloq Num, nada. |
+| `vt_cursor_keys_follow_the_application_mode_and_the_modifiers` | As frechas, Inicio e Fin, co modo aplicación e coas modificadoras. |
+| `vt_editing_and_function_keys_send_their_sequences` | Insert, Supr, RePáx, AvPáx, F1, F4, F5, F10 e F12, con e sen modificadoras. |
+| `vt_backspace_tab_enter_and_escape_send_control_codes` | Retroceso, Tab, Intro (tamén co modo *LNM*), Esc, Pausa e Ctrl+Inter, con Maiús, Ctrl e Alt. |
+| `vt_keys_with_a_character_that_is_not_theirs_send_the_character` | Despois de ´, Intro, que trae o ´, e o `CR` que chega só envían `´` e `CR`; con Retroceso, `´` e `DEL`; e co 7 do teclado numérico, que chega coa tecla Inicio, `´7`. |
+| `vt_ctrl_sends_control_codes` | Ctrl+C, Ctrl+Espazo, Ctrl+2, Ctrl+3, Ctrl+7, Ctrl+8 e Ctrl+Alt+A, tamén con AltGr e o Ctrl dereito; unha tecla sen código de control non envía nada. |
+| `vt_alt_sends_escape_first_but_altgr_does_not` | Alt+a é `ESC a`; AltGr+2 e Ctrl+Alt+2 envían `@`, e o `[` de AltGr, `[`, sen ESC; e o ~ de AltGr+4, unha tecla morta, non envía nada ata a tecla seguinte. |
+| `vt_repeats_the_keys_that_repeated` | Unha tecla repetida tres veces envía tres veces o seu, tamén unha frecha; con 0 repeticións, unha. |
+| `focus_events_only_go_if_the_program_asks_for_them` | `ESC [ I` e `ESC [ O` co modo, e nada sen el. |
+
 ## `crates/meiga-core/src/term/mod.rs`
 
 O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra) e [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma).
@@ -748,7 +1184,7 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
   - 10 000 liñas de historial;
   - desde a subfase 1.6, o cursor por defecto, `DEFAULT_CURSOR`;
   - `Osc52::OnlyCopy`: os programas poden escribir no portapapeis, pero non lelo;
-  - sen o protocolo de teclado de kitty: meiga usará o win32-input-mode, que é o que pide o ConPTY (subfase 1.7);
+  - sen o protocolo de teclado de kitty: meiga usa o win32-input-mode, que é o que pide o ConPTY ([`input.rs`](#cratesmeiga-coresrcinputrs));
   - o resto, cos valores por defecto (`..Config::default()`).
 
   Ten as cores de meiga (`Palette::MEIGA`) e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
@@ -1091,7 +1527,7 @@ pub(super) fn set_palette(&mut self, palette: &Palette) {
 
 O escáner que le a saída do programa antes do parser, para atopar as secuencias que `alacritty_terminal` ignora e meiga necesita ([ADR 0007](../adr/0007-integracion-coa-shell.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). Só le os bytes: o parser recibe exactamente os mesmos.
 
-Polo de agora segue unha: o **win32-input-mode** (`ESC [ ? 9001 h` e `l`), que o ConPTY activa ao arrancar para que meiga lle envíe eventos de tecla completos (subfase 1.7). O plan falaba tamén de `?1004`, os eventos de foco, pero ese xa o segue `alacritty_terminal`. As secuencias da integración coa shell (OSC 7, 9;9 e 133) chegarán na subfase 4.1.
+Polo de agora segue unha: o **win32-input-mode** (`ESC [ ? 9001 h` e `l`), que o ConPTY activa ao arrancar para que meiga lle envíe eventos de tecla completos ([`input.rs`](#cratesmeiga-coresrcinputrs)). O plan falaba tamén de `?1004`, os eventos de foco, pero ese xa o segue `alacritty_terminal`. As secuencias da integración coa shell (OSC 7, 9;9 e 133) chegarán na subfase 4.1.
 
 **Ler como `vte`.** Para ver un cambio de modo só cando `vte` o vería, tamén cando a secuencia chega partida entre dúas lecturas, o escáner segue os mesmos estados ca el ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)):
 
