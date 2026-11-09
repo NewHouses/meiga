@@ -629,6 +629,11 @@ impl ControlKeys {
     pub const fn shift(self) -> bool {
         self.contains(Self::SHIFT)
     }
+
+    const fn alt_gr(self) -> bool {
+        let all = Self::LEFT_ALT.0 | Self::RIGHT_ALT.0 | Self::LEFT_CTRL.0 | Self::RIGHT_CTRL.0;
+        self.0 & all == Self::LEFT_CTRL.0 | Self::RIGHT_ALT.0
+    }
 }
 
 impl BitOr for ControlKeys {
@@ -649,6 +654,7 @@ impl BitOrAssign for ControlKeys {
 - As teclas modificadoras e as de bloqueo dun evento, cos bits que usa Windows nos eventos da consola (`dwControlKeyState`). Gardar os mesmos bits fai que o win32-input-mode os envíe tal cal, con `bits`.
 - `ENHANCED` marca unha **tecla estendida**, das que non tiñan os primeiros teclados do PC: as frechas, Insert, Supr, Inicio, Fin, RePáx e AvPáx de fóra do teclado numérico, o Ctrl e o Alt dereitos, e o Intro e a `/` do teclado numérico ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)).
 - `alt` e `ctrl` son certos con calquera dos dous, o esquerdo ou o dereito; `contains`, se están todas as de outro valor. `BitOr` e `BitOrAssign` permiten xuntalas con `|` e `|=`.
+- **`alt_gr`**, privada, di se o Ctrl e o Alt premidos son só os de AltGr: Windows dá AltGr coma o Ctrl esquerdo e o Alt dereito. Se ademais está o Ctrl dereito ou o Alt esquerdo, hai un Ctrl ou un Alt de verdade. Úsaa [`push_vt_character`](#keyencoder).
 - É un *newtype* sobre `u16`: o número non se confunde con outro, e os bits só se nomean coas constantes. As funcións son `const`, así que tamén se poden usar para definir outras constantes, coma nas probas.
 
 ### `KeyEvent`
@@ -698,8 +704,18 @@ impl KeyEncoder {
             push_win32(event, out);
             return;
         }
-        // A VT terminal only sends something when a key goes down.
+        // A VT terminal only sends something when a key goes down, and the
+        // character that Alt brings when it goes up: the one of the code
+        // typed with it on the numeric keypad. Only with Num Lock on, as
+        // Windows Terminal.
         if !event.down {
+            if event.key == vk::MENU
+                && event.controls.contains(ControlKeys::NUM_LOCK)
+                && let Some(character) = char::from_u32(u32::from(event.character))
+                && character != '\0'
+            {
+                push_utf8(out, character);
+            }
             return;
         }
         let start = out.len();
@@ -716,12 +732,19 @@ impl KeyEncoder {
 
 - **Co win32-input-mode,** o evento vai enteiro, tamén ao subir e tamén as teclas modificadoras soas ([`push_win32`](#os-axudantes-das-secuencias)). As dúas metades dun carácter van en dous eventos, e o ConPTY xúntaas.
 - **Sen el,** só envían algo as teclas que baixan, coma nun terminal VT. Se o teclado repetiu a tecla, `extend_from_within` copia o que escribiu a primeira vez as veces que falten, sen calculalo de novo.
+- **A excepción é Alt cando sobe,** se trae un carácter: o do código que se escribiu con el no teclado numérico, coma Alt+0225, que escribe á. Windows dálle ese carácter á tecla Alt cando sobe, e as teclas do teclado numérico non escriben nada ([Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)). Vai tal cal, sen o ESC de Alt, e só co Bloq Num activado, coma no Windows Terminal. `char::from_u32` descarta unha metade dun carácter, que un código así non pode dar.
 - **`high_surrogate`**, o único estado: a primeira metade dun carácter, que espera pola segunda en VT. Cambiar ao win32-input-mode descártaa.
 
 ```rust
 fn push_vt(&mut self, event: &KeyEvent, modes: &Modes, out: &mut Vec<u8>) {
     // The first half of a character only waits for the second one.
     let high_surrogate = self.high_surrogate.take();
+    // A key that brings a character that is not its own sends the
+    // character, not its sequence.
+    if !own_character(event.key, event.character) {
+        self.push_vt_character(event, high_surrogate, out);
+        return;
+    }
     let controls = event.controls;
     let (alt, ctrl) = (controls.alt(), controls.ctrl());
     // The parameter of the modifiers in the sequences of xterm: 1, plus
@@ -796,6 +819,7 @@ fn push_vt(&mut self, event: &KeyEvent, modes: &Modes, out: &mut Vec<u8>) {
 - **`modifiers`** é o parámetro das modificadoras do xterm: 1, máis 1 por Maiús, 2 por Alt e 4 por Ctrl. Con algunha, as frechas e as teclas con `~` lévano: Ctrl+frecha esquerda é `ESC [ 1 ; 5 D`.
 - **`with_alt`** pon un ESC diante, coma fan os terminais VT con Alt, nas teclas que non teñen o parámetro.
 - `high_surrogate` cóllese ao principio con `take`: se esta tecla non é a segunda metade dun carácter, a primeira pérdese, porque xa non ten con que xuntarse.
+- **Unha tecla que trae un carácter que non é seu** envía o carácter, non a súa secuencia ([`own_character`](#os-axudantes-das-secuencias)). Pasa cando unha tecla morta non se xunta coa seguinte: Windows escribe os dous caracteres coa segunda tecla, o primeiro chega con ela e o segundo chega despois, só, coa tecla do seu código de exploración. Despois de ´, Intro trae o ´, e o `CR` chega só: sen esta comprobación irían dous `CR`. E se a seguinte é o 7 do teclado numérico, o 7 chega coa tecla Inicio, e iría `ESC [ H`.
 
 ```rust
 fn push_vt_character(
@@ -809,6 +833,11 @@ fn push_vt_character(
     // Windows writes a space for Ctrl+Space, and nothing for some keys
     // with Ctrl, such as Ctrl+2: a VT terminal sends control codes.
     if ctrl && (unit == 0 || unit == u16::from(b' ')) {
+        // But AltGr writes characters: with a key that writes nothing
+        // with it, as a dead key, it sends nothing.
+        if unit == 0 && event.controls.alt_gr() {
+            return;
+        }
         if let Some(code) = control_code(event.key) {
             if alt {
                 out.push(ESC);
@@ -842,17 +871,17 @@ fn push_vt_character(
     if alt && !alt_gr {
         out.push(ESC);
     }
-    let mut utf8 = [0; 4];
-    out.extend_from_slice(character.encode_utf8(&mut utf8).as_bytes());
+    push_utf8(out, character);
 }
 ```
 
 **`push_vt_character`** envía o carácter da tecla en UTF-8:
 
 - **Ctrl sen carácter.** Windows dá o código de control de Ctrl cunha letra (Ctrl+C escribe `0x03`), pero nada para Ctrl+2 e un espazo para Ctrl+Espazo. Para esas, [`control_code`](#os-axudantes-das-secuencias) dá o que envía un terminal VT, e se a tecla non ten ningún, non se envía nada.
+- **AltGr sen carácter** non envía nada. AltGr é o Ctrl esquerdo e o Alt dereito ([`alt_gr`](#controlkeys)), pero serve para escribir caracteres. Unha tecla que con AltGr non escribe nada é unha tecla morta, coma o ~ de AltGr+4 no teclado español, cuxo carácter vai coa tecla seguinte, ou unha sen carácter con AltGr, coma a A. Ctrl+Alt co Alt esquerdo segue enviando os códigos de control: Ctrl+Alt+A é `ESC` e `0x01`.
 - **As dúas metades.** A primeira (`0xD800`–`0xDBFF`) gárdase; a segunda (`0xDC00`–`0xDFFF`) xúntase con ela no carácter enteiro. Unha segunda metade sen a primeira, ou unha primeira que non vai seguida da segunda, pérdese.
 - **AltGr** escribe os seus caracteres con Ctrl e Alt premidos ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)): un carácter imprimíbel con Ctrl e Alt é de AltGr e vai tal cal. Con Alt só, vai un ESC diante: Alt+f é `ESC f`.
-- `encode_utf8` escribe o carácter nun *array* de 4 bytes, sen reservar memoria.
+- [`push_utf8`](#os-axudantes-das-secuencias) escribe o carácter en UTF-8.
 
 ### Os eventos de foco
 
@@ -951,18 +980,42 @@ fn push_decimal(out: &mut Vec<u8>, value: u16) {
 - **`push_decimal`** escribe as cifras de atrás cara a diante nun *array* de 5, as que ten como moito un `u16`, sen `format!`, que reservaría un texto.
 - O módulo **`vk`** ten os códigos de tecla virtual que a codificación VT trata á parte, e `F5_TO_F12`, os números das teclas de función, que saltan algúns por razóns históricas. `meiga-core` non depende de `windows-sys`, así que define os seus.
 
-**Probas.** Dez:
+```rust
+fn own_character(key: u16, unit: u16) -> bool {
+    match key {
+        vk::BACK => matches!(unit, 0 | 0x08 | 0x7f),
+        vk::TAB => matches!(unit, 0 | 0x09),
+        vk::RETURN => matches!(unit, 0 | 0x0a | 0x0d),
+        vk::ESCAPE => matches!(unit, 0 | 0x1b),
+        vk::CANCEL => matches!(unit, 0 | 0x03),
+        vk::PAUSE | vk::PRIOR..=vk::DOWN | vk::INSERT | vk::DELETE | vk::F1..=vk::F12 => unit == 0,
+        _ => true,
+    }
+}
+
+fn push_utf8(out: &mut Vec<u8>, character: char) {
+    let mut utf8 = [0; 4];
+    out.extend_from_slice(character.encode_utf8(&mut utf8).as_bytes());
+}
+```
+
+- **`own_character`** di se o carácter dun evento é da súa tecla, ou se non trae ningún: só entón envían a súa secuencia as teclas que a teñen ([`push_vt`](#keyencoder)). Retroceso escribe `BS`, e con Ctrl `DEL`; Tab, `HT`; Intro, `CR`, e con Ctrl `LF`; Esc, `ESC`; e Ctrl+Inter, `ETX`. As frechas, Inicio, Fin, Insert, Supr, RePáx, AvPáx, Pausa e as teclas de función non escriben ningún. As outras teclas non teñen secuencia, e envían sempre o seu carácter.
+- **`push_utf8`** escribe o carácter en UTF-8 nun *array* de 4 bytes, sen reservar memoria. Úsano `encode`, para o carácter de Alt cando sobe, e `push_vt_character`.
+
+**Probas.** Doce:
 
 | Proba | Que comproba |
 |---|---|
 | `win32_input_mode_sends_the_whole_key_events` | Eventos que enviou o Windows Terminal co teclado español: a A ao baixar e ao subir, AltGr+2 (@), Maiús+Intro, a frecha esquerda, unha tecla morta e Maiús só; as repeticións, e un 0 que vai coma 1; e os números máis grandes. |
 | `vt_sends_the_characters_in_utf8_when_keys_go_down` | a, ñ e €, en UTF-8; unha tecla morta non envía nada, e a seguinte, á; nin as teclas que soben nin Maiús só envían nada. |
 | `vt_joins_the_two_halves_of_a_character` | 😀 en dous eventos dá os seus 4 bytes, tamén cos eventos de subir no medio e con Alt; unha metade soa pérdese. |
+| `vt_sends_the_character_of_an_alt_code_when_alt_goes_up` | Alt+0225: Alt e as teclas do teclado numérico non envían nada ao baixar, e Alt envía á ao subir; sen Bloq Num, nada. |
 | `vt_cursor_keys_follow_the_application_mode_and_the_modifiers` | As frechas, Inicio e Fin, co modo aplicación e coas modificadoras. |
 | `vt_editing_and_function_keys_send_their_sequences` | Insert, Supr, RePáx, AvPáx, F1, F4, F5, F10 e F12, con e sen modificadoras. |
 | `vt_backspace_tab_enter_and_escape_send_control_codes` | Retroceso, Tab, Intro (tamén co modo *LNM*), Esc, Pausa e Ctrl+Inter, con Maiús, Ctrl e Alt. |
-| `vt_ctrl_sends_control_codes` | Ctrl+C, Ctrl+Espazo, Ctrl+2, Ctrl+3, Ctrl+7, Ctrl+8 e Ctrl+Alt+A; unha tecla sen código de control non envía nada. |
-| `vt_alt_sends_escape_first_but_altgr_does_not` | Alt+a é `ESC a`; AltGr+2 e Ctrl+Alt+2 envían `@`, e o `[` de AltGr, `[`, sen ESC. |
+| `vt_keys_with_a_character_that_is_not_theirs_send_the_character` | Despois de ´, Intro, que trae o ´, e o `CR` que chega só envían `´` e `CR`; con Retroceso, `´` e `DEL`; e co 7 do teclado numérico, que chega coa tecla Inicio, `´7`. |
+| `vt_ctrl_sends_control_codes` | Ctrl+C, Ctrl+Espazo, Ctrl+2, Ctrl+3, Ctrl+7, Ctrl+8 e Ctrl+Alt+A, tamén con AltGr e o Ctrl dereito; unha tecla sen código de control non envía nada. |
+| `vt_alt_sends_escape_first_but_altgr_does_not` | Alt+a é `ESC a`; AltGr+2 e Ctrl+Alt+2 envían `@`, e o `[` de AltGr, `[`, sen ESC; e o ~ de AltGr+4, unha tecla morta, non envía nada ata a tecla seguinte. |
 | `vt_repeats_the_keys_that_repeated` | Unha tecla repetida tres veces envía tres veces o seu, tamén unha frecha; con 0 repeticións, unha. |
 | `focus_events_only_go_if_the_program_asks_for_them` | `ESC [ I` e `ESC [ O` co modo, e nada sen el. |
 

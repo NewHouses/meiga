@@ -62,6 +62,13 @@ impl ControlKeys {
     pub const fn shift(self) -> bool {
         self.contains(Self::SHIFT)
     }
+
+    /// Whether the Ctrl and the Alt that are down are only those of AltGr,
+    /// which Windows gives as the left Ctrl and the right Alt.
+    const fn alt_gr(self) -> bool {
+        let all = Self::LEFT_ALT.0 | Self::RIGHT_ALT.0 | Self::LEFT_CTRL.0 | Self::RIGHT_CTRL.0;
+        self.0 & all == Self::LEFT_CTRL.0 | Self::RIGHT_ALT.0
+    }
 }
 
 impl BitOr for ControlKeys {
@@ -122,8 +129,18 @@ impl KeyEncoder {
             push_win32(event, out);
             return;
         }
-        // A VT terminal only sends something when a key goes down.
+        // A VT terminal only sends something when a key goes down, and the
+        // character that Alt brings when it goes up: the one of the code
+        // typed with it on the numeric keypad. Only with Num Lock on, as
+        // Windows Terminal.
         if !event.down {
+            if event.key == vk::MENU
+                && event.controls.contains(ControlKeys::NUM_LOCK)
+                && let Some(character) = char::from_u32(u32::from(event.character))
+                && character != '\0'
+            {
+                push_utf8(out, character);
+            }
             return;
         }
         let start = out.len();
@@ -138,6 +155,12 @@ impl KeyEncoder {
     fn push_vt(&mut self, event: &KeyEvent, modes: &Modes, out: &mut Vec<u8>) {
         // The first half of a character only waits for the second one.
         let high_surrogate = self.high_surrogate.take();
+        // A key that brings a character that is not its own sends the
+        // character, not its sequence.
+        if !own_character(event.key, event.character) {
+            self.push_vt_character(event, high_surrogate, out);
+            return;
+        }
         let controls = event.controls;
         let (alt, ctrl) = (controls.alt(), controls.ctrl());
         // The parameter of the modifiers in the sequences of xterm: 1, plus
@@ -205,6 +228,11 @@ impl KeyEncoder {
         // Windows writes a space for Ctrl+Space, and nothing for some keys
         // with Ctrl, such as Ctrl+2: a VT terminal sends control codes.
         if ctrl && (unit == 0 || unit == u16::from(b' ')) {
+            // But AltGr writes characters: with a key that writes nothing
+            // with it, as a dead key, it sends nothing.
+            if unit == 0 && event.controls.alt_gr() {
+                return;
+            }
             if let Some(code) = control_code(event.key) {
                 if alt {
                     out.push(ESC);
@@ -238,8 +266,7 @@ impl KeyEncoder {
         if alt && !alt_gr {
             out.push(ESC);
         }
-        let mut utf8 = [0; 4];
-        out.extend_from_slice(character.encode_utf8(&mut utf8).as_bytes());
+        push_utf8(out, character);
     }
 }
 
@@ -259,6 +286,7 @@ mod vk {
     pub const BACK: u16 = 0x08;
     pub const TAB: u16 = 0x09;
     pub const RETURN: u16 = 0x0d;
+    pub const MENU: u16 = 0x12;
     pub const PAUSE: u16 = 0x13;
     pub const ESCAPE: u16 = 0x1b;
     pub const SPACE: u16 = 0x20;
@@ -281,6 +309,30 @@ mod vk {
 /// The numbers of F5 to F12 in their sequences, `ESC [ n ~`, which skip
 /// some numbers for historical reasons.
 const F5_TO_F12: [u16; 8] = [15, 17, 18, 19, 20, 21, 23, 24];
+
+/// Whether `unit` is nothing or a character that `key` writes by itself:
+/// only then the keys with a sequence send it. Another character is not of
+/// the key: the one of a dead key that does not join with Enter, Tab,
+/// Backspace or Esc, which Windows writes with them, or one of the numeric
+/// keypad that came alone, whose key comes from its scan code, such as
+/// Home for the 7.
+fn own_character(key: u16, unit: u16) -> bool {
+    match key {
+        vk::BACK => matches!(unit, 0 | 0x08 | 0x7f),
+        vk::TAB => matches!(unit, 0 | 0x09),
+        vk::RETURN => matches!(unit, 0 | 0x0a | 0x0d),
+        vk::ESCAPE => matches!(unit, 0 | 0x1b),
+        vk::CANCEL => matches!(unit, 0 | 0x03),
+        vk::PAUSE | vk::PRIOR..=vk::DOWN | vk::INSERT | vk::DELETE | vk::F1..=vk::F12 => unit == 0,
+        _ => true,
+    }
+}
+
+/// Adds `character` in UTF-8.
+fn push_utf8(out: &mut Vec<u8>, character: char) {
+    let mut utf8 = [0; 4];
+    out.extend_from_slice(character.encode_utf8(&mut utf8).as_bytes());
+}
 
 /// The win32-input-mode sequence of `event`:
 /// `ESC [ Vk ; Sc ; Uc ; Kd ; Cs ; Rc _`, with all its numbers, as Windows
@@ -372,6 +424,7 @@ mod tests {
     /// AltGr: Windows adds a left Ctrl to the right Alt.
     const ALT_GR: ControlKeys = ControlKeys(ControlKeys::LEFT_CTRL.0 | ControlKeys::RIGHT_ALT.0);
     const ENHANCED: ControlKeys = ControlKeys::ENHANCED;
+    const NUM_LOCK: ControlKeys = ControlKeys::NUM_LOCK;
 
     fn down(key: u16, scan: u16, character: u16, controls: ControlKeys) -> KeyEvent {
         KeyEvent {
@@ -495,6 +548,24 @@ mod tests {
     }
 
     #[test]
+    fn vt_sends_the_character_of_an_alt_code_when_alt_goes_up() {
+        // Alt+0225 writes á: the keys of the numeric keypad write nothing,
+        // and Alt brings the character when it goes up.
+        let numpad = |key| down(key, 0, 0, ALT | NUM_LOCK);
+        let typed = [
+            down(0x12, 56, 0, ALT | NUM_LOCK),
+            numpad(0x60),
+            numpad(0x62),
+            numpad(0x62),
+            numpad(0x65),
+            up(0x12, 56, 'á' as u16, NUM_LOCK),
+        ];
+        assert_eq!(vt(&typed), "á".as_bytes());
+        // Without Num Lock, as in Windows Terminal, nothing.
+        assert_eq!(vt(&[up(0x12, 56, 'á' as u16, NONE)]), b"");
+    }
+
+    #[test]
     fn vt_cursor_keys_follow_the_application_mode_and_the_modifiers() {
         assert_eq!(vt(&[key(0x26, '\0', ENHANCED)]), b"\x1b[A");
         assert_eq!(vt(&[key(0x24, '\0', NONE)]), b"\x1b[H");
@@ -548,6 +619,21 @@ mod tests {
     }
 
     #[test]
+    fn vt_keys_with_a_character_that_is_not_theirs_send_the_character() {
+        // ´ and Enter do not join: Windows writes ´ with Enter, and then
+        // the \r alone, with the key of its scan code.
+        let dead = key(0xde, '\0', NONE);
+        let enter = [dead, key(0x0d, '´', NONE), key(0x0d, '\r', NONE)];
+        assert_eq!(vt(&enter), "´\r".as_bytes());
+        let backspace = [dead, key(0x08, '´', NONE), key(0x08, '\x08', NONE)];
+        assert_eq!(vt(&backspace), "´\x7f".as_bytes());
+        // The 7 of the numeric keypad comes alone with Home, the key of its
+        // scan code.
+        let seven = [dead, key(0x67, '´', NUM_LOCK), key(0x24, '7', NUM_LOCK)];
+        assert_eq!(vt(&seven), "´7".as_bytes());
+    }
+
+    #[test]
     fn vt_ctrl_sends_control_codes() {
         // Windows already gives the control code of Ctrl+letter.
         assert_eq!(vt(&[key(0x43, '\x03', CTRL)]), b"\x03");
@@ -560,6 +646,9 @@ mod tests {
         // Ctrl+Alt+A, without a character in the layout.
         assert_eq!(vt(&[key(0x41, '\0', CTRL | ALT)]), b"\x1b\x01");
         assert_eq!(vt(&[key(0x41, '\x01', CTRL | ALT)]), b"\x1b\x01");
+        // With AltGr and the right Ctrl, the Ctrl is real.
+        let both = ALT_GR | ControlKeys::RIGHT_CTRL;
+        assert_eq!(vt(&[key(0x41, '\0', both)]), b"\x1b\x01");
         // A key without a control code sends nothing.
         assert_eq!(vt(&[key(0xc0, '\0', CTRL)]), b"");
     }
@@ -571,6 +660,9 @@ mod tests {
         // Ctrl+Alt also writes the characters of AltGr.
         assert_eq!(vt(&[key(0x32, '@', CTRL | ALT)]), b"@");
         assert_eq!(vt(&[key(0xba, '[', ALT_GR)]), b"[");
+        // A dead key with AltGr, as the ~ of the Spanish layout, sends
+        // nothing: its character goes with the next key.
+        assert_eq!(vt(&[key(0x34, '\0', ALT_GR), key(0x20, '~', NONE)]), b"~");
     }
 
     #[test]
