@@ -144,8 +144,9 @@ impl Frames {
     }
 
     /// Starts the frame timer for the first moment that the pacer allows,
-    /// even if nothing changed. For the benchmarks, which draw a frame each
-    /// time.
+    /// even if nothing changed: for the benchmarks, which draw a frame each
+    /// time, and for a new scale, whose frame comes after the new size of the
+    /// window.
     pub fn schedule(&mut self, window: &Window) -> Result<(), HandlerError> {
         if self.minimized {
             return Ok(());
@@ -388,7 +389,7 @@ impl Frames {
 }
 
 /// The interval between frames now: `max_fps = "auto"`.
-fn interval() -> Duration {
+pub fn interval() -> Duration {
     auto_interval(window::is_remote_session())
 }
 

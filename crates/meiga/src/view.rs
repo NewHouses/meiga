@@ -8,24 +8,27 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use meiga_core::color::{Palette, Rgb};
-use meiga_core::geometry::{Point, Rect, Size};
+use meiga_core::geometry::{GridSize, Point, Rect, Size};
 use meiga_core::input::{KeyEncoder, KeyEvent, focus_sequence};
-use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, Screen};
+use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, MIN_SIZE, Screen, Scroll};
 use meiga_core::text::CellChar;
-use meiga_render::{Canvas, Decorations, Font, FontStyle};
+use meiga_render::{Canvas, Decorations, Font, FontStyle, FontSystem};
 use meiga_win::conpty::Input;
 use meiga_win::event::Event;
 use meiga_win::window::{self, CaretSettings, Waker, Window};
 
 use crate::clipboard;
-use crate::frames::Scene;
+use crate::frames::{self, Scene};
 use crate::mouse::{Context, Mouse, Response};
 use crate::session::{Shared, lock};
 
 /// The font: the first of these families that is installed, at 12 points,
-/// as in Windows Terminal.
+/// as in Windows Terminal. The zoom changes its size a point at a time,
+/// from 6 to 72 points.
 pub const FONT_FAMILIES: [&str; 2] = ["Cascadia Mono", "Consolas"];
-pub const FONT_POINTS: f32 = 12.0;
+pub const FONT_POINTS: u16 = 12;
+const MIN_POINTS: u16 = 6;
+const MAX_POINTS: u16 = 72;
 
 /// How far dim text (SGR 2) goes from its colour towards the one of its
 /// background: a third of the way, out of 255.
@@ -38,17 +41,51 @@ const BASE_DPI: u32 = 96;
 const VK_C: u16 = 0x43;
 const VK_V: u16 = 0x56;
 const VK_ESCAPE: u16 = 0x1b;
+/// Page Up, Page Down, End, Home, and the up and down arrows.
+const VK_PRIOR: u16 = 0x21;
+const VK_NEXT: u16 = 0x22;
+const VK_END: u16 = 0x23;
+const VK_HOME: u16 = 0x24;
+const VK_UP: u16 = 0x26;
+const VK_DOWN: u16 = 0x28;
+/// The 0, the + and the - keys of the main keyboard and of the numeric
+/// keypad. On the main keyboard, the + and the - are the keys with + and -
+/// of the Spanish layout, and with = and - of the US one.
+const VK_0: u16 = 0x30;
+const VK_NUMPAD0: u16 = 0x60;
+const VK_ADD: u16 = 0x6b;
+const VK_SUBTRACT: u16 = 0x6d;
+const VK_OEM_PLUS: u16 = 0xbb;
+const VK_OEM_MINUS: u16 = 0xbd;
 
 /// The terminal of the session, as the window shows it.
 pub struct TerminalView {
     shared: Arc<Mutex<Shared>>,
     /// Sends to the program the keys, and the answers that the window finds
-    /// when it ends a synchronized update. `None` if the program did not
-    /// start.
+    /// when it ends a synchronized update, and tells it the size of the
+    /// grid. `None` if the program did not start.
     input: Option<Input>,
     waker: Waker,
+    /// The fonts of the system, for a new font when the zoom or the scale
+    /// changes.
+    fonts: FontSystem,
     font: Font,
+    /// The size of the font, in points, and the dots per inch of the
+    /// window.
+    points: u16,
+    dpi: u32,
     cell: Size,
+    /// The size of the client area of the window.
+    client: Size,
+    /// The grid of the terminal and of the program.
+    grid: GridSize,
+    /// The grid that fills the window, while they do not have it: it
+    /// changes at most once per frame interval, since they reflow their
+    /// text each time. It last changed at `resized_at`.
+    wanted: Option<GridSize>,
+    resized_at: Option<Instant>,
+    /// The whole window has to be drawn again: the font changed.
+    redraw: bool,
     screen: Screen,
     caret: Caret,
     mouse: Mouse,
@@ -67,23 +104,35 @@ pub struct TerminalView {
 }
 
 impl TerminalView {
-    /// The view of the terminal of `shared`, drawn with `font` at `dpi`.
+    /// The view of the terminal of `shared`, drawn with `font`, of `fonts`,
+    /// in a window of `client` pixels at `dpi`.
     pub fn new(
         shared: Arc<Mutex<Shared>>,
         input: Option<Input>,
         waker: Waker,
+        fonts: FontSystem,
         font: Font,
         dpi: u32,
+        client: Size,
     ) -> Self {
+        let grid = lock(&shared).terminal.size();
         Self {
             shared,
             input,
             waker,
+            fonts,
             cell: font.cell(),
             font,
+            points: FONT_POINTS,
+            dpi,
+            client,
+            grid,
+            wanted: None,
+            resized_at: None,
+            redraw: false,
             screen: Screen::new(),
             caret: Caret::new(dpi, Instant::now()),
-            mouse: Mouse::new(),
+            mouse: Mouse::new(dpi, client),
             taken: Vec::new(),
             run: Vec::new(),
             answers: Vec::new(),
@@ -100,17 +149,27 @@ impl TerminalView {
         self.caret.focused
     }
 
+    /// The dots per inch for which the view draws.
+    pub const fn dpi(&self) -> u32 {
+        self.dpi
+    }
+
     /// A key went down or up. Ctrl+C copies the selection, if there is
-    /// one; Ctrl+V pastes; and Esc removes the selection, if there is one.
-    /// The rest go to the program, as the modes that it turned on say, and
-    /// a key that goes down removes the selection, unless it is a modifier
-    /// key.
+    /// one; Ctrl+V pastes; Esc removes the selection, if there is one; on
+    /// the primary screen, the keys of the history move its view; and
+    /// Ctrl and +, - or 0 zoom. The rest go to the program, as the modes
+    /// that it turned on say, and a key that goes down removes the
+    /// selection and brings the view back to the screen, where the program
+    /// writes, unless it is a modifier key.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         // A key that meiga took does not reach the program while it repeats,
-        // nor when it goes up.
+        // nor when it goes up. The ones that move the view or zoom do it
+        // again while they repeat.
         if let Some(taken) = self.taken.iter().position(|&key| key == event.key) {
             if !event.down {
                 self.taken.swap_remove(taken);
+            } else if repeats(event.key) {
+                return self.shortcut(window, event).unwrap_or_default();
             }
             return Response::default();
         }
@@ -125,7 +184,10 @@ impl TerminalView {
         }
         let mut response = Response::default();
         if event.down && !is_modifier(event.key) {
-            response.redraw = lock(&self.shared).terminal.clear_selection();
+            let mut shared = lock(&self.shared);
+            let cleared = shared.terminal.clear_selection();
+            let back = shared.terminal.scroll(Scroll::Bottom);
+            response.redraw = cleared || back;
         }
         let Some(input) = &self.input else {
             return response;
@@ -140,35 +202,146 @@ impl TerminalView {
     /// What a key that goes down does if meiga takes it.
     fn shortcut(&mut self, window: &Window, event: &KeyEvent) -> Option<Response> {
         let controls = event.controls;
-        // Ctrl, and Shift or not, but not Alt, nor AltGr.
-        let ctrl = controls.ctrl() && !controls.alt();
+        let (ctrl, alt, shift) = (controls.ctrl(), controls.alt(), controls.shift());
         match event.key {
-            VK_C if ctrl => clipboard::copy(window, &self.shared, true).then_some(Response {
-                redraw: true,
-                dialog: false,
-            }),
-            VK_V if ctrl => {
-                let redraw = lock(&self.shared).terminal.clear_selection();
-                let dialog = self
-                    .input
-                    .as_ref()
-                    .is_some_and(|input| clipboard::paste(window, &self.shared, input));
-                Some(Response { redraw, dialog })
+            // Ctrl, and Shift or not, but not Alt, nor AltGr.
+            VK_C if ctrl && !alt => {
+                clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW)
             }
-            VK_ESCAPE if !controls.ctrl() && !controls.alt() && !controls.shift() => {
-                lock(&self.shared)
-                    .terminal
-                    .clear_selection()
-                    .then_some(Response {
-                        redraw: true,
-                        dialog: false,
-                    })
+            VK_V if ctrl && !alt => {
+                let cleared = lock(&self.shared).terminal.clear_selection();
+                let pasted = self.input.as_ref().map_or_else(Response::default, |input| {
+                    clipboard::paste(window, &self.shared, input)
+                });
+                Some(Response {
+                    redraw: cleared || pasted.redraw,
+                    ..pasted
+                })
             }
+            VK_ESCAPE if !ctrl && !alt && !shift => lock(&self.shared)
+                .terminal
+                .clear_selection()
+                .then_some(Response::REDRAW),
+            // The history, as in Windows Terminal: Shift and Page Up or Page
+            // Down, with Ctrl or without it, by pages; and Ctrl+Shift with
+            // the arrows, by rows, or with Home and End, to its ends.
+            VK_PRIOR if shift && !alt => self.scroll_history(Scroll::PageUp),
+            VK_NEXT if shift && !alt => self.scroll_history(Scroll::PageDown),
+            VK_UP if ctrl && shift && !alt => self.scroll_history(Scroll::Rows(1)),
+            VK_DOWN if ctrl && shift && !alt => self.scroll_history(Scroll::Rows(-1)),
+            VK_HOME if ctrl && shift && !alt => self.scroll_history(Scroll::Top),
+            VK_END if ctrl && shift && !alt => self.scroll_history(Scroll::Bottom),
+            // The zoom: Ctrl alone.
+            VK_OEM_PLUS | VK_ADD if ctrl && !alt && !shift => Some(self.zoom(1)),
+            VK_OEM_MINUS | VK_SUBTRACT if ctrl && !alt && !shift => Some(self.zoom(-1)),
+            VK_0 | VK_NUMPAD0 if ctrl && !alt && !shift => Some(self.set_points(FONT_POINTS)),
             _ => None,
         }
     }
 
-    /// A mouse event of the window.
+    /// Moves the view of the history, on the primary screen. On the
+    /// alternate one, which has none, the key goes to the program.
+    fn scroll_history(&self, scroll: Scroll) -> Option<Response> {
+        let mut shared = lock(&self.shared);
+        if shared.terminal.modes().alt_screen {
+            return None;
+        }
+        Some(Response {
+            redraw: shared.terminal.scroll(scroll),
+            ..Response::default()
+        })
+    }
+
+    /// Makes the font `steps` points bigger, or smaller if they are
+    /// negative, from 6 to 72 points.
+    fn zoom(&mut self, steps: i32) -> Response {
+        let points = i32::from(self.points)
+            .saturating_add(steps)
+            .clamp(i32::from(MIN_POINTS), i32::from(MAX_POINTS));
+        // Between 6 and 72.
+        self.set_points(points as u16)
+    }
+
+    /// Draws with the font at `points`.
+    fn set_points(&mut self, points: u16) -> Response {
+        if points == self.points {
+            return Response::default();
+        }
+        self.points = points;
+        self.new_font();
+        Response::REDRAW
+    }
+
+    /// The window moved to a monitor with `dpi`: a font, a scroll bar and
+    /// a cursor for it. Its new size, if it changes, comes next, and gives
+    /// the grid; if it does not change, the grid is the one of the new
+    /// cells in the same window.
+    pub fn dpi_changed(&mut self, dpi: u32) {
+        if dpi == self.dpi {
+            return;
+        }
+        self.dpi = dpi;
+        self.caret.set_dpi(dpi);
+        self.mouse.set_dpi(dpi);
+        self.new_font();
+    }
+
+    /// Makes the font of the size and the scale that the view has now. The
+    /// cells change size, and with them the grid that fills the window. If
+    /// DirectWrite cannot make it, the old one stays.
+    fn new_font(&mut self) {
+        if let Ok(font) = Font::new(
+            &self.fonts,
+            &FONT_FAMILIES,
+            f32::from(self.points),
+            self.dpi,
+        ) {
+            self.font = font;
+            self.cell = self.font.cell();
+            lock(&self.shared).terminal.set_cell_size(self.cell);
+        }
+        self.redraw = true;
+        self.resized(self.client);
+    }
+
+    /// The client area of the window has `client` pixels now: the grid
+    /// that fills it is for the terminal and the program, at most once per
+    /// frame interval.
+    pub fn resized(&mut self, client: Size) {
+        self.client = client;
+        self.mouse.bar_mut().set_client(client);
+        let grid = grid_size(client, self.cell, self.mouse.bar().width());
+        self.wanted = (grid != self.grid).then_some(grid);
+    }
+
+    /// Gives the grid that fills the window to the terminal and to the
+    /// program, if it changed, unless it changed less than a frame interval
+    /// before `now`. Returns when it has to, then.
+    fn resize_grid(&mut self, now: Instant) -> Option<Instant> {
+        let grid = self.wanted?;
+        if let Some(due) = self
+            .resized_at
+            .and_then(|at| at.checked_add(frames::interval()))
+            && now < due
+        {
+            return Some(due);
+        }
+        self.wanted = None;
+        self.resized_at = Some(now);
+        self.grid = grid;
+        let mut shared = lock(&self.shared);
+        shared.terminal.resize(grid);
+        // The program learns it with the lock held, so that no output of
+        // it reaches the terminal in between. ConPTY does not wait for it.
+        // If it fails, the program keeps the old size, and its text may
+        // look wrong until the next one.
+        if let Some(input) = &self.input {
+            let _ = input.resize(grid);
+        }
+        None
+    }
+
+    /// A mouse event of the window. The wheel with Ctrl zooms.
     pub fn mouse(&mut self, window: &Window, event: &Event) -> Response {
         let context = Context {
             window,
@@ -176,7 +349,12 @@ impl TerminalView {
             input: self.input.as_ref(),
             cell: self.cell,
         };
-        self.mouse.event(&context, event)
+        let mut response = self.mouse.event(&context, event);
+        if response.zoom != 0 {
+            response.redraw |= self.zoom(response.zoom).redraw;
+            response.zoom = 0;
+        }
+        response
     }
 
     /// A message box of the view closed. While it was open, the events of
@@ -248,14 +426,18 @@ impl TerminalView {
 
 impl Scene for TerminalView {
     fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
-        let (sync, title) = {
+        let resize = self.resize_grid(now);
+        let (sync, title, tick, history) = {
             let mut shared = lock(&self.shared);
+            // The view moves on its own while the left button holds the
+            // scroll bar, or a selection outside the grid.
+            let tick = self.mouse.tick(&mut shared.terminal, now, self.cell);
             // If the program did not end its synchronized update in time, it
             // is shown as it is.
-            let late = shared.end_late_sync(now, &mut self.answers);
+            let (sync, title) = shared.end_late_sync(now, &mut self.answers);
             shared.terminal.copy_damage(&mut self.screen);
             shared.screen_changed = false;
-            late
+            (sync, title, tick, shared.terminal.history())
         };
         self.send(title);
 
@@ -269,7 +451,11 @@ impl Scene for TerminalView {
             self.screen.mark_cursor_changed();
         }
 
-        if self.screen.all_changed() {
+        let rows = self.screen.size().rows;
+        if let Some(area) = self.mouse.bar_mut().update(history, rows) {
+            damage(area);
+        }
+        if mem::take(&mut self.redraw) || self.screen.all_changed() {
             // Also the margins, which have the colour of the background.
             damage(Rect::new(0, 0, i32::MAX, i32::MAX));
         } else {
@@ -278,10 +464,7 @@ impl Scene for TerminalView {
             }
         }
         self.screen.clear_changes();
-        match (sync, blink) {
-            (Some(sync), Some(blink)) => Some(sync.min(blink)),
-            (sync, blink) => sync.or(blink),
-        }
+        [sync, blink, resize, tick].into_iter().flatten().min()
     }
 
     fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
@@ -300,6 +483,7 @@ impl Scene for TerminalView {
             screen,
             caret,
             run,
+            mouse,
             ..
         } = self;
         let palette = screen.palette();
@@ -323,25 +507,57 @@ impl Scene for TerminalView {
         );
 
         let visible = clip.intersection(grid);
-        if visible.is_empty() {
-            return;
+        if !visible.is_empty() {
+            // `visible` is inside the grid, so the divisions are not
+            // negative.
+            let columns =
+                (visible.left / width) as usize..((visible.right - 1) / width + 1) as usize;
+            for row in visible.top / height..=(visible.bottom - 1) / height {
+                let cells = screen.row(row as u16);
+                draw_row(
+                    canvas,
+                    font,
+                    run,
+                    cells,
+                    columns.clone(),
+                    row * height,
+                    palette,
+                );
+            }
+            draw_cursor(canvas, font, screen, caret, *cell);
         }
-        // `visible` is inside the grid, so the divisions are not negative.
-        let columns = (visible.left / width) as usize..((visible.right - 1) / width + 1) as usize;
-        for row in visible.top / height..=(visible.bottom - 1) / height {
-            let cells = screen.row(row as u16);
-            draw_row(
-                canvas,
-                font,
-                run,
-                cells,
-                columns.clone(),
-                row * height,
-                palette,
-            );
-        }
-        draw_cursor(canvas, font, screen, caret, *cell);
+        mouse.bar().draw(canvas, palette.background);
     }
+}
+
+/// The grid of cells of `cell` pixels that fills a client area of `client`
+/// pixels, without the strip of the scroll bar, of `bar` pixels: at least
+/// the smallest one of the terminal.
+pub fn grid_size(client: Size, cell: Size, bar: u32) -> GridSize {
+    let cells = |pixels: u32, cell: u32| u16::try_from(pixels / cell.max(1)).unwrap_or(u16::MAX);
+    GridSize::new(
+        cells(client.width.saturating_sub(bar), cell.width).max(MIN_SIZE.columns),
+        cells(client.height, cell.height).max(MIN_SIZE.rows),
+    )
+}
+
+/// Whether the action of `key`, when meiga takes it, goes on while it
+/// repeats: the keys that move the view of the history, and the ones that
+/// zoom.
+const fn repeats(key: u16) -> bool {
+    matches!(
+        key,
+        VK_PRIOR
+            | VK_NEXT
+            | VK_END
+            | VK_HOME
+            | VK_UP
+            | VK_DOWN
+            | VK_OEM_PLUS
+            | VK_OEM_MINUS
+            | VK_ADD
+            | VK_SUBTRACT
+    )
 }
 
 /// The width and the height of `cell`, as coordinates. A cell is a few
@@ -635,6 +851,11 @@ impl Caret {
     fn read_settings(&mut self) {
         self.settings = window::caret_settings();
         self.thickness = thickness(self.settings, self.dpi);
+    }
+
+    fn set_dpi(&mut self, dpi: u32) {
+        self.dpi = dpi;
+        self.thickness = thickness(self.settings, dpi);
     }
 
     /// Whether `cursor` is shown at `now`, and when that changes next, while

@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 1.8. Contén as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta e a selección, o escáner previo e as gravacións.
+> Estado: subfase 1.9. Contén as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -15,9 +15,11 @@
 | [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella. |
 | [`src/shell.rs`](#cratesmeiga-coresrcshellrs) | `command_line`: a liña de comandos dun programa cos seus argumentos, entre comiñas segundo as regras de Windows. |
 | [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
-| [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
+| [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda en partes, e `WheelRows`, en filas do historial; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
 | [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
-| [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, e a copia do que cambia, coas celas seleccionadas. |
+| [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, o cambio de tamaño, a vista do historial e a copia do que cambia, coas celas seleccionadas. |
+| [`src/term/resize.rs`](#cratesmeiga-coresrctermresizers) | O cambio de tamaño da pantalla principal, que reparte o texto e coloca a pantalla onde a pon o ConPTY, seguindo a primeira fila e o cursor cunhas marcas; e a pantalla principal á parte mentres se ve a alternativa. |
+| [`src/term/handler.rs`](#cratesmeiga-coresrctermhandlerrs) | `Hooked`: o `Handler` entre o parser e o `Term`, que lle pasa todas as ordes, devolve a pantalla principal cando o programa deixa a alternativa ou reinicia o terminal, e deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba. |
 | [`src/term/screen.rs`](#cratesmeiga-coresrctermscreenrs) | `Screen`: o que mostra o terminal, en tipos de meiga, coa súa paleta, e as celas que cambiaron. |
 | [`src/term/selection.rs`](#cratesmeiga-coresrctermselectionrs) | A selección: creala, movela e quitala, o seu texto, e as súas celas, na grella de `alacritty_terminal`. |
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
@@ -330,7 +332,7 @@ impl GridSize {
 }
 ```
 
-Desde a subfase 1.4: o tamaño da grella do terminal, en celas, non en píxeles. É o tamaño que recibe a pseudoconsola ao creala ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcconptyrs)) e, desde a 1.5, o do núcleo do terminal. Desde a 1.6, sae do tamaño da xanela ao arrancar, dividido polo da cela, e desde a 1.9 seguirá a xanela cando cambie de tamaño.
+Desde a subfase 1.4: o tamaño da grella do terminal, en celas, non en píxeles. É o tamaño que recibe a pseudoconsola ao creala e, desde a 1.9, cando cambia ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcconptyrs)), e, desde a 1.5, o do núcleo do terminal. Desde a 1.6, sae do tamaño da xanela ao arrancar, dividido polo da cela, e desde a 1.9 segue a xanela, sen a franxa da barra de desprazamento, cando cambia o seu tamaño ou o das celas, coa escala ou co zoom ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)).
 
 - `u16`: ningunha grella chega a 65 535 columnas ou filas. Cada uso comproba o seu propio límite: o ConPTY, por exemplo, recibe as medidas nun `COORD`, de 16 bits con signo, así que acepta como moito 32 767, e polo menos 1.
 - Deriva o mesmo ca os outros tipos do módulo, e os campos son públicos: calquera par de números é un tamaño, e quen o usa decide se lle serve.
@@ -1062,7 +1064,7 @@ fn push_utf8(out: &mut Vec<u8>, character: char) {
 
 ## `crates/meiga-core/src/mouse.rs`
 
-Desde a subfase 1.8: o rato, coma o conta meiga e coma o recibe un programa que o pide ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). A xanela dá os eventos do rato en píxeles, cos botóns e as teclas modificadoras ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)), e o rato da vista decide se seleccionan texto ou van ao programa ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)). Este módulo ten o que non depende de Windows: a cela debaixo do punteiro, os clics seguidos, as partes da roda e os informes, no formato que pediu o programa. Coma `input.rs`, só traballa con números e bytes: as súas probas non necesitan ningún rato.
+Desde a subfase 1.8: o rato, coma o conta meiga e coma o recibe un programa que o pide ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). A xanela dá os eventos do rato en píxeles, cos botóns e as teclas modificadoras ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)), e o rato da vista decide se seleccionan texto ou van ao programa ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)). Este módulo ten o que non depende de Windows: a cela debaixo do punteiro, os clics seguidos, as partes da roda e, desde a subfase 1.9, as filas do historial que move ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)), e os informes, no formato que pediu o programa. Coma `input.rs`, só traballa con números e bytes: as súas probas non necesitan ningún rato.
 
 **Os informes e o ConPTY.** Un programa pide os clics (`?1000`), tamén os movementos cun botón premido (`?1002`) ou todos os movementos (`?1003`), e o formato dos informes: o do primeiro xterm, o mesmo en UTF-8 (`?1005`) ou SGR (`?1006`) ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). O ConPTY pásalles os informes tal cal aos programas que len a entrada coma un terminal, coma os de WSL: por iso meiga os escribe no formato que pediu o programa. Para os programas da consola de Windows, o ConPTY pide el mesmo SGR, e converte os informes en eventos do rato de Windows.
 
@@ -1074,7 +1076,7 @@ const MAX_X10: u16 = 127 - 33;
 const MAX_UTF8: u16 = 0x7ff - 33;
 ```
 
-- **`WHEEL_DELTA`**: o xiro que Windows conta coma unha parte enteira (*notch*) da roda: 120. As mensaxes da roda dan o xiro en 120 avos dunha parte. Úsao [`WheelTurns`](#a-roda-wheelturns-e-arrow_keys).
+- **`WHEEL_DELTA`**: o xiro que Windows conta coma unha parte enteira (*notch*) da roda: 120. As mensaxes da roda dan o xiro en 120 avos dunha parte. Úsano [`WheelTurns` e, desde a subfase 1.9, `WheelRows`](#a-roda-wheelturns-wheelrows-e-arrow_keys).
 - **`MAX_X10`** e **`MAX_UTF8`**: a columna e a fila máis grandes, desde 0, que caben nun informe no formato do primeiro xterm e no de UTF-8 ([`report`](#os-informes-report)).
 
 ### `Button`, `Modifiers`, `Wheel` e `MouseAction`
@@ -1331,7 +1333,7 @@ impl Clicks {
 - `now` vén de fóra, coma en [`FramePacer`](#cratesmeiga-coresrcpacingrs): as probas usan instantes inventados. `saturating_duration_since` dá 0 se `now` fose anterior, en vez de fallar, e `abs_diff` dá a distancia entre dous `i32` coma un `u32`, sen desbordar.
 - **`reset`** esquece o último clic: o seguinte é un clic só.
 
-### A roda: `WheelTurns` e `arrow_keys`
+### A roda: `WheelTurns`, `WheelRows` e `arrow_keys`
 
 ```rust
 #[derive(Clone, Copy, Debug, Default)]
@@ -1367,7 +1369,39 @@ impl WheelTurns {
 - **Un xiro no outro sentido empeza de cero**: o que sobraba no sentido anterior esquécese.
 - A división de enteiros corta cara a 0, así que o que sobra ten o signo do total e nunca chega a unha parte.
 - A roda e a inclinación cara aos lados suman por separado (`vertical` e `horizontal`). `delta` é un `i16`, coma o trae a mensaxe de Windows, e o total, un `i32`. `reset` esquece o que sobraba.
-- Por cada parte, o rato da vista envíalle ao programa un informe, se pediu o rato, ou frechas, na pantalla alternativa. Na pantalla normal, a roda servirá para o historial (subfase 1.9).
+- Por cada parte, o rato da vista envíalle ao programa un informe, se pediu o rato, ou frechas, na pantalla alternativa. Desde a subfase 1.9, con Ctrl, cada parte é un punto de zoom; e, na pantalla principal, se a roda despraza unha pantalla, unha pantalla do historial. Se despraza liñas, as filas cóntaas `WheelRows`.
+
+```rust
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WheelRows {
+    total: i64,
+}
+
+impl WheelRows {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add(&mut self, delta: i16, rows: u32) -> i32 {
+        let delta = i64::from(delta) * i64::from(rows);
+        if (self.total > 0 && delta < 0) || (self.total < 0 && delta > 0) {
+            self.total = 0;
+        }
+        self.total += delta;
+        let whole = self.total / i64::from(WHEEL_DELTA);
+        self.total -= whole * i64::from(WHEEL_DELTA);
+        i32::try_from(whole).unwrap_or(if whole < 0 { i32::MIN } else { i32::MAX })
+    }
+}
+```
+
+**`WheelRows`**, desde a subfase 1.9, suma os xiros da roda en filas do historial, a un número de filas por parte: as liñas que din as preferencias de Windows ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)).
+
+- **`add`** suma un xiro de `delta`, en 120 avos dunha parte, positivo adiante, a `rows` filas por parte, e devolve as filas enteiras que completa, con signo: positivas cara arriba, coma en [`Scroll::Rows`](#o-historial-e-a-súa-vista).
+- **En 120 avos dunha fila** (`total`): cada xiro suma `delta` por `rows`, así que unha parte enteira son `rows` filas, e os anacos dunha parte moven unha fila en canto chegan a ela: con 3 filas por parte, cada 40. Contando partes enteiras, coma `WheelTurns`, a vista moveríase de `rows` en `rows` filas ao completar cada parte, e cun *touchpad*, que xira menos dunha parte cada vez, iría a saltos.
+- **Un xiro no outro sentido empeza de cero**, coma en `WheelTurns`.
+- As contas fanse en `i64`, onde caben un `i16` por un `u32` e as súas sumas. As filas, nun `i32`, quedan no máximo ou no mínimo (`unwrap_or`) se non caben, o que só pasaría cun número de filas por parte enorme.
+- O rato da vista úsao na pantalla principal, cando a roda despraza liñas, e move a vista as filas que devolve ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
 
 ```rust
 pub const fn arrow_keys(wheel: Wheel) -> [KeyEvent; 2] {
@@ -1397,7 +1431,7 @@ pub const fn arrow_keys(wheel: Wheel) -> [KeyEvent; 2] {
 - As frechas de cada parte son as liñas das preferencias de Windows, ou as filas da pantalla se a roda despraza unha pantalla; cara aos lados, os caracteres. Cóntaas o rato da vista ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
 - `let mut up = down;` copia o evento, que é `Copy`, e despois cambia un campo da copia: nunha `const fn` tamén se pode.
 
-**Probas.** Oito:
+**Probas.** Nove:
 
 | Proba | Que comproba |
 |---|---|
@@ -1408,6 +1442,7 @@ pub const fn arrow_keys(wheel: Wheel) -> [KeyEvent; 2] {
 | `the_cell_under_the_pointer_and_its_side` | Con celas de 10 × 20 píxeles nunha grella de 8 × 4: a metade esquerda chega ata a metade da cela, incluída; e fóra da grella, por riba, á esquerda, á dereita e por baixo, a cela máis próxima, co lado dereito á dereita da grella. |
 | `clicks_in_a_row_count_up_to_three` | Tres clics seguidos dan 1, 2 e 3, o segundo 2 píxeles máis aló, e o cuarto, 1; tarde, lonxe ou con outro botón, 1; e despois de `reset`, 1. |
 | `the_wheel_adds_up_whole_notches` | Unha parte enteira e tres cara atrás; un *touchpad* que dá unha parte en tres anacos de 50; o que sobra esquécese ao cambiar de sentido; a roda e a inclinación por separado; e `reset`. |
+| `the_wheel_moves_the_history_by_rows_also_with_parts_of_a_notch` | Desde a subfase 1.9, con 3 filas por parte: unha parte adiante dá 3 filas, e dúas cara atrás, −6; un *touchpad* que xira de 30 en 30 move unha fila cada 40 (0, 1 e, con 20 máis, outra); e os 30 que sobran esquécense ao cambiar de sentido: −30 e −10 dan unha fila cara abaixo. |
 | `the_wheel_on_the_alternate_screen_sends_arrows` | A frecha de arriba baixa e sobe, coma tecla estendida; e `KeyEncoder` converte a de abaixo en `ESC [ B`, e no modo aplicación, en `ESC O B`. |
 
 ## `crates/meiga-core/src/paste.rs`
@@ -1515,10 +1550,12 @@ fn trim(text: &str) -> &str {
 
 ## `crates/meiga-core/src/term/mod.rs`
 
-O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a 1.8 ten a selección, que vive na grella de `alacritty_terminal` e que a copia do que cambia marca nas celas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma) e [› O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis).
+O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a 1.8 ten a selección, que vive na grella de `alacritty_terminal` e que a copia do que cambia marca nas celas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Desde a 1.9, cando cambia o tamaño, coloca a pantalla onde a pon o ConPTY e garda á parte a pantalla principal mentres se ve a alternativa, e move a vista do historial ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma), [› O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis) e [› O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom).
 
 ```rust
+mod handler;
 pub mod recording;
+mod resize;
 mod scanner;
 mod screen;
 mod selection;
@@ -1528,7 +1565,8 @@ pub use selection::{SelectionKind, Side};
 ```
 
 - Os outros arquivos do cartafol `src/term/` son os submódulos de `term`.
-- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner`, `screen` e, desde a subfase 1.8, `selection` son privados, pero os tipos de `screen` e de `selection` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen` ou `meiga_core::term::SelectionKind`, sen saber en que arquivo están.
+- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner`, `screen` e, desde a subfase 1.8, `selection` son privados, coma, desde a 1.9, `handler` e `resize`, pero os tipos de `screen` e de `selection` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen` ou `meiga_core::term::SelectionKind`, sen saber en que arquivo están.
+- Desde a 1.9, `use alacritty_terminal::grid::{self, Dimensions, Grid};` trae tamén o módulo `grid` (`self`): o `Scroll` de `alacritty_terminal` escríbese `grid::Scroll`, porque `Scroll` é o tipo de meiga ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E `use handler::Hooked;` trae o `Handler` que recibe a saída do programa ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)).
 
 ### Constantes
 
@@ -1544,7 +1582,7 @@ const DEFAULT_CURSOR: CursorStyle = CursorStyle {
 };
 ```
 
-- **`SCROLLBACK_LINES`**: as liñas de historial que se gardan por riba da pantalla, as que mostrará o *scrollback* (subfase 1.9). `alacritty_terminal` non as reserva ao crear o terminal: a memoria do historial medra a medida que se enche, de 1 000 en 1 000 liñas.
+- **`SCROLLBACK_LINES`**: as liñas de historial que se gardan por riba da pantalla, só na pantalla principal: a alternativa non ten. Desde a subfase 1.9, a vista móstraas ([O historial e a súa vista](#o-historial-e-a-súa-vista)); ata a 1.8, gardábanse sen poder velas. `alacritty_terminal` non as reserva ao crear o terminal: a memoria do historial medra a medida que se enche, de 1 000 en 1 000 liñas. Cada cela ocupa 24 bytes, tamén as baleiras: un historial cheo de 100 columnas son 24 MB ([ADR 0016 › Consecuencias](../adr/0016-o-historial-o-tamano-e-o-zoom.md#consecuencias)). Desde a 1.9, úsaa tamén [`new_primary`](#a-pantalla-principal-á-parte), para a pantalla principal nova despois dun reinicio na alternativa.
 - **`MIN_SIZE`**: a grella máis pequena que admite `alacritty_terminal`, as súas constantes `MIN_COLUMNS` e `MIN_SCREEN_LINES`: 2 columnas e 1 fila. Un carácter ancho necesita dúas columnas: nunha grella dunha soa columna, `alacritty_terminal` falla (*panic*) ao escribilo. `as u16` converte os dous valores, que son `usize`, porque nunha constante non se pode usar `try_from`; son 2 e 1, así que caben.
 - **`DEFAULT_CURSOR`**, desde a subfase 1.6: o cursor cando o programa non escolle ningún, unha barra que pestanexa, coma no Windows Terminal ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Vai na configuración de `alacritty_terminal` (`default_cursor_style`), que o usa mentres o programa non pide outro, e outra vez despois de `ESC [ 0 SP q` ou dun reinicio (RIS). Se o programa só pide un cursor fixo ou que pestanexe (`?12l` e `?12h`), a barra segue, e só cambia o pestanexo. É privada porque `CursorStyle` é un tipo de `alacritty_terminal`: fóra da fachada, o cursor é un [`Cursor`](#cratesmeiga-coresrctermscreenrs). Que pestanexe de verdade decídeo a vista do terminal, segundo Windows ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)).
 
@@ -1560,7 +1598,7 @@ pub struct Changes {
 ```
 
 - **`Changes`**: o que pasou ao ler a saída, ademais dos cambios na pantalla: hai respostas para o programa (`take_responses`), cambiou o título (`title`), soou a campá ou hai texto para o portapapeis (`take_clipboard`). Devólveno `feed` e `end_sync`, e quen chama só ten que facer algo máis cando un campo é `true`.
-- **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). `win32_input` dío o escáner, porque `alacritty_terminal` non coñece ese modo; o resto, `alacritty_terminal`. Desde a subfase 1.8, os modos do rato deciden se os clics seleccionan texto ou van ao programa, e en que formato ([`mouse.rs`](#cratesmeiga-coresrcmousers)), e o *bracketed paste*, como se pega o texto ([`paste.rs`](#cratesmeiga-coresrcpasters)).
+- **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). `win32_input` dío o escáner, porque `alacritty_terminal` non coñece ese modo; o resto, `alacritty_terminal`. Desde a subfase 1.8, os modos do rato deciden se os clics seleccionan texto ou van ao programa, e en que formato ([`mouse.rs`](#cratesmeiga-coresrcmousers)), e o *bracketed paste*, como se pega o texto ([`paste.rs`](#cratesmeiga-coresrcpasters)). Desde a 1.9, na pantalla alternativa (`alt_screen`), que non ten historial, as teclas do historial van ao programa ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
 
 ### Os eventos: `Pending` e `Listener`
 
@@ -1609,13 +1647,15 @@ struct TermSize(GridSize);
 impl Dimensions for TermSize { … }
 ```
 
-`alacritty_terminal` pide o tamaño a través do trait `Dimensions`: as filas que se ven (`screen_lines`), as columnas e as filas en total. `TermSize` envolve un `GridSize` para implementalo: implementalo directamente en `GridSize`, que é público, mostraría `alacritty_terminal` fóra da fachada. O historial non conta: `total_lines` é igual a `screen_lines`. Ata a subfase 1.5 chamábase `Size`; na 1.6 cambiou de nome porque o módulo usa agora o `Size` de [`geometry.rs`](#cratesmeiga-coresrcgeometryrs), o tamaño dunha cela en píxeles, e os dous nomes chocarían.
+`alacritty_terminal` pide o tamaño a través do trait `Dimensions`: as filas que se ven (`screen_lines`), as columnas e as filas en total. `TermSize` envolve un `GridSize` para implementalo: implementalo directamente en `GridSize`, que é público, mostraría `alacritty_terminal` fóra da fachada. O historial non conta: `total_lines` é igual a `screen_lines`. Ata a subfase 1.5 chamábase `Size`; na 1.6 cambiou de nome porque o módulo usa agora o `Size` de [`geometry.rs`](#cratesmeiga-coresrcgeometryrs), o tamaño dunha cela en píxeles, e os dous nomes chocarían. Desde a 1.9, úsano tamén os cambios de tamaño de [`term/resize.rs`](#cratesmeiga-coresrctermresizers).
 
 ### `Terminal`
 
 ```rust
 pub struct Terminal {
     term: Term<Listener>,
+    primary: Option<Grid<TermCell>>,
+    region_below_top: bool,
     parser: Processor,
     scanner: Scanner,
     pending: Arc<Mutex<Pending>>,
@@ -1631,6 +1671,8 @@ pub struct Terminal {
 | Campo | Que é |
 |---|---|
 | `term` | O terminal de `alacritty_terminal`: a grella, o historial, o cursor e os modos. |
+| `primary` | Desde a subfase 1.9: a pantalla principal, coa súa grella e o seu historial, mentres está á parte porque o tamaño cambiou cando se vía a alternativa; `None` o resto do tempo. Recibe o tamaño do terminal cando o programa volta a ela ([`term/resize.rs`](#cratesmeiga-coresrctermresizers)). `TermCell` é o `Cell` de `alacritty_terminal`, co nome cambiado, porque `Cell` é o de meiga. |
+| `region_below_top` | Desde a revisión do código da subfase 1.9: a rexión de desprazamento do programa empeza máis abaixo da primeira fila da pantalla. `alacritty_terminal` non di onde empeza a súa, e [`Hooked`](#hooked) séguea eiquí, para deixar a vista do historial onde está ([O historial e a súa vista](#o-historial-e-a-súa-vista)). |
 | `parser` | O parser de `vte` (`Processor`), que le os bytes e chama aos métodos de `term`. Garda o estado entre lecturas: unha secuencia partida entre dous bloques, ou un carácter UTF-8 a medias. Tamén garda a saída dunha actualización sincronizada mentres non remata. |
 | `scanner` | O escáner propio ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). |
 | `pending` | A cola dos eventos, compartida co `Listener`. |
@@ -1664,6 +1706,8 @@ pub fn new(size: GridSize) -> Self {
     };
     Self {
         term: Term::new(config, &TermSize(size), Listener(Arc::clone(&pending))),
+        primary: None,
+        region_below_top: false,
         parser: Processor::new(),
         …
         theme: Palette::MEIGA,
@@ -1675,7 +1719,12 @@ pub fn new(size: GridSize) -> Self {
 
 pub fn feed(&mut self, bytes: &[u8]) -> Changes {
     self.scanner.scan(bytes);
-    self.parser.advance(&mut self.term, bytes);
+    let mut hooked = Hooked {
+        term: &mut self.term,
+        primary: &mut self.primary,
+        region_below_top: &mut self.region_below_top,
+    };
+    self.parser.advance(&mut hooked, bytes);
     self.take_changes()
 }
 ```
@@ -1688,8 +1737,9 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
   - desde a subfase 1.8, os caracteres que rematan unha palabra nun dobre clic (`semantic_escape_chars`), os de meiga, [`WORD_DELIMITERS`](#word_delimiters-selectionkind-e-side): `alacritty_terminal` úsaos para estender as seleccións de palabras. `to_owned` copia o texto nun `String`, que é o que garda a configuración;
   - o resto, cos valores por defecto (`..Config::default()`).
 
-  Ten as cores de meiga (`Palette::MEIGA`) e ningunha selección, e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
+  Ten as cores de meiga (`Palette::MEIGA`), ningunha selección e, desde a subfase 1.9, ningunha pantalla principal á parte (`primary: None`) e a rexión de desprazamento na pantalla enteira (`region_below_top: false`), e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
 - **`feed`** le o que escribiu o programa: primeiro o escáner e despois o parser, cos mesmos bytes, sen copialos nin cambialos. Devolve os `Changes`.
+  - Desde a subfase 1.9, o parser non lle dá a saída directamente ao `Term`, senón a un [`Hooked`](#hooked): pásalle todas as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve no momento a pantalla principal que deixou á parte un cambio de tamaño, antes da saída que vén despois. Tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([O historial e a súa vista](#o-historial-e-a-súa-vista)). `Hooked` toma prestados tres campos do terminal, `term`, `primary` e `region_below_top`, mentres le o parser, que é outro: o compilador permite as catro referencias mutábeis porque son campos distintos.
 
 | Método | Que fai |
 |---|---|
@@ -1701,11 +1751,118 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
 | `take_clipboard` | O último texto que o programa copiou ao portapapeis; despois, ningún. Se copiou varios antes de recollelos, só queda o último, como no portapapeis. Desde a subfase 1.8, a xanela recólleo e pono no portapapeis de Windows, só se ten o foco e está en primeiro plano ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Código › meiga › `app.rs`](meiga.md#cratesmeigasrcapprs)). |
 | `title` | O título que deu o programa, se deu algún. |
 | `modes` | Os modos, traducidos de `TermMode` (uns *bitflags*) aos campos de `Modes`. `win32_input` pregúntallo ao escáner. |
-| `resize(size)` | Cambia o tamaño da grella, con polo menos `MIN_SIZE`. `alacritty_terminal` reorganiza as liñas longas da pantalla principal (*reflow*), e todo queda danado. Se cambia o número de columnas, quita tamén a selección; se só cambian as filas, móvea co texto. |
+| `resize(size)` | Cambia o tamaño da grella, con polo menos `MIN_SIZE`, e todo queda danado. Ata a subfase 1.8, `alacritty_terminal` repartía as liñas longas da pantalla principal (*reflow*) e colocaba a pantalla á súa maneira, e a selección só se ía se cambiaba o número de columnas. Desde a 1.9, a pantalla queda onde a pon o ConPTY, e a selección vaise sempre ([O tamaño](#o-tamaño-resize)). |
 | `sync_deadline` | Cando hai que mostrar a actualización sincronizada (`?2026`) que empezou o programa, aínda que non a remate: `vte` gárdaa como moito 150 ms desde o último `?2026h`, ou ata encher o búfer. Mentres tanto, a saída non chega á pantalla. |
-| `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador. Desde a subfase 1.6, remátaa a xanela: antes de cada fotograma consulta `sync_deadline`, e o temporizador dos fotogramas vence a esa hora, tamén coa xanela minimizada, que non debuxa ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). |
+| `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador. Desde a subfase 1.6, remátaa a xanela: antes de cada fotograma consulta `sync_deadline`, e o temporizador dos fotogramas vence a esa hora, tamén coa xanela minimizada, que non debuxa ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Desde a 1.9, coma `feed`: a saída pasa polo `Hooked`. |
 
-Desde a subfase 1.8, `Terminal` ten tamén os métodos da selección, noutro arquivo do módulo: `select`, `select_to`, `clear_selection`, `has_selection` e `selection_text` ([`term/selection.rs`](#cratesmeiga-coresrctermselectionrs)).
+Desde a subfase 1.8, `Terminal` ten tamén os métodos da selección, noutro arquivo do módulo: `select`, `select_to`, `clear_selection`, `has_selection` e `selection_text` ([`term/selection.rs`](#cratesmeiga-coresrctermselectionrs)). Desde a 1.9, ten tamén os do historial: `scroll`, `scroll_to` e `history` ([O historial e a súa vista](#o-historial-e-a-súa-vista)).
+
+### O tamaño: `resize`
+
+Desde a subfase 1.9 ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). A vista do terminal chámao co tamaño da grella que enche a xanela, como moito unha vez por intervalo dos fotogramas, e despois cambia o tamaño do ConPTY co *lock* do terminal aínda collido: ningunha saída do programa chega entre os dous ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
+
+```rust
+pub fn resize(&mut self, size: GridSize) {
+    let size = at_least_min_size(size);
+    if size == self.size {
+        return;
+    }
+    self.size = size;
+    self.region_below_top = false;
+    if self.term.mode().contains(TermMode::ALT_SCREEN) {
+        if self.primary.is_none() {
+            self.primary = Some(resize::set_aside_primary(&mut self.term));
+        }
+        // Neither ConPTY nor alacritty_terminal reflow the alternate
+        // screen.
+        self.term.resize(TermSize(size));
+        self.term.selection = None;
+    } else {
+        resize::resize(&mut self.term, size);
+    }
+}
+```
+
+- **Co mesmo tamaño, nada**, tamén despois de `at_least_min_size`: nin garda á parte a pantalla principal nin quita a selección.
+- **Na pantalla principal**, [`resize::resize`](#resize-a-pantalla-onde-a-pon-o-conpty) reparte o texto e coloca a pantalla onde a pon o ConPTY.
+- **Na pantalla alternativa**, a primeira vez, [`set_aside_primary`](#a-pantalla-principal-á-parte) garda á parte a principal, sen repartila. Despois, `term.resize` cambia a alternativa, que nin o ConPTY nin `alacritty_terminal` reparten: córtase ou énchese pola dereita e por abaixo. `alacritty_terminal` reparte tamén a grella que ocupa o sitio da principal, que, baleira e sen historial, non custa nada. Os seguintes cambios xa atopan a principal á parte (`is_none`), e esta recibe o tamaño do terminal unha vez, cando o programa volta a ela, coma no ConPTY ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)).
+- **A selección vaise sempre**, coma no Windows Terminal: `alacritty_terminal` quítaa se cambian as columnas, pero se só cambian as filas, móvea co texto. Na pantalla principal, quítaa `resize::resize`.
+- **A rexión de desprazamento volta ser a pantalla enteira**: `alacritty_terminal` faino sempre que cambia o tamaño, nas dúas pantallas. Desde a revisión do código, `region_below_top`, que a segue, volta a `false` ([`Hooked`](#hooked)).
+
+### O historial e a súa vista
+
+Desde a subfase 1.9: o historial, as filas que saíron da pantalla principal por arriba, vese coa roda, coas teclas e coa barra de desprazamento ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), [Tecnoloxías › O historial](../tecnoloxias.md#49-o-historial-de-alacritty_terminal-a-vista-e-o-reflow)). A vista é o que se mostra: a pantalla, ou unhas filas máis arriba. `alacritty_terminal` gárdaa na súa grella, coma as filas por riba da pantalla onde empeza (`display_offset`), e a copia do que cambia copia as filas que se ven ([`copy_row`](#os-axudantes)). Fóra da fachada, móvese e lese con tipos de meiga.
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Scroll {
+    Rows(i32),
+    PageUp,
+    PageDown,
+    Top,
+    Bottom,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct History {
+    pub rows: usize,
+    pub offset: usize,
+}
+```
+
+- **`Scroll`**: canto mover a vista:
+
+  | Variante | Ata onde |
+  |---|---|
+  | `Rows(filas)` | Unhas filas cara arriba, cara ás máis vellas, ou cara abaixo, cun número negativo. |
+  | `PageUp` e `PageDown` | Unha pantalla cara arriba ou cara abaixo. |
+  | `Top` | Á primeira fila do historial. |
+  | `Bottom` | Á pantalla, onde escribe o programa. |
+
+- **`History`**: o historial e a parte del que mostra a vista: `rows`, as filas de historial por riba da pantalla, e `offset`, cantas filas por riba da pantalla empeza a vista, 0 cando mostra a pantalla. Na pantalla alternativa, sen historial, os dous son 0. Con el debúxase o polgar da barra de desprazamento ([Código › meiga › `scrollbar.rs`](meiga.md#cratesmeigasrcscrollbarrs), [Tecnoloxías › A barra de desprazamento](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)).
+- `alacritty_terminal` ten o seu `Scroll`, coas mesmas cinco variantes (`Delta` en vez de `Rows`), pero non sae da fachada ([ADR 0012](../adr/0012-fachada-do-terminal.md)): neste módulo é `grid::Scroll`.
+
+```rust
+pub fn scroll(&mut self, scroll: Scroll) -> bool {
+    let before = self.term.grid().display_offset();
+    self.term.scroll_display(match scroll {
+        Scroll::Rows(rows) => grid::Scroll::Delta(rows),
+        Scroll::PageUp => grid::Scroll::PageUp,
+        Scroll::PageDown => grid::Scroll::PageDown,
+        Scroll::Top => grid::Scroll::Top,
+        Scroll::Bottom => grid::Scroll::Bottom,
+    });
+    self.term.grid().display_offset() != before
+}
+
+pub fn scroll_to(&mut self, offset: usize) -> bool {
+    let before = self.term.grid().display_offset();
+    let offset = offset.min(self.term.grid().history_size());
+    // Both fit in an i32: the history has at most SCROLLBACK_LINES rows.
+    self.scroll(Scroll::Rows(offset as i32 - before as i32))
+}
+
+pub fn history(&self) -> History {
+    let grid = self.term.grid();
+    History {
+        rows: grid.history_size(),
+        offset: grid.display_offset(),
+    }
+}
+```
+
+| Método | Que fai |
+|---|---|
+| `scroll(scroll)` | Move a vista, sen pasar da primeira fila do historial nin da pantalla, e di se se moveu: entón hai que debuxar. Úsano as teclas e a roda, a barra cando pasa páxinas e a selección que se despraza soa; e as teclas que van ao programa, e pegar, levan con el a vista á pantalla (`Bottom`). |
+| `scroll_to(offset)` | Leva a vista a `offset` filas por riba da pantalla, como moito ao principio do historial, e di se se moveu. Úsao a barra mentres se arrastra o polgar. |
+| `history` | O historial e onde está a vista. Con el, cada fotograma pon ao día o polgar da barra. |
+
+- `scroll_display` de `alacritty_terminal` fai o traballo: non pasa dos extremos e, se move a vista, dana a pantalla enteira. A seguinte copia compara entón todas as filas que se ven, e só marca as celas que cambian ([`copy_damage`](#copy_damage-copiar-o-que-cambiou)).
+- `scroll_to` move a vista a diferenza entre `offset` e onde está. As dúas contas caben nun `i32`: o historial ten como moito `SCROLLBACK_LINES` filas, e `offset` xa non pasa del (`min`).
+- Na pantalla alternativa, que non ten historial, a vista nunca se move.
+
+- **A saída non move a vista** ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)): mentres mostra o historial, as filas que entran nel súbena tamén, e segue mostrando as mesmas filas. Faino `alacritty_terminal` ao desprazar a grella. Compróbao a proba `the_output_does_not_move_the_view_of_the_history`.
+- **Tampouco cunha rexión de desprazamento.** Cunha rexión que non empeza na primeira fila (`ESC [ superior ; inferior r`), as filas que saen dela non entran no historial, pero `alacritty_terminal` sube igual a vista: con cada fila que se despraza, a vista mostraría a de enriba, e podería pasar do principio do historial, onde non hai filas que mostrar. Desde a revisión do código, [`Hooked`](#manter-a-vista-view_to_keep-e-keep_view) déixaa onde estaba. Compróbano as probas `the_rows_that_leave_a_region_below_the_top_do_not_move_the_view` e `a_new_size_a_reset_or_deccolm_make_the_region_the_whole_screen_again`.
 
 ### A paleta: o tema e os cambios do programa
 
@@ -1859,7 +2016,7 @@ pub fn copy_damage(&mut self, screen: &mut Screen) {
 Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-fachada-do-terminal.md)), desde a subfase 1.6 a paleta ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), e desde a 1.8 a selección ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)):
 
 1. Se a `Screen` ten outro tamaño, cámbiao: todas as súas celas quedan en branco e cambiadas, e cópianse todas as filas.
-2. `term.damage()` dá as filas danadas desde a última copia: `Full`, todas, ou `Partial`, a lista das filas danadas. `alacritty_terminal` dá `Full` cando cambia moito: ao borrar a pantalla, ao desprazala (cada salto de liña na última fila), ao cambiar á pantalla alternativa ou de tamaño, nun reinicio…
+2. `term.damage()` dá as filas danadas desde a última copia: `Full`, todas, ou `Partial`, a lista das filas danadas. `alacritty_terminal` dá `Full` cando cambia moito: ao borrar a pantalla, ao desprazala (cada salto de liña na última fila), ao cambiar á pantalla alternativa ou de tamaño, ao mover a vista do historial (desde a subfase 1.9), nun reinicio…
 3. Cada fila danada cópiase **enteira** con `copy_row`, que compara cela a cela e só marca as que cambiaron. **Por que enteira:** `alacritty_terminal` dana as celas que escribe, pero non sempre outras da mesma fila que cambian con elas. Ao escribir sobre a metade dereita dun carácter ancho, por exemplo, borra tamén a esquerda, e esa non queda danada. Atopouno a proba aleatoria do terminal. Copiar e comparar unha fila custa pouco, e marcar só as celas distintas evita debuxar o que non cambiou, tamén co dano `Full`: despois de borrar a pantalla, as filas que xa estaban en branco non se marcan.
 4. **A selección**, desde a subfase 1.8. `selection_range` dá as súas celas na grella, e `copy_row` marca as que están nela con `CellFlags::SELECTED` ([Os axudantes](#os-axudantes)). Pero `alacritty_terminal` tampouco dana as celas da selección cando esta cambia: se non é a que mostra a pantalla (`shown_selection`), cópianse outra vez as filas das dúas, a vella e a nova ([`shown_rows`](#cratesmeiga-coresrctermselectionrs)), e `copy_row` só marca as celas que entran ou saen dela. Así, arrastrar o rato só debuxa as celas onde cambia a selección. Cando a selección se move co texto, porque a pantalla se desprazou, `alacritty_terminal` xa dá `Full`. Ao final, `shown_selection` garda a nova, tamén despois dunha copia enteira.
 5. **O cursor.** Se cambiou (a posición, a forma ou o pestanexo), márcanse as súas celas onde estaba, antes de cambialo, e onde está, despois, con [`mark_cursor_changed`](#cratesmeiga-coresrctermscreenrs): dúas celas, por se está sobre un carácter ancho, e só unha na última columna, e só se se debuxa. A vista do terminal debuxa o cursor por riba delas. Oculto (`Hidden`), non marca nada: un *spinner* que oculta o cursor só redebuxa os seus caracteres, e unha copia sen saída nova non marca nada.
@@ -1875,7 +2032,7 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
 - **`cursor`** le o cursor da grella (`grid.cursor.point`) e do estado do terminal. Desde a subfase 1.6 é público: cando o programa remata, a sesión mira se o cursor está ao principio dunha fila, para escribir nunha fila propia a liña co código de saída ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)).
   - a forma é `Hidden` se o programa o ocultou (`?25l`); se non, a que pediu (`cursor_style()`), que tamén di se pestanexa, ou `DEFAULT_CURSOR` se non pediu ningunha;
   - sobre a metade dereita dun carácter ancho, pasa á columna anterior, para debuxalo sobre o carácter enteiro, pero só se esa cela é a súa metade esquerda: coma en `copy_row`, unha metade dereita soa é unha cela en branco, e o cursor debúxase nela;
-  - `point_to_viewport` converte a posición na grella, que inclúe o historial, na fila que se ve: se queda fóra (mentres se mira o historial, na subfase 1.9), o cursor non se debuxa.
+  - `point_to_viewport` converte a posición na grella, que inclúe o historial, na fila que se ve: se queda fóra, porque desde a subfase 1.9 a vista pode mostrar o historial, o cursor non se debuxa.
 
   **Por que non `renderable_content()`**, que dá o cursor como o debuxa Alacritty: sobre unha metade dereita, pásao á columna anterior sen comprobar que exista. Borrar caracteres (`ESC [ P`) pode deixar unha metade dereita soa na primeira columna, co cursor enriba, e entón a resta baixa de cero: nas compilacións de depuración, que comproban os desbordamentos tamén nas dependencias, é un *panic*; en *release*, a columna dá a volta e o cursor desaparece. Atopouno a revisión do código, e compróbao a proba `the_cursor_on_a_lone_right_half_stays_in_its_cell`.
 - **`take_changes`**, desde a subfase 1.6, responde primeiro as preguntas pendentes ([As preguntas](#as-preguntas-polas-cores-e-polo-tamaño)). Despois colle os `Changes` da cola e déixaa baleira: `mem::take` devolve o valor e deixa no seu sitio o valor por defecto. O título só se move se cambiou.
@@ -1913,7 +2070,7 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
   }
   ```
 
-  - `viewport_to_point` converte a fila que se ve na liña da grella, contando o historial (`display_offset`), e `&grid[point.line][..]` son as súas celas.
+  - `viewport_to_point` converte a fila que se ve na liña da grella, contando o historial (`display_offset`), e `&grid[point.line][..]` son as súas celas. Desde a subfase 1.9, a vista pode mostrar o historial, e as súas filas cópianse coma as da pantalla.
   - Percorre á vez as celas da `Screen` e as de `alacritty_terminal` (`zip`), e converte cada unha:
 
     | Cela de `alacritty_terminal` | `CellChar` |
@@ -1962,6 +2119,571 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
 - **`flags`** traduce os estilos cunha táboa (`MAP`) de 11 pares, só os que debuxa meiga: os *flags* internos de `alacritty_terminal`, como os das metades dos caracteres anchos, non pasan. `fold` xúntaos con `|`. `SELECTED` non está na táboa: non é un estilo de `alacritty_terminal`, e pono `copy_row`.
 
 As probas están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs).
+
+## `crates/meiga-core/src/term/resize.rs`
+
+Desde a subfase 1.9: o tamaño novo da pantalla principal, coa pantalla onde a colocan o anfitrión do ConPTY e o Windows Terminal, para que as filas do programa e as do terminal sexan as mesmas ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Chámano [`Terminal::resize`](#o-tamaño-resize) e, cando o programa volta á pantalla principal, [`Hooked`](#cratesmeiga-coresrctermhandlerrs).
+
+**O problema.** Cando cambia o tamaño, o ConPTY volta repartir as liñas longas do seu búfer (*reflow*), que non ten historial: o texto queda arriba, e medra cara abaixo. Non lle escribe nada ao terminal: supón que colocou o texto coma el, e a seguinte vez que un programa lle pide os datos do búfer, pregúntalle onde ten o cursor (`ESC [ 6 n`) e colle esa posición ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)). `alacritty_terminal` reparte a pantalla e o historial xuntos, e mantén abaixo o cursor: cando a pantalla medra, trae liñas do historial, e cando as liñas se parten, empurra as de arriba ao historial, aínda que haxa filas baleiras debaixo ([Tecnoloxías › O historial](../tecnoloxias.md#49-o-historial-de-alacritty_terminal-a-vista-e-o-reflow)). Entón, o que escribe despois o programa cae noutras filas, e queda lixo na pantalla.
+
+**A solución.** Despois do *reflow* de `alacritty_terminal`, a pantalla móvese onde a pon o Windows Terminal (`Terminal::UserResize`): a súa primeira fila é aquela onde foi parar a primeira de antes, salvo que o texto e o cursor xa non caiban debaixo dela; entón, a súa última fila é a máis baixa con texto, ou a do cursor se está máis abaixo. O cursor sempre queda na pantalla, e as liñas que pasaron ao historial quedan nel. Para saber onde foron parar a primeira fila e o cursor, `resize` marca as súas celas antes de repartir: non se pode fiar do cursor de `alacritty_terminal`, que, cando moitas filas debaixo del se parten, sae da pantalla por arriba e queda na primeira fila, que xa non é a súa.
+
+**Na pantalla alternativa**, o ConPTY non reparte a principal: dálle o último tamaño unha vez, cando o programa volta a ela. meiga garda á parte a pantalla principal ata entón, e así tampouco reparte o seu historial mentres corre un programa a pantalla completa.
+
+**Como se comproba.** Ademais das probas de [`tests.rs`](#cratesmeiga-coresrctermtestsrs), `check-resize.ps1` compara na CI, despois de cada cambio de tamaño, a pantalla de meiga co búfer da consola do ConPTY, que le un script de PowerShell dentro de meiga con `ReadConsoleOutputCharacterW`: a 70 × 20, 45 × 14, 90 × 18 e 60 × 24 celas; na pantalla alternativa, a 50 × 16; e, despois dun cambio de tamaño coa caixa de mensaxe aberta, a 66 × 15 ([Código › ferramentas](ferramentas.md#toolscheck-resizeps1)).
+
+### As marcas: `MARK` e `CURSOR`
+
+```rust
+const MARK: Flags = Flags::from_bits_retain(0x8000);
+
+const CURSOR: char = '\u{FFFF}';
+```
+
+- **`MARK`**: un *flag* das celas que `alacritty_terminal` 0.26.0 non usa, o último dos 16 bits de `Flags` (`0x8000`): os seus, os estilos e as marcas dos caracteres anchos e das liñas partidas, chegan ata `0x4000`. Marca as dúas celas que segue o cambio de tamaño: a primeira da pantalla e a do cursor. `from_bits_retain` crea o valor con ese bit aínda que non sexa un *flag* coñecido, e pódese usar nunha constante. Nunca chega á pantalla: `resize` quita as marcas antes de rematar, e `copy_row` só copia os estilos da súa táboa ([Os axudantes](#os-axudantes)).
+- **`CURSOR`**: o carácter da cela do cursor mentres está marcada, U+FFFF, un dos que Unicode reserva para usos internos (*noncharacters*), que os programas non escriben. Fai que a cela estea ocupada. Para `alacritty_terminal`, unha cela cun espazo, sen cores nin estilos, está baleira, tamén con `MARK`, e o *reflow* non conserva as celas baleiras do final das filas que parte: a do cursor podería perderse. Con `CURSOR`, o *reflow* consérvaa coma texto, e pasa á fila seguinte cos brancos de antes dela, coma fai o ConPTY cos brancos antes do cursor. Ao final, a cela recupera o seu carácter.
+
+### `resize`: a pantalla onde a pon o ConPTY
+
+```rust
+pub(super) fn resize(term: &mut Term<Listener>, size: GridSize) {
+    let at_bottom = term.grid().display_offset() == 0;
+    let rows = i32::from(size.rows);
+    let old_rows = term.grid().screen_lines() as u16;
+    let marks = Marks::set(term.grid_mut());
+    // The width first, with the same rows: alacritty_terminal removes no row
+    // when it reflows.
+    if usize::from(size.columns) != term.grid().columns() {
+        term.resize(TermSize(GridSize::new(size.columns, old_rows)));
+    }
+    if let Some(cursor) = marks.find(term.grid()).cursor {
+        term.grid_mut().cursor.point = cursor;
+    }
+    if size.rows < old_rows {
+        // alacritty_terminal removes the rows at the bottom: before that, the
+        // screen starts where it has to, so that they are the ones that
+        // ConPTY removes too.
+        let top = window_top(term.grid(), rows, marks.find(term.grid()).top);
+        move_screen(term.grid_mut(), top);
+        term.resize(TermSize(size));
+    } else {
+        term.resize(TermSize(size));
+        let top = window_top(term.grid(), rows, marks.find(term.grid()).top);
+        move_screen(term.grid_mut(), top);
+        // Back to the size, without the rows at the bottom.
+        let grid = term.grid_mut();
+        let columns = grid.columns();
+        grid.resize::<Color>(false, usize::from(size.rows), columns);
+    }
+    let found = marks.find(term.grid());
+    marks.remove(term.grid_mut(), found);
+    term.selection = None;
+    let grid = term.grid_mut();
+    grid.scroll_display(if at_bottom {
+        Scroll::Bottom
+    } else {
+        // Where it was, as long as the history still reaches it.
+        Scroll::Delta(0)
+    });
+}
+```
+
+**`resize`** cambia o tamaño da pantalla principal de `term` a `size`, que non é o que ten: nin [`Terminal::resize`](#o-tamaño-resize) nin [`bring_back_primary`](#a-pantalla-principal-á-parte) o chaman co mesmo tamaño. Paso a paso:
+
+1. **As marcas.** Lembra se a vista mostraba a pantalla (`at_bottom`), e marca a primeira cela da pantalla e a do cursor ([`Marks::set`](#seguir-as-celas-marks-e-found)).
+2. **Primeiro o ancho, coas mesmas filas.** Se cambian as columnas, `alacritty_terminal` reparte a pantalla e o historial coas filas de antes: ao repartir, non quita ningunha fila, e as que non caben na pantalla quedan no historial. Se cambiase tamén a altura na mesma chamada, `alacritty_terminal` quitaría ou traería filas primeiro, á súa maneira, co cursor abaixo, antes de saber onde foi parar o texto.
+3. **O cursor, desde as marcas.** O cursor pasa á cela marcada con `CURSOR`, que pode estar no historial. `alacritty_terminal` sobe o cursor unha fila por cada fila nova debaixo del e, se moitas filas debaixo del se parten e o empurran por riba da pantalla, déixao na primeira fila, que xa non é a súa. Compróbao a proba `the_cursor_keeps_its_row_when_many_rows_below_it_wrap`.
+4. **As filas.** [`window_top`](#onde-empeza-a-pantalla-window_top-e-last_text_row) di onde ten que empezar a pantalla, e [`move_screen`](#mover-a-pantalla-move_screen) móvea alí:
+   - **con menos filas**, a pantalla móvese primeiro, e despois `alacritty_terminal` quita as filas que sobran abaixo: así son as mesmas que quita o ConPTY;
+   - **con máis filas, ou coas mesmas**, primeiro cambia o tamaño: `alacritty_terminal` medra trazendo filas do historial, co cursor abaixo. Despois, a pantalla móvese: as filas que trouxo voltan ao historial, e entran filas baleiras abaixo. Se ten que empezar máis arriba, no historial, `move_screen` faina máis alta, e `Grid::resize` sen *reflow* (`false`) devólvea ao seu tamaño, sen as filas de abaixo. Coas mesmas filas, o primeiro `term.resize` non fai nada: o ancho xa cambiou.
+5. **O final.** As marcas vanse, e a cela do cursor recupera o seu carácter ([`Marks::remove`](#seguir-as-celas-marks-e-found)). A selección vaise, coma no Windows Terminal: `alacritty_terminal` só a quita se cambian as columnas. E a vista queda abaixo se estaba abaixo, ou onde estaba, mentres o historial chegue a ela: `Delta(0)` non a move ningunha fila, pero axústaa ao historial, que pode ser máis curto. Compróbao a proba `a_resize_keeps_the_view_inside_the_history`.
+
+- `old_rows` cabe nun `u16`, porque as filas da grella veñen dun `GridSize`; e `rows` é un `i32`, coma as liñas de `alacritty_terminal` (`Line`), negativas no historial.
+- `Scroll`, neste arquivo, é o de `alacritty_terminal`, e o último `scroll_display` é o da grella, non o do `Term`: non dana nada, pero o cambio de tamaño xa danou a pantalla enteira.
+- `::<Color>`, en `Grid::resize` e en `Grid::scroll_up`, di o tipo co que a grella compara as celas cando borra filas (`ResetDiscriminant`): nas celas de `alacritty_terminal`, a cor do fondo.
+
+### A pantalla principal á parte
+
+```rust
+pub(super) fn set_aside_primary(term: &mut Term<Listener>) -> Grid<Cell> {
+    let lines = term.screen_lines();
+    let columns = term.columns();
+    // alacritty_terminal only gives the primary screen through swap_alt,
+    // which clears the grid that becomes the alternate screen: the alternate
+    // screen goes out before, and comes back after.
+    let alternate = mem::replace(term.grid_mut(), Grid::new(lines, columns, 0));
+    term.swap_alt();
+    let primary = mem::replace(term.grid_mut(), Grid::new(lines, columns, 0));
+    term.swap_alt();
+    *term.grid_mut() = alternate;
+    primary
+}
+```
+
+**`set_aside_primary`** garda á parte a pantalla principal, mentres se ve a alternativa, e devólvea. No seu sitio deixa unha grella baleira sen historial (`Grid::new(lines, columns, 0)`), que segue o tamaño do terminal: ata que o programa volta á pantalla principal, un cambio de tamaño só cambia a alternativa e esa grella, que, baleira, se reparte sen custo.
+
+- **Por que dous `swap_alt`.** `alacritty_terminal` garda a pantalla que non se ve nun campo privado, e só a dá `swap_alt`, que cambia dunha pantalla á outra. Pero, cando cambia á alternativa, borra a grella que pasa a ser a alternativa. Así que primeiro sae a alternativa, cunha grella baleira no seu sitio; o primeiro `swap_alt` mostra a principal, que sae tamén, con outra grella baleira no seu sitio; o segundo volta á pantalla alternativa, e borra a primeira grella baleira; e ao final a alternativa volta ao seu sitio. O terminal segue na pantalla alternativa, e cada `swap_alt` quita a selección e dana a pantalla enteira.
+- `mem::replace` pon un valor no sitio doutro e devolve o que había: as grellas saen do `Term` sen copialas.
+- Unha copia de meiga que non garda á parte a pantalla principal falla `check-resize.ps1`: `The primary screen, after the alternate one changed size: … line 1 is '26 …' in meiga and '25 …' in the console.`
+
+```rust
+pub(super) fn bring_back_primary(term: &mut Term<Listener>, primary: Grid<Cell>) -> bool {
+    let size = GridSize::new(term.columns() as u16, term.screen_lines() as u16);
+    let fits = primary.columns() == term.columns() && primary.screen_lines() == term.screen_lines();
+    *term.grid_mut() = primary;
+    if !fits {
+        resize(term, size);
+    }
+    !fits
+}
+```
+
+**`bring_back_primary`** devolve ao `Term` a pantalla principal que estaba á parte, cando o programa acaba de deixar a alternativa ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)), no sitio da grella baleira, que xa ten o tamaño do terminal. Coma fai entón o ConPTY, recibe ese tamaño, unha vez: se non é o que tiña, [`resize`](#resize-a-pantalla-onde-a-pon-o-conpty) reparte o texto e coloca a pantalla, coma se o tamaño cambiase nese momento. Os tamaños do medio non contan. Compróbao a proba `on_the_alternate_screen_the_primary_one_gets_the_last_size_when_the_program_leaves`.
+
+- O tamaño do terminal lese antes de devolver a principal: o `Term` mide a grella que ten. Os `as u16` non cortan nada: as columnas e as filas viñeron dun `GridSize`.
+- Desde a revisión do código, di se o tamaño cambiou: entón `alacritty_terminal` puxo a rexión de desprazamento na pantalla enteira, e [`Hooked`](#os-métodos-de-handler) fai o mesmo coa súa copia.
+
+```rust
+pub(super) fn new_primary(term: &mut Term<Listener>) {
+    let lines = term.screen_lines();
+    let columns = term.columns();
+    *term.grid_mut() = Grid::new(lines, columns, SCROLLBACK_LINES);
+}
+```
+
+**`new_primary`** pon unha pantalla principal nova despois dun reinicio (`ESC c`) na pantalla alternativa, cando a principal estaba á parte. O reinicio de `alacritty_terminal` volta á pantalla principal e baléiraa, co seu historial, pero a que baleira é a grella sen historial que ocupaba o seu sitio. A principal á parte vaise ([`Hooked`](#cratesmeiga-coresrctermhandlerrs)), e no sitio da grella sen historial queda unha nova, baleira e con historial (`SCROLLBACK_LINES`), coma despois dun reinicio na pantalla principal. `Grid::new` non reserva o historial: medra a medida que se enche. Compróbao a proba `a_reset_on_the_alternate_screen_leaves_an_empty_primary_screen_with_history`.
+
+### Seguir as celas: `Marks` e `Found`
+
+```rust
+struct Marks {
+    cursor_char: char,
+    pending_wrap: bool,
+    cursor_first: bool,
+}
+
+struct Found {
+    top: Option<i32>,
+    cursor: Option<Point>,
+}
+```
+
+| Campo | Que é |
+|---|---|
+| `Marks::cursor_char` | O carácter que tiña a cela do cursor, que volta a ela ao final. |
+| `Marks::pending_wrap` | O cursor esperaba despois da última columna para pasar á fila seguinte (`input_needs_wrap`): o seguinte carácter vai á fila de abaixo. |
+| `Marks::cursor_first` | O cursor estaba na primeira cela da pantalla: as dúas marcas son unha. |
+| `Found::top` | A fila da cela que era a primeira da pantalla, na pantalla ou no historial, se a atopou. |
+| `Found::cursor` | A cela do cursor, se a atopou. |
+
+Os tres métodos de `Marks` (`impl Marks`):
+
+```rust
+fn set(grid: &mut Grid<Cell>) -> Self {
+    let first = Point::new(Line(0), Column(0));
+    let cursor = grid.cursor.point;
+    let pending_wrap = grid.cursor.input_needs_wrap;
+    // Writing through the index of the row makes the cell occupied.
+    grid[first].flags.insert(MARK);
+    let cell = &mut grid[cursor];
+    cell.flags.insert(MARK);
+    Self {
+        cursor_char: mem::replace(&mut cell.c, CURSOR),
+        pending_wrap,
+        cursor_first: cursor == first,
+    }
+}
+```
+
+**`set`** marca a primeira cela da pantalla con `MARK`, e a do cursor con `MARK` e `CURSOR`, e garda o que fai falta para desfacelo. `mem::replace` pon `CURSOR` na cela e devolve o carácter que tiña.
+
+- **As celas ocupadas.** Cada fila de `alacritty_terminal` lembra ata que columna ten celas escritas (`occ`), e cando a borra só mira esas. Escribir a través do índice da fila (`grid[…]`) conta a cela coma escrita: se a fila se borra, a marca vaise con ela.
+
+```rust
+fn find(&self, grid: &Grid<Cell>) -> Found {
+    let mut found = Found {
+        top: None,
+        cursor: None,
+    };
+    let top = -(grid.history_size() as i32);
+    let rows = grid.screen_lines() as i32;
+    for line in (top..rows).rev() {
+        for (column, cell) in grid[Line(line)].into_iter().enumerate() {
+            if !cell.flags.contains(MARK) {
+                continue;
+            }
+            let is_cursor = cell.c == CURSOR;
+            if is_cursor {
+                found.cursor = Some(Point::new(Line(line), Column(column)));
+            }
+            if !is_cursor || self.cursor_first {
+                found.top = Some(line);
+            }
+        }
+        if found.top.is_some() && found.cursor.is_some() {
+            break;
+        }
+    }
+    found
+}
+```
+
+**`find`** busca as celas marcadas de abaixo arriba, desde a última fila da pantalla ata a primeira do historial, e para cando atopou as dúas: case sempre están preto da pantalla. A do cursor é a que ten `CURSOR`; a outra, a que era a primeira, ou a do cursor se eran a mesma (`cursor_first`). `resize` chámaa tres veces, porque cada paso move as filas: despois do *reflow*, polo cursor; antes de mover a pantalla, pola primeira fila; e ao final, para quitar as marcas.
+
+- `grid[Line(line)]` é unha fila, e `into_iter` percorre as súas celas; `enumerate` dá a columna de cada unha.
+- `-(grid.history_size() as i32)` é a primeira fila do historial: ten como moito `SCROLLBACK_LINES`, e cabe nun `i32`.
+
+```rust
+fn remove(self, grid: &mut Grid<Cell>, found: Found) {
+    if let Some(line) = found.top {
+        for cell in &mut grid[Line(line)] {
+            cell.flags.remove(MARK);
+        }
+    }
+    let Some(point) = found.cursor else {
+        return;
+    };
+    let cell = &mut grid[point];
+    cell.c = self.cursor_char;
+    cell.flags.remove(MARK);
+    if !(0..grid.screen_lines() as i32).contains(&point.line.0) {
+        return;
+    }
+    let last_column = Column(grid.columns() - 1);
+    let cursor = &mut grid.cursor;
+    // The next character goes after the one of the cell, maybe on the
+    // same row now.
+    if self.pending_wrap && point.column < last_column {
+        cursor.point = Point::new(point.line, point.column + 1);
+        cursor.input_needs_wrap = false;
+    } else {
+        cursor.point = point;
+        cursor.input_needs_wrap = self.pending_wrap;
+    }
+}
+```
+
+**`remove`** quita as marcas: a da primeira cela, en toda a súa fila, porque o *reflow* pode levala a outra columna, cando a liña empezaba no historial e se xunta co seu anaco ao ensanchar; e a da cela do cursor, que recupera o seu carácter. Despois, se esa cela está na pantalla, o cursor pasa a ela:
+
+- se esperaba despois da última columna, e a súa cela xa non está na última, vai á cela seguinte, e xa non espera: o seguinte carácter vai despois do da cela, quizais agora na mesma fila;
+- se non, queda na cela, e espera se esperaba. Coma no xterm, un cursor que esperaba segue esperando aínda que a fila se estreite; no ConPTY, non.
+
+Compróbao a proba `the_cursor_keeps_its_place_after_the_last_character_of_a_full_row`. `remove` recibe `self` por valor: despois, as marcas xa non serven. `let Some(point) = found.cursor else { return; };` (*let-else*) sae se non atopou a cela do cursor.
+
+### Onde empeza a pantalla: `window_top` e `last_text_row`
+
+```rust
+fn window_top(grid: &Grid<Cell>, rows: i32, first: Option<i32>) -> i32 {
+    let cursor = grid.cursor.point.line.0;
+    let bottom = last_text_row(grid).map_or(cursor, |last| max(last, cursor));
+    let mut top = bottom - rows + 1;
+    if let Some(first) = first {
+        top = max(top, first);
+    }
+    min(top, cursor)
+}
+
+fn last_text_row(grid: &Grid<Cell>) -> Option<i32> {
+    let rows = grid.screen_lines() as i32;
+    (0..rows).rev().find(|&line| {
+        grid[Line(line)]
+            .into_iter()
+            .any(|cell| !matches!(cell.c, ' ' | '\t'))
+    })
+}
+```
+
+**`window_top`**: onde ten que empezar unha pantalla de `rows` filas, coma unha fila da pantalla de agora ou, negativa, do historial. Coma no Windows Terminal:
+
+1. a fila máis baixa que ten que caber, `bottom`, é a última con texto ou a do cursor, a que estea máis abaixo;
+2. a pantalla empeza onde foi parar a primeira fila, `first`, salvo que así `bottom` non caiba: entón, tan abaixo como faga falta (`bottom - rows + 1`);
+3. e nunca debaixo do cursor: se o texto que hai debaixo del non cabe, a pantalla empeza na súa fila, e as filas que non caben vanse por abaixo.
+
+Sen `first`, se a marca non apareceu, a pantalla remata en `bottom`.
+
+**`last_text_row`**: a fila máis baixa da pantalla con texto, coma a mide o ConPTY: os espazos e os tabuladores non contan, aínda que teñan cor. Para `alacritty_terminal`, un espazo con cor ocupa a cela.
+
+### Mover a pantalla: `move_screen`
+
+```rust
+fn move_screen(grid: &mut Grid<Cell>, top: i32) {
+    let rows = grid.screen_lines();
+    match top.cmp(&0) {
+        Ordering::Greater => {
+            let count = top as usize;
+            grid.scroll_up::<Color>(&(Line(0)..Line(rows as i32)), count);
+            grid.cursor.point.line -= count;
+            grid.saved_cursor.point.line = max(grid.saved_cursor.point.line - count, Line(0));
+        }
+        Ordering::Less => {
+            let columns = grid.columns();
+            grid.resize::<Color>(false, rows + (-top) as usize, columns);
+        }
+        Ordering::Equal => {}
+    }
+}
+```
+
+**`move_screen`** move a pantalla para que a súa primeira fila sexa `top`:
+
+- **máis abaixo**, con `top` positivo: `Grid::scroll_up`, coa pantalla enteira coma rexión, sobe as `top` primeiras filas ao historial, e entran filas baleiras abaixo, coma cando o programa escribe na última fila. O cursor sobe con elas, e tamén o cursor gardado (`ESC 7`), como moito ata a primeira fila;
+- **máis arriba**, con `top` negativo, unha fila do historial: `Grid::resize` sen *reflow* (`false`) fai a pantalla `-top` filas máis alta, e énchea coas filas do historial que hai enriba dela, co cursor máis abaixo. Despois, `resize` devólvea ao tamaño novo, quitando as filas de abaixo.
+
+Na súa rama, `top` e `-top` son positivos: os `as usize` non perden nada.
+
+**Onde meiga e o ConPTY non coinciden.** Hai casos raros, que corrixe a seguinte escritura do programa ([ADR 0016 › Consecuencias](../adr/0016-o-historial-o-tamano-e-o-zoom.md#consecuencias)): unha liña que empezaba no historial xúntase coa súa parte da primeira fila ao ensanchar, coma no Windows Terminal, e no ConPTY non, porque non ten historial; os espazos con cor ao final dunha liña ocupan celas en `alacritty_terminal`, e o ConPTY quítaos ao repartir; e un cursor que esperaba despois da última columna segue esperando, coma no xterm, e no ConPTY non.
+
+As probas están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs), coas do terminal: cinco do cambio de tamaño e tres da pantalla principal á parte.
+
+## `crates/meiga-core/src/term/handler.rs`
+
+Desde a subfase 1.9: o terminal de `alacritty_terminal` coma o ve o parser. O parser de `vte` chama a un `Handler` por cada orde da saída ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Ata a 1.8 era o propio `Term`; desde a 1.9 é `Hooked`, que lle pasa ao `Term` todas as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve a pantalla principal que un cambio de tamaño deixou á parte ([`term/resize.rs`](#cratesmeiga-coresrctermresizers), [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a revisión do código, tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([Manter a vista](#manter-a-vista-view_to_keep-e-keep_view)).
+
+**Por que dentro do parser.** A pantalla principal ten que voltar no momento en que o programa deixa a alternativa: a saída que vén despois de `?1049l`, na mesma lectura ou na mesma actualización sincronizada (`?2026`), xa é para ela, e ten que caer nas súas filas, co tamaño novo. `feed` só volta cando o parser leu o bloque enteiro; `vte` garda a saída dunha actualización sincronizada e dálla ao `Handler` dunha vez, cando remata ou cando vence (`end_sync`); e ningún evento de `alacritty_terminal` avisa do cambio de pantalla. Despois de ler, sería tarde. Compróbao a proba `the_output_after_leaving_the_alternate_screen_reaches_the_primary_one`, nos tres casos.
+
+### `Hooked`
+
+```rust
+pub(super) struct Hooked<'a> {
+    pub term: &'a mut Term<Listener>,
+    pub primary: &'a mut Option<Grid<Cell>>,
+    pub region_below_top: &'a mut bool,
+}
+```
+
+- **`Hooked`**: o terminal, a pantalla principal que un cambio de tamaño deixou á parte e, desde a revisión do código, se a rexión de desprazamento do programa empeza máis abaixo da primeira fila da pantalla: os campos `term`, `primary` e `region_below_top` do [`Terminal`](#terminal), prestados mentres le o parser. `feed` e `end_sync` crean un en cada lectura: son tres referencias, sen copiar nada.
+- `'a` é o tempo de vida dos tres préstamos: `Hooked` non pode durar máis ca eles. Os campos son públicos, pero o tipo só se ve no módulo `term` (`pub(super)`).
+- `Cell`, neste arquivo, é a cela de `alacritty_terminal`.
+
+### Manter a vista: `view_to_keep` e `keep_view`
+
+Desde a revisión do código da subfase 1.9. Cando se despraza unha rexión que non empeza na primeira fila da pantalla, as filas que saen dela non entran no historial, pero `alacritty_terminal` sube igual a vista ([O historial e a súa vista](#o-historial-e-a-súa-vista)): se a vista non está na pantalla, `Grid::scroll_up` súmalle as filas que despraza, entren ou non no historial (só se borra a rexión enteira, non a move). As ordes que poden desprazar así gardan antes onde está a vista e, despois, déixana alí.
+
+```rust
+impl Hooked<'_> {
+    #[inline]
+    fn view_to_keep(&self, below_top: bool) -> Option<usize> {
+        if !below_top {
+            return None;
+        }
+        let offset = self.term.grid().display_offset();
+        (offset != 0).then_some(offset)
+    }
+
+    #[inline]
+    fn keep_view(&mut self, view: Option<usize>) {
+        let Some(offset) = view else {
+            return;
+        };
+        let moved = self.term.grid().display_offset();
+        if moved != offset {
+            // Both are at most SCROLLBACK_LINES: they fit in an i32.
+            self.term
+                .scroll_display(Scroll::Delta(offset as i32 - moved as i32));
+        }
+    }
+}
+```
+
+- **`view_to_keep(below_top)`**: onde está a vista, cantas filas por riba da pantalla, se a orde despraza desde unha fila que non é a primeira (`below_top`) e a vista non está na pantalla; se non, `None`. Coa vista na pantalla, `alacritty_terminal` non a move, e non hai nada que manter. Fóra dese caso, o custo é ler un `bool`.
+- **`keep_view(view)`**: despois da orde, se a vista se moveu, lévaa onde estaba coa diferenza (`Delta`), negativa: cara abaixo. As dúas contas caben nun `i32`, porque a vista non pasa de `SCROLLBACK_LINES` filas. `scroll_display` dana a pantalla enteira, pero só cando a vista estaba arriba e a rexión se desprazou. A vista volta a unha fila que xa mostraba, así que tampouco pasa do principio do historial.
+- **Orde a orde.** Ao final da lectura sería tarde: na mesma lectura, outras ordes poden meter filas no historial, que si teñen que subir a vista, e despois xa non se sabe canto subiu por cada unha.
+
+### Seguir a rexión: `follow_region` e `follow_column_mode`
+
+```rust
+#[inline]
+fn follow_region(&mut self, top: usize, bottom: Option<usize>) {
+    if top < bottom.unwrap_or_else(|| self.term.screen_lines()) {
+        *self.region_below_top = top > 1;
+    }
+}
+
+#[inline]
+fn follow_column_mode(&mut self, mode: PrivateMode) {
+    if matches!(mode, PrivateMode::Named(NamedPrivateMode::ColumnMode)) {
+        self.follow_region(1, None);
+    }
+}
+```
+
+Desde a revisión do código da subfase 1.9. `alacritty_terminal` garda a rexión de desprazamento nun campo privado, `scroll_region`, e non di onde empeza: `region_below_top` séguea.
+
+- **`follow_region`** fai coa copia o mesmo ca `alacritty_terminal` coa rexión cando o programa a pon desde a fila `top`, onde a primeira é 1, ata `bottom` ou, sen `bottom`, ata a última fila: se `top` non está por riba desa fila, `alacritty_terminal` ignora a orde, e a copia tampouco cambia. Se non, a rexión empeza máis abaixo da primeira fila se `top > 1`. `unwrap_or_else` só le o alto da pantalla se fai falta.
+- **`follow_column_mode`**: DECCOLM (`?3h` e `?3l`) cambiaba o terminal a 132 ou a 80 columnas. `alacritty_terminal` non cambia as columnas, pero borra a pantalla e pon a rexión na pantalla enteira, coma `CSI 1 r`, desde dentro do `Term`, sen pasar polo `Handler`. `matches!` compara o modo co patrón de DECCOLM. Cunha soa fila, `1` non está por riba da última, e `alacritty_terminal` deixa a rexión que había: `follow_region(1, None)` tamén. Atopouno a segunda volta da revisión do código.
+- **A copia segue todos os cambios.** `alacritty_terminal` só cambia a rexión en catro sitios: ao crear o terminal, ao cambiar o seu tamaño, que a pon na pantalla enteira, no reinicio e en `set_scrolling_region`, que tamén chama DECCOLM. Deixar a pantalla alternativa non a cambia. `region_below_top` segue os catro: `false` ao crear o [`Terminal`](#terminal), en [`Terminal::resize`](#o-tamaño-resize) e cando `bring_back_primary` cambia o tamaño, en `reset_state`, e `follow_region` con `set_scrolling_region` e con DECCOLM ([Os métodos de `Handler`](#os-métodos-de-handler)).
+
+### Os métodos de `Handler`
+
+```rust
+macro_rules! pass {
+    ($(fn $name:ident(&mut self $(, $argument:ident: $type:ty)*);)*) => {
+        $(
+            #[inline]
+            fn $name(&mut self $(, $argument: $type)*) {
+                <Term<Listener> as Handler>::$name(self.term $(, $argument)*);
+            }
+        )*
+    };
+}
+
+// A method that Handler adds in a new version would do nothing here, without
+// any error: the lint asks for all of them.
+#[deny(clippy::missing_trait_methods)]
+impl Handler for Hooked<'_> {
+    pass! {
+        fn set_title(&mut self, title: Option<String>);
+        fn set_cursor_style(&mut self, style: Option<CursorStyle>);
+        fn set_cursor_shape(&mut self, shape: CursorShape);
+        fn goto(&mut self, line: i32, column: usize);
+        fn goto_line(&mut self, line: i32);
+        fn goto_col(&mut self, column: usize);
+        fn insert_blank(&mut self, count: usize);
+        fn move_up(&mut self, rows: usize);
+        fn move_down(&mut self, rows: usize);
+        fn identify_terminal(&mut self, intermediate: Option<char>);
+        fn device_status(&mut self, kind: usize);
+        fn move_forward(&mut self, columns: usize);
+        fn move_backward(&mut self, columns: usize);
+        fn move_down_and_cr(&mut self, rows: usize);
+        fn move_up_and_cr(&mut self, rows: usize);
+        fn backspace(&mut self);
+        fn carriage_return(&mut self);
+        fn bell(&mut self);
+        fn substitute(&mut self);
+        fn set_horizontal_tabstop(&mut self);
+        fn scroll_down(&mut self, rows: usize);
+        fn insert_blank_lines(&mut self, count: usize);
+        fn erase_chars(&mut self, count: usize);
+        fn delete_chars(&mut self, count: usize);
+        fn move_backward_tabs(&mut self, count: u16);
+        fn move_forward_tabs(&mut self, count: u16);
+        fn save_cursor_position(&mut self);
+        fn restore_cursor_position(&mut self);
+        fn clear_line(&mut self, mode: LineClearMode);
+        fn clear_screen(&mut self, mode: ClearMode);
+        fn clear_tabs(&mut self, mode: TabulationClearMode);
+        fn set_tabs(&mut self, interval: u16);
+        fn reverse_index(&mut self);
+        fn terminal_attribute(&mut self, attribute: Attr);
+        fn set_mode(&mut self, mode: Mode);
+        fn unset_mode(&mut self, mode: Mode);
+        fn report_mode(&mut self, mode: Mode);
+        fn report_private_mode(&mut self, mode: PrivateMode);
+        fn set_keypad_application_mode(&mut self);
+        fn unset_keypad_application_mode(&mut self);
+        fn set_active_charset(&mut self, index: CharsetIndex);
+        fn configure_charset(&mut self, index: CharsetIndex, charset: StandardCharset);
+        fn set_color(&mut self, index: usize, color: Rgb);
+        fn dynamic_color_sequence(&mut self, prefix: String, index: usize, terminator: &str);
+        fn reset_color(&mut self, index: usize);
+        fn clipboard_store(&mut self, clipboard: u8, base64: &[u8]);
+        fn clipboard_load(&mut self, clipboard: u8, terminator: &str);
+        fn decaln(&mut self);
+        fn push_title(&mut self);
+        fn pop_title(&mut self);
+        fn text_area_size_pixels(&mut self);
+        fn text_area_size_chars(&mut self);
+        fn set_hyperlink(&mut self, hyperlink: Option<Hyperlink>);
+        fn set_mouse_cursor_icon(&mut self, icon: CursorIcon);
+        fn report_keyboard_mode(&mut self);
+        fn push_keyboard_mode(&mut self, mode: KeyboardModes);
+        fn pop_keyboard_modes(&mut self, count: u16);
+        fn set_keyboard_mode(&mut self, mode: KeyboardModes, behavior: KeyboardModesApplyBehavior);
+        fn set_modify_other_keys(&mut self, mode: ModifyOtherKeys);
+        fn report_modify_other_keys(&mut self);
+        fn set_scp(&mut self, path: ScpCharPath, update: ScpUpdateMode);
+    }
+
+    #[inline]
+    fn input(&mut self, c: char) {
+        let view = self.view_to_keep(*self.region_below_top);
+        <Term<Listener> as Handler>::input(self.term, c);
+        self.keep_view(view);
+    }
+
+    #[inline]
+    fn put_tab(&mut self, count: u16) {
+        let view = self.view_to_keep(*self.region_below_top);
+        <Term<Listener> as Handler>::put_tab(self.term, count);
+        self.keep_view(view);
+    }
+
+    #[inline]
+    fn linefeed(&mut self) {
+        let view = self.view_to_keep(*self.region_below_top);
+        <Term<Listener> as Handler>::linefeed(self.term);
+        self.keep_view(view);
+    }
+
+    #[inline]
+    fn newline(&mut self) {
+        let view = self.view_to_keep(*self.region_below_top);
+        <Term<Listener> as Handler>::newline(self.term);
+        self.keep_view(view);
+    }
+
+    #[inline]
+    fn scroll_up(&mut self, rows: usize) {
+        let view = self.view_to_keep(*self.region_below_top);
+        <Term<Listener> as Handler>::scroll_up(self.term, rows);
+        self.keep_view(view);
+    }
+
+    #[inline]
+    fn delete_lines(&mut self, count: usize) {
+        let view = self.view_to_keep(self.term.grid().cursor.point.line.0 != 0);
+        <Term<Listener> as Handler>::delete_lines(self.term, count);
+        self.keep_view(view);
+    }
+
+    #[inline]
+    fn set_scrolling_region(&mut self, top: usize, bottom: Option<usize>) {
+        <Term<Listener> as Handler>::set_scrolling_region(self.term, top, bottom);
+        self.follow_region(top, bottom);
+    }
+
+    #[inline]
+    fn set_private_mode(&mut self, mode: PrivateMode) {
+        <Term<Listener> as Handler>::set_private_mode(self.term, mode);
+        self.follow_column_mode(mode);
+    }
+
+    #[inline]
+    fn unset_private_mode(&mut self, mode: PrivateMode) {
+        <Term<Listener> as Handler>::unset_private_mode(self.term, mode);
+        self.follow_column_mode(mode);
+        if !self.term.mode().contains(TermMode::ALT_SCREEN)
+            && let Some(primary) = self.primary.take()
+            && resize::bring_back_primary(self.term, primary)
+        {
+            *self.region_below_top = false;
+        }
+    }
+
+    #[inline]
+    fn reset_state(&mut self) {
+        <Term<Listener> as Handler>::reset_state(self.term);
+        *self.region_below_top = false;
+        if self.primary.take().is_some() {
+            resize::new_primary(self.term);
+        }
+    }
+}
+```
+
+- **`pass!`**, unha macro declarativa (`macro_rules!`), escribe os métodos que só lle pasan a orde ao `Term`: recibe as súas firmas, coma no trait, e escribe cada un cun corpo que chama ao mesmo método do `Term`, cos mesmos argumentos. `$name:ident` e `$argument:ident` recollen identificadores, `$type:ty` un tipo, e `$( … )*` repítese para cada método e para cada argumento.
+- `<Term<Listener> as Handler>::$name(self.term …)` chama ao método do trait `Handler` do `Term` coa sintaxe completa, que non deixa dúbida de cal é. `self.term` xa é unha referencia mutábel ao `Term`.
+- `#[inline]` suxírelle ao compilador que meta cada método no sitio da chamada: o parser é xenérico no seu `Handler`, e así pasar polo `Hooked` non ten por que engadir unha chamada.
+- **Todos os métodos.** Os 71 métodos de `Handler` en `vte` 0.15.0 teñen unha implementación por defecto que non fai nada. Se unha versión nova engadise outro, `Hooked` usaría esa, e a orde non chegaría ao `Term`, sen ningún erro. O *lint* de Clippy `missing_trait_methods`, do grupo *restriction*, que non está activo por defecto, avisa de cada método dun trait que unha implementación non escribe; co nivel `deny`, só neste `impl`, é un erro, e a CI falla ([Tecnoloxías › *Lints*](../tecnoloxias.md#7-lints-rustc-e-clippy)). `pass!` escribe 61 deles, e os outros dez fan algo máis.
+- **`input`, `put_tab`, `linefeed`, `newline` e `scroll_up`**, desde a revisión do código: as ordes que desprazan a rexión de desprazamento cara arriba, desde a súa primeira fila. Un carácter despois da última columna pasa á fila seguinte (`input`), e tamén un tabulador (`put_tab`); ao final da rexión, iso despráza, coma unha liña nova (`linefeed`, que fan LF, VT, FF, `ESC D` e `ESC E`). `newline` é unha liña nova e, no modo `LNM`, un retorno de carro, pero o parser de `vte` 0.15 non o chama. E `CSI n S` despraza a rexión `n` filas (`scroll_up`). Se a rexión empeza máis abaixo da primeira fila da pantalla (`region_below_top`), a vista queda onde estaba ([Manter a vista](#manter-a-vista-view_to_keep-e-keep_view)).
+- **`delete_lines`** (`CSI n M`) borra `n` filas desde a do cursor e sobe as de debaixo, dentro da rexión: despraza desde a fila do cursor. Se non é a primeira da pantalla, non entra nada no historial, aínda que a rexión empece arriba, e a vista queda onde estaba. `cursor.point.line.0` é a fila do cursor na pantalla, desde 0.
+- **`set_scrolling_region`** (`ESC [ superior ; inferior r`) pásalle a orde ao `Term`, e [`follow_region`](#seguir-a-rexión-follow_region-e-follow_column_mode) segue a rexión nova.
+- **`set_private_mode`** e **`unset_private_mode`**, con DECCOLM (`?3h` e `?3l`), seguen tamén a rexión que pon o `Term` ([`follow_column_mode`](#seguir-a-rexión-follow_region-e-follow_column_mode)).
+- **`unset_private_mode`**: despois de que o `Term` desactive o modo, se xa non está na pantalla alternativa e hai unha principal á parte, devólvea con [`bring_back_primary`](#a-pantalla-principal-á-parte), que lle dá o tamaño do terminal. Só pasa con `?1049l`, o único modo co que `alacritty_terminal` deixa a pantalla alternativa. `take` colle a principal e deixa `None` no seu sitio. Se o tamaño da principal cambia, a rexión volta ser a pantalla enteira.
+- **`reset_state`**: o reinicio (`ESC c`) de `alacritty_terminal` deixa tamén a pantalla alternativa e baleira a principal, co seu historial, e a rexión volta ser a pantalla enteira. Se a principal estaba á parte, o reinicio baleirou a grella que ocupaba o seu sitio: entón a principal á parte vaise, e [`new_primary`](#a-pantalla-principal-á-parte) pon unha nova, con historial.
+- `if … && let Some(primary) = self.primary.take() && resize::bring_back_primary(…)` encadea condicións e un `if let` (*let chains*, da edición 2024): cada unha só se avalía se se cumpre a anterior, así que `take` só se chama fóra da pantalla alternativa, e `bring_back_primary` só se hai unha principal á parte.
+- Un programa que activa a pantalla alternativa estando xa nela (`?1049h` dúas veces) non cambia nada en `alacritty_terminal`: a principal segue á parte ata que o programa volta a ela ([ADR 0016 › Consecuencias](../adr/0016-o-historial-o-tamano-e-o-zoom.md#consecuencias)).
 
 ## `crates/meiga-core/src/term/screen.rs`
 
@@ -2086,7 +2808,7 @@ pub(super) fn set_palette(&mut self, palette: &Palette) {
 
 Desde a subfase 1.8: a selección, o texto que se marca co rato, que mostra a pantalla e que copia o portapapeis ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). É outro submódulo de `term`, cos métodos de `Terminal` que a crean, a moven, a quitan e a len: os tipos da selección de `alacritty_terminal` quedan dentro da fachada, coma os demais ([ADR 0012](../adr/0012-fachada-do-terminal.md)). Quen a move é o rato da vista ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)), e quen leva o seu texto ao portapapeis, o módulo que copia e pega ([Código › meiga › `clipboard.rs`](meiga.md#cratesmeigasrcclipboardrs)).
 
-**A selección vive na grella.** `alacritty_terminal` garda a selección no seu `Term` (`term.selection`), cos puntos da súa grella, que contan tamén o historial. Así segue o texto: cando a pantalla se despraza, sobe con el; e desaparece cando o programa borra a parte da pantalla onde está, cambia á pantalla alternativa ou reinicia o terminal. Escribir enriba das súas celas non a quita. Gardala fóra da grella obrigaría a facer todo isto outra vez ([ADR 0015 › Alternativas consideradas](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md#alternativas-consideradas)).
+**A selección vive na grella.** `alacritty_terminal` garda a selección no seu `Term` (`term.selection`), cos puntos da súa grella, que contan tamén o historial. Así segue o texto: cando a pantalla se despraza, sobe con el; e desaparece cando o programa borra a parte da pantalla onde está, cambia á pantalla alternativa ou reinicia o terminal. Escribir enriba das súas celas non a quita. Desde a subfase 1.9, desaparece tamén cando cambia o tamaño ([`resize`](#o-tamaño-resize)); e, como vive na grella, colle tamén filas do historial, e segue o seu texto cando se move a vista. Gardala fóra da grella obrigaría a facer todo isto outra vez ([ADR 0015 › Alternativas consideradas](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md#alternativas-consideradas)).
 
 ### `WORD_DELIMITERS`, `SelectionKind` e `Side`
 
@@ -2163,7 +2885,7 @@ impl Terminal {
 - **As clases de `alacritty_terminal`** (`SelectionType`): `Simple` para as celas, `Semantic` para as palabras e `Lines` para as liñas. A selección rectangular, `Block`, aínda non se usa.
 - `alacritty_terminal` garda a selección coma dous puntos da grella, o do comezo e o do final, cada un co seu lado, e calcula as súas celas cada vez que se piden. Unha selección de celas que empeza e remata no mesmo lado da mesma cela, ou que vai do lado dereito dunha ao esquerdo da seguinte, non ten ningunha.
 - `side.into()` converte o `Side` de meiga no de `alacritty_terminal`. `if let Some(selection) = &mut self.term.selection` toma prestada a selección para cambiala no seu sitio.
-- O rato da vista chama a `select` cando baixa o botón esquerdo, coa clase dos clics que contou ([`Clicks`](#os-clics-seguidos-clicksettings-e-clicks)), e a `select_to` cando o rato pasa a outra cela ou a outro lado.
+- O rato da vista chama a `select` cando baixa o botón esquerdo, coa clase dos clics que contou ([`Clicks`](#os-clics-seguidos-clicksettings-e-clicks)), e a `select_to` cando o rato pasa a outra cela ou a outro lado e, desde a subfase 1.9, cando a vista se move mentres a selección medra, coa roda ou soa, para que remate debaixo do punteiro.
 
 ```rust
 pub fn selection_text(&self) -> Option<String> {
@@ -2240,7 +2962,7 @@ fn grid_point(&self, point: GridPoint) -> Point {
 }
 ```
 
-**`grid_point`** converte a cela da pantalla no punto da grella de `alacritty_terminal`, coma `copy_row`: a fila que se ve, contando o historial que hai por riba (`display_offset`, que deixará de ser 0 cando se poida mirar o historial, na subfase 1.9). Unha cela fóra da pantalla pasa a ser a máis próxima: a resta nunca baixa de 0, porque a grella ten polo menos `MIN_SIZE`.
+**`grid_point`** converte a cela da pantalla no punto da grella de `alacritty_terminal`, coma `copy_row`: a fila que se ve, contando o historial que hai por riba (`display_offset`, que desde a subfase 1.9 non é 0 mentres a vista mostra o historial). Unha cela fóra da pantalla pasa a ser a máis próxima: a resta nunca baixa de 0, porque a grella ten polo menos `MIN_SIZE`.
 
 ```rust
 pub(super) fn selected_columns(range: &SelectionRange, line: Line, columns: u16) -> Columns {
@@ -2398,7 +3120,7 @@ E despois, para cada bloque:
 
 ## `crates/meiga-core/src/term/tests.rs`
 
-As vinte e tres probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Catro axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; e, desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén.
+As trinta e seis probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Oito axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras; desde a 1.9, `texts` dá o texto de cada fila que se ve, `cursor_at`, a fila e a columna do cursor, e `ten_lines`, un terminal de 10 × 3 coas liñas do 1 ao 10, 7 delas no historial; e, desde a revisión do código da 1.9, `assert_the_rows_go_into_the_history`, que, coa vista dúas filas arriba, comproba que dúas liñas novas ao final da pantalla meten dúas filas no historial e que a vista segue mostrando as mesmas. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén. Desde a 1.9, trece comproban o cambio de tamaño, a pantalla principal á parte e a vista do historial, e a proba aleatoria move tamén a vista.
 
 | Proba | Que comproba |
 |---|---|
@@ -2419,12 +3141,25 @@ As vinte e tres probas do terminal, nun arquivo aparte para que `mod.rs` sexa m�
 | `a_synchronized_update_waits_for_its_end` | A saída dunha actualización sincronizada non chega á pantalla ata que remata ou vence (como moito, 150 ms); `end_sync` móstraa e entrega as súas respostas. |
 | `after_a_resize_everything_is_copied_again` | Despois de cambiar o tamaño, a copia ten o tamaño novo e todas as celas cambiadas, co texto no seu sitio. |
 | `the_grid_is_never_smaller_than_two_columns_and_one_row` | Un terminal de 0 × 0 ou de 1 × 0 mide 2 × 1, e escribir caracteres anchos e inserir celas e liñas nel non falla. |
+| `a_taller_screen_adds_blank_rows_and_leaves_the_history_alone` | Desde a subfase 1.9: un terminal de 10 × 3 con `a` a `e`, dúas no historial, pasa a ter 5 filas: `c`, `d` e `e` seguen arriba, con dúas filas baleiras abaixo, o cursor segue despois do `e`, e o historial segue con dúas filas. `alacritty_terminal` traería del `a` e `b`. |
+| `a_shorter_screen_keeps_the_cursor_and_the_rows_above_it` | De 5 filas a 3, se o texto cabe, só se van as filas baleiras de abaixo: `a` e `b` seguen arriba, co cursor, e nada vai ao historial. Se non cabe, de `a`, `b` e `c` a 2 filas, a primeira vai ao historial; e alí segue cando a pantalla volta a 5 filas, con `b` e `c` arriba e as baleiras abaixo. |
+| `narrower_lines_wrap_downwards_and_join_again_when_wider` | `abcdef` e `xy`, de 8 columnas a 4: `abcdef` pártese en dúas filas, que baixan cara á fila baleira, e nada vai ao historial; o cursor segue despois de `xy`. De volta a 8, as dúas filas xúntanse, a fila baleira volta abaixo, e un `z` escríbese despois de `xy`. |
+| `the_cursor_keeps_its_row_when_many_rows_below_it_wrap` | En 4 × 4, con `x`, `a`, `bbbb` e `cccc` e o cursor no `a`: a 2 columnas, as dúas últimas liñas ocupan catro filas e, coma no ConPTY, a pantalla empeza na fila do cursor, e a última, que xa non cabe, vaise. O cursor segue no `a`, e un `A` escríbese enriba del. |
+| `the_cursor_keeps_its_place_after_the_last_character_of_a_full_row` | Co cursor esperando despois de `abcd`, nunha fila chea de 4 columnas: a 6 columnas, un `e` vai despois do `d`, na mesma fila; a 2 columnas, `abcd` ocupa dúas filas, e o `e` vai á seguinte. |
+| `on_the_alternate_screen_the_primary_one_gets_the_last_size_when_the_program_leaves` | Na pantalla alternativa, a 10 × 5 e a 4 × 2, `ALT` segue arriba, sen repartir. Se o programa volta á principal co tamaño que tiña, 10 × 3, esta non cambia, sen rastro dos tamaños do medio: `c`, `d` e `e`, o cursor despois do `e` e dúas filas no historial. E se volta despois de pasar a 10 × 5, recibe ese tamaño coma na pantalla principal: dúas filas baleiras abaixo, e o historial onde estaba. |
+| `the_output_after_leaving_the_alternate_screen_reaches_the_primary_one` | Despois de pasar a 10 × 4 na pantalla alternativa, a `X` que segue a `?1049l` chega á principal, xa co tamaño novo, despois do `b`: na mesma lectura, dentro dunha actualización sincronizada (`?2026`) e nunha que remata `end_sync`, á súa hora. |
+| `a_reset_on_the_alternate_screen_leaves_an_empty_primary_screen_with_history` | Un reinicio (`ESC c`) na pantalla alternativa, despois dun cambio de tamaño, volta á principal, baleira e sen historial; e esta garda historial: con seis liñas en catro filas, dúas van a el. |
+| `the_view_moves_through_the_history` | Con `ten_lines`, a vista móvese dúas filas cara arriba, unha pantalla, ao principio do historial, unha pantalla cara abaixo, a unha fila por riba da pantalla e, con `scroll_to(100)`, ao principio outra vez, e volta á pantalla; en cada paso vense as filas que tocan. Mentres non se ve a fila do cursor, o cursor non se debuxa (`Hidden`); e nos extremos, `scroll` di que non se moveu. |
+| `the_output_does_not_move_the_view_of_the_history` | Coa vista dúas filas arriba, en `6`, `7` e `8`, dúas liñas novas non a moven: segue mostrando as mesmas filas, agora 4 por riba da pantalla, nun historial de 9. |
+| `the_rows_that_leave_a_region_below_the_top_do_not_move_the_view` | Desde a revisión do código da subfase 1.9. Con `ten_lines` e a vista dúas filas arriba, en `6`, `7` e `8`, seis saídas non meten nada no historial nin moven a vista: dez liñas novas ao final dunha rexión que empeza na segunda fila (`ESC [ 2 ; 3 r`); tres `CSI S`; caracteres que pasan á fila seguinte ao final da rexión; un tabulador despois da última columna; unha rexión que non vale (`ESC [ 1 ; 1 r`), que deixa a de antes; e, sen rexión, dous `CSI M` co cursor na segunda fila. Desde o principio do historial, a vista tampouco pasa del. E unha rexión que empeza arriba (`ESC [ 1 ; 2 r`) mete as súas filas no historial, e a vista sobe con elas. |
+| `a_new_size_a_reset_or_deccolm_make_the_region_the_whole_screen_again` | Desde a revisión do código. Despois dunha rexión que empeza na segunda fila, a pantalla enteira volta ser a rexión, e dúas liñas novas ao final da pantalla meten dúas filas no historial, coa vista nas mesmas filas: despois dun cambio de tamaño; dunha rexión da pantalla alternativa, cando o programa volta á principal, que recibe outro tamaño; dun reinicio (`ESC c`); e de DECCOLM, `?3h` e `?3l`, que `alacritty_terminal` só segue para borrar a pantalla e a rexión. |
+| `a_resize_keeps_the_view_inside_the_history` | Coa vista no principio do historial, despois de pasar a 10 × 8, a 2 × 2 e a 10 × 3, a vista nunca pasa do historial, e copiar o terminal non falla. E coa vista abaixo, un cambio de tamaño déixaa abaixo. |
 | `a_selection_of_cells_marks_them_and_gives_their_text` | Un clic que non se move non selecciona nada, e a copia non cambia nada. Arrastrando desde o lado esquerdo da segunda cela ata o dereito da sexta, o texto é `la mu`, e só esas celas quedan marcadas e cambiadas; ata o lado esquerdo da terceira cela da fila seguinte, `la mundo`, un LF e `ad`, e só cambian as celas que entran; e cara atrás, ata o lado esquerdo da primeira, `o`. `clear_selection` di se había selección, e despois só cambia a cela que estaba seleccionada, co texto no seu sitio. |
 | `a_double_click_selects_a_word_a_path_or_up_to_the_other_bracket` | Un dobre clic selecciona unha palabra (`cat`, e `ok` e `si`, dentro dunhas parénteses e dunhas comiñas); unha ruta enteira, coas súas barras invertidas e os seus `:` (`C:\x\f.rs:12:5`); nunha paréntese, ata a outra, desde as dúas; nun espazo ou nunha coma, só iso; despois do final do texto, ningún texto; e en calquera das metades dun carácter ancho, a palabra (`中文`). |
 | `a_triple_click_selects_the_rows_of_a_line` | Un triplo clic nunha liña que non colle nunha fila marca as súas dúas filas, e o seu texto vai sen LF ao final; arrastrar ata a liña seguinte engádea, despois dun LF. |
 | `a_wide_character_is_selected_whole` | Unha selección que empeza na metade dereita dun carácter ancho, ou que remata na esquerda, marca o carácter enteiro, e o texto lévao unha vez. |
 | `the_selection_moves_with_the_text_and_goes_away_with_it` | Cando a pantalla se despraza, a selección sobe co seu texto. Cando o programa borra unha das súas filas, desaparece, tamén da outra fila, que non cambiou. Escribir enriba dela non a quita, pero borrar a pantalla si. |
-| `copying_only_the_damage_gives_the_same_screen_as_copying_everything` | **A invariante da copia.** 300 casos aleatorios, de ata 79 anacos dunha lista de 70: texto, caracteres anchos e combinados, movementos do cursor, borrados, inserir e borrar caracteres e liñas, desprazamentos e rexións, a pantalla alternativa, estilos, reinicios… Cada caso lese en anacos de ata 16 bytes, por veces cambiando o tamaño, con grellas de 2 × 1 a 80 × 24. Despois de cada anaco, a pantalla copiada só co dano ten que ser igual, cela a cela e no cursor, á dun segundo terminal copiado enteiro. Esta proba atopou o oco do dano de `alacritty_terminal` cos caracteres anchos. Desde a subfase 1.8, antes de cada anaco cambia tamén a selección, igual nos dous terminais: un de cada oito empeza unha, de calquera clase; dous de cada oito móvena; e un quítaa, ás veces con celas fóra da grella. Así comproba tamén que a copia marca as celas onde cambia a selección. |
+| `copying_only_the_damage_gives_the_same_screen_as_copying_everything` | **A invariante da copia.** 300 casos aleatorios, de ata 79 anacos dunha lista de 70: texto, caracteres anchos e combinados, movementos do cursor, borrados, inserir e borrar caracteres e liñas, desprazamentos e rexións, a pantalla alternativa, estilos, reinicios… Cada caso lese en anacos de ata 16 bytes, por veces cambiando o tamaño, con grellas de 2 × 1 a 80 × 24. Despois de cada anaco, a pantalla copiada só co dano ten que ser igual, cela a cela e no cursor, á dun segundo terminal copiado enteiro. Esta proba atopou o oco do dano de `alacritty_terminal` cos caracteres anchos. Desde a subfase 1.8, antes de cada anaco cambia tamén a selección, igual nos dous terminais: un de cada oito empeza unha, de calquera clase; dous de cada oito móvena; e un quítaa, ás veces con celas fóra da grella. Así comproba tamén que a copia marca as celas onde cambia a selección. Desde a 1.9, outro de cada oito move a vista do historial, igual nos dous terminais, con calquera `Scroll`: de dúas filas cara abaixo a dúas cara arriba, unha pantalla ou ata un extremo. |
 
 ## `crates/meiga-core/tests/recordings.rs`
 

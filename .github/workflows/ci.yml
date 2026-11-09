@@ -97,6 +97,9 @@ jobs:
       - name: Check the mouse, the selection and the clipboard
         run: ./tools/check-mouse.ps1
 
+      - name: Check the resizing, the history and the zoom
+        run: ./tools/check-resize.ps1
+
       - name: Check the start-up measurement
         run: ./tools/perf/measure-startup.ps1 -Runs 3 -Warmup 1
 

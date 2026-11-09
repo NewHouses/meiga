@@ -127,6 +127,9 @@ public static extern uint MapVirtualKeyExW(uint code, uint type, IntPtr layout);
 public static extern bool GetClientRect(IntPtr window, out RECT rect);
 
 [DllImport("user32.dll")]
+public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool ClientToScreen(IntPtr window, ref POINT point);
 
@@ -405,16 +408,18 @@ function Show-Text([string]$Text) {
 }
 
 # The size of the grid, which the script wrote first, and of its cells: the
-# grid fills the client area of the window but for less than a cell.
+# grid fills the client area of the window but for the strip of the scroll
+# bar, 12 pixels at a scale of 100 %, and less than a cell.
 function Measure-Cells {
     $size = @(Get-Lines)[0] -split ' '
     $rect = [Meiga.Tools.MouseCheck+RECT]::new()
     if (-not $api::GetClientRect($window, [ref]$rect)) {
         throw "Could not read the size of the window of $exe."
     }
+    $strip = [Math]::Max(1, [Math]::Floor((12 * $api::GetDpiForWindow($window) + 48) / 96))
     $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
     $script:cell = [pscustomobject]@{
-        Width = [Math]::Floor($rect.Right / $grid.Columns)
+        Width = [Math]::Floor(($rect.Right - $strip) / $grid.Columns)
         Height = [Math]::Floor($rect.Bottom / $grid.Rows)
     }
 }

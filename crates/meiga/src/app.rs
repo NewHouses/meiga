@@ -5,7 +5,7 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use meiga_core::geometry::{GridSize, Rect};
+use meiga_core::geometry::Rect;
 use meiga_core::term::Terminal;
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::HDC;
@@ -18,9 +18,10 @@ use crate::bench::Bench;
 use crate::frames::{Frames, Scene};
 use crate::mouse::Response;
 use crate::options::{BenchMode, Options};
+use crate::scrollbar::ScrollBar;
 use crate::session::{self, Shared, lock};
 use crate::trace::Trace;
-use crate::view::{FONT_FAMILIES, FONT_POINTS, TerminalView};
+use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TerminalView};
 
 /// The title of the window while the program does not give one.
 pub const TITLE: &str = "meiga";
@@ -75,7 +76,12 @@ impl App {
         let (mut content, session) = match options.bench {
             Some(BenchMode::Text) => {
                 let system = FontSystem::new()?;
-                let font = Font::new(&system, &FONT_FAMILIES, FONT_POINTS, window.dpi())?;
+                let font = Font::new(
+                    &system,
+                    &FONT_FAMILIES,
+                    f32::from(FONT_POINTS),
+                    window.dpi(),
+                )?;
                 let bench = Bench::new(BenchMode::Text, Some(font));
                 (Content::Bench(Box::new(bench)), None)
             }
@@ -137,6 +143,7 @@ impl App {
             if let Content::Terminal(view) = &mut self.content {
                 view.dialog_closed(window);
             }
+            self.catch_up(window)?;
             // While the message box was open, the window lost its wakes, and
             // maybe some paint: what changed meanwhile is shown now.
             window.invalidate(None);
@@ -147,30 +154,37 @@ impl App {
         }
         Ok(())
     }
+
+    /// While a message box of the view was open, the events of the window
+    /// did not reach the view: the window may have another scale or size
+    /// now. They are taken as if they had just changed.
+    fn catch_up(&mut self, window: &Window) -> Result<(), HandlerError> {
+        let Content::Terminal(view) = &self.content else {
+            return Ok(());
+        };
+        let dpi = window.dpi();
+        if dpi != view.dpi() {
+            self.event(window, Event::DpiChanged { dpi })?;
+        }
+        let size = window.client_size()?;
+        let minimized = window.is_minimized();
+        self.event(window, Event::Resized { size, minimized })
+    }
 }
 
-/// The terminal, with the size that fills `window`, and its session, which
+/// The terminal, with the grid that fills `window`, and its session, which
 /// runs `command`, or the default shell. If the program cannot start, the
 /// terminal shows why.
 fn terminal(
     window: &Window,
     command: Option<&str>,
 ) -> Result<(Content, Option<Pty>), HandlerError> {
-    let font = Font::new(
-        &FontSystem::new()?,
-        &FONT_FAMILIES,
-        FONT_POINTS,
-        window.dpi(),
-    )?;
+    let fonts = FontSystem::new()?;
+    let dpi = window.dpi();
+    let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
     let cell = font.cell();
     let client = window.client_size()?;
-    // The grid keeps this size until it can change with the window
-    // (subphase 1.9).
-    let cells = |pixels: u32, cell: u32| u16::try_from(pixels / cell.max(1)).unwrap_or(u16::MAX);
-    let mut terminal = Terminal::new(GridSize::new(
-        cells(client.width, cell.width),
-        cells(client.height, cell.height),
-    ));
+    let mut terminal = Terminal::new(view::grid_size(client, cell, ScrollBar::width_at(dpi)));
     terminal.set_cell_size(cell);
     let size = terminal.size();
     let shared = Arc::new(Mutex::new(Shared::new(terminal)));
@@ -183,7 +197,7 @@ fn terminal(
         }
     };
     let input = session.as_ref().map(Pty::input);
-    let view = TerminalView::new(shared, input, waker, font, window.dpi());
+    let view = TerminalView::new(shared, input, waker, fonts, font, dpi, client);
     // The clicks select text until the program asks for the mouse.
     window.set_pointer(Pointer::Text);
     Ok((Content::Terminal(Box::new(view)), session))
@@ -193,9 +207,25 @@ impl Handler for App {
     fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
         match event {
             Event::Resized { size, minimized } => {
+                // A minimized window keeps its grid.
+                if let Content::Terminal(view) = &mut self.content
+                    && !minimized
+                {
+                    view.resized(size);
+                }
                 self.frames
                     .resized(window, size, minimized, &mut self.content)?;
                 if self.is_bench() {
+                    self.frames.schedule(window)?;
+                }
+            }
+            Event::DpiChanged { dpi } => {
+                if let Content::Terminal(view) = &mut self.content {
+                    view.dpi_changed(dpi);
+                    // The new size of the window, if it changes, comes right
+                    // after this event. A frame now would give the terminal
+                    // and the program the grid of the new cells in the old
+                    // window, which does not last: the frame comes after it.
                     self.frames.schedule(window)?;
                 }
             }
@@ -229,7 +259,8 @@ impl Handler for App {
             | Event::MouseUp { .. }
             | Event::MouseMoved { .. }
             | Event::Wheel { .. }
-            | Event::CaptureLost => {
+            | Event::CaptureLost
+            | Event::MouseLeft => {
                 if let Content::Terminal(view) = &mut self.content {
                     let response = view.mouse(window, &event);
                     self.respond(window, response)?;

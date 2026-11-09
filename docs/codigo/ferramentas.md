@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 1.8. Na 1.8 chegou `check-mouse.ps1`, que comproba o rato, a selección e o portapapeis de meiga; os outros scripts non cambiaron.
+> Estado: subfase 1.9. Na 1.9 chegou `check-resize.ps1`, que comproba o tamaño, o historial e o zoom de meiga, e `check-mouse.ps1` resta a franxa da barra de desprazamento ao medir as celas; os outros scripts non cambiaron.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -13,6 +13,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`check-present.ps1`](#toolscheck-presentps1) | Comprobar que `meiga.exe` presenta só o que cambia na saída dun programa e non debuxa en repouso nin minimizado. |
 | [`check-keyboard.ps1`](#toolscheck-keyboardps1) | Comprobar que as teclas que se teclean en `meiga.exe` chegan ao programa do terminal coma as le PowerShell, co teclado español e co estadounidense. |
 | [`check-mouse.ps1`](#toolscheck-mouseps1) | Comprobar que en `meiga.exe` o rato selecciona e copia texto, que as teclas e o botón dereito copian e pegan, e que o rato chega aos programas do terminal que o piden. |
+| [`check-resize.ps1`](#toolscheck-resizeps1) | Comprobar que, cando a xanela de `meiga.exe` cambia de tamaño, tamén coa caixa de mensaxe aberta, a súa pantalla ten as mesmas filas ca a consola do ConPTY; que a roda, as teclas e a barra de desprazamento moven a vista do historial; e que o zoom cambia a grella. |
 | [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
@@ -959,7 +960,7 @@ Os pasos, en orde:
 
   **Por que o título.** Sae do terminal polo mesmo camiño ca unha resposta, cando remata a actualización ([Código › meiga](meiga.md#cratesmeigasrcviewrs)), e chega á xanela: velo na barra de título demostra que a actualización rematou, sen ter que ler ningunha resposta no script do terminal.
 - **Paso 8.** O `paint` mostra xa as filas do paso 6, porque, ao restaurar a xanela, o *framebuffer* se compón co que hai entón na pantalla do terminal. A comprobación non mira os píxeles: só comproba que se pintou a xanela enteira.
-- **Paso 9.** `SetWindowPos` cambia o tamaño da xanela co marco; por iso o tamaño que se compara co do `compose` é o da zona de debuxo, que dá `GetClientRect`. As opcións: sen movela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`), sen activala (`SWP_NOACTIVATE`) e sen esperar (`SWP_ASYNCWINDOWPOS`). A grella do terminal non cambia co tamaño da xanela ata a subfase 1.9: ao medrar, o que sobra son marxes, da cor do fondo ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). A xanela compónse e píntase enteira igual.
+- **Paso 9.** `SetWindowPos` cambia o tamaño da xanela co marco; por iso o tamaño que se compara co do `compose` é o da zona de debuxo, que dá `GetClientRect`. As opcións: sen movela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`), sen activala (`SWP_NOACTIVATE`) e sen esperar (`SWP_ASYNCWINDOWPOS`). Desde a subfase 1.9, a grella do terminal cambia tamén co tamaño da xanela, no seguinte fotograma ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)); ata a 1.8 non cambiaba, e ao medrar o que sobraba eran marxes, da cor do fondo ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). A xanela compónse e píntase enteira igual.
 
 ```powershell
 finally {
@@ -1300,6 +1301,9 @@ public struct POINT { public int X, Y; }
 [DllImport("user32.dll")]
 public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
 …
+[DllImport("user32.dll")]
+public static extern uint GetDpiForWindow(IntPtr window);
+…
 '@
 }
 $api = [Meiga.Tools.MouseCheck]
@@ -1314,6 +1318,7 @@ Para que serve cada unha:
 | `PostMessageW` | Publica as mensaxes do rato e das teclas na xanela, e a dun botón na caixa de mensaxe. |
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
 | `GetClientRect`, `ClientToScreen` e `ScreenToClient` | O tamaño da área cliente da xanela, e un punto dela na pantalla, ou ao revés. |
+| `GetDpiForWindow` | A escala da xanela, para a franxa da barra de desprazamento. |
 | `GetCursorPos` e `SetCursorPos` | Len e moven o punteiro. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
 | `FindWindowW` e `GetWindow` | Atopan a caixa de mensaxe de meiga, e a xanela dona dela. |
@@ -1617,16 +1622,18 @@ function Show-Text([string]$Text) {
 
 ```powershell
 # The size of the grid, which the script wrote first, and of its cells: the
-# grid fills the client area of the window but for less than a cell.
+# grid fills the client area of the window but for the strip of the scroll
+# bar, 12 pixels at a scale of 100 %, and less than a cell.
 function Measure-Cells {
     $size = @(Get-Lines)[0] -split ' '
     $rect = [Meiga.Tools.MouseCheck+RECT]::new()
     if (-not $api::GetClientRect($window, [ref]$rect)) {
         throw "Could not read the size of the window of $exe."
     }
+    $strip = [Math]::Max(1, [Math]::Floor((12 * $api::GetDpiForWindow($window) + 48) / 96))
     $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
     $script:cell = [pscustomobject]@{
-        Width = [Math]::Floor($rect.Right / $grid.Columns)
+        Width = [Math]::Floor(($rect.Right - $strip) / $grid.Columns)
         Height = [Math]::Floor($rect.Bottom / $grid.Rows)
     }
 }
@@ -1645,7 +1652,8 @@ function Get-Y([int]$Row) { $Row * $cell.Height + [Math]::Floor($cell.Height / 2
 
 **As celas.** A comprobación preme en celas, e as mensaxes do rato levan píxeles.
 
-- `Measure-Cells` le o tamaño da grella na primeira liña do rexistro, e o da área cliente con `GetClientRect`. A grella enche a área cliente salvo menos dunha cela, así que o ancho dunha cela é o da área cliente entre as columnas, sen decimais, e o alto, o mesmo coas filas. `$script:` garda as variábeis no script, e non só dentro da función.
+- `Measure-Cells` le o tamaño da grella na primeira liña do rexistro, e o da área cliente con `GetClientRect`. A grella enche a área cliente salvo a franxa da barra de desprazamento, á dereita, e menos dunha cela, así que o ancho dunha cela é o da área cliente sen a franxa entre as columnas, sen decimais, e o alto, o da área cliente entre as filas. `$script:` garda as variábeis no script, e non só dentro da función.
+- **A franxa**, desde a subfase 1.9 ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 10), mide 12 píxeles ao 100 %, e escálase coma en meiga, redondeando e polo menos a un ([Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)). `GetDpiForWindow` dá a escala da xanela en puntos por polgada (DPI), 96 ao 100 %, e `(12 × DPI + 48) / 96`, sen decimais, é `12 × DPI / 96` redondeado: 12 ao 100 % e 18 ao 150 %. Ata a 1.8, a grella enchía a área cliente enteira, salvo menos dunha cela.
 - `Get-X` e `Get-Y` dan un píxel dunha cela, na área cliente, contando as columnas e as filas desde 0: no medio, ou xunto a un dos seus bordos. Un arrastre empeza xunto ao bordo esquerdo dunha cela e remata xunto ao dereito doutra, porque a selección colle unha cela cando se pasa da súa metade ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 1): así entran as dúas.
 
 ```powershell
@@ -2227,6 +2235,807 @@ finally {
 
 A CI executa este script en cada PR, despois de `check-keyboard.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a xanela de meiga está en primeiro plano, así que comproba que un programa pode copiar ao portapapeis (OSC 52).
 
+## `tools/check-resize.ps1`
+
+Desde a subfase 1.9. Comproba o tamaño, o historial e o zoom de `meiga.exe` ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)): que, cando a xanela cambia de tamaño, o programa do terminal recibe a grella que a enche, e a pantalla de meiga ten as mesmas filas ca o búfer da consola, que o ConPTY tamén reparte, aínda que o tamaño cambie mentres está aberta a caixa de mensaxe que pregunta antes de pegar; que a roda, as teclas e a barra de desprazamento moven a vista do historial, e que unha tecla para o programa, ou pegar, a levan á pantalla; que unha selección arrastrada por riba da xanela despraza a vista soa; e que o zoom cambia as celas e, con elas, a grella. Abre meiga cun script de PowerShell no terminal, cambia o tamaño da súa xanela e publica nela as mensaxes do rato e das teclas, coma [`check-mouse.ps1`](#toolscheck-mouseps1). Despois de cada paso, o script le o búfer da súa consola con `ReadConsoleOutputCharacterW` e escríbeo nun arquivo, e a comprobación compárao coa pantalla de meiga, que copia seleccionándoa: o texto chega ao portapapeis. A xanela non necesita o foco. Leva uns 6 s.
+
+```powershell
+.\tools\check-resize.ps1                                  # comproba target\release\meiga.exe
+.\tools\check-resize.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-resize.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
+```
+
+Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script do terminal con `pwsh`.
+
+**Coidado:** coma con `check-mouse.ps1`, mentres corre non uses o rato nin o teclado, que se mesturarían coas mensaxes da comprobación; e o portapapeis volta ter ao final o texto que tiña, pero calquera outra cousa, coma unha imaxe, pérdese. Ademais, a xanela de meiga cambia de tamaño varias veces, e nun paso a comprobación move o punteiro por riba dela.
+
+Saída esperada, cos valores que dependen da pantalla e do tempo:
+
+```text
+The cells have … x … pixels, and the strip of the scroll bar ….
+OK: the program gets the grid that fills the window, and the screen has the rows of the console when the window gets narrower, shorter, wider and taller.
+OK: on the alternate screen, the primary one gets the new size when the program goes back to it.
+OK: if the window changes size while a message box is open, the program gets the grid that fills it when the box closes.
+OK: the wheel (3 rows), Shift+Page Up, Ctrl+Shift+Up, Ctrl+Shift+Home and Ctrl+Shift+End move the view of the history.
+OK: dragging the thumb of the scroll bar moves the view, and a click on the strip under it moves it a page down.
+OK: a key for the program, and pasting, bring the view back to the screen.
+OK: a selection above the window moves the view on its own, up to the line '…'.
+OK: Ctrl and +, and Ctrl and the wheel, make the cells bigger and the grid smaller, which the program gets; Ctrl and -, and Ctrl+0, bring the grid back.
+OK: it ends with exit code 0 when its window closes.
+```
+
+- **A primeira liña** di o tamaño das celas e o ancho da franxa da barra de desprazamento, en píxeles, que dependen da escala da pantalla: ao 100 %, coma no *runner* da CI, as celas son máis pequenas ca ao 150 %, e a franxa mide 12 píxeles en vez de 18 ([Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)). A comprobación necesítaos para calcular o tamaño da xanela de cada grella, e os píxeles onde premer.
+- **As filas da roda** son as liñas que despraza cada parte nas preferencias de Windows: 3 por defecto, ou as filas da grella, se a roda despraza unha pantalla de cada vez.
+- **A liña á que chega a selección,** unha das liñas curtas que escribe o script, `h…|`, cambia dunha vez a outra: depende de canto tempo está o punteiro por riba da xanela (ver *A selección que despraza a vista soa*, máis abaixo).
+
+Se falla unha comprobación, o script remata cun erro que explica cal, coa grella que recibiu o programa, coa fila que mostra a vista ou coa primeira liña distinta en meiga e na consola, e código de saída 1; e di onde gardou o que escribiu o programa: `What the program wrote is in …`. Se o que falla é o script do terminal, a mensaxe é a súa: `The script in the terminal failed: …`. Pase o que pase, `meiga.exe` non queda aberto, o portapapeis volta ter o texto que tiña e o punteiro volta a onde estaba.
+
+**Comprobado** con cinco copias de meiga cun cambio feito a propósito cada unha, compiladas noutro cartafol en *release* sen LTO, que eiquí só alongaría a compilación, e co ConPTY ao lado (`conpty.dll` e `OpenConsole.exe`): sen el, meiga usaría o de Windows. Cada unha falla no seu paso:
+
+- A que non reserva a franxa da barra, no primeiro tamaño: `The first size: the program has a grid of … x 20 cells, and it has to be 70 x 20.` Sen a franxa, a grella da copia é máis ancha, e as celas que calcula a comprobación, que resta a franxa, saen máis estreitas ca as de meiga: na xanela que fai para 70 columnas caben menos, e cantas depende da escala.
+- A que non leva a vista á pantalla cunha tecla: `A key for the program: the first row of the view is the line h042, and it has to be h082.` A vista queda onde a deixou Maiús+RePáx.
+- A que non despraza a vista soa coa selección: `A selection above the window: the view did not move on its own, and the selection starts with 'h082|'.` A selección só chega á primeira fila da vista.
+- A que, mentres se ve a pantalla alternativa, reparte tamén a principal, coma `alacritty_terminal`: `The primary screen, after the alternate one changed size: the screen of meiga.exe is not the one of the console. Their line 1 is '26 …' in meiga and '25 …' in the console.` As dúas liñas son longas, e eiquí van cortadas.
+- A que, ao pecharse a caixa de mensaxe, non colle o tamaño que ten a xanela, sen [`App::catch_up`](meiga.md#respond-o-que-pide-a-vista): `After the message box: the program did not write its screen.` A xanela cambiou de tamaño coa caixa aberta, e os seus eventos perdéronse: meiga non o soubo, e o programa segue coa grella de antes.
+
+O ritmo dos cambios de tamaño, como moito un por intervalo dos fotogramas ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 3), non o pode ver esta comprobación, que cambia o tamaño unha vez en cada paso: compróbase lendo o código, e a man.
+
+Explicación por partes. O comezo (a axuda, os parámetros, a versión de PowerShell e a ruta de `meiga.exe`) é igual ca en [`check-mouse.ps1`](#toolscheck-mouseps1).
+
+**As funcións de Windows**, declaradas en C# nunha clase propia, `ResizeCheck`, coma en `check-mouse.ps1`:
+
+```powershell
+if (-not ('Meiga.Tools.ResizeCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name ResizeCheck -MemberDefinition @'
+…
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
+
+[DllImport("user32.dll")]
+public static extern uint GetDpiForWindow(IntPtr window);
+…
+'@
+}
+$api = [Meiga.Tools.ResizeCheck]
+```
+
+Son as de `check-mouse.ps1`, coas súas dúas funcións propias: `PostAll`, que publica as mensaxes dunha acción co fío da xanela suspendido, e `ClearClipboard`, que baleira o portapapeis. Están tamén as da caixa de mensaxe, `FindWindowW` e `GetWindow`; non está a da xanela de primeiro plano, `GetForegroundWindow`, que esta comprobación non usa; e hai tres máis:
+
+| Función | Para que |
+|---|---|
+| `GetWindowRect` | O tamaño da xanela, co seu marco. |
+| `SetWindowPos` | Cambia o tamaño da xanela. |
+| `GetDpiForWindow` | A escala da xanela, en puntos por polgada (DPI): 96 ao 100 %. |
+
+**Unha clase propia.** PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e o script non a crea outra vez se xa existe (ver [`check-present.ps1`](#toolscheck-presentps1)). Coa clase de `check-mouse.ps1`, nunha sesión que xa executou ese script, faltarían as funcións novas.
+
+```powershell
+$WM_KEYDOWN = 0x0100
+$WM_KEYUP = 0x0101
+$WM_COMMAND = 0x0111
+$WM_MOUSEMOVE = 0x0200
+$WM_LBUTTONDOWN = 0x0201
+$WM_LBUTTONUP = 0x0202
+$WM_MOUSEWHEEL = 0x020A
+$MK_LBUTTON = 0x0001
+$MK_CONTROL = 0x0008
+$WHEEL_DELTA = 120
+$WHEEL_PAGESCROLL = [uint32]::MaxValue
+$SPI_GETWHEELSCROLLLINES = 0x0068
+$MAPVK_VK_TO_VSC = 0
+$GW_OWNER = 4
+$IDCANCEL = 2
+$SWP_NOMOVE = 0x0002
+$SWP_NOZORDER = 0x0004
+$SWP_NOACTIVATE = 0x0010
+
+# The keys that each modifier sets down: Shift and the left Shift, and Ctrl
+# and the left Ctrl.
+$modifierKeys = @{
+    Shift = 0x10, 0xA0
+    Ctrl = 0x11, 0xA2
+}
+```
+
+As constantes son as de `check-mouse.ps1` que usa, e catro novas:
+
+- `MK_CONTROL`: Ctrl, no `wParam` das mensaxes do rato. Coa roda, fai o zoom.
+- As opcións de `SetWindowPos`, coma en [`check-present.ps1`](#toolscheck-presentps1): cambiar só o tamaño, sen mover a xanela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`) e sen activala (`SWP_NOACTIVATE`).
+
+```powershell
+# The script that runs in the terminal. It writes to the log the size of
+# the terminal, the keys that it reads, and, when the size changes and after
+# some keys, the rows of the console and where its cursor is. Its lines end
+# with |, so the rows that do not end with it go on in the next one.
+$program = @'
+param([Parameter(Mandatory)][string]$Log)
+$ErrorActionPreference = 'Stop'
+# An error goes to the log, where the check finds it.
+trap {
+    [IO.File]::AppendAllText($Log, "error $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))`n")
+    break
+}
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+Add-Type -Namespace MeigaCheck -Name Console -MemberDefinition @"
+[DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int handle);
+[DllImport("kernel32.dll")] public static extern bool SetConsoleMode(System.IntPtr handle, uint mode);
+[DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
+[DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern bool ReadConsoleOutputCharacterW(System.IntPtr handle, [System.Runtime.InteropServices.Out] char[] text, uint length, int at, out uint read);
+"@
+function Write-Log([string]$Line) { [IO.File]::AppendAllText($Log, "$Line`n") }
+function Set-Title([string]$Title) { [Console]::Write("`e]0;$Title`a") }
+$in = [MeigaCheck.Console]::GetStdHandle(-10)
+$out = [MeigaCheck.Console]::GetStdHandle(-11)
+# The keys and the changes of size, without the mouse, which stays for
+# meiga: ENABLE_WINDOW_INPUT and ENABLE_EXTENDED_FLAGS.
+$null = [MeigaCheck.Console]::SetConsoleMode($in, 0x88)
+# Up to 64 INPUT_RECORD of 20 bytes: the type of the event in the first two,
+# and the event from byte 4.
+$records = [byte[]]::new(20 * 64)
+$screens = 0
+```
+
+**O script do terminal.** Coma o de `check-mouse.ps1`, escribe no rexistro (`-Log`) unha liña por cada cousa, con `AppendAllText`, e le a entrada da consola con `ReadConsoleInputW`. O novo:
+
+- **O `trap`.** Con `$ErrorActionPreference = 'Stop'`, calquera erro remata o script. Antes, o `trap` escribe no rexistro `error <mensaxe> (line <liña>)`, coa liña do script onde foi, e `break` deixa que o erro siga e remate o script, coma sen el. Sen o `trap`, o erro só se vería no terminal de meiga, que a comprobación non le, e a comprobación só diría que o programa non escribiu a súa pantalla. `Wait-For` atópao no rexistro (máis abaixo).
+- **[`ReadConsoleOutputCharacterW`](https://learn.microsoft.com/windows/console/readconsoleoutputcharacter)** le caracteres do búfer da consola, tantos coma di `length`, desde unha posición, nunha lista de `char`, e di cantos leu. A posición é un `COORD`, dous números de 16 bits, a columna e a fila, que caben nun `int`: a columna na metade baixa, e a fila na alta.
+- **`CharSet.Unicode`.** Sen el, .NET usa o predeterminado, Ansi, e converte a lista de `char` nunha de bytes, un por carácter. Pero a función, a versión W, escribe dous bytes por carácter: pasaba do final da lista, e pwsh pechábase de súpeto. Con `CharSet.Unicode`, a lista vai tal cal, con dous bytes por carácter.
+- `GetStdHandle(-11)` dá a saída estándar (`STD_OUTPUT_HANDLE`): o búfer da consola.
+- **`SetConsoleMode` con `0x88`:** `ENABLE_WINDOW_INPUT` (`0x8`), co que o ConPTY lle dá ao script un evento `WINDOW_BUFFER_SIZE_EVENT` en cada cambio de tamaño ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)); e `ENABLE_EXTENDED_FLAGS` (`0x80`), sen a edición rápida, coma en `check-mouse.ps1`. Sen `ENABLE_MOUSE_INPUT`, o ConPTY non lle pide o rato a meiga ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)): o rato queda para meiga, que selecciona e despraza o historial con el.
+- `$screens` conta as pantallas que escribe o script.
+
+```powershell
+# Writes to the log the size of the screen, its rows and where the cursor
+# is, and then sets a title with how many times it did.
+function Write-Screen {
+    $width = [Console]::WindowWidth
+    $height = [Console]::WindowHeight
+    $top = [Console]::WindowTop
+    $text = [char[]]::new($width)
+    Write-Log "size $width $height"
+    for ($row = 0; $row -lt $height; $row++) {
+        $read = 0
+        $null = [MeigaCheck.Console]::ReadConsoleOutputCharacterW($out, $text, $width, ($top + $row) -shl 16, [ref]$read)
+        Write-Log ("row $row " + [string]::new($text, 0, $read).TrimEnd(' '))
+    }
+    Write-Log "cursor $([Console]::CursorLeft) $([Console]::CursorTop - $top)"
+    $script:screens++
+    Set-Title "meiga-resize-$screens"
+}
+```
+
+**`Write-Screen`** escribe no rexistro unha pantalla enteira da consola: `size <columnas> <filas>`, unha liña `row <fila> <texto>` por fila, e `cursor <columna> <fila>`.
+
+- O tamaño é o da xanela da consola (`WindowWidth` e `WindowHeight`), e `WindowTop`, a súa primeira fila no búfer, que nunha pseudoconsola é a 0: o búfer é a xanela, sen historial.
+- Cada fila lese enteira, desde a columna 0: `-shl 16` leva o número da fila á metade alta do `COORD`. `[string]::new($text, 0, $read)` fai un texto cos caracteres que leu, e `TrimEnd(' ')` quítalle os brancos do final, coma meiga ao copiar ([Código › meiga-core › `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)).
+- **A pregunta polo cursor.** Ler o tamaño chama a `GetConsoleScreenBufferInfo`. Despois dun cambio de tamaño, a primeira chamada fai que o ConPTY lle pregunte a meiga onde ten o cursor, e colle esa posición ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)): o que escribe despois o script vai alí.
+- Ao final, un título con cantas pantallas leva, `meiga-resize-<n>`. Vese na xanela, pero a comprobación só agarda o primeiro título, e conta as pantallas no rexistro. `$script:screens` é a variábel do script: sen o prefixo, a función crearía unha súa.
+
+```powershell
+Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)"
+Set-Title 'meiga-resize-ready'
+while ($true) {
+    $read = 0
+    $null = [MeigaCheck.Console]::ReadConsoleInputW($in, $records, 64, [ref]$read)
+    for ($at = 0; $at -lt 20 * $read; $at += 20) {
+        $type = [BitConverter]::ToUInt16($records, $at)
+        # WINDOW_BUFFER_SIZE_EVENT
+        if ($type -eq 4) { Write-Screen }
+        # KEY_EVENT, of a key that goes down: its virtual-key code.
+        if ($type -ne 1 -or [BitConverter]::ToInt32($records, $at + 4) -eq 0) { continue }
+        $key = [BitConverter]::ToUInt16($records, $at + 10)
+        Write-Log "key $key"
+        switch ($key) {
+            # L: lines of many lengths, and the start of another one, where
+            # the cursor stays.
+            0x4C {
+                $chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+                for ($line = 1; $line -le 30; $line++) {
+                    $length = ($line * 37) % 150 + 6
+                    $body = -join @(for ($i = 0; $i -lt $length - 4; $i++) { $chars[($i + $line) % $chars.Length] })
+                    [Console]::Write(('{0:D2} {1}|' -f $line, $body) + "`r`n")
+                }
+                [Console]::Write('> ready|')
+                Write-Screen
+            }
+            # W: two characters where the cursor is.
+            0x57 { [Console]::Write('w|'); Write-Screen }
+            # A: the alternate screen. B: back to the primary one.
+            0x41 { [Console]::Write("`e[?1049h`e[Halt|"); Write-Screen }
+            0x42 { [Console]::Write("`e[?1049l"); Write-Screen }
+            # H: 100 short lines.
+            0x48 {
+                [Console]::Write("`r`n")
+                for ($line = 1; $line -le 100; $line++) { [Console]::Write(('h{0:D3}|' -f $line) + "`r`n") }
+                [Console]::Write('> ready|')
+                Write-Screen
+            }
+        }
+    }
+}
+'@
+```
+
+**O bucle.** Antes del, o script escribe no rexistro o tamaño da grella ao arrancar, a primeira liña, e pon o título `meiga-resize-ready`: está listo. Despois le eventos, ata 64 de cada vez:
+
+- Con cada `WINDOW_BUFFER_SIZE_EVENT` (o tipo 4), escribe a pantalla, que o ConPTY xa repartiu para o tamaño novo.
+- De cada tecla que baixa (`KEY_EVENT`, o tipo 1, co `bKeyDown` do byte 4), escribe `key` e o seu código de tecla virtual (`wVirtualKeyCode`, no byte 10), en decimal: `key 78` é a N. O texto pegado chega tamén coma teclas ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)).
+- Con cinco letras, escribe algo na pantalla, e despois a pantalla no rexistro:
+  - **L:** 30 liñas de lonxitudes moi distintas, de 29 a 154 caracteres (a liña *n* mide 37 *n* mod 150 + 6): o seu número, un espazo, letras e números que empezan nun sitio distinto en cada liña, e `|`. Despois, `> ready|`, o principio doutra liña, onde queda o cursor.
+  - **W:** `w|`, onde está o cursor.
+  - **A:** a pantalla alternativa (`ESC [ ? 1049 h`), co cursor arriba (`ESC [ H`), e `alt|`. **B:** a volta á principal (`ESC [ ? 1049 l`).
+  - **H:** o fin da liña do cursor, as 100 liñas curtas, de `h001|` a `h100|`, e outra vez `> ready|`.
+- **As liñas rematan en `|`.** O búfer da consola só ten caracteres: non di que filas continúan na seguinte, cando unha liña non cabe nunha fila. Pero todas as liñas do script rematan en `|`, así que unha fila que non remata en `|`, e non está baleira, continúa na seguinte. A comprobación necesítao para saber onde pon meiga os fins de liña ao copiar (`Get-Expected`, máis abaixo).
+- Entre 45 e 90 columnas, as liñas da L ocupan dunha a catro filas, e cada cambio de ancho fai que o ConPTY e meiga as repartan.
+
+O script do terminal e o rexistro van ao cartafol temporal, coma en `check-mouse.ps1`, co nome `meiga-check-resize-<PID>`.
+
+**As esperas e o portapapeis.** `Get-Lines`, `Wait-Title`, `Get-Text`, `Set-Text` e `Show-Text` son os de `check-mouse.ps1`. `Wait-For` tamén, cunha cousa máis:
+
+```powershell
+# Waits until $Done gives true. If it does not in time, fails with the
+# message that $Failure gives then.
+function Wait-For([scriptblock]$Done, [scriptblock]$Failure) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (-not (& $Done)) {
+        if ($process -and $process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) during the check."
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            $failed = @(Get-Lines | Where-Object { $_.StartsWith('error ') })
+            if ($failed) { throw "The script in the terminal failed: $($failed[0].Substring(6))" }
+            throw (& $Failure)
+        }
+        Start-Sleep -Milliseconds 20
+    }
+}
+```
+
+Cando pasa o tempo, mira antes se o script do terminal escribiu un erro no rexistro, co seu `trap`, e, se o escribiu, falla con el: `The script in the terminal failed: … (line …)`, sen o `error ` do principio (`Substring(6)`). Un script que fallou xa non escribe nada, e a espera remataría co seu tempo, cunha mensaxe que non diría por que.
+
+```powershell
+# How many times the script wrote the screen.
+function Get-Screens { @(Get-Lines | Where-Object { $_.StartsWith('cursor ') }).Count }
+
+# The last screen that the script wrote whole: its size, and its rows. Nothing
+# if it did not write any.
+function Read-Screen {
+    $lines = @(Get-Lines)
+    $start = $lines.Count - 1
+    while ($start -ge 0 -and -not $lines[$start].StartsWith('cursor ')) { $start-- }
+    while ($start -ge 0 -and -not $lines[$start].StartsWith('size ')) { $start-- }
+    if ($start -lt 0) { return $null }
+    $size = $lines[$start] -split ' '
+    $rows = [int]$size[2]
+    [pscustomobject]@{
+        Columns = [int]$size[1]
+        Rows = $rows
+        Text = @(for ($row = 1; $row -le $rows; $row++) { $lines[$start + $row] -replace '^row \d+ ', '' })
+    }
+}
+
+# Waits until the script writes the screen after the $Before time, and
+# returns it. With $Columns and $Rows, waits for a screen of that size.
+function Wait-Screen([int]$Before, [string]$What, [int]$Columns = 0, [int]$Rows = 0) {
+    Wait-For {
+        if ((Get-Screens) -le $Before) { return $false }
+        $screen = Read-Screen
+        $Columns -eq 0 -or ($screen.Columns -eq $Columns -and $screen.Rows -eq $Rows)
+    } {
+        $screen = Read-Screen
+        if ((Get-Screens) -le $Before) { "$What`: the program did not write its screen." }
+        else { "$What`: the program has a grid of $($screen.Columns) x $($screen.Rows) cells, and it has to be $Columns x $Rows." }
+    }
+    $script:grid = Read-Screen
+    $grid
+}
+```
+
+**As pantallas do script.**
+
+- `Get-Screens` conta as pantallas que escribiu o script: as liñas `cursor`, a última de cada unha.
+- `Read-Screen` le a última pantalla enteira: busca cara atrás a última liña `cursor` e, antes dela, a súa liña `size`, e devolve o tamaño e as filas, sen o `row <fila>` do principio. Unha pantalla que o script aínda está escribindo non ten a liña `cursor`, e non conta. Se o script non escribiu ningunha, por exemplo porque fallou antes, devolve `$null`: por iso `Wait-Screen` mira antes `Get-Screens`.
+- **`Wait-Screen`** agarda a que o script escriba unha pantalla despois das `$Before` que xa levaba e, se se lle dá un tamaño, a que a última sexa dese tamaño. Gárdaa en `$grid`, a grella que ten o programa, e devólvea. Se non chega, a mensaxe di o que pasou: que o programa non escribiu a súa pantalla, ou que a súa grella ten outro tamaño, `… the program has a grid of … x … cells, and it has to be … x ….`
+
+```powershell
+# The size of the cells, from the first size of the grid that the script
+# wrote: the grid fills the client area of the window but for the strip of
+# the scroll bar, 12 pixels at a scale of 100 %, and less than a cell.
+function Measure-Cells {
+    $size = @(Get-Lines)[0] -split ' '
+    $client = Get-Client
+    $script:strip = [Math]::Max(1, [Math]::Floor((12 * $api::GetDpiForWindow($window) + 48) / 96))
+    $script:cell = [pscustomobject]@{
+        Width = [Math]::Floor(($client.Right - $strip) / [int]$size[1])
+        Height = [Math]::Floor($client.Bottom / [int]$size[2])
+    }
+}
+
+function Get-Client {
+    $rect = [Meiga.Tools.ResizeCheck+RECT]::new()
+    if (-not $api::GetClientRect($window, [ref]$rect)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $rect
+}
+
+# Changes the size of the window, so that the grid that fills it has
+# $Columns x $Rows cells, and half a cell to spare.
+function Resize-Window([int]$Columns, [int]$Rows) {
+    $client = Get-Client
+    $outer = [Meiga.Tools.ResizeCheck+RECT]::new()
+    $null = $api::GetWindowRect($window, [ref]$outer)
+    $width = $Columns * $cell.Width + $strip + [Math]::Floor($cell.Width / 2) + ($outer.Right - $outer.Left - $client.Right)
+    $height = $Rows * $cell.Height + [Math]::Floor($cell.Height / 2) + ($outer.Bottom - $outer.Top - $client.Bottom)
+    if (-not $api::SetWindowPos($window, [IntPtr]::Zero, 0, 0, $width, $height, $SWP_NOMOVE -bor $SWP_NOZORDER -bor $SWP_NOACTIVATE)) {
+        throw "SetWindowPos failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    Move-Pointer
+}
+
+# Changes the size of the window as Resize-Window, and waits until the
+# program gets the grid.
+function Set-Grid([int]$Columns, [int]$Rows, [string]$What) {
+    $before = Get-Screens
+    Resize-Window $Columns $Rows
+    $null = Wait-Screen $before $What $Columns $Rows
+}
+```
+
+**As celas e o tamaño da xanela.**
+
+- `Measure-Cells` mide as celas coma en [`check-mouse.ps1`](#toolscheck-mouseps1), co tamaño da grella ao arrancar, que é a primeira liña do rexistro: o ancho é o da área cliente sen a franxa da barra entre as columnas, e o alto, o da área cliente entre as filas, sen decimais. Garda tamén o ancho da franxa, en `$script:strip`, para o tamaño da xanela e para premer na barra. As celas non cambian ata o zoom: a xanela cambia de tamaño, pero a fonte é a mesma.
+- `Get-Client` dá a área cliente. Empeza en 0, así que `Right` e `Bottom` son o seu ancho e o seu alto.
+- **`Resize-Window`** fai a xanela do tamaño dunha grella: de ancho, as columnas polo ancho dunha cela, máis a franxa; de alto, as filas polo alto dunha cela; e en cada un, media cela de máis, que sobra. A grella colle as celas enteiras que caben, e a media cela deixa o tamaño lonxe do límite entre unha grella e a seguinte. `SetWindowPos` pide o tamaño da xanela co seu marco: por iso súmase o marco, o que mide `GetWindowRect` de máis ca a área cliente. Despois, `Move-Pointer` aparta o punteiro, se a xanela medrou ata el.
+- **`Set-Grid`** cambia o tamaño con `Resize-Window`, e `Wait-Screen` agarda a pantalla do programa con ese tamaño: o programa recibiu a grella que enche a xanela. As pantallas cóntanse antes do cambio, porque o programa pode escribir a nova antes de que volte `SetWindowPos`. `Resize-Window` vai á parte para o paso da caixa de mensaxe, onde o programa non recibe a grella ata que se pecha a caixa.
+
+```powershell
+# The message box of meiga: a dialog with its title, owned by its window.
+function Get-Dialog {
+    $dialog = $api::FindWindowW('#32770', 'meiga')
+    if ($dialog -ne [IntPtr]::Zero -and $api::GetWindow($dialog, $GW_OWNER) -eq $window) { $dialog }
+    else { [IntPtr]::Zero }
+}
+
+function Wait-Dialog {
+    Wait-For { (Get-Dialog) -ne [IntPtr]::Zero } { "$exe did not ask before pasting more than one line." }
+}
+
+# Presses $Button in the message box, and waits until it closes.
+function Close-Dialog([int]$Button) {
+    if (-not $api::PostMessageW((Get-Dialog), $WM_COMMAND, [UIntPtr]::new([uint64]$Button), [IntPtr]::Zero)) {
+        throw "PostMessageW failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    Wait-For { (Get-Dialog) -eq [IntPtr]::Zero } { 'The message box did not close.' }
+}
+```
+
+**A caixa de mensaxe.** `Get-Dialog` é o de [`check-mouse.ps1`](#toolscheck-mouseps1): atopa a caixa coa que meiga pregunta antes de pegar varias liñas, se é da súa xanela. `Close-Dialog` tamén, pero sen a espera do principio, que vai á parte, en `Wait-Dialog`, e sen `-Messages`: entre que se abre a caixa e se preme o botón, esta comprobación non publica mensaxes, senón que cambia o tamaño da xanela.
+
+**O rato e as teclas.** `Get-X`, `Get-Y`, `Send-Messages`, `Get-Mouse`, `Set-Modifiers` e `Get-Key` son os de `check-mouse.ps1`. A roda e as teclas cambian un pouco:
+
+```powershell
+# Turns the wheel over the middle of the grid, forward with a positive
+# number of notches, with the modifier keys of $Keys. Its message gives the
+# place on the screen.
+function Send-Wheel([int]$Notches, [int]$Keys = 0) {
+    $point = [Meiga.Tools.ResizeCheck+POINT]::new()
+    $point.X = Get-X ([Math]::Floor($grid.Columns / 2))
+    $point.Y = Get-Y ([Math]::Floor($grid.Rows / 2))
+    $null = $api::ClientToScreen($window, [ref]$point)
+    $turn = ([long](($Notches * $WHEEL_DELTA) -band 0xFFFF) -shl 16) -bor $Keys
+    Send-Messages @($WM_MOUSEWHEEL, $turn, (($point.X -band 0xFFFF) -bor (($point.Y -band 0xFFFF) -shl 16)))
+}
+```
+
+`Send-Wheel` xira a roda sempre no medio da grella, e leva no `wParam`, na metade baixa, as modificadoras de `$Keys`, coma Windows: `MK_CONTROL` para o zoom.
+
+```powershell
+# Types a key, such as "Ctrl+Shift+Home": sets its modifier keys down, and
+# posts the messages of the key going down and up.
+function Send-Key([string]$Key) {
+    $parts = $Key -split '\+'
+    Set-Modifiers @($parts | Select-Object -SkipLast 1)
+    Send-Messages @((Get-Key $parts[-1]) + (Get-Key $parts[-1] -Up))
+}
+
+# Types a key for the program, and waits until the script reads it.
+function Send-ProgramKey([string]$Key) {
+    $count = @(Get-Lines).Count
+    Send-Key $Key
+    $code = [int][ConsoleKey]$Key
+    Wait-For { @(Get-Lines | Select-Object -Skip $count) -contains "key $code" } `
+    { "The program did not read the $Key that the check typed." }
+}
+```
+
+- `Send-Key` é o de `check-mouse.ps1`, sen `-Keep`: cada tecla pon as súas modificadoras.
+- `Get-Key` non pon o bit das teclas estendidas, e a comprobación usa RePáx, a frecha arriba, Inicio e Fin. Non importa: meiga recoñece as teclas do historial polo seu código de tecla virtual ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)), e non chegan ao programa.
+- `Send-ProgramKey` teclea unha tecla que vai ao programa, e agarda a que o script a lea: a súa liña `key`, co código da tecla, despois das que xa había.
+
+**Ler a pantalla de meiga.** A comprobación non le os píxeles da xanela: selecciona texto, e meiga cópiao ao portapapeis ao soltar o botón ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+
+```powershell
+# Selects from the left edge of a cell to the right edge of another one,
+# and returns the text that meiga copies. The press goes to the top or to the
+# bottom of the first cell, by turns: two presses at the same place, inside
+# the double-click time, would be a double or a triple click.
+function Copy-Cells([int]$FromColumn, [int]$FromRow, [int]$ToColumn, [int]$ToRow, [string]$What) {
+    Wait-For { $api::ClearClipboard() } { 'Could not empty the clipboard.' }
+    $script:presses++
+    $from = if ($presses % 2) { $FromRow * $cell.Height + 2 } else { ($FromRow + 1) * $cell.Height - 3 }
+    $x = Get-X $ToColumn 'Right'
+    $y = Get-Y $ToRow
+    Send-Messages @(
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON (Get-X $FromColumn 'Left') $from
+        Get-Mouse $WM_MOUSEMOVE $MK_LBUTTON $x $y
+        Get-Mouse $WM_LBUTTONUP 0 $x $y
+    )
+    Wait-Copied "$What`: $exe did not copy the selection."
+}
+
+# Waits until the clipboard has text, and returns it: reading it once more
+# could fail, while another program opens it.
+function Wait-Copied([string]$Message) {
+    Wait-For { ($script:copiedText = Get-Text) } { $Message }
+    $script:copiedText
+}
+```
+
+- `Copy-Cells` baleira antes o portapapeis, e téntao outra vez mentres outro programa o teña aberto: así, o texto que chega é o novo. Despois arrastra desde o bordo esquerdo dunha cela ata o dereito doutra, coma `Send-Drag` en `check-mouse.ps1`, e agarda o texto.
+- **Unha vez arriba e outra abaixo.** meiga conta coma un dobre ou un triplo clic unha pulsación que chega preto da anterior, dentro do tempo e do rectángulo do dobre clic de Windows, 500 ms e 4 × 4 píxeles por defecto ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)); e as seleccións da comprobación empezan moitas veces na mesma cela, unha tras outra. Un dobre clic selecciona palabras, e un triplo, liñas enteiras, que `alacritty_terminal` copia cun LF ao final: unha pantalla que remataba en filas baleiras copiábase cun fin de liña de máis. Por iso a pulsación vai, por quendas, 2 píxeles por debaixo do bordo de arriba da fila e 3 por riba do de abaixo: entre unha e a seguinte hai o alto dunha cela menos 5 píxeles, moito máis ca os 2 que admite o rectángulo a cada lado. `$script:presses` conta as pulsacións de todo o script.
+- **O portapapeis, unha soa vez.** Outro programa pode abrir o portapapeis un intre despois de cada cambio, para lelo: o do Escritorio remoto (`rdpclip`), que o leva ao outro equipo, ou o historial do portapapeis ([Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)). Mentres tanto, `Get-Text` non dá nada. Se a comprobación agardase o texto e despois o lese outra vez, esa segunda lectura podería fallar. Por iso `Wait-Copied` le o portapapeis unha soa vez en cada volta de `Wait-For`, e garda o texto en `$script:copiedText`. Entre parénteses, unha asignación dá o valor asignado: o bloque devolve o texto, e un texto baleiro, ou `$null`, conta coma falso.
+- **Por que `$script:`.** `Wait-For` executa o bloque (`& $Done`) nun ámbito novo, fillo do seu. Unha variábel que se asigna no bloque sen prefixo créase nese ámbito, e desaparece con el. E as que se len búscanse nos ámbitos de quen o executa: primeiro no de `Wait-For`, despois no de `Wait-Copied`, e así ata o do script; é o ámbito dinámico de PowerShell. Por iso o texto vai a unha variábel do script; e por iso o parámetro de `Wait-Copied` non pode chamarse coma os de `Wait-For`, `$Done` e `$Failure`: nun bloque `{ $Failure }`, `$Failure` sería o de `Wait-For`, o propio bloque, e non a mensaxe. Chámase `$Message`.
+
+```powershell
+# The text of a row of the view.
+function Read-Row([int]$Row, [string]$What) {
+    Copy-Cells 0 $Row ($grid.Columns - 1) $Row $What
+}
+
+# The number of the short line of a row of the view.
+function Read-Number([int]$Row, [string]$What) {
+    $text = Read-Row $Row $What
+    if ($text -notmatch '^h(\d{3})\|$') { throw "$What`: the row $Row of the view is '$(Show-Text $text)'." }
+    [int]$Matches[1]
+}
+
+function Assert-Number([int]$Expected, [string]$What) {
+    $number = Read-Number 0 $What
+    if ($number -ne $Expected) {
+        throw "$What`: the first row of the view is the line h$('{0:D3}' -f $number), and it has to be h$('{0:D3}' -f $Expected)."
+    }
+}
+```
+
+**A vista do historial.**
+
+- `Read-Row` copia unha fila enteira da vista.
+- `Read-Number` dá o número da liña curta dunha fila, 82 para `h082|`, e falla se a fila é outra cousa. `$Matches[1]` é o que colleu o grupo entre parénteses de `-match`.
+- `Assert-Number` comproba que a primeira fila da vista é unha liña curta concreta: así sabe a comprobación onde está a vista.
+
+```powershell
+# The text that meiga copies when the whole screen is selected, from the
+# rows of the console: each row, with the end of a line after the ones that
+# do not go on in the next one. alacritty_terminal leaves out the end of the
+# last row, and meiga one more.
+function Get-Expected([string[]]$Rows) {
+    $text = -join @(foreach ($row in $Rows) {
+            if ($row -and -not $row.EndsWith('|')) { $row } else { "$row`r`n" }
+        })
+    foreach ($end in 1, 2) {
+        if ($text.EndsWith("`r`n")) { $text = $text.Substring(0, $text.Length - 2) }
+    }
+    $text
+}
+
+# Checks that the screen of meiga shows the rows of the last screen that the
+# script wrote.
+function Compare-Screen([string]$What) {
+    $screen = Read-Screen
+    $expected = Get-Expected $screen.Text
+    $copied = Copy-Cells 0 0 ($screen.Columns - 1) ($screen.Rows - 1) $What
+    if ($copied -cne $expected) {
+        $mine = $copied -split "`r`n"
+        $theirs = $expected -split "`r`n"
+        $line = 0
+        while ($line -lt $mine.Count -and $line -lt $theirs.Count -and $mine[$line] -ceq $theirs[$line]) { $line++ }
+        $inMeiga = if ($line -lt $mine.Count) { "'$($mine[$line])'" } else { 'missing' }
+        $inConsole = if ($line -lt $theirs.Count) { "'$($theirs[$line])'" } else { 'missing' }
+        throw "$What`: the screen of $exe is not the one of the console. Their line $($line + 1) is $inMeiga in meiga and $inConsole in the console."
+    }
+}
+```
+
+**Comparar as pantallas.**
+
+- `Get-Expected` calcula, coas filas da consola, o texto que copia meiga cando se selecciona a pantalla enteira: cada fila e, despois, CR LF, salvo nas filas que continúan na seguinte, que non rematan en `|` e non están baleiras. Ao final, `alacritty_terminal` deixa fóra o fin da última fila, e meiga un máis ([Código › meiga-core › `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)): quítanse ata dous.
+- `Compare-Screen` selecciona a pantalla enteira de meiga, da primeira cela á última, e compara o texto co da última pantalla do script. Se non coinciden, busca a primeira liña distinta, e a mensaxe dá as dúas, `… Their line … is '…' in meiga and '…' in the console.`, ou `missing` na que ten menos liñas. Son liñas do texto, non filas: unha liña partida en varias filas é unha.
+
+**O punteiro, e abrir e pechar meiga.** `Move-Pointer`, `Start-Meiga`, `Connect-Keyboard` e `Stop-Meiga` son os de `check-mouse.ps1`, cunha soa fase: `Start-Meiga` agarda o título `meiga-resize-ready` e mide as celas. Eiquí, os movementos que fai Windows no sitio do punteiro chegarían a meiga, e non ao programa, que non pide o rato; e `Resize-Window` chama a `Move-Pointer` despois de cada cambio de tamaño, porque a xanela pode medrar ata o punteiro.
+
+```powershell
+# As per monitor (v2), as meiga, this thread sees the pixels of the window as
+# they are on the screen.
+$previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+$process = $null
+$window = [IntPtr]::Zero
+$thread = [uint32]0
+$attached = $false
+$pointer = $null
+$grid = $null
+$cell = $null
+$presses = 0
+$strip = 0
+$passed = $false
+$saved = Get-Text
+try {
+    Start-Meiga
+    Connect-Keyboard
+    Write-Host "The cells have $($cell.Width) x $($cell.Height) pixels, and the strip of the scroll bar $strip."
+```
+
+- Coma en `check-mouse.ps1`, o fío pasa á escala por monitor (v2), coma meiga, para ver os píxeles da xanela tal como están na pantalla; eiquí, tamén os que dan `GetWindowRect` e pide `SetWindowPos`, coma en `check-present.ps1`. As variábeis que usan as funcións créanse antes, porque `Set-StrictMode` non deixa ler unha que non existe, e `$saved` garda o texto do portapapeis. As novas son `$presses`, as pulsacións de `Copy-Cells`, e `$strip`, o ancho da franxa.
+- Despois, `Start-Meiga`, `Connect-Keyboard`, porque a comprobación teclea, e a liña do tamaño das celas.
+
+**Os pasos,** cada un coa súa liña `OK:`:
+
+| Paso | Que fai a comprobación | Que ten que pasar |
+|---|---|---|
+| O tamaño | Fai a xanela de 70 × 20 celas, e o script escribe as liñas longas (L). Despois, de 45 × 14, de 90 × 18 e de 60 × 24, e en cada tamaño o script escribe dous caracteres (W). | O programa recibe cada grella, e a pantalla de meiga ten as filas da consola, antes e despois de escribir. |
+| A pantalla alternativa | O script pasa á alternativa (A); a xanela, a 50 × 16; e o script volta á principal (B). | A alternativa, e despois a principal, xa co tamaño novo, teñen as filas da consola. |
+| A caixa de mensaxe | Dúas liñas no portapapeis, e Ctrl+V: meiga pregunta antes de pegar. Coa caixa aberta, a xanela pasa a 66 × 15; despois, *Cancel*. | Ao pecharse a caixa, o programa recibe a grella de 66 × 15, e a pantalla de meiga ten as filas da consola. |
+| O historial | A xanela de 60 × 20, e as liñas curtas (H). Unha parte da roda, Maiús+RePáx, Ctrl+Maiús+↑, Ctrl+Maiús+Inicio e Ctrl+Maiús+Fin. | A vista sobe o que corresponde a cada un, chega ao principio do historial e volta á pantalla. |
+| A barra | Arrastra o polgar ata arriba. Despois, coa vista dúas páxinas arriba, un clic na franxa debaixo do polgar. | A vista vai ao principio do historial, e despois baixa unha páxina. |
+| Volta á pantalla | Maiús+RePáx e unha tecla para o programa (N). Maiús+RePáx e Ctrl+V. | As dúas veces, a vista volta á pantalla. |
+| A selección | Arrastra desde a terceira fila ata por riba da xanela, e o punteiro queda alí medio segundo. | A selección empeza polo menos seis liñas por riba da primeira da pantalla. |
+| O zoom | Ctrl e `+`, Ctrl e `-`, Ctrl e a roda, e Ctrl+0. | A grella faise máis pequena, e despois volta a 60 × 20. |
+
+```powershell
+    # 1. Resizing.
+    Set-Grid 70 20 'The first size'
+    $before = Get-Screens
+    Send-Key 'L'
+    $null = Wait-Screen $before 'The lines'
+    Compare-Screen 'The lines of many lengths'
+    foreach ($size in @(45, 14), @(90, 18), @(60, 24)) {
+        $what = "At $($size[0]) x $($size[1]) cells"
+        Set-Grid $size[0] $size[1] $what
+        Compare-Screen $what
+        $before = Get-Screens
+        Send-Key 'W'
+        $null = Wait-Screen $before $what
+        Compare-Screen "$what, after writing where the cursor is"
+    }
+    Write-Host 'OK: the program gets the grid that fills the window, and the screen has the rows of the console when the window gets narrower, shorter, wider and taller.'
+```
+
+**O tamaño.**
+
+- Primeiro, a xanela de 70 × 20 celas, antes de escribir nada: o programa ten que recibir a grella que enche a xanela, sen a franxa da barra ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 2). A copia que non reserva a franxa falla eiquí.
+- Coa L, o script escribe as liñas longas, e a pantalla de meiga ten que ter as filas da consola.
+- Despois, tres tamaños: 45 × 14, máis estreita e máis baixa; 90 × 18, máis ancha; e 60 × 24, máis estreita e máis alta. Con cada un, o ConPTY reparte o seu búfer ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)), e meiga a súa grella, que despois coloca a pantalla onde a pon o ConPTY (decisión 4): as filas teñen que coincidir.
+- Despois de cada tamaño, coa W, o script escribe `w|` onde está o cursor, e a comprobación compara outra vez: o que escribe o programa despois do cambio tamén ten que quedar igual nas dúas pantallas.
+- `@(45, 14), @(90, 18), @(60, 24)` é unha lista de listas: en cada volta, `$size[0]` son as columnas, e `$size[1]`, as filas.
+
+```powershell
+    $before = Get-Screens
+    Send-Key 'A'
+    $null = Wait-Screen $before 'The alternate screen'
+    Set-Grid 50 16 'On the alternate screen'
+    Compare-Screen 'The alternate screen, at 50 x 16 cells'
+    $before = Get-Screens
+    Send-Key 'B'
+    $null = Wait-Screen $before 'Back to the primary screen' 50 16
+    Compare-Screen 'The primary screen, after the alternate one changed size'
+    Write-Host 'OK: on the alternate screen, the primary one gets the new size when the program goes back to it.'
+```
+
+**A pantalla alternativa.**
+
+- Coa A, o script pasa á pantalla alternativa e escribe `alt|` arriba. Mentres se ve, a xanela pasa a 50 × 16: o ConPTY corta ou enche a alternativa, e non reparte a principal ata que o programa volta a ela; meiga gárdaa á parte, sen repartila ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 5). Primeiro compárase a alternativa.
+- Coa B, o script volta á principal, que recibe entón o tamaño novo, no ConPTY e en meiga: `Wait-Screen` agarda unha pantalla de 50 × 16, e a comprobación compáraa. A copia que reparte a principal mentres se ve a alternativa falla eiquí: as súas filas quedan noutro sitio.
+
+```powershell
+    # While the message box that asks before pasting more than one line is
+    # open, the window changes size. Its events do not reach meiga, which
+    # waits for the box: the program gets the new grid when the box closes.
+    Set-Text "un`r`ndous"
+    $before = Get-Screens
+    Send-Key 'Ctrl+V'
+    Wait-Dialog
+    Resize-Window 66 15
+    Close-Dialog $IDCANCEL
+    $null = Wait-Screen $before 'After the message box' 66 15
+    Compare-Screen 'The screen, after the window changed size while the message box was open'
+    Write-Host 'OK: if the window changes size while a message box is open, the program gets the grid that fills it when the box closes.'
+```
+
+**A caixa de mensaxe.**
+
+- `Set-Text` deixa dúas liñas no portapapeis, e Ctrl+V: o script non pediu o *bracketed paste*, así que meiga pregunta antes de pegalas, e `Wait-Dialog` agarda a caixa ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)).
+- Coa caixa aberta, `Resize-Window` fai a xanela de 66 × 15 celas. A caixa desactiva a xanela, pero `SetWindowPos` cámbialle o tamaño igual, e o seu *window procedure* recibe o `WM_SIZE`; o evento, en cambio, non chega a meiga, que agarda a resposta da caixa ([Código › meiga-win › `State`](meiga-win.md#state-e-installed-o-handler-dentro-do-window-procedure)). É o que pasa se outro programa redimensiona a xanela, ou se cambia a escala do monitor, mentres a caixa está aberta.
+- *Cancel* pecha a caixa sen pegar nada. Entón, [`App::catch_up`](meiga.md#respond-o-que-pide-a-vista) dálle á vista a escala e o tamaño que ten a xanela, e o programa recibe a grella de 66 × 15: `Wait-Screen` agárdaa, e a comprobación compara as pantallas. A copia sen `catch_up` falla eiquí, sen pantalla nova.
+- As pantallas cóntanse antes de Ctrl+V: o programa non escribe ningunha mentres a caixa está aberta, e a primeira despois de pecharse ten que ser a de 66 × 15.
+
+```powershell
+    # 2. The history. At the bottom, the view shows the last $rows - 1 short
+    # lines, and the line of the cursor.
+    Set-Grid 60 20 'Before the history'
+    $before = Get-Screens
+    Send-Key 'H'
+    $null = Wait-Screen $before 'The short lines'
+    $rows = $grid.Rows
+    $last = 101 - $rows + 1
+    Assert-Number $last 'At the bottom'
+
+    $lines = [uint32]0
+    $null = $api::SystemParametersInfoW($SPI_GETWHEELSCROLLLINES, 0, [ref]$lines, 0)
+    if ($lines -eq $WHEEL_PAGESCROLL) { $lines = [uint32]$rows }
+    Send-Wheel 1
+    $first = $last - [int]$lines
+    Assert-Number $first 'A notch of the wheel'
+    Send-Key 'Shift+PageUp'
+    $first -= $rows
+    Assert-Number $first 'Shift+Page Up'
+    Send-Key 'Ctrl+Shift+UpArrow'
+    $first -= 1
+    Assert-Number $first 'Ctrl+Shift+Up'
+    Send-Key 'Ctrl+Shift+Home'
+    $top = Read-Row 0 'Ctrl+Shift+Home'
+    if (-not $top.StartsWith('01 ')) {
+        throw "Ctrl+Shift+Home: the first row of the view is '$(Show-Text $top)' instead of the first line of the history."
+    }
+    Send-Key 'Ctrl+Shift+End'
+    Assert-Number $last 'Ctrl+Shift+End'
+    Write-Host "OK: the wheel ($lines rows), Shift+Page Up, Ctrl+Shift+Up, Ctrl+Shift+Home and Ctrl+Shift+End move the view of the history."
+```
+
+**O historial.**
+
+- A xanela pasa a 60 × 20, e coa H o script escribe as 100 liñas curtas. Abaixo, a vista mostra as últimas 19, de `h082|` a `h100|`, e a liña do cursor: `$last` é o número da primeira, 82. Por riba, no historial, están as outras liñas curtas e, antes delas, as da L.
+- **A roda.** Unha parte adiante, no medio da grella, sobe a vista as liñas das preferencias de Windows, que a comprobación le con `SystemParametersInfoW`, coma en `check-mouse.ps1`: se a roda despraza unha pantalla, as filas da grella ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 9).
+- **As teclas** (decisión 8): Maiús+RePáx sobe a vista unha pantalla, as filas da grella; Ctrl+Maiús+↑, unha fila; Ctrl+Maiús+Inicio lévaa ao principio do historial, á primeira liña que escribiu o script coa L, `01 …`; e Ctrl+Maiús+Fin, outra vez á pantalla. Despois de cada unha, a comprobación le a primeira fila da vista. `PageUp`, `UpArrow`, `Home` e `End` son os nomes de `ConsoleKey`.
+
+```powershell
+    # The thumb, at the bottom of the strip, up to the top; and a click on
+    # the strip under it, a page down.
+    $client = Get-Client
+    $x = $client.Right - [Math]::Floor($strip / 2) - 1
+    $bottom = $client.Bottom - [Math]::Max(1, [Math]::Floor((2 * $api::GetDpiForWindow($window) + 48) / 96)) - 2
+    Send-Messages @(
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $x $bottom
+        Get-Mouse $WM_MOUSEMOVE $MK_LBUTTON $x (-1000)
+        Get-Mouse $WM_LBUTTONUP 0 $x (-1000)
+    )
+    $top = Read-Row 0 'Dragging the thumb to the top'
+    if (-not $top.StartsWith('01 ')) {
+        throw "Dragging the thumb to the top: the first row of the view is '$(Show-Text $top)' instead of the first line of the history."
+    }
+    Send-Key 'Ctrl+Shift+End'
+    Send-Key 'Shift+PageUp'
+    Send-Key 'Shift+PageUp'
+    Assert-Number ($last - 2 * $rows) 'Two pages up'
+    Send-Messages @(
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $x ($client.Bottom - 1)
+        Get-Mouse $WM_LBUTTONUP 0 $x ($client.Bottom - 1)
+    )
+    Assert-Number ($last - $rows) 'A click on the strip under the thumb'
+    Write-Host 'OK: dragging the thumb of the scroll bar moves the view, and a click on the strip under it moves it a page down.'
+```
+
+**A barra de desprazamento** ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 10).
+
+- `$x` é o medio da franxa, á dereita da área cliente.
+- **O polgar.** Coa vista na pantalla, está abaixo de todo, ata a marxe de debaixo, 2 píxeles ao 100 %, que se escala coma a franxa ([Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)): `$bottom` cae 2 píxeles por riba do seu extremo, dentro del. A comprobación prémeo, móveo co botón abaixo ata 1 000 píxeles por riba da xanela, e sóltao alí: o polgar sobe ata arriba de todo, onde se detén, e a vista vai ao principio do historial.
+- **A franxa.** Coa vista dúas páxinas por riba da pantalla, o polgar xa non está abaixo. Un clic na última fila de píxeles da franxa, debaixo del, baixa a vista unha páxina. O botón sobe na mesma publicación, no momento: as páxinas non se repiten, que o farían aos 250 ms.
+
+```powershell
+    # A key for the program, and pasting, bring the view back to the screen.
+    Send-Key 'Shift+PageUp'
+    Send-ProgramKey 'N'
+    Assert-Number $last 'A key for the program'
+    Set-Text 'x'
+    Send-Key 'Shift+PageUp'
+    Send-Key 'Ctrl+V'
+    Wait-For { @(Get-Lines)[-1] -eq "key $([int][ConsoleKey]::X)" } { 'The program did not get the text that the check pasted.' }
+    Assert-Number $last 'Pasting'
+    Write-Host 'OK: a key for the program, and pasting, bring the view back to the screen.'
+```
+
+**Volta á pantalla** ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 7).
+
+- Maiús+RePáx sobe a vista, e a N vai ao programa: `Send-ProgramKey` agarda a que a lea, e a vista ten que estar outra vez na pantalla. A copia que non a leva á pantalla falla eiquí: a vista segue onde a deixou Maiús+RePáx, en `h042|`.
+- **Pegar.** O portapapeis ten `x` e, despois doutro Maiús+RePáx, Ctrl+V pégao: o programa leo coma a tecla X, `key 88`. A comprobación agarda esa liña antes de mirar a vista, porque `Copy-Cells` baleira o portapapeis: se meiga aínda non pegara, xa non pegaría nada.
+
+```powershell
+    # A selection from the third row to above the window, where the pointer
+    # stays for half a second: the view moves on its own, and the selection
+    # grows with it. The pointer goes there too, for the moves that Windows
+    # makes at its place when the window takes the mouse.
+    $above = [Meiga.Tools.ResizeCheck+POINT]::new()
+    $above.X = Get-X 0 'Left'
+    $above.Y = -3 * $cell.Height
+    $screen = [Meiga.Tools.ResizeCheck+POINT]::new()
+    $screen.X = $above.X
+    $screen.Y = $above.Y
+    $null = $api::ClientToScreen($window, [ref]$screen)
+    if ($null -eq $pointer) {
+        $current = [Meiga.Tools.ResizeCheck+POINT]::new()
+        if ($api::GetCursorPos([ref]$current)) { $pointer = $current }
+    }
+    $null = $api::SetCursorPos($screen.X, $screen.Y)
+    Set-Modifiers @()
+    Send-Messages @(
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON (Get-X 3) (Get-Y 2)
+        Get-Mouse $WM_MOUSEMOVE $MK_LBUTTON $above.X $above.Y
+    )
+    Start-Sleep -Milliseconds 500
+    Wait-For { $api::ClearClipboard() } { 'Could not empty the clipboard.' }
+    Send-Messages (Get-Mouse $WM_LBUTTONUP 0 $above.X $above.Y)
+    $first = (Wait-Copied "A selection above the window: $exe did not copy it.") -split "`r`n" | Select-Object -First 1
+    if ($first -match '^h(\d{3})\|' -and [int]$Matches[1] -ge $last - 5) {
+        throw "A selection above the window: the view did not move on its own, and the selection starts with '$first'."
+    }
+    Send-ProgramKey 'N'
+    Write-Host "OK: a selection above the window moves the view on its own, up to the line '$first'."
+```
+
+**A selección que despraza a vista soa** ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 11).
+
+- A comprobación preme na terceira fila da vista, que está na pantalla, e, co botón abaixo, move o rato 3 celas por riba da área cliente, á altura da primeira columna. Por riba da grella, a vista desprázase soa, e a selección medra con ela, máis rápido canto máis lonxe está o punteiro. O punteiro queda alí medio segundo (`Start-Sleep`); despois, a comprobación baleira o portapapeis e publica a soltura: meiga copia a selección, que empeza na fila á que chegou a vista.
+- **O punteiro de verdade.** Cando baixa o botón, meiga captura o rato, e Windows envíalle entón un movemento no sitio do punteiro de verdade ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows), *A captura*). Nos outros pasos non importa: `PostAll` fai que chegue despois de toda a acción, co botón xa arriba. Eiquí, o botón segue abaixo medio segundo, e ese movemento chegaría no medio: o final da selección, e a velocidade da vista, irían ao sitio do punteiro, que pode estar en calquera parte. Na barra de título, onde o deixa `Move-Pointer`, a só 8 píxeles da área cliente, a vista case non se movería; e sobre a grella, non se movería. Por iso a comprobación leva o punteiro de verdade ao mesmo punto ca o movemento publicado, con `SetCursorPos`: os movementos de Windows caen no mesmo sitio.
+- **Devolvelo.** `Move-Pointer` só garda o sitio do punteiro cando o move. Se aínda non o gardou, a comprobación gárdao agora en `$pointer`, e o `finally` devólveo alí ao rematar, coma en `check-mouse.ps1`. Este código vai no corpo do script, así que `$pointer` xa é a variábel do script, sen `$script:`.
+- `Set-Modifiers @()` solta Ctrl, que deixou abaixo Ctrl+V: a selección vai sen modificadoras.
+- **O resultado.** A primeira liña do texto copiado ten que estar polo menos seis liñas por riba da primeira da pantalla: unha liña curta ata `h076|`, ou unha máis antiga, que xa non é curta. A copia que non despraza a vista soa falla eiquí: a selección só chega á primeira fila da vista, `h082|`. Despois, a N leva a vista outra vez á pantalla, e quita a selección.
+- **A liña cambia dunha vez a outra.** A vista avanza co temporizador dos fotogramas, a 2 filas por segundo máis o cadrado da distancia en píxeles ao 100 % entre 25: a 3 celas, unhas decenas de filas en medio segundo. Pero ese medio segundo, máis o que tarda meiga en tratar a soltura, nunca é exacto, e a liña á que chega a selección tampouco.
+
+```powershell
+    # 3. The zoom.
+    $columns = $grid.Columns
+    $before = Get-Screens
+    Send-Key 'Ctrl+OemPlus'
+    $null = Wait-Screen $before 'Ctrl and +'
+    if ($grid.Columns -ge $columns -or $grid.Rows -gt $rows) {
+        throw "Ctrl and +: the grid has $($grid.Columns) x $($grid.Rows) cells, and it has to be smaller than $columns x $rows."
+    }
+    $before = Get-Screens
+    Send-Key 'Ctrl+OemMinus'
+    $null = Wait-Screen $before 'Ctrl and -' $columns $rows
+    $before = Get-Screens
+    Set-Modifiers 'Ctrl'
+    Send-Wheel 1 $MK_CONTROL
+    $null = Wait-Screen $before 'Ctrl and the wheel'
+    if ($grid.Columns -ge $columns) {
+        throw "Ctrl and the wheel: the grid has $($grid.Columns) x $($grid.Rows) cells, and it has to be smaller than $columns x $rows."
+    }
+    $before = Get-Screens
+    Send-Key 'Ctrl+D0'
+    $null = Wait-Screen $before 'Ctrl+0' $columns $rows
+    Write-Host 'OK: Ctrl and +, and Ctrl and the wheel, make the cells bigger and the grid smaller, which the program gets; Ctrl and -, and Ctrl+0, bring the grid back.'
+
+    Stop-Meiga
+    $passed = $true
+}
+```
+
+**O zoom** ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 12). A xanela non cambia de tamaño: cambian as celas e, con elas, a grella que a enche, que recibe o programa. `$columns` e `$rows` son a grella de antes, 60 × 20.
+
+- **Ctrl e `+`** (`OemPlus`, o código `VK_OEM_PLUS`: a tecla de `+` no teclado español, e a de `=` no estadounidense) fai a fonte un punto máis grande ([Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom), *As teclas do zoom*). A grella do programa ten que ter menos columnas, e non máis filas.
+- **Ctrl e `-`** (`OemMinus`) volta aos 12 puntos, e a grella, a 60 × 20.
+- **Ctrl e a roda.** `Set-Modifiers 'Ctrl'` pon Ctrl abaixo, coma cando se xira a roda con Ctrl de verdade, e a mensaxe lévao no `wParam` (`MK_CONTROL`), que é o que le meiga: unha parte adiante, un punto máis. A grella ten que ter menos columnas.
+- **Ctrl+0** (`D0`, o 0 de enriba das letras) volta aos 12 puntos, e a grella, a 60 × 20.
+- Despois, `Stop-Meiga`, e `$passed` di que todo foi ben.
+
+O `finally` é o de `check-mouse.ps1`: meiga non queda aberto; o punteiro volta a onde estaba, tamén despois da selección por riba da xanela; o portapapeis volta ter o texto que tiña; e, se algo fallou, o rexistro, coas pantallas que escribiu o script, gárdase, e o script di onde está: `What the program wrote is in …`.
+
+A CI executa este script en cada PR, despois de `check-mouse.ps1`, no paso *Check the resizing, the history and the zoom* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a escala é do 100 %, e a franxa mide 12 píxeles.
+
 ## `tools/terminal-sample.ps1`
 
 Desde a subfase 1.6. Escribe unha mostra do que ten que saber mostrar un terminal, para comprobala a ollo: as cores, os estilos e os caracteres que non son ASCII. Ata a 1.5, a demo de meiga mostraba un texto fixo; desde a 1.6, meiga só mostra o que escribe o seu programa, e esta mostra é o programa que ensina de vez todo o que debuxa. Tamén se pode executar noutro terminal, para comparar. Non comproba nada soa: hai que mirala.
@@ -2239,7 +3048,7 @@ pwsh -File .\tools\terminal-sample.ps1 -Wait 30                               # 
 
 - O script pode ir como o programa de meiga, na liña de comandos: así a mostra sae soa, nunha shell sen perfil. Ata a subfase 1.7 era a única forma, porque meiga non tiña teclado; desde a 1.7 tamén se pode executar desde a shell de meiga, coma noutro terminal. pwsh resolve a ruta relativa desde o seu cartafol actual, que herda de meiga, e meiga do terminal desde o que se lanza: por iso funciona desde a raíz do repositorio. `-NoProfile` evita que o perfil do usuario escriba algo antes da mostra.
 - Cando o script remata, meiga escribe debaixo da mostra `[process exited with code 0 (0x00000000)]` e oculta o cursor, e a xanela queda aberta ata que se pecha ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
-- A mostra ocupa 20 filas, e as máis anchas, 72 columnas. A grella de meiga ten o tamaño da xanela ao arrancar e non cambia con ela ata a subfase 1.9: nunha xanela máis pequena, as liñas longas pasan á fila seguinte.
+- A mostra ocupa 20 filas, e as máis anchas, 72 columnas: nunha xanela máis estreita, as liñas longas pasan á fila seguinte. Desde a subfase 1.9, a grella de meiga segue o tamaño da xanela ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)); ata a 1.8, tiña o da xanela ao arrancar, e non cambiaba con ela.
 
 Que mirar:
 
@@ -2499,10 +3308,10 @@ A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso 
    }
    ```
 
-`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.8, con [`check-mouse.ps1`](#toolscheck-mouseps1), son 21:
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.9, con [`check-resize.ps1`](#toolscheck-resizeps1), son 22:
 
 ```text
-OK: the 21 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+OK: the 22 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
 ```
 
 | Comprobación | Como |

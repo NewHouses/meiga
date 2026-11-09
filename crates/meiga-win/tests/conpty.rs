@@ -217,6 +217,24 @@ fn the_reader_thread_can_answer_the_program() {
 }
 
 #[test]
+fn the_program_gets_the_new_size() {
+    let (pty, mut transcript) = spawn(&bundled(), "cmd /k");
+    transcript.wait_for(">");
+    pty.resize(GridSize::new(123, 37)).unwrap();
+    // Windows PowerShell shows the size of the console after a mark that the
+    // line that runs it does not have. The output of mode, in the language
+    // of Windows, has other numbers, such as the code page 437.
+    pty.write(
+        b"powershell -NoProfile -Command \"'size=' + [Console]::WindowWidth + 'x' + [Console]::WindowHeight\"\r",
+    );
+    transcript.wait_for("size=123x37");
+    pty.write(b"exit 3\r");
+    assert_eq!(transcript.wait_for_end(), Some(3));
+    // Once the session ends, it does nothing.
+    pty.resize(GridSize::new(80, 25)).unwrap();
+}
+
+#[test]
 fn dropping_a_session_closes_it_without_waiting() {
     let (pty, mut transcript) = spawn(&bundled(), "cmd /k");
     transcript.wait_for(">");

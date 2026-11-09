@@ -27,3 +27,4 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 1.6 | Da saída á pantalla | [PR #12](https://github.com/NewHouses/meiga/pull/12) | [1.6-saida.md](1.6-saida.md) |
 | 1.7 | Teclado | [PR #13](https://github.com/NewHouses/meiga/pull/13) | [1.7-teclado.md](1.7-teclado.md) |
 | 1.8 | Rato, selección e portapapeis | [PR #14](https://github.com/NewHouses/meiga/pull/14) | [1.8-rato.md](1.8-rato.md) |
+| 1.9 | Scrollback, redimensionado e zoom | [PR #15](https://github.com/NewHouses/meiga/pull/15) | [1.9-historial.md](1.9-historial.md) |

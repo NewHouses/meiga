@@ -290,6 +290,35 @@ impl WheelTurns {
     }
 }
 
+/// Adds up the turns of the wheel into rows of the history, at a number of
+/// rows per notch: the turns of less than a notch of the touchpads move it
+/// a row as soon as they make one.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WheelRows {
+    /// In 120ths of a row.
+    total: i64,
+}
+
+impl WheelRows {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds a turn of `delta`, in 120ths of a notch, forward when it is
+    /// positive, at `rows` per notch, and returns the whole rows that it
+    /// completes. A turn in the other direction starts again from zero.
+    pub fn add(&mut self, delta: i16, rows: u32) -> i32 {
+        let delta = i64::from(delta) * i64::from(rows);
+        if (self.total > 0 && delta < 0) || (self.total < 0 && delta > 0) {
+            self.total = 0;
+        }
+        self.total += delta;
+        let whole = self.total / i64::from(WHEEL_DELTA);
+        self.total -= whole * i64::from(WHEEL_DELTA);
+        i32::try_from(whole).unwrap_or(if whole < 0 { i32::MIN } else { i32::MAX })
+    }
+}
+
 /// The arrow key of `wheel`, as it goes down and up, for the programs on
 /// the alternate screen that did not ask for the mouse (`?1007`): they
 /// scroll with the arrows.
@@ -532,6 +561,21 @@ mod tests {
         assert_eq!(turns.add(60, true), 1);
         turns.reset();
         assert_eq!(turns.add(60, false), 0);
+    }
+
+    #[test]
+    fn the_wheel_moves_the_history_by_rows_also_with_parts_of_a_notch() {
+        let mut rows = WheelRows::new();
+        assert_eq!(rows.add(120, 3), 3);
+        assert_eq!(rows.add(-240, 3), -6);
+        // A touchpad: with 3 rows per notch, a row every 40.
+        assert_eq!(rows.add(30, 3), 0);
+        assert_eq!(rows.add(30, 3), 1);
+        assert_eq!(rows.add(20, 3), 1);
+        // The 30 that are left go when it turns back.
+        assert_eq!(rows.add(30, 3), 0);
+        assert_eq!(rows.add(-30, 3), 0);
+        assert_eq!(rows.add(-10, 3), -1);
     }
 
     #[test]

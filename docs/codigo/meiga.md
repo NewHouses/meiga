@@ -1,8 +1,8 @@
 # Código › `meiga` (o programa)
 
-> Estado: subfase 1.8. O programa é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell, mostra a súa saída na xanela, coas cores, os estilos, o cursor e o título que pon o programa, e envíalle as teclas e o foco. O rato selecciona texto, que vai ao portapapeis, ou chega ao programa, se o pediu; as teclas e o botón dereito copian e pegan. Presenta só as zonas que cambian. Tamén ten tres modos de medición (`--bench`), un rexistro dos fotogramas (`--trace-frames`) e as marcas das zonas presentadas (`--marks`). Na 1.6 desapareceu a demo, e chegaron `session.rs` e `view.rs`; na 1.7, o teclado, e as marcas pasaron da tecla P á opción `--marks`; na 1.8, o rato, a selección e o portapapeis, con `mouse.rs` e `clipboard.rs`. A grella aínda non cambia co tamaño da xanela, nin a roda despraza o historial (1.9).
+> Estado: subfase 1.9. O programa é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell, mostra a súa saída na xanela, coas cores, os estilos, o cursor e o título que pon o programa, e envíalle as teclas e o foco. O rato selecciona texto, que vai ao portapapeis, ou chega ao programa, se o pediu; as teclas e o botón dereito copian e pegan. A grella enche a xanela e segue o seu tamaño e a súa escala; o historial vese coa roda, coas teclas e cunha barra de desprazamento; e o texto ten zoom. Presenta só as zonas que cambian. Tamén ten tres modos de medición (`--bench`), un rexistro dos fotogramas (`--trace-frames`) e as marcas das zonas presentadas (`--marks`). Na 1.6 desapareceu a demo, e chegaron `session.rs` e `view.rs`; na 1.7, o teclado, e as marcas pasaron da tecla P á opción `--marks`; na 1.8, o rato, a selección e o portapapeis, con `mouse.rs` e `clipboard.rs`; e na 1.9, o historial, o tamaño e o zoom, con `scrollbar.rs`.
 
-**Responsabilidade:** unir as pezas. Crea a xanela, lanza o programa nunha sesión de ConPTY, leva a súa saída á pantalla co fluxo de fotogramas, e as teclas e o rato ao programa, e copia e pega co portapapeis de Windows, usando os outros tres crates. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates) e, para o camiño da saída, [Arquitectura › Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma); para o das teclas, [Arquitectura › O teclado](../arquitectura.md#o-teclado-da-tecla-ao-programa); e para o do rato e o do texto, [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis).
+**Responsabilidade:** unir as pezas. Crea a xanela, lanza o programa nunha sesión de ConPTY, leva a súa saída á pantalla co fluxo de fotogramas, e as teclas e o rato ao programa, dálles ao terminal e ao programa a grella que enche a xanela, e copia e pega co portapapeis de Windows, usando os outros tres crates. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates) e, para o camiño da saída, [Arquitectura › Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma); para o das teclas, [Arquitectura › O teclado](../arquitectura.md#o-teclado-da-tecla-ao-programa); para o do rato e o do texto, [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); e para o dun cambio de tamaño e o da vista do historial, [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom).
 
 | Arquivo | Contido |
 |---|---|
@@ -13,9 +13,10 @@
 | [`src/options.rs`](#cratesmeigasrcoptionsrs) | As opcións da liña de comandos, co programa que se lanza. |
 | [`src/app.rs`](#cratesmeigasrcapprs) | `App`, o *handler* da xanela: crea o contido, o terminal ou un modo de medición, leva os eventos a el e aos fotogramas, e pon no portapapeis o texto que copia o programa. |
 | [`src/session.rs`](#cratesmeigasrcsessionrs) | A sesión do terminal: o programa, e o fío lector que lle dá a súa saída ao terminal, responde ao programa e esperta a xanela. |
-| [`src/view.rs`](#cratesmeigasrcviewrs) | `TerminalView`, o terminal na xanela: a súa copia da pantalla, posta ao día antes de cada fotograma, o debuxo das celas, as súas liñas, a selección e o cursor, e as teclas e o foco, que lle envía ao programa, salvo as que colle para copiar e pegar. |
-| [`src/mouse.rs`](#cratesmeigasrcmousers) | `Mouse`, o rato da vista: selecciona texto, cópiao ao soltar o botón e pega co dereito, ou envíalle ao programa os clics, os movementos e a roda. |
-| [`src/clipboard.rs`](#cratesmeigasrcclipboardrs) | Copiar a selección ao portapapeis e pegar o portapapeis no programa, coa pregunta antes de pegar varias liñas. |
+| [`src/view.rs`](#cratesmeigasrcviewrs) | `TerminalView`, o terminal na xanela: a súa copia da pantalla, posta ao día antes de cada fotograma, o debuxo das celas, as súas liñas, a selección e o cursor, e as teclas e o foco, que lle envía ao programa, salvo as que colle para copiar e pegar, para mover a vista do historial e para o zoom; a grella que enche a xanela, que lles dá ao terminal e ao programa ao ritmo dos fotogramas; e a fonte, que crea de novo co zoom e coa escala. |
+| [`src/mouse.rs`](#cratesmeigasrcmousers) | `Mouse`, o rato da vista: selecciona texto, cópiao ao soltar o botón e pega co dereito, ou envíalle ao programa os clics, os movementos e a roda. A roda tamén despraza o historial, ou fai o zoom con Ctrl; a barra de desprazamento é súa; e unha selección arrastrada fóra da grella despraza a vista soa. |
+| [`src/scrollbar.rs`](#cratesmeigasrcscrollbarrs) | `ScrollBar`, a barra de desprazamento: a franxa á dereita da xanela, co polgar que mostra que parte do historial se ve, que se arrastra, e as páxinas cun clic na franxa. |
+| [`src/clipboard.rs`](#cratesmeigasrcclipboardrs) | Copiar a selección ao portapapeis e pegar o portapapeis no programa, coa pregunta antes de pegar varias liñas. Pegar leva a vista do historial á pantalla. |
 | [`src/frames.rs`](#cratesmeigasrcframesrs) | `Frames`, o fluxo de fotogramas: que cambiou, cando debuxalo e como chega á xanela. |
 | [`src/trace.rs`](#cratesmeigasrctracers) | O rexistro dos fotogramas, en CSV. |
 | [`src/bench.rs`](#cratesmeigasrcbenchrs) | Os tres modos de medición: fotogramas parciais, completos e completos de texto, sen parar. |
@@ -35,9 +36,13 @@ graph LR
     frames -- "compoñer e presentar" --> surface["Surface<br/>(meiga-render)"]
     frames -- "unha liña por fotograma" --> trace["Trace"]
     app -- "Event::Key e os do rato:<br/>key e mouse" --> content
+    app -- "Event::Resized e<br/>Event::DpiChanged" --> content
     content -- "as teclas e o foco<br/>(Input::write)" --> conpty
+    content -- "a grella nova, no fotograma:<br/>Terminal::resize (baixo o lock)" --> shared
+    content -- "e despois, Input::resize<br/>(aínda baixo o lock)" --> conpty
     content -- "os eventos do rato" --> mouse["Mouse<br/>(mouse.rs)"]
-    mouse -- "a selección<br/>(baixo o lock)" --> shared
+    mouse -- "a selección e a vista<br/>do historial (baixo o lock)" --> shared
+    mouse -- "os clics na franxa" --> bar["ScrollBar<br/>(scrollbar.rs)"]
     mouse -- "os informes e a roda<br/>(Input::write)" --> conpty
     content -- "Ctrl+C e Ctrl+V" --> clip["copy e paste<br/>(clipboard.rs)"]
     mouse -- "ao soltar o botón<br/>e co dereito" --> clip
@@ -52,6 +57,7 @@ graph LR
 4. Coa xanela minimizada non hai fotogramas, e a vista non copia nada: só fai o que non pode esperar (`Scene::update_hidden`): rematar á súa hora unha actualización sincronizada que o programa deixou aberta, para que as súas preguntas teñan resposta ([`frames.rs`](#coa-xanela-minimizada-hidden)).
 5. Desde a subfase 1.7, as teclas chegan á xanela coma `Event::Key`, e `App` pásallas á vista, que as converte no que le o programa, segundo os modos que activou, e as escribe na entrada da sesión, sen esperar: o fío escritor da sesión lévaas ao ConPTY ([`key` e `focus`](#as-teclas-e-o-foco-key-e-focus)). Os cambios do foco tamén lle chegan ao programa, se os pediu.
 6. Desde a subfase 1.8, `App` pásalle á vista tamén os eventos do rato, e a vista ao seu rato ([`mouse.rs`](#cratesmeigasrcmousers)): os clics seleccionan texto na grella do terminal, baixo o *lock*, ou, se o programa pediu o rato e Maiús non está premido, van a el coma informes, pola entrada da sesión. A selección vai ao portapapeis ao soltar o botón; Ctrl+C e Ctrl+Maiús+C cópiana, e Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan ([`clipboard.rs`](#cratesmeigasrcclipboardrs)). Despois, `App` fai o que lle pide a vista ([`respond`](#respond-o-que-pide-a-vista)): un fotograma, se cambiou a selección, e poñerse ao día, se se mostrou a caixa de mensaxe que pregunta antes de pegar.
+7. Desde a subfase 1.9, `App` pásalle á vista os cambios de tamaño da xanela (`Event::Resized`), salvo se está minimizada, e os de escala (`Event::DpiChanged`), e, ao pecharse a caixa de mensaxe que pregunta antes de pegar, o tamaño e a escala que a xanela ten entón ([`catch_up`](#respond-o-que-pide-a-vista)). A vista calcula a grella que enche a xanela, sen a franxa da barra de desprazamento, e dálla ao terminal e ao ConPTY no seguinte fotograma, como moito unha vez por intervalo, baixo o *lock* ([`resized` e `resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). A roda, as teclas do historial e a barra de desprazamento ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)) moven a vista do historial; e Ctrl e `+`, `-` ou `0`, e Ctrl e a roda, fan o zoom: a vista crea a fonte nova, e con ela cambia a grella ([`zoom`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)).
 
 ## `crates/meiga/Cargo.toml`
 
@@ -178,6 +184,7 @@ mod clipboard;
 mod frames;
 mod mouse;
 mod options;
+mod scrollbar;
 mod session;
 mod trace;
 mod view;
@@ -237,7 +244,7 @@ fn report(text: &str) {
 
 - `#![cfg_attr(condición, atributo)]` aplica o atributo só se se cumpre a condición. `debug_assertions` está activado nas compilacións de depuración e desactivado en *release*, así que en *release* meiga é unha aplicación gráfica, sen xanela de consola. Ver [Tecnoloxías › Subsistema](../tecnoloxias.md#6-subsistema-de-windows).
 - `#![forbid(unsafe_code)]`: o programa non ten nin un bloque `unsafe`. Todas as chamadas a Windows pasan por `meiga-win` e `meiga-render`, que as envolven en funcións seguras.
-- `mod …;` declara os nove módulos do programa, que están nos arquivos do mesmo nome. Desde a subfase 1.8 hai dous máis: `mouse`, o rato da vista ([`mouse.rs`](#cratesmeigasrcmousers)), e `clipboard`, copiar e pegar ([`clipboard.rs`](#cratesmeigasrcclipboardrs)).
+- `mod …;` declara os dez módulos do programa, que están nos arquivos do mesmo nome. Desde a subfase 1.8 hai dous máis: `mouse`, o rato da vista ([`mouse.rs`](#cratesmeigasrcmousers)), e `clipboard`, copiar e pegar ([`clipboard.rs`](#cratesmeigasrcclipboardrs)); e desde a 1.9, `scrollbar`, a barra de desprazamento ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)).
 - `use meiga_win::window::{self, Window, WindowOptions};` importa o módulo (`self`, para escribir `window::show_error`) e os dous tipos.
 - `TITLE` é o título da xanela, «meiga»: o que ten ao abrila e sempre que o programa do terminal non pon outro (ver [`app.rs`](#cratesmeigasrcapprs)).
 - `fn main() -> ExitCode`: `main` pode devolver o código de saída do proceso: `ExitCode::SUCCESS` (0), `ExitCode::FAILURE` (1) ou outro número, con `ExitCode::from`.
@@ -437,12 +444,21 @@ pub struct App {
 ### `App::new` e `terminal`
 
 ```rust
-pub fn new(window: &Window, options: &Options, trace: Option<Trace>) -> Result<Self, HandlerError> {
+pub fn new(
+    window: &Window,
+    options: &Options,
+    trace: Option<Trace>,
+) -> Result<Self, HandlerError> {
     // Only the content with text reads the fonts of the system.
     let (mut content, session) = match options.bench {
         Some(BenchMode::Text) => {
             let system = FontSystem::new()?;
-            let font = Font::new(&system, &FONT_FAMILIES, FONT_POINTS, window.dpi())?;
+            let font = Font::new(
+                &system,
+                &FONT_FAMILIES,
+                f32::from(FONT_POINTS),
+                window.dpi(),
+            )?;
             let bench = Bench::new(BenchMode::Text, Some(font));
             (Content::Bench(Box::new(bench)), None)
         }
@@ -453,29 +469,33 @@ pub fn new(window: &Window, options: &Options, trace: Option<Trace>) -> Result<S
     if options.bench.is_some() {
         frames.schedule(window)?;
     }
-    Ok(Self { frames, content, _session: session })
+    Ok(Self {
+        frames,
+        content,
+        _session: session,
+    })
 }
 ```
 
 - **O contido:** un modo de medición, como antes, ou o terminal, que crea `terminal` co programa das opcións. `as_deref` dá un `Option<&str>` sen copiar o texto.
 - **As fontes.** Só o contido con texto le as fontes do sistema ([`FontSystem`](meiga-render.md#fontsystem)): o terminal e o modo `text`, cunha fonte ao DPI da xanela ([`Window::dpi`](meiga-win.md#windowdpi)). Os modos `partial` e `full` non cargan nada de DirectWrite, e miden o mesmo ca na subfase 1.2.
+- **Os puntos.** Desde a subfase 1.9, `FONT_POINTS` é un número enteiro, porque o zoom cambia o tamaño da fonte dun punto en punto ([`view.rs`](#constantes)), e `Font::new` recibe os puntos coma un `f32`: `f32::from` convérteos sen perder nada.
 - Os erros de `meiga-render` convértense en `HandlerError` con `?`, como os de `meiga-win`: se non hai ningunha das fontes, meiga para cunha caixa de mensaxe que o di.
 - `Frames::new` crea o *framebuffer* co tamaño da xanela, pon ao día o contido e compóno enteiro nel. Así, cando Windows pide o primeiro `WM_PAINT`, só hai que copialo.
 - **As marcas** (o bordo magenta das zonas presentadas) só se debuxan coa opción `--marks`: no terminal son unha axuda para ver que presenta cada fotograma, e nos modos de medición engadirían traballo aos fotogramas que se miden. Ata a subfase 1.6 activábaas a tecla P; desde a 1.7, todas as teclas van ao programa.
 - Un modo de medición pide xa o seu primeiro fotograma (`schedule`), que chegará en canto a xanela empece o seu bucle de mensaxes.
 
 ```rust
-fn terminal(window: &Window, command: Option<&str>) -> Result<(Content, Option<Pty>), HandlerError> {
-    let font = Font::new(&FontSystem::new()?, &FONT_FAMILIES, FONT_POINTS, window.dpi())?;
+fn terminal(
+    window: &Window,
+    command: Option<&str>,
+) -> Result<(Content, Option<Pty>), HandlerError> {
+    let fonts = FontSystem::new()?;
+    let dpi = window.dpi();
+    let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
     let cell = font.cell();
     let client = window.client_size()?;
-    // The grid keeps this size until it can change with the window
-    // (subphase 1.9).
-    let cells = |pixels: u32, cell: u32| u16::try_from(pixels / cell.max(1)).unwrap_or(u16::MAX);
-    let mut terminal = Terminal::new(GridSize::new(
-        cells(client.width, cell.width),
-        cells(client.height, cell.height),
-    ));
+    let mut terminal = Terminal::new(view::grid_size(client, cell, ScrollBar::width_at(dpi)));
     terminal.set_cell_size(cell);
     let size = terminal.size();
     let shared = Arc::new(Mutex::new(Shared::new(terminal)));
@@ -488,7 +508,7 @@ fn terminal(window: &Window, command: Option<&str>) -> Result<(Content, Option<P
         }
     };
     let input = session.as_ref().map(Pty::input);
-    let view = TerminalView::new(shared, input, waker, font, window.dpi());
+    let view = TerminalView::new(shared, input, waker, fonts, font, dpi, client);
     // The clicks select text until the program asks for the mouse.
     window.set_pointer(Pointer::Text);
     Ok((Content::Terminal(Box::new(view)), session))
@@ -497,15 +517,16 @@ fn terminal(window: &Window, command: Option<&str>) -> Result<(Content, Option<P
 
 O terminal, paso a paso:
 
-1. **A fonte**, ao DPI da xanela: dela sae o tamaño da cela.
-2. **A grella:** tantas celas enteiras como caben na xanela. O que sobra son as marxes, que a vista pinta coa cor do fondo. `cell.max(1)` evita dividir entre 0, e `try_from` dá `u16::MAX` se o número non cabe: unha cela sempre ten píxeles, e ningunha xanela ten tantas celas, pero o tipo non o garante. [`Terminal::new`](meiga-core.md#cratesmeiga-coresrctermmodrs) dálle polo menos o seu tamaño mínimo. A grella queda así ata a subfase 1.9 ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+1. **A fonte**, ao DPI da xanela: dela sae o tamaño da cela. Desde a subfase 1.9, as fontes do sistema (`fonts`) quedan na vista, que crea con elas a fonte nova cando cambian o zoom ou a escala ([`new_font`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)).
+2. **A grella:** a que enche a xanela, sen a franxa da barra de desprazamento ([`grid_size`](#o-tamaño-resized-resize_grid-e-grid_size)): tantas celas enteiras como caben, polo menos 2 × 1. O que sobra son as marxes, que a vista pinta coa cor do fondo. Desde a subfase 1.9, é a mesma conta que fai a vista cada vez que cambia o tamaño da xanela, e a franxa mídese co DPI da xanela ([`ScrollBar::width_at`](#scrollbar)), porque aínda non hai vista, nin rato, nin barra. Ata a 1.8, a conta estaba eiquí, sen a franxa, e a grella quedaba así toda a vida da xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
 3. **`set_cell_size`**: co tamaño da cela, o terminal responde aos programas que preguntan polo tamaño da grella en píxeles (`CSI 14 t`, [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
 4. **`size`**: o tamaño que ten de verdade o terminal, co mínimo xa aplicado. A pseudoconsola ten que ter o mesmo.
 5. **`Shared`** ([`session.rs`](#cratesmeigasrcsessionrs)), o terminal e as súas marcas, vai nun `Arc<Mutex<…>>`: o `Mutex` deixa usalo desde dous fíos, un cada vez, e o `Arc`, un contador de referencias que se pode compartir entre fíos, mantén vivo o que comparten mentres o use calquera deles.
 6. **O `Waker`** da xanela é o que usa o fío lector para espertala ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcwindowrs)): garda o *handle* da xanela, e pódese copiar e levar a outro fío.
 7. **A sesión** lánzase xa, antes do primeiro fotograma: así o programa empeza canto antes, e o que escriba mentres meiga compón ese fotograma xa está no terminal, ou chega en seguida ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Se non se pode lanzar, a mensaxe vai ao terminal coma se a escribise o programa, e o primeiro fotograma móstraa.
-8. **`Pty::input`** dá unha copia da entrada da sesión para a vista, que a usa para as teclas e os eventos de foco, desde a subfase 1.7 ([`key` e `focus`](#as-teclas-e-o-foco-key-e-focus)), para os informes do rato e o texto que se pega, desde a 1.8 ([`mouse.rs`](#cratesmeigasrcmousers) e [`clipboard.rs`](#cratesmeigasrcclipboardrs)), e para as poucas respostas que aparecen cando ela remata unha actualización sincronizada (ver [`update`](#poñer-ao-día-update)).
-9. **O punteiro**, desde a subfase 1.8, é a barra de texto ([`Pointer::Text`](meiga-win.md#cratesmeiga-winsrcwindowrs)): os clics seleccionan texto mentres o programa non pide o rato. A xanela empeza coa frecha, a da súa clase, que queda nos modos de medición. Despois, o rato da vista escolle o punteiro en cada movemento ([`moved`](#mover-o-rato-moved)).
+8. **`Pty::input`** dá unha copia da entrada da sesión para a vista, que a usa para as teclas e os eventos de foco, desde a subfase 1.7 ([`key` e `focus`](#as-teclas-e-o-foco-key-e-focus)), para os informes do rato e o texto que se pega, desde a 1.8 ([`mouse.rs`](#cratesmeigasrcmousers) e [`clipboard.rs`](#cratesmeigasrcclipboardrs)), para cambiar o tamaño da pseudoconsola, desde a 1.9 ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)), e para as poucas respostas que aparecen cando ela remata unha actualización sincronizada (ver [`update`](#poñer-ao-día-update)).
+9. **A vista** recibe tamén, desde a subfase 1.9, as fontes do sistema, o DPI e o tamaño da área cliente ([`TerminalView`](#terminalview)): para a fonte nova, para a barra de desprazamento e para a grella cando cambie o tamaño da xanela.
+10. **O punteiro**, desde a subfase 1.8, é a barra de texto ([`Pointer::Text`](meiga-win.md#cratesmeiga-winsrcwindowrs)): os clics seleccionan texto mentres o programa non pide o rato. A xanela empeza coa frecha, a da súa clase, que queda nos modos de medición. Despois, o rato da vista escolle o punteiro en cada movemento ([`moved`](#mover-o-rato-moved)).
 
 ### `wake`: o aviso do fío lector
 
@@ -561,8 +582,25 @@ O fío lector espertou a xanela con `WM_WAKE`: cambiou o título, a pantalla ou,
 fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
     match event {
         Event::Resized { size, minimized } => {
-            self.frames.resized(window, size, minimized, &mut self.content)?;
+            // A minimized window keeps its grid.
+            if let Content::Terminal(view) = &mut self.content
+                && !minimized
+            {
+                view.resized(size);
+            }
+            self.frames
+                .resized(window, size, minimized, &mut self.content)?;
             if self.is_bench() {
+                self.frames.schedule(window)?;
+            }
+        }
+        Event::DpiChanged { dpi } => {
+            if let Content::Terminal(view) = &mut self.content {
+                view.dpi_changed(dpi);
+                // The new size of the window, if it changes, comes right
+                // after this event. A frame now would give the terminal
+                // and the program the grid of the new cells in the old
+                // window, which does not last: the frame comes after it.
                 self.frames.schedule(window)?;
             }
         }
@@ -596,7 +634,8 @@ fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
         | Event::MouseUp { .. }
         | Event::MouseMoved { .. }
         | Event::Wheel { .. }
-        | Event::CaptureLost => {
+        | Event::CaptureLost
+        | Event::MouseLeft => {
             if let Content::Terminal(view) = &mut self.content {
                 let response = view.mouse(window, &event);
                 self.respond(window, response)?;
@@ -616,16 +655,18 @@ fn paint(&mut self, _window: &Window, dc: HDC, area: Rect) -> Result<(), Handler
 | `Wake` | O fío lector avisou: `wake` pon o título e o texto que copiou o programa e, se cambiou a pantalla, pide un fotograma; coa xanela minimizada, a vista só fai o que non pode esperar. |
 | `Focus` | A xanela gañou ou perdeu o foco ([`Event::Focus`](meiga-win.md#cratesmeiga-winsrceventrs)): o cursor do terminal cambia, o programa sabe do foco se o pediu ([`focus`](#as-teclas-e-o-foco-key-e-focus)), e pídese un fotograma para debuxar o cursor. Nos modos de medición, nada. |
 | `FrameTimer` | Toca debuxar. Nun modo de medición, primeiro avanza un paso e marca as zonas que cambian. Despois, `Frames` debuxa o fotograma pendente; se non había ningún, é o momento que pediu o terminal, como o seguinte cambio do pestanexo do cursor, e pide un fotograma para el ([`timer`](#pedir-un-fotograma)). Coa xanela minimizada, o temporizador só se programa para a hora límite dunha actualización sincronizada, e a vista remátaa sen debuxar nada. Nun modo de medición, despois pide o seguinte fotograma. |
-| `Resized` | `Frames` adapta o *framebuffer* ao tamaño novo, ou, se a xanela se minimizou, deixa de debuxar, e o temporizador queda só para a hora límite dunha actualización sincronizada aberta, se a hai. Nun modo de medición, ao restaurala, os fotogramas continúan. A grella do terminal non cambia: se a xanela medra, as marxes medran, e se se fai pequena, a grella córtase. |
+| `Resized` | `Frames` adapta o *framebuffer* ao tamaño novo, ou, se a xanela se minimizou, deixa de debuxar, e o temporizador queda só para a hora límite dunha actualización sincronizada aberta, se a hai. Nun modo de medición, ao restaurala, os fotogramas continúan. Desde a subfase 1.9, antes diso, a vista calcula a grella que enche a xanela ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)), e dálla ao terminal e ao programa no seguinte fotograma, como moito unha vez por intervalo. Coa xanela minimizada, que ten tamaño 0 × 0, a grella non cambia: o terminal e o programa repartirían o texto para nada, e ao restaurala a xanela volta ao tamaño de antes. Ata a 1.8, a grella non cambiaba nunca: se a xanela medraba, as marxes medraban, e se se facía pequena, a grella cortábase. |
+| `DpiChanged` | Desde a subfase 1.9. A xanela pasou a un monitor con outra escala, ou cambiou a escala do seu ([`Event::DpiChanged`](meiga-win.md#cratesmeiga-winsrceventrs)): a vista crea a fonte, a barra de desprazamento e o cursor para o DPI novo ([`dpi_changed`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)). Chega antes ca o tamaño que suxire Windows, que chega de inmediato coma `Resized` e calcula a grella coas celas novas ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)). Por iso, desde a revisión do código, non se debuxa no momento: [`schedule`](#pedir-un-fotograma) pide un fotograma ao temporizador, e o tamaño novo chega antes. O seu fotograma dálles ao terminal e ao programa a grella nova, unha vez, e debuxa a xanela enteira; o do temporizador xa non atopa nada que facer. Se o tamaño da xanela non cambia, é o do temporizador o que lles dá a grella das celas novas na mesma xanela. Nos modos de medición, nada. |
 | `SizeMoveStarted` e `SizeMoveEnded` | O usuario empeza e remata de mover ou redimensionar a xanela: mentres tanto, o *framebuffer* reserva memoria con marxe ([`Fit::Room`](meiga-render.md#fit-e-surface)). Ao rematar, preséntase o que cambiase mentres tanto. |
-| `Key` | Desde a subfase 1.7. Unha tecla baixou ou subiu ([`Event::Key`](meiga-win.md#cratesmeiga-winsrckeyboardrs)): a vista envíalla ao programa ([`key`](#as-teclas-e-o-foco-key-e-focus)) ou, desde a 1.8, cóllea para copiar, pegar ou quitar a selección. Despois, `respond` fai o que pide a vista. A tecla en si non pide ningún fotograma: o que escriba o programa en resposta chega coma calquera saída; só se pide un se cambiou a selección. Nos modos de medición, nada. |
-| `MouseDown`, `MouseUp`, `MouseMoved`, `Wheel` e `CaptureLost` | Desde a subfase 1.8. Un botón do rato baixou ou subiu, o rato moveuse, xirou a roda, ou outra xanela colleu o rato ([`Event`](meiga-win.md#cratesmeiga-winsrceventrs)): a vista pásallo ao seu rato, que selecciona, copia e pega, ou envíalle ao programa os clics, os movementos e a roda ([`mouse`](#o-rato-mouse-e-dialog_closed)). Despois, `respond` fai o que pide a vista. Nos modos de medición, nada. |
+| `Key` | Desde a subfase 1.7. Unha tecla baixou ou subiu ([`Event::Key`](meiga-win.md#cratesmeiga-winsrckeyboardrs)): a vista envíalla ao programa ([`key`](#as-teclas-e-o-foco-key-e-focus)) ou, desde a 1.8, cóllea para copiar, pegar ou quitar a selección e, desde a 1.9, para mover a vista do historial e para o zoom. Despois, `respond` fai o que pide a vista. A tecla en si non pide ningún fotograma: o que escriba o programa en resposta chega coma calquera saída; só se pide un se cambiou a selección, a vista do historial ou a fonte. Nos modos de medición, nada. |
+| `MouseDown`, `MouseUp`, `MouseMoved`, `Wheel`, `CaptureLost` e `MouseLeft` | Desde a subfase 1.8. Un botón do rato baixou ou subiu, o rato moveuse, xirou a roda, ou outra xanela colleu o rato; e, desde a 1.9, o punteiro saíu da xanela, despois de pasar pola franxa da barra de desprazamento (`MouseLeft`) ([`Event`](meiga-win.md#cratesmeiga-winsrceventrs)): a vista pásallo ao seu rato, que selecciona, copia e pega, move a vista do historial, ou envíalle ao programa os clics, os movementos e a roda; e coa roda e Ctrl, a vista fai o zoom ([`mouse`](#o-rato-mouse-e-dialog_closed)). Despois, `respond` fai o que pide a vista. Nos modos de medición, nada. |
 
 - `WM_PAINT` (`paint`) copia a zona que pide Windows desde o *framebuffer*. `_window`: o guión baixo indica que o parámetro non se usa.
 - `is_bench` di se o contido é un modo de medición: `matches!` compara un valor cun patrón e dá `true` ou `false`.
-- **Todos os eventos.** Ata a subfase 1.7, o último brazo era `_ => {}`, e o rato non facía nada. Desde a 1.8, o `match` nomea todas as variantes de `Event`, sen `_`: se `meiga-win` engade outra, o programa non compila ata que `App` decida que facer con ela.
+- **Todos os eventos.** Ata a subfase 1.7, o último brazo era `_ => {}`, e o rato non facía nada. Desde a 1.8, o `match` nomea todas as variantes de `Event`, sen `_`: se `meiga-win` engade outra, o programa non compila ata que `App` decida que facer con ela. Así chegaron na 1.9 `DpiChanged` e `MouseLeft`.
+- **A orde en `Resized`.** Desde a subfase 1.9, a vista recibe o tamaño antes ca `Frames`: o fotograma que compón `Frames::resized` pon ao día a vista, e con ela xa vai a grella nova, se pasou un intervalo desde o cambio anterior ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). `if let … && !minimized` encadea o patrón e a condición (*let chains*).
 - `Event::MouseDown { .. } | …`: un brazo para varios patróns, separados por `|`. `{ .. }` encaixa coa variante sen mirar os seus campos, e a vista recibe o evento enteiro (`&event`), que o seu rato volta mirar ([`Mouse::event`](#mouse)).
-- **Os préstamos.** En `Focus`, `view` é unha referencia `&mut` a `self.content`. Despois de `view.focus(…)` xa non se usa, e Rust permite pasar outra vez `&mut self.content` a `Frames::changed`. O mesmo en `Key` e no rato: `respond` colle `&mut self` enteiro, e chámase cando `view` xa non se usa. Por iso a vista devolve o que hai que facer, en vez de pedir ela o fotograma: non ten `Frames`, e `Frames::changed` necesita o contido enteiro, onde está ela.
+- **Os préstamos.** En `Focus`, `view` é unha referencia `&mut` a `self.content`. Despois de `view.focus(…)` xa non se usa, e Rust permite pasar outra vez `&mut self.content` a `Frames::changed`. O mesmo en `Resized`, desde a 1.9, e en `Key` e no rato: `respond` colle `&mut self` enteiro, e chámase cando `view` xa non se usa. Por iso a vista devolve o que hai que facer, en vez de pedir ela o fotograma: non ten `Frames`, e `Frames::changed` necesita o contido enteiro, onde está ela.
 - `if let Content::Bench(bench) = &mut self.content`: entra só se o contido é un modo de medición, e dá unha referencia a el.
 
 ### `respond`: o que pide a vista
@@ -636,6 +677,7 @@ fn respond(&mut self, window: &Window, response: Response) -> Result<(), Handler
         if let Content::Terminal(view) = &mut self.content {
             view.dialog_closed(window);
         }
+        self.catch_up(window)?;
         // While the message box was open, the window lost its wakes, and
         // maybe some paint: what changed meanwhile is shown now.
         window.invalidate(None);
@@ -646,15 +688,29 @@ fn respond(&mut self, window: &Window, response: Response) -> Result<(), Handler
     }
     Ok(())
 }
+
+fn catch_up(&mut self, window: &Window) -> Result<(), HandlerError> {
+    let Content::Terminal(view) = &self.content else {
+        return Ok(());
+    };
+    let dpi = window.dpi();
+    if dpi != view.dpi() {
+        self.event(window, Event::DpiChanged { dpi })?;
+    }
+    let size = window.client_size()?;
+    let minimized = window.is_minimized();
+    self.event(window, Event::Resized { size, minimized })
+}
 ```
 
 Desde a subfase 1.8. Despois dunha tecla ou dun evento do rato, fai o que lle pide a vista nun [`Response`](#context-e-response):
 
 - **Pechouse a caixa de mensaxe** que pregunta antes de pegar ([`paste`](#pegar-paste)). A caixa ten o seu propio bucle de mensaxes, que lle pasa tamén as da xanela ao *window procedure*, pero, mentres estaba aberta, o *handler* seguía ocupado na tecla ou no clic que a abriu, esperando por ela: `meiga-win` non o pode chamar outra vez, e descarta os eventos que chegan entón ([Código › meiga-win › `Handler`](meiga-win.md#handler), [Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). Ao pecharse:
   1. **A vista esquece as teclas que colleu e os botóns do rato** ([`dialog_closed`](#o-rato-mouse-e-dialog_closed)): a súa soltura puido chegar mentres tanto, e perderse. O programa recibe agora a soltura dos botóns cuxa baixada recibiu.
-  2. **A xanela píntase enteira** desde o *framebuffer* (`invalidate`): quizais se perdeu algún `WM_PAINT`.
-  3. **`wake` le o que cambiou mentres tanto.** Os avisos do fío lector tamén se perderon e, coas súas marcas postas, o fío lector non envía outros ([`Shared`](#shared-e-lock)): o título, o texto que copiou o programa e a pantalla agardan a que alguén mire.
-- **Cambiou a selección:** pídese un fotograma (`changed`), que copia e debuxa só as celas onde cambiou ([`update`](#poñer-ao-día-update)).
+  2. **A vista ponse ao día coa escala e co tamaño da xanela** (`catch_up`), desde a revisión do código da subfase 1.9: mentres a caixa estaba aberta, a xanela puido cambiar de tamaño ou de escala, por exemplo se cambia a escala do monitor, ou se outro programa lle cambia o tamaño, e eses eventos tamén se perderon. Windows aplica igual o tamaño que suxire o cambio de escala ([`WM_DPICHANGED`](meiga-win.md#cratesmeiga-winsrcwindowrs)), pero a vista, o terminal e o programa seguirían coa grella de antes ata o seguinte cambio. `catch_up` trata a escala e o tamaño de agora coma se acabasen de chegar, na mesma orde ca Windows: primeiro a escala da xanela, se non é a da vista ([`dpi`](#terminalview)), e despois o tamaño, sempre. Co mesmo tamaño, `Resized` non fai nada: a vista non cambia a grella, e `Frames` non toca o *framebuffer*. Minimizada, a xanela deixa de debuxar, coma con calquera `Resized`. `catch_up` chama a `event` desde `respond`, que xa vén de `event`: non hai ningún problema, porque `App` é un valor normal, sen *lock* nin `RefCell`, e cada chamada colle `&mut self` cando a anterior xa non o usa. `check-resize.ps1` compróbao: cambia o tamaño da xanela coa caixa aberta, e o programa recibe a grella nova ao pechala ([Código › ferramentas](ferramentas.md#toolscheck-resizeps1)).
+  3. **A xanela píntase enteira** desde o *framebuffer* (`invalidate`): quizais se perdeu algún `WM_PAINT`.
+  4. **`wake` le o que cambiou mentres tanto.** Os avisos do fío lector tamén se perderon e, coas súas marcas postas, o fío lector non envía outros ([`Shared`](#shared-e-lock)): o título, o texto que copiou o programa e a pantalla agardan a que alguén mire.
+- **Cambiou a selección** ou, desde a subfase 1.9, a vista do historial ou a fonte: pídese un fotograma (`changed`), que copia e debuxa só as celas onde cambiou ([`update`](#poñer-ao-día-update)) ou, cunha fonte nova, a xanela enteira. O zoom da roda xa o fixo a vista ([`mouse`](#o-rato-mouse-e-dialog_closed)), e `respond` non o ve.
 - **Desde a revisión do código.** Antes, ao pecharse a caixa, `respond` só pintaba a xanela e chamaba a `wake`, e a vista non sabía o que pasara mentres tanto: unha tecla collida que subira na caixa, coma o C de Ctrl+C se Ctrl+V abriu a caixa co C aínda abaixo, comía a súa seguinte pulsación; e o programa nunca recibía a soltura dun botón que se premeu para el antes de abrila. `check-mouse.ps1` comproba os dous casos ([Código › ferramentas](ferramentas.md#toolscheck-mouseps1)).
 
 ## `crates/meiga/src/session.rs`
@@ -885,15 +941,20 @@ O que mostra o terminal cando remata o programa, coma no Windows Terminal: por e
 
 ## `crates/meiga/src/view.rs`
 
-A **vista do terminal**: o terminal na xanela. Garda a súa propia copia da pantalla, un [`Screen`](meiga-core.md#cratesmeiga-coresrctermscreenrs), que pon ao día desde o terminal da sesión antes de cada fotograma, e debuxa desde ela as celas, as súas liñas e o cursor. É a [`Scene`](#scene) do terminal. Desde a subfase 1.7 envía as teclas ao programa e, desde a 1.8, colle as que copian, pegan ou quitan a selección, debuxa as celas seleccionadas e lévalle os eventos do rato ao seu [`Mouse`](#cratesmeigasrcmousers).
+A **vista do terminal**: o terminal na xanela. Garda a súa propia copia da pantalla, un [`Screen`](meiga-core.md#cratesmeiga-coresrctermscreenrs), que pon ao día desde o terminal da sesión antes de cada fotograma, e debuxa desde ela as celas, as súas liñas e o cursor. É a [`Scene`](#scene) do terminal. Desde a subfase 1.7 envía as teclas ao programa e, desde a 1.8, colle as que copian, pegan ou quitan a selección, debuxa as celas seleccionadas e lévalle os eventos do rato ao seu [`Mouse`](#cratesmeigasrcmousers). Desde a 1.9, calcula a grella que enche a xanela e dálla ao terminal e ao programa, ao ritmo dos fotogramas; colle tamén as teclas do historial e do zoom; crea a fonte de novo co zoom e coa escala; e debuxa a barra de desprazamento do seu rato ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)), despois da grella ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)).
 
 **Por que unha copia.** Compoñer leva tempo, e o fío lector, que está lendo a saída do programa, non debe agardar por iso. Baixo o *lock* só se copian as celas que cambiaron; compoñer e presentar fanse despois, fóra del ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
 
 ### Constantes
 
 ```rust
+/// The font: the first of these families that is installed, at 12 points,
+/// as in Windows Terminal. The zoom changes its size a point at a time,
+/// from 6 to 72 points.
 pub const FONT_FAMILIES: [&str; 2] = ["Cascadia Mono", "Consolas"];
-pub const FONT_POINTS: f32 = 12.0;
+pub const FONT_POINTS: u16 = 12;
+const MIN_POINTS: u16 = 6;
+const MAX_POINTS: u16 = 72;
 
 /// How far dim text (SGR 2) goes from its colour towards the one of its
 /// background: a third of the way, out of 255.
@@ -906,12 +967,30 @@ const BASE_DPI: u32 = 96;
 const VK_C: u16 = 0x43;
 const VK_V: u16 = 0x56;
 const VK_ESCAPE: u16 = 0x1b;
+/// Page Up, Page Down, End, Home, and the up and down arrows.
+const VK_PRIOR: u16 = 0x21;
+const VK_NEXT: u16 = 0x22;
+const VK_END: u16 = 0x23;
+const VK_HOME: u16 = 0x24;
+const VK_UP: u16 = 0x26;
+const VK_DOWN: u16 = 0x28;
+/// The 0, the + and the - keys of the main keyboard and of the numeric
+/// keypad. On the main keyboard, the + and the - are the keys with + and -
+/// of the Spanish layout, and with = and - of the US one.
+const VK_0: u16 = 0x30;
+const VK_NUMPAD0: u16 = 0x60;
+const VK_ADD: u16 = 0x6b;
+const VK_SUBTRACT: u16 = 0x6d;
+const VK_OEM_PLUS: u16 = 0xbb;
+const VK_OEM_MINUS: u16 = 0xbd;
 ```
 
 - **A fonte:** Cascadia Mono ou, se non está, Consolas, a 12 puntos, como no Windows Terminal. Antes estaban na demo; agora úsanas o terminal e o modo `--bench text`, que así debuxa coa mesma fonte.
+- **Os puntos**, desde a subfase 1.9, son un número enteiro, un `u16`, e non un `f32`: o zoom cambia o tamaño dun punto en punto, de `MIN_POINTS`, 6, a `MAX_POINTS`, 72, e Ctrl+0 volta a `FONT_POINTS` ([`zoom` e `set_points`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)). Quen crea unha fonte convérteos con `f32::from`, sen perder nada ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 12).
 - `DIM`: o texto tenue (`SGR 2`) vai un terzo do camiño, 85 de 255, desde a súa cor cara á do seu fondo ([`Rgb::mix`](meiga-core.md#cratesmeiga-coresrccolorrs)).
 - `BASE_DPI`: os puntos por polgada ao 100 %, para escalar o grosor do cursor ([`thickness`](#o-pestanexo-caret)).
 - `VK_C`, `VK_V` e `VK_ESCAPE`, desde a subfase 1.8: os códigos de tecla virtual de Windows da C, da V e de Esc, as teclas que colle meiga ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)). O evento da tecla trae o código coma un número ([`KeyEvent`](meiga-core.md#cratesmeiga-coresrcinputrs)), e o crate non depende de `windows-sys` ([`Cargo.toml`](#cratesmeigacargotoml)), así que as define el.
+- **As teclas do historial e do zoom**, desde a subfase 1.9: RePáx (`VK_PRIOR`), AvPáx (`VK_NEXT`), Fin, Inicio e as frechas arriba e abaixo; e o 0, o `+` e o `-`, do teclado principal e do numérico (`VK_NUMPAD0`, `VK_ADD` e `VK_SUBTRACT`). No principal, `VK_OEM_PLUS` é a tecla de `+` no teclado español e a de `=` no estadounidense, e `VK_OEM_MINUS`, a de `-` nos dous: os atallos usan os códigos de tecla virtual, e non os caracteres, así que o zoom usa as mesmas teclas en calquera distribución, teñan o carácter que teñan ([Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)).
 
 ### `TerminalView`
 
@@ -920,8 +999,16 @@ pub struct TerminalView {
     shared: Arc<Mutex<Shared>>,
     input: Option<Input>,
     waker: Waker,
+    fonts: FontSystem,
     font: Font,
+    points: u16,
+    dpi: u32,
     cell: Size,
+    client: Size,
+    grid: GridSize,
+    wanted: Option<GridSize>,
+    resized_at: Option<Instant>,
+    redraw: bool,
     screen: Screen,
     caret: Caret,
     mouse: Mouse,
@@ -936,27 +1023,50 @@ pub struct TerminalView {
 | Campo | Que garda |
 |---|---|
 | `shared` | O que comparte co fío lector: o terminal e as súas marcas ([`Shared`](#shared-e-lock)). |
-| `input` | A entrada da sesión, para as teclas, os eventos de foco e as respostas que aparecen cando a vista remata unha actualización sincronizada; desde a subfase 1.8, tamén para os informes do rato e o texto que se pega. `None` se o programa non se lanzou. |
+| `input` | A entrada da sesión, para as teclas, os eventos de foco e as respostas que aparecen cando a vista remata unha actualización sincronizada; desde a subfase 1.8, tamén para os informes do rato e o texto que se pega; e desde a 1.9, para darlle ao programa o tamaño da grella ([`Input::resize`](meiga-win.md#input)). `None` se o programa non se lanzou. |
 | `waker` | Para espertar a xanela cando esa actualización cambia o título ou trae un texto para o portapapeis. |
+| `fonts` | Desde a subfase 1.9. As fontes do sistema ([`FontSystem`](meiga-render.md#fontsystem)), para crear a fonte nova cando cambian o zoom ou a escala. |
 | `font` e `cell` | A fonte, coa súa caché de glifos, e o tamaño da súa cela. |
+| `points` e `dpi` | Desde a subfase 1.9. O tamaño da fonte, en puntos, que cambia co zoom, e os puntos por polgada da xanela, que cambian coa escala. |
+| `client` | Desde a subfase 1.9. O tamaño da área cliente da xanela, en píxeles. |
+| `grid` | Desde a subfase 1.9. A grella que teñen o terminal e o programa. |
+| `wanted` e `resized_at` | Desde a subfase 1.9. A grella que enche a xanela, mentres o terminal e o programa aínda non a teñen, e cando lla deu a vista por última vez: cambia como moito unha vez por intervalo dos fotogramas, porque os dous reparten o seu texto cada vez ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). |
+| `redraw` | Desde a subfase 1.9. Hai que debuxar a xanela enteira outra vez, porque cambiou a fonte. |
 | `screen` | A copia da pantalla: as celas, o cursor, a paleta e o que cambiou desde o último fotograma. |
 | `caret` | Como se ve e como pestanexa o cursor ([`Caret`](#o-pestanexo-caret)). |
-| `mouse` | Desde a subfase 1.8. O rato: os clics, a selección que medra, os botóns que se premeron para o programa e a roda ([`Mouse`](#mouse)). |
+| `mouse` | Desde a subfase 1.8. O rato: os clics, a selección que medra, os botóns que se premeron para o programa e a roda ([`Mouse`](#mouse)); desde a 1.9, tamén a barra de desprazamento e a vista que se move soa. |
 | `taken` | Desde a subfase 1.8. As teclas que colleu meiga ao baixar, polo seu código de tecla virtual: ata que soben, o programa non as recibe ([`key`](#as-teclas-e-o-foco-key-e-focus)). |
 | `run` e `answers` | Os caracteres dun tramo de celas e as respostas, que se gardan para non reservar memoria cada vez. |
 | `encoder` e `keys` | Desde a subfase 1.7. O que converte as teclas no que le o programa ([`KeyEncoder`](meiga-core.md#keyencoder)), e o que le para unha tecla, que se garda polo mesmo motivo. |
 
 ```rust
-pub fn new(shared: Arc<Mutex<Shared>>, input: Option<Input>, waker: Waker, font: Font, dpi: u32) -> Self {
+pub fn new(
+    shared: Arc<Mutex<Shared>>,
+    input: Option<Input>,
+    waker: Waker,
+    fonts: FontSystem,
+    font: Font,
+    dpi: u32,
+    client: Size,
+) -> Self {
+    let grid = lock(&shared).terminal.size();
     Self {
         shared,
         input,
         waker,
+        fonts,
         cell: font.cell(),
         font,
+        points: FONT_POINTS,
+        dpi,
+        client,
+        grid,
+        wanted: None,
+        resized_at: None,
+        redraw: false,
         screen: Screen::new(),
         caret: Caret::new(dpi, Instant::now()),
-        mouse: Mouse::new(),
+        mouse: Mouse::new(dpi, client),
         taken: Vec::new(),
         run: Vec::new(),
         answers: Vec::new(),
@@ -967,17 +1077,21 @@ pub fn new(shared: Arc<Mutex<Shared>>, input: Option<Input>, waker: Waker, font:
 ```
 
 - **`new`**: `cell: font.cell()` vai antes ca `font` porque os campos se avalían na orde na que se escriben, e despois de mover a fonte ao seu campo xa non se podería usar. A copia da pantalla empeza baleira, sen celas: a primeira copia dálle o tamaño do terminal e marca todas as celas como cambiadas. O rato le xa as preferencias do rato de Windows.
-- `area` dá os píxeles dunhas columnas dunha fila, e `shared` dálle a [`App::wake`](#wake-o-aviso-do-fío-lector) o que comparte co fío lector. Desde a subfase 1.8, `is_focused` dille se a xanela ten o foco, para o texto que copia un programa.
+- Desde a subfase 1.9, recibe tamén as fontes do sistema, o DPI e o tamaño da área cliente, e le a grella que xa ten o terminal: a que calculou [`terminal`](#appnew-e-terminal), coa mesma conta ca `resized`. O programa xa a ten, así que non hai nada pendente (`wanted` a `None`). A fonte empeza en `FONT_POINTS`, e o rato recibe o DPI e o tamaño da área cliente, para a barra de desprazamento.
+- `area` dá os píxeles dunhas columnas dunha fila, e `shared` dálle a [`App::wake`](#wake-o-aviso-do-fío-lector) o que comparte co fío lector. Desde a subfase 1.8, `is_focused` dille se a xanela ten o foco, para o texto que copia un programa. E, desde a revisión do código da 1.9, `dpi` dálle a [`App::catch_up`](#respond-o-que-pide-a-vista) a escala para a que debuxa a vista, para saber se cambiou mentres estaba aberta a caixa de mensaxe.
 
 ### As teclas e o foco: `key` e `focus`
 
 ```rust
 pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
     // A key that meiga took does not reach the program while it repeats,
-    // nor when it goes up.
+    // nor when it goes up. The ones that move the view or zoom do it
+    // again while they repeat.
     if let Some(taken) = self.taken.iter().position(|&key| key == event.key) {
         if !event.down {
             self.taken.swap_remove(taken);
+        } else if repeats(event.key) {
+            return self.shortcut(window, event).unwrap_or_default();
         }
         return Response::default();
     }
@@ -992,7 +1106,10 @@ pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
     }
     let mut response = Response::default();
     if event.down && !is_modifier(event.key) {
-        response.redraw = lock(&self.shared).terminal.clear_selection();
+        let mut shared = lock(&self.shared);
+        let cleared = shared.terminal.clear_selection();
+        let back = shared.terminal.scroll(Scroll::Bottom);
+        response.redraw = cleared || back;
     }
     let Some(input) = &self.input else {
         return response;
@@ -1006,30 +1123,39 @@ pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
 
 fn shortcut(&mut self, window: &Window, event: &KeyEvent) -> Option<Response> {
     let controls = event.controls;
-    // Ctrl, and Shift or not, but not Alt, nor AltGr.
-    let ctrl = controls.ctrl() && !controls.alt();
+    let (ctrl, alt, shift) = (controls.ctrl(), controls.alt(), controls.shift());
     match event.key {
-        VK_C if ctrl => clipboard::copy(window, &self.shared, true).then_some(Response {
-            redraw: true,
-            dialog: false,
-        }),
-        VK_V if ctrl => {
-            let redraw = lock(&self.shared).terminal.clear_selection();
-            let dialog = self
-                .input
-                .as_ref()
-                .is_some_and(|input| clipboard::paste(window, &self.shared, input));
-            Some(Response { redraw, dialog })
+        // Ctrl, and Shift or not, but not Alt, nor AltGr.
+        VK_C if ctrl && !alt => {
+            clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW)
         }
-        VK_ESCAPE if !controls.ctrl() && !controls.alt() && !controls.shift() => {
-            lock(&self.shared)
-                .terminal
-                .clear_selection()
-                .then_some(Response {
-                    redraw: true,
-                    dialog: false,
-                })
+        VK_V if ctrl && !alt => {
+            let cleared = lock(&self.shared).terminal.clear_selection();
+            let pasted = self.input.as_ref().map_or_else(Response::default, |input| {
+                clipboard::paste(window, &self.shared, input)
+            });
+            Some(Response {
+                redraw: cleared || pasted.redraw,
+                ..pasted
+            })
         }
+        VK_ESCAPE if !ctrl && !alt && !shift => lock(&self.shared)
+            .terminal
+            .clear_selection()
+            .then_some(Response::REDRAW),
+        // The history, as in Windows Terminal: Shift and Page Up or Page
+        // Down, with Ctrl or without it, by pages; and Ctrl+Shift with
+        // the arrows, by rows, or with Home and End, to its ends.
+        VK_PRIOR if shift && !alt => self.scroll_history(Scroll::PageUp),
+        VK_NEXT if shift && !alt => self.scroll_history(Scroll::PageDown),
+        VK_UP if ctrl && shift && !alt => self.scroll_history(Scroll::Rows(1)),
+        VK_DOWN if ctrl && shift && !alt => self.scroll_history(Scroll::Rows(-1)),
+        VK_HOME if ctrl && shift && !alt => self.scroll_history(Scroll::Top),
+        VK_END if ctrl && shift && !alt => self.scroll_history(Scroll::Bottom),
+        // The zoom: Ctrl alone.
+        VK_OEM_PLUS | VK_ADD if ctrl && !alt && !shift => Some(self.zoom(1)),
+        VK_OEM_MINUS | VK_SUBTRACT if ctrl && !alt && !shift => Some(self.zoom(-1)),
+        VK_0 | VK_NUMPAD0 if ctrl && !alt && !shift => Some(self.set_points(FONT_POINTS)),
         _ => None,
     }
 }
@@ -1057,26 +1183,73 @@ pub fn focus(&mut self, focused: bool, now: Instant) {
 ```
 
 - **`key`**, desde a subfase 1.7: envía unha tecla ao programa ([ADR 0014](../adr/0014-o-teclado.md)). Desde a 1.8, antes mira se é unha das que colle meiga ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 4); recibe tamén a xanela, para o portapapeis e a caixa de mensaxe, e devolve o que ten que facer a xanela despois ([`Response`](#context-e-response)), que fai [`App::respond`](#respond-o-que-pide-a-vista). Paso a paso:
-  1. **Unha tecla collida** (`taken`) non chega ao programa mentres se repite nin cando sobe: o programa non recibiu a súa baixada, así que tampouco recibe o resto. Cando sobe, sae da lista: `swap_remove` pon a última no seu sitio, en vez de mover todas as que van despois, porque a orde non importa.
+  1. **Unha tecla collida** (`taken`) non chega ao programa mentres se repite nin cando sobe: o programa non recibiu a súa baixada, así que tampouco recibe o resto. Cando sobe, sae da lista: `swap_remove` pon a última no seu sitio, en vez de mover todas as que van despois, porque a orde non importa. Desde a subfase 1.9, as que moven a vista do historial ou fan o zoom (`repeats`) fan o seu outra vez mentres se repiten, coma no Windows Terminal: Maiús+RePáx pasa páxinas mentres se mantén premida ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 8 e 12). Se mentres tanto o atallo deixa de collela, por exemplo porque subiu Maiús, `unwrap_or_default` dá a resposta por defecto: nada, e a repetición tampouco vai ao programa.
   2. **Un atallo.** Se a tecla baixa e `shortcut` a colle, meiga fai o que toca, e a tecla entra en `taken`. Se se mostrou a caixa de mensaxe, non: a tecla sobe na caixa, e a vista non a vería subir. `if event.down && let Some(response) = …` encadea unha condición e un `if let` (*let chains*, da edición 2024), e `shortcut` só se chama se a tecla baixa.
-  3. **Calquera outra** vai ao programa, coma na 1.7. Se baixa e non é unha modificadora (`is_modifier`), quita antes a selección, coma no Windows Terminal, e, se había unha, pide un fotograma (`redraw`). Se o programa non se lanzou, non hai a quen enviala.
-  - **Os modos** saen do terminal da sesión, baixo o *lock*: se o ConPTY activou o win32-input-mode, e os modos das frechas e do Intro. `modes()` dá unha copia, e o *lock* sóltase ao final da mesma liña, porque o `MutexGuard` é temporal: o resto faise fóra del. Quitar a selección colle o *lock* noutra liña, do mesmo xeito.
+  3. **Calquera outra** vai ao programa, coma na 1.7. Se baixa e non é unha modificadora (`is_modifier`), quita antes a selección, coma no Windows Terminal, e, desde a subfase 1.9, leva a vista á pantalla, onde escribe o programa ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs) con `Scroll::Bottom`): o que se teclea vese ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 7). Se había selección, ou a vista estaba no historial, pide un fotograma (`redraw`). Se o programa non se lanzou, non hai a quen enviala.
+  - **Os modos** saen do terminal da sesión, baixo o *lock*: se o ConPTY activou o win32-input-mode, e os modos das frechas e do Intro. `modes()` dá unha copia, e o *lock* sóltase ao final da mesma liña, porque o `MutexGuard` é temporal: o resto faise fóra del. Quitar a selección e levar a vista á pantalla collen o *lock* dentro do bloque do `if`, e sóltano ao rematar el.
   - **O que le o programa** escríbeo [`KeyEncoder`](meiga-core.md#keyencoder) en `keys`, que se baleira e se reutiliza: enviar unha tecla non reserva memoria.
   - **`input.write`** non espera: deixa os bytes nun búfer da sesión e avisa ao seu fío escritor, que os escribe na tubaxe do ConPTY ([Código › meiga-win › `Input`](meiga-win.md#input)). Así, a xanela nunca queda bloqueada porque o programa non le.
 
-**`shortcut`**, desde a subfase 1.8: o que fai unha tecla que baixa se a colle meiga, ou `None` se vai ao programa.
+**`shortcut`**, desde a subfase 1.8: o que fai unha tecla que baixa se a colle meiga, ou `None` se vai ao programa. Desde a 1.9, chámase tamén cando se repite unha das que repiten.
 
 | Tecla | Que fai |
 |---|---|
 | Ctrl+C e Ctrl+Maiús+C | Se hai selección, cópiaa e quítaa ([`copy`](#copiar-copy)). Se non, `copy` devolve `false`, `then_some` dá `None`, e a tecla vai ao programa, que a le coma sempre: Ctrl+C segue parando os programas cando non hai nada seleccionado. |
-| Ctrl+V e Ctrl+Maiús+V | Quita a selección e pega o portapapeis no programa ([`paste`](#pegar-paste)). Cóllea sempre, aínda que o programa non se lanzase: Maiús+Insert segue indo ao programa, para os que pegan eles mesmos. |
+| Ctrl+V e Ctrl+Maiús+V | Quita a selección e pega o portapapeis no programa ([`paste`](#pegar-paste)), que desde a subfase 1.9 leva a vista á pantalla. Cóllea sempre, aínda que o programa non se lanzase: Maiús+Insert segue indo ao programa, para os que pegan eles mesmos. |
 | Esc, sen Ctrl, Alt nin Maiús | Se hai selección, quítaa. Se non, vai ao programa. |
+| Maiús+RePáx e Maiús+AvPáx, con Ctrl ou sen el | Desde a subfase 1.9, na pantalla principal, move a vista do historial unha pantalla arriba ou abaixo (`scroll_history`). Na alternativa, vai ao programa. |
+| Ctrl+Maiús+↑ e Ctrl+Maiús+↓ | Desde a 1.9, igual, unha fila. |
+| Ctrl+Maiús+Inicio e Ctrl+Maiús+Fin | Desde a 1.9, igual, ao principio do historial e á pantalla. |
+| Ctrl e `+` ou `-`, tamén os do teclado numérico | Desde a 1.9, o zoom: a fonte, un punto máis grande ou máis pequena, de 6 a 72 ([`zoom`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)). |
+| Ctrl+0, tamén o do teclado numérico | Desde a 1.9, volta aos 12 puntos (`set_points`). |
 
-- **`ctrl`**: Ctrl, con Maiús ou sen el, pero sen Alt. AltGr chega coma o Ctrl esquerdo e o Alt dereito ([Código › meiga-core › `input.rs`](meiga-core.md#cratesmeiga-coresrcinputrs)), así que non conta: os caracteres de AltGr+C e AltGr+V, nas distribucións que os teñen, chegan ao programa.
-- `bool::then_some` dá `Some` co valor se o `bool` é `true`, e `None` se non: `copy` e `clear_selection` din se había selección.
-- `is_some_and`: sen programa non hai onde pegar, e `dialog` queda a `false`.
+- **As teclas modificadoras.** Desde a subfase 1.9, `ctrl`, `alt` e `shift` din se está premida cada unha, e cada atallo pide as súas. Ctrl+C e Ctrl+V queren Ctrl, con Maiús ou sen el, pero sen Alt, coma na 1.8. AltGr chega coma o Ctrl esquerdo e o Alt dereito ([Código › meiga-core › `input.rs`](meiga-core.md#cratesmeiga-coresrcinputrs)), así que non conta: os caracteres de AltGr+C e AltGr+V, nas distribucións que os teñen, chegan ao programa.
+- **As do historial**, coma no Windows Terminal, sempre sen Alt ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 8). Sen Maiús, RePáx, AvPáx, as frechas, Inicio e Fin van ao programa, coma sempre; e o PSReadLine non usa ningunha das do historial.
+- **As do zoom**, con Ctrl só: sen Alt, nin AltGr, nin Maiús (decisión 12). `VK_OEM_PLUS | VK_ADD`: un brazo para dúas teclas, a do teclado principal e a do numérico.
+- `bool::then_some` dá `Some` co valor se o `bool` é `true`, e `None` se non: `copy` e `clear_selection` din se había selección. `Response::REDRAW`, desde a 1.9, é a resposta que só pide un fotograma ([`Response`](#context-e-response)).
+- **Pegar**, desde a 1.9, devolve un `Response` ([`paste`](#pegar-paste)): `redraw`, se levou a vista á pantalla, e `dialog`, se mostrou a caixa. `map_or_else`: sen programa non hai onde pegar, e a resposta é a por defecto. `..pasted` copia de `pasted` os campos que non se nomean, `dialog` e `zoom`, e o fotograma pídese se se quitou unha selección ou se pegar moveu a vista. Ata a 1.8, `paste` só dicía se mostrara a caixa.
 
-**`is_modifier`**, desde a subfase 1.8: as teclas que non quitan a selección cando baixan, coma no Windows Terminal: Maiús, Ctrl e Alt, tamén os esquerdos e os dereitos, Bloq Maiús, Imprimir pantalla, as teclas Windows, Bloq Num e Bloq Despr. Así, Ctrl+C copia: Ctrl baixa antes ca o C, e non quita a selección que o C vai copiar.
+**`scroll_history`**, desde a subfase 1.9: move a vista do historial do terminal, baixo o *lock* ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs)).
+
+```rust
+fn scroll_history(&self, scroll: Scroll) -> Option<Response> {
+    let mut shared = lock(&self.shared);
+    if shared.terminal.modes().alt_screen {
+        return None;
+    }
+    Some(Response {
+        redraw: shared.terminal.scroll(scroll),
+        ..Response::default()
+    })
+}
+```
+
+- **Só na pantalla principal**, coma no Windows Terminal: a alternativa non ten historial, e alí a tecla vai ao programa (`None`).
+- **Na principal cóllea sempre**, aínda que a vista non se mova: no principio do historial, Maiús+RePáx non chega ao programa. Pide un fotograma (`redraw`) se a vista se moveu: `scroll` dío, e nos extremos do historial non se move.
+- **Cada tecla, o seu `Scroll`**: `PageUp` e `PageDown`, unha pantalla; `Rows(1)` e `Rows(-1)`, unha fila, cara arriba se é positiva; e `Top` e `Bottom`, o principio do historial e a pantalla.
+- `..Response::default()` pon o resto dos campos aos seus valores por defecto.
+
+**`repeats`**, desde a subfase 1.9: as teclas collidas que fan o seu outra vez mentres se repiten, as do historial e as do zoom. Ctrl+0 non: volta aos 12 puntos unha vez. Nin Ctrl+C, Ctrl+V e Esc: copian, pegan ou quitan a selección unha vez por pulsación.
+
+```rust
+const fn repeats(key: u16) -> bool {
+    matches!(
+        key,
+        VK_PRIOR
+            | VK_NEXT
+            | VK_END
+            | VK_HOME
+            | VK_UP
+            | VK_DOWN
+            | VK_OEM_PLUS
+            | VK_OEM_MINUS
+            | VK_ADD
+            | VK_SUBTRACT
+    )
+}
+```
+
+**`is_modifier`**, desde a subfase 1.8: as teclas que non quitan a selección cando baixan, coma no Windows Terminal: Maiús, Ctrl e Alt, tamén os esquerdos e os dereitos, Bloq Maiús, Imprimir pantalla, as teclas Windows, Bloq Num e Bloq Despr. Así, Ctrl+C copia: Ctrl baixa antes ca o C, e non quita a selección que o C vai copiar. Desde a 1.9, tampouco levan a vista á pantalla: Maiús, ao baixar para Maiús+RePáx, non a leva abaixo.
 
 ```rust
 const fn is_modifier(key: u16) -> bool {
@@ -1096,6 +1269,118 @@ const fn is_modifier(key: u16) -> bool {
   - O cursor empeza sen o foco (`focused: false`): Windows envía `WM_SETFOCUS` ao mostrar e activar a xanela.
   - Desde a subfase 1.7, o programa tamén o sabe, se o pediu: [`focus_sequence`](meiga-core.md#os-eventos-de-foco) dá `ESC [ I` ou `ESC [ O`, ou nada. O ConPTY pídeo ao arrancar ([Tecnoloxías › As teclas no terminal](../tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt)).
 
+### O zoom e a escala: `zoom`, `set_points`, `dpi_changed` e `new_font`
+
+```rust
+fn zoom(&mut self, steps: i32) -> Response {
+    let points = i32::from(self.points)
+        .saturating_add(steps)
+        .clamp(i32::from(MIN_POINTS), i32::from(MAX_POINTS));
+    // Between 6 and 72.
+    self.set_points(points as u16)
+}
+
+fn set_points(&mut self, points: u16) -> Response {
+    if points == self.points {
+        return Response::default();
+    }
+    self.points = points;
+    self.new_font();
+    Response::REDRAW
+}
+
+pub fn dpi_changed(&mut self, dpi: u32) {
+    if dpi == self.dpi {
+        return;
+    }
+    self.dpi = dpi;
+    self.caret.set_dpi(dpi);
+    self.mouse.set_dpi(dpi);
+    self.new_font();
+}
+
+fn new_font(&mut self) {
+    if let Ok(font) = Font::new(
+        &self.fonts,
+        &FONT_FAMILIES,
+        f32::from(self.points),
+        self.dpi,
+    ) {
+        self.font = font;
+        self.cell = self.font.cell();
+        lock(&self.shared).terminal.set_cell_size(self.cell);
+    }
+    self.redraw = true;
+    self.resized(self.client);
+}
+```
+
+Desde a subfase 1.9. O tamaño da fonte cambia co zoom e coa escala, e a xanela non: cambian as celas e, con elas, a grella que enche a xanela, coma no Windows Terminal ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 12 e 13).
+
+- **`zoom`**: a fonte `steps` puntos máis grande, ou máis pequena se son negativos, de 6 a 72. Chámano Ctrl e `+` ou `-`, cun punto ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)), e Ctrl e a roda, cun punto por parte ([`mouse`](#o-rato-mouse-e-dialog_closed)). A conta vai nun `i32`: `saturating_add` non pasa dos seus límites, aínda que a roda dea moitas partes de golpe, e `clamp` déixaa entre `MIN_POINTS` e `MAX_POINTS`, así que `as u16` non perde nada.
+- **`set_points`** cambia o tamaño e crea a fonte nova. Co mesmo tamaño, nada: Ctrl e `+` nos 72 puntos, ou Ctrl+0 nos 12, non debuxan nada. Se non, `Response::REDRAW`, un fotograma.
+- **`dpi_changed`**: a xanela pasou a un monitor con outra escala, ou cambiou a escala do seu ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)). Chámaa [`App`](#os-eventos) con `Event::DpiChanged`, que chega antes ca o tamaño novo da xanela: o cursor ([`Caret::set_dpi`](#o-pestanexo-caret)), a barra de desprazamento ([`Mouse::set_dpi`](#mouse)) e a fonte colleno xa, e o cambio de tamaño que vén despois calcula a grella coas celas novas. Ao revés, a grella cambiaría dúas veces, a primeira coas celas vellas. Desde a revisión do código, `App` tampouco debuxa entre os dous, para que o terminal e o programa non reciban a grella das celas novas na xanela vella; se o tamaño non cambia, a grella é a das celas novas na mesma xanela. Co mesmo DPI, nada.
+- **`new_font`** crea a fonte co tamaño e coa escala que ten agora a vista, coas fontes do sistema que garda: o em mide `puntos × DPI / 72` píxeles ([Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos)). Con ela cambian a cela, que o terminal usa para responder aos programas que preguntan polo tamaño en píxeles (`set_cell_size`, coma en [`terminal`](#appnew-e-terminal)), e a grella que enche a xanela, que se calcula co tamaño que xa tiña a xanela (`resized`). A fonte nova ten a súa caché de glifos, baleira: os glifos rasterízanse de novo a medida que se debuxan.
+- **Se DirectWrite non pode crear a fonte**, queda a de antes, coa súa cela (`if let Ok`). O tamaño en puntos, ou o DPI, xa cambiou, e a seguinte vez parte del.
+- **A xanela enteira** debúxase outra vez (`redraw`, que mira [`update`](#poñer-ao-día-update)): cambian todas as celas e as marxes.
+
+### O tamaño: `resized`, `resize_grid` e `grid_size`
+
+```rust
+pub fn resized(&mut self, client: Size) {
+    self.client = client;
+    self.mouse.bar_mut().set_client(client);
+    let grid = grid_size(client, self.cell, self.mouse.bar().width());
+    self.wanted = (grid != self.grid).then_some(grid);
+}
+
+fn resize_grid(&mut self, now: Instant) -> Option<Instant> {
+    let grid = self.wanted?;
+    if let Some(due) = self
+        .resized_at
+        .and_then(|at| at.checked_add(frames::interval()))
+        && now < due
+    {
+        return Some(due);
+    }
+    self.wanted = None;
+    self.resized_at = Some(now);
+    self.grid = grid;
+    let mut shared = lock(&self.shared);
+    shared.terminal.resize(grid);
+    // The program learns it with the lock held, so that no output of
+    // it reaches the terminal in between. ConPTY does not wait for it.
+    // If it fails, the program keeps the old size, and its text may
+    // look wrong until the next one.
+    if let Some(input) = &self.input {
+        let _ = input.resize(grid);
+    }
+    None
+}
+
+pub fn grid_size(client: Size, cell: Size, bar: u32) -> GridSize {
+    let cells = |pixels: u32, cell: u32| u16::try_from(pixels / cell.max(1)).unwrap_or(u16::MAX);
+    GridSize::new(
+        cells(client.width.saturating_sub(bar), cell.width).max(MIN_SIZE.columns),
+        cells(client.height, cell.height).max(MIN_SIZE.rows),
+    )
+}
+```
+
+Desde a subfase 1.9, a grella segue o tamaño da xanela ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 2 e 3; [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom)).
+
+- **`resized`**: a área cliente da xanela ten agora `client` píxeles. Chámana [`App`](#os-eventos), cando a xanela cambia de tamaño e non está minimizada, e `new_font`. A franxa da barra vai co bordo dereito (`set_client`), e a grella que enche a xanela calcúlase xa, sen a franxa, pero non se lle dá a ninguén: queda en `wanted`, se é distinta da que teñen o terminal e o programa. Se a xanela volta ao tamaño de antes, `wanted` volta a `None`, e non cambia nada.
+- **`resize_grid`**, ao principio de cada fotograma ([`update`](#poñer-ao-día-update)), dálle a grella ao terminal e ao programa, como moito unha vez por intervalo dos fotogramas, 33,3 ms por Escritorio remoto e 16,7 ms en local ([`frames::interval`](#funcións-auxiliares)):
+  1. Sen grella pendente, nada: `?` sobre un `Option` volta con `None` se é `None`.
+  2. Se a última cambiou hai menos dun intervalo, aínda non: devolve cando poderá, e `update` dillo a `Frames`, que programa para entón o temporizador dos fotogramas. Así, mentres se arrastra o bordo da xanela, cada `WM_SIZE` só cambia `wanted`, cada fotograma leva o último tamaño, e o temporizador leva o último de todos.
+  3. Se non, cambia o terminal ([`Terminal::resize`](meiga-core.md#cratesmeiga-coresrctermmodrs)), que reparte o texto e coloca a pantalla onde a pon o ConPTY ([`term/resize.rs`](meiga-core.md#cratesmeiga-coresrctermresizers)), e despois a pseudoconsola ([`Input::resize`](meiga-win.md#input)), que reparte o seu búfer e avisa ao programa ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)).
+- **Os dous baixo o *lock*.** Primeiro o terminal e despois o ConPTY, coma no Windows Terminal: a saída que o programa escribe para o tamaño novo non pode chegar a un terminal co tamaño vello, e o fío lector, que necesita o *lock* para darlla ao terminal, espera ata que os dous teñen o tamaño novo. O ConPTY non espera: `ResizePseudoConsole` escribe o tamaño na tubaxe de sinais e volta, así que o *lock* dura pouco máis ca o *reflow* do terminal.
+- **Se `ResizePseudoConsole` falla**, o programa queda co tamaño de antes, e o seu texto pode verse mal ata o seguinte cambio: `let _ =` descarta o erro, que non é motivo para parar meiga. Sen programa, só cambia o terminal.
+- **Por que non en cada `WM_SIZE`.** Cada cambio reparte o historial enteiro, ata 10 000 liñas, e fai que o ConPTY reparta o seu búfer e que os programas a pantalla completa redebuxen todo: moitos máis cambios dos que se poden ver.
+- `if let Some(due) = … && now < due` (*let chains*): só se houbo un cambio antes, a súa hora máis un intervalo cabe nun `Instant` (`checked_add`), e esa hora aínda non chegou.
+- **`grid_size`**: a grella de celas de `cell` píxeles que enche unha área cliente de `client` píxeles, sen a franxa da barra, de `bar` píxeles: tantas columnas e filas enteiras como caben, e polo menos a máis pequena do terminal, 2 × 1 ([`MIN_SIZE`](meiga-core.md#cratesmeiga-coresrctermmodrs)), aínda que a xanela sexa máis pequena. O que sobra, menos dunha cela, son as marxes, que `draw` pinta coa cor do fondo. É pública: [`terminal`](#appnew-e-terminal) usa a mesma conta para a primeira grella.
+  - `cell.max(1)` evita dividir entre 0, e `try_from` dá `u16::MAX` se o número non cabe: unha cela sempre ten píxeles, e ningunha xanela ten tantas celas, pero o tipo non o garante. `saturating_sub` dá 0 nunha xanela máis estreita ca a franxa. Ata a 1.8, esta conta estaba en `terminal`, sen a franxa nin o mínimo, que lle daba `Terminal::new`.
+
 ### O rato: `mouse` e `dialog_closed`
 
 ```rust
@@ -1106,7 +1391,12 @@ pub fn mouse(&mut self, window: &Window, event: &Event) -> Response {
         input: self.input.as_ref(),
         cell: self.cell,
     };
-    self.mouse.event(&context, event)
+    let mut response = self.mouse.event(&context, event);
+    if response.zoom != 0 {
+        response.redraw |= self.zoom(response.zoom).redraw;
+        response.zoom = 0;
+    }
+    response
 }
 
 pub fn dialog_closed(&mut self, window: &Window) {
@@ -1123,6 +1413,7 @@ pub fn dialog_closed(&mut self, window: &Window) {
 
 - **`mouse`**, desde a subfase 1.8: un evento do rato da xanela. A vista dálle ao seu rato o que necesita ([`Context`](#context-e-response)): a xanela, o que comparte co fío lector, a entrada do programa e o tamaño da cela. O rato decide que facer ([`mouse.rs`](#cratesmeigasrcmousers)), e a súa resposta volta a `App`.
   - **Os préstamos.** `Context` leva referencias a dous campos da vista, `shared` e `input`, e `self.mouse.event` colle `&mut self.mouse`: Rust permíteo, porque son campos distintos, prestados por separado. `&self.shared`, un `&Arc<Mutex<Shared>>`, convértese só no `&Mutex<Shared>` do campo (*deref coercion*), e `as_ref` converte o `&Option<Input>` nun `Option<&Input>`. `cell` cópiase.
+  - **O zoom da roda**, desde a subfase 1.9. Se a roda xirou con Ctrl, o rato devolve as partes en `zoom`, e a vista fai o zoom ([`zoom`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)): a fonte é dela, e non do rato. Despois, `zoom` volta a 0, así que a `App` só lle chegan `redraw` e `dialog`. `context` xa non se usa, e Rust deixa chamar a `self.zoom`, que colle a vista enteira.
 - **`dialog_closed`**, desde a revisión do código da subfase 1.8: pechouse a caixa de mensaxe que pregunta antes de pegar. Mentres estaba aberta, os eventos da xanela non chegaron á vista ([`respond`](#respond-o-que-pide-a-vista)), e a vista non sabe que pasou con eles:
   - **As teclas collidas** esquécense: subiron na caixa. Sen isto, unha tecla que quedase en `taken` comería a súa seguinte pulsación: por exemplo, o C de Ctrl+C, se Ctrl+V abriu a caixa co C aínda abaixo; despois, un C só non chegaba ao programa.
   - **Os botóns do rato** tamén ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)): ao abrirse a caixa, Windows envíalle á xanela `WM_CANCELMODE`, e `DefWindowProcW` solta a captura do rato. O `WM_CAPTURECHANGED` e a soltura do botón chegaron mentres tanto, e perdéronse: sen isto, o programa nunca recibía a soltura dun botón que se premeu para el.
@@ -1133,14 +1424,18 @@ pub fn dialog_closed(&mut self, window: &Window) {
 
 ```rust
 fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
-    let (sync, title) = {
+    let resize = self.resize_grid(now);
+    let (sync, title, tick, history) = {
         let mut shared = lock(&self.shared);
+        // The view moves on its own while the left button holds the
+        // scroll bar, or a selection outside the grid.
+        let tick = self.mouse.tick(&mut shared.terminal, now, self.cell);
         // If the program did not end its synchronized update in time, it
         // is shown as it is.
-        let late = shared.end_late_sync(now, &mut self.answers);
+        let (sync, title) = shared.end_late_sync(now, &mut self.answers);
         shared.terminal.copy_damage(&mut self.screen);
         shared.screen_changed = false;
-        late
+        (sync, title, tick, shared.terminal.history())
     };
     self.send(title);
 
@@ -1154,7 +1449,11 @@ fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Insta
         self.screen.mark_cursor_changed();
     }
 
-    if self.screen.all_changed() {
+    let rows = self.screen.size().rows;
+    if let Some(area) = self.mouse.bar_mut().update(history, rows) {
+        damage(area);
+    }
+    if mem::take(&mut self.redraw) || self.screen.all_changed() {
         // Also the margins, which have the colour of the background.
         damage(Rect::new(0, 0, i32::MAX, i32::MAX));
     } else {
@@ -1163,10 +1462,7 @@ fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Insta
         }
     }
     self.screen.clear_changes();
-    match (sync, blink) {
-        (Some(sync), Some(blink)) => Some(sync.min(blink)),
-        (sync, blink) => sync.or(blink),
-    }
+    [sync, blink, resize, tick].into_iter().flatten().min()
 }
 
 fn send(&mut self, title: bool) {
@@ -1185,16 +1481,20 @@ fn send(&mut self, title: bool) {
 
 Antes de cada fotograma, `Frames` chama a `update` ([`Scene`](#scene)). Paso a paso:
 
-1. **Baixo o *lock*:**
+1. **A grella**, desde a subfase 1.9: se cambiou o tamaño da xanela ou o da cela, `resize_grid` dálles a grella nova ao terminal e ao programa, ou di cando poderá ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). Vai antes da copia, para que este fotograma xa mostre o texto repartido. Colle o *lock* ela mesma, e sóltao antes do paso seguinte.
+2. **Baixo o *lock*:**
+   - **A vista que se move soa**, desde a 1.9: mentres o botón esquerdo segue premido na franxa da barra fóra do polgar, ou mentres unha selección se arrastra por riba ou por debaixo da grella, o rato move a vista do historial ([`tick`](#a-vista-que-se-move-soa-tick-follow-e-autoscroll)), e di cando ten que movela outra vez. Vai antes da copia, por iso mesmo.
    - **O fin dunha actualización sincronizada.** Se o programa deixou unha aberta (`ESC [ ? 2026 h`) e pasou a súa hora límite, móstrase tal como está ([`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync)): `vte` garda a saída e coñece a hora, pero non ten temporizador ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). O que gardaba pode traer respostas e un título novo. Vai antes da copia, para que este fotograma xa o mostre. Devolve a hora límite da que siga aberta, se a hai.
-   - **A copia.** [`copy_damage`](meiga-core.md#cratesmeiga-coresrctermmodrs) copia á vista as filas que cambiaron, o cursor e a paleta, e marca as celas que agora son distintas. Desde a subfase 1.8, as celas da selección levan a marca `SELECTED`, e copia tamén as filas onde cambiou a selección, que `alacritty_terminal` non dá como cambiadas: arrastrar só debuxa as celas onde cambia ([Código › meiga-core › `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)).
+   - **A copia.** [`copy_damage`](meiga-core.md#cratesmeiga-coresrctermmodrs) copia á vista as filas que cambiaron, o cursor e a paleta, e marca as celas que agora son distintas. Desde a subfase 1.8, as celas da selección levan a marca `SELECTED`, e copia tamén as filas onde cambiou a selección, que `alacritty_terminal` non dá como cambiadas: arrastrar só debuxa as celas onde cambia ([Código › meiga-core › `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)). Desde a 1.9, copia as filas que mostra a vista do historial.
    - **A marca da pantalla** quítase: a xanela xa copiou, e a seguinte saída voltará espertala.
-2. **Fóra do *lock*,** `send` envía as respostas ao programa coa copia de `Input` e, se cambiou o título, esperta a xanela: o título cólleo [`App::wake`](#wake-o-aviso-do-fío-lector), coma cando o cambia o fío lector, porque a vista non ten a xanela. Desde a subfase 1.8, o mesmo `bool`, que na vista segue chamándose `title`, di tamén se o programa copiou texto ao portapapeis (OSC 52) dentro da actualización: tamén o colle `App::wake`. As marcas xa quedaron postas, así que o fío lector non envía outro aviso por eles. Se o programa non se lanzou, non hai `Input`, e o búfer baléirase igual.
-3. **A actividade.** Se cambiou algo na pantalla, o pestanexo empeza de novo, visíbel: mentres o programa escribe, o cursor non pestanexa, e deixa de facelo cando pasa o tempo de espera sen cambios ([`Caret`](#o-pestanexo-caret)).
-4. **O pestanexo.** `phase` di se o cursor se ve agora e cando cambia iso. Se cambiou desde o último fotograma, as súas celas márcanse como cambiadas. Vai despois da actividade: se non, cada cambio do pestanexo contaría como actividade, e o cursor non deixaría nunca de pestanexar.
-5. **As zonas.** Se cambiaron todas as celas, por exemplo porque o programa cambiou a paleta, cambia a xanela enteira, coas marxes, que teñen a cor do fondo: un rectángulo enorme, que `Frames` recorta ao *framebuffer*. Se non, as columnas cambiadas de cada fila, en píxeles (`area`).
-6. Os cambios da copia esquécense (`clear_changes`): xa están nas zonas.
-7. **Cando outra vez:** o momento máis próximo entre a hora límite da actualización sincronizada e o seguinte cambio do pestanexo, se hai algún. `Frames` programa para el o temporizador dos fotogramas ([`wait_for_scene`](#a-escena-e-o-temporizador-update-e-wait_for_scene)). En repouso, sen saída e co cursor quieto, non hai ningún, e a xanela non esperta.
+   - **O historial**, desde a 1.9: cantas filas ten e onde está a vista ([`history`](meiga-core.md#cratesmeiga-coresrctermmodrs)), para a barra de desprazamento.
+3. **Fóra do *lock*,** `send` envía as respostas ao programa coa copia de `Input` e, se cambiou o título, esperta a xanela: o título cólleo [`App::wake`](#wake-o-aviso-do-fío-lector), coma cando o cambia o fío lector, porque a vista non ten a xanela. Desde a subfase 1.8, o mesmo `bool`, que na vista segue chamándose `title`, di tamén se o programa copiou texto ao portapapeis (OSC 52) dentro da actualización: tamén o colle `App::wake`. As marcas xa quedaron postas, así que o fío lector non envía outro aviso por eles. Se o programa non se lanzou, non hai `Input`, e o búfer baléirase igual.
+4. **A actividade.** Se cambiou algo na pantalla, o pestanexo empeza de novo, visíbel: mentres o programa escribe, o cursor non pestanexa, e deixa de facelo cando pasa o tempo de espera sen cambios ([`Caret`](#o-pestanexo-caret)).
+5. **O pestanexo.** `phase` di se o cursor se ve agora e cando cambia iso. Se cambiou desde o último fotograma, as súas celas márcanse como cambiadas. Vai despois da actividade: se non, cada cambio do pestanexo contaría como actividade, e o cursor non deixaría nunca de pestanexar.
+6. **A barra**, desde a subfase 1.9, ponse ao día co historial e coas filas da pantalla ([`ScrollBar::update`](#poñer-ao-día-e-debuxar-update-e-draw)): se o polgar se moveu, cambiou de tamaño ou de aspecto, a súa zona tamén cambiou.
+7. **As zonas.** Se cambiaron todas as celas, por exemplo porque o programa cambiou a paleta, ou, desde a 1.9, se cambiou a fonte (`redraw`, que `mem::take` quita), cambia a xanela enteira, coas marxes, que teñen a cor do fondo: un rectángulo enorme, que `Frames` recorta ao *framebuffer*. Se non, as columnas cambiadas de cada fila, en píxeles (`area`).
+8. Os cambios da copia esquécense (`clear_changes`): xa están nas zonas.
+9. **Cando outra vez:** o momento máis próximo entre a hora límite da actualización sincronizada, o seguinte cambio do pestanexo e, desde a 1.9, o seguinte cambio da grella e o seguinte paso da vista que se move soa, se hai algún. Os catro van nun *array* de `Option`: `flatten` deixa só os que teñen un momento, e `min` dá o máis próximo, ou `None` se non hai ningún. Ata a 1.8, un `match` escollía entre os dous primeiros. `Frames` programa para el o temporizador dos fotogramas ([`wait_for_scene`](#a-escena-e-o-temporizador-update-e-wait_for_scene)). En repouso, sen saída, co cursor quieto e sen nada que mover, non hai ningún, e a xanela non esperta.
 
 ### Coa xanela minimizada: `update_hidden`
 
@@ -1220,34 +1520,64 @@ Coa xanela minimizada, `Frames` non pon ao día a vista nin debuxa nada, pero ch
 
 ```rust
 fn draw(&mut self, canvas: &mut Canvas<'_>) {
-    let Self { font, cell, screen, caret, run, .. } = self;
+    let Self {
+        font,
+        cell,
+        screen,
+        caret,
+        run,
+        mouse,
+        ..
+    } = self;
     let palette = screen.palette();
     let size = screen.size();
     let (width, height) = cell_size(*cell);
-    let grid = Rect::new(0, 0, i32::from(size.columns) * width, i32::from(size.rows) * height);
+    let grid = Rect::new(
+        0,
+        0,
+        i32::from(size.columns) * width,
+        i32::from(size.rows) * height,
+    );
     // The margins: the window can be larger than the grid.
     let clip = canvas.clip();
-    canvas.fill(Rect::new(grid.right, clip.top, clip.right, clip.bottom), palette.background);
-    canvas.fill(Rect::new(clip.left, grid.bottom, grid.right, clip.bottom), palette.background);
+    canvas.fill(
+        Rect::new(grid.right, clip.top, clip.right, clip.bottom),
+        palette.background,
+    );
+    canvas.fill(
+        Rect::new(clip.left, grid.bottom, grid.right, clip.bottom),
+        palette.background,
+    );
 
     let visible = clip.intersection(grid);
-    if visible.is_empty() {
-        return;
+    if !visible.is_empty() {
+        // `visible` is inside the grid, so the divisions are not
+        // negative.
+        let columns =
+            (visible.left / width) as usize..((visible.right - 1) / width + 1) as usize;
+        for row in visible.top / height..=(visible.bottom - 1) / height {
+            let cells = screen.row(row as u16);
+            draw_row(
+                canvas,
+                font,
+                run,
+                cells,
+                columns.clone(),
+                row * height,
+                palette,
+            );
+        }
+        draw_cursor(canvas, font, screen, caret, *cell);
     }
-    // `visible` is inside the grid, so the divisions are not negative.
-    let columns = (visible.left / width) as usize..((visible.right - 1) / width + 1) as usize;
-    for row in visible.top / height..=(visible.bottom - 1) / height {
-        let cells = screen.row(row as u16);
-        draw_row(canvas, font, run, cells, columns.clone(), row * height, palette);
-    }
-    draw_cursor(canvas, font, screen, caret, *cell);
+    mouse.bar().draw(canvas, palette.background);
 }
 ```
 
-- **Os préstamos.** `let Self { font, cell, screen, caret, run, .. } = self;` separa os campos en referencias distintas: así `draw_row` pode cambiar a fonte (a súa caché de glifos) e o búfer `run` mentres le a pantalla e a súa paleta. Con métodos de `self`, Rust non o permitiría, porque cada chamada colle `self` enteiro.
-- **As marxes.** A xanela pode ser maior ca a grella: á dereita e debaixo dela, píntase a cor do fondo da paleta. Son dous rectángulos sen parte común; `fill` recórtaos ao lenzo, e un rectángulo baleiro non pinta nada.
+- **Os préstamos.** `let Self { font, cell, screen, caret, run, mouse, .. } = self;` separa os campos en referencias distintas: así `draw_row` pode cambiar a fonte (a súa caché de glifos) e o búfer `run` mentres le a pantalla e a súa paleta. Con métodos de `self`, Rust non o permitiría, porque cada chamada colle `self` enteiro.
+- **As marxes.** A xanela pode ser maior ca a grella: á dereita e debaixo dela, píntase a cor do fondo da paleta. Son dous rectángulos sen parte común; `fill` recórtaos ao lenzo, e un rectángulo baleiro non pinta nada. Desde a subfase 1.9, a marxe da dereita inclúe a franxa da barra, que se pinta despois.
 - **As filas e as columnas** son só as que toca o recorte: desde a do seu primeiro píxel ata a do último, `right - 1` e `bottom - 1`, porque o recorte non inclúe os seus bordos dereito e inferior. Como `visible` está dentro da grella, as divisións non son negativas, e os `as` non perden nada. `Range` non é `Copy`, e cada fila recibe unha copia (`clone`).
-- **O cursor** debúxase ao final, por riba das súas celas, que se acaban de debuxar: cando o cursor cambia, as súas celas están sempre entre as cambiadas (ver [`update`](#poñer-ao-día-update)).
+- **O cursor** debúxase despois das celas, por riba das súas, que se acaban de debuxar: cando o cursor cambia, as súas celas están sempre entre as cambiadas (ver [`update`](#poñer-ao-día-update)).
+- **A barra de desprazamento**, desde a subfase 1.9, debúxase ao final, se a franxa toca o recorte ([`ScrollBar::draw`](#poñer-ao-día-e-debuxar-update-e-draw)), coa cor do fondo da paleta e o polgar. É do rato (`mouse`, que tamén se separa). Ata a 1.8, un recorte sen nada da grella saía da función antes do cursor; agora o `if` deixa chegar á barra un fotograma que só cambia o polgar.
 - `cell_size` dá o tamaño da cela en coordenadas (`i32`): unha cela son unhas decenas de píxeles.
 
 ```rust
@@ -1504,6 +1834,11 @@ struct Caret {
 }
 
 impl Caret {
+    fn set_dpi(&mut self, dpi: u32) {
+        self.dpi = dpi;
+        self.thickness = thickness(self.settings, dpi);
+    }
+
     fn phase(&self, cursor: Cursor, now: Instant) -> (bool, Option<Instant>) {
         let blinks = self.focused && cursor.blinking && cursor.shape != CursorShape::Hidden;
         let Some(period) = self.settings.blink.filter(|_| blinks) else {
@@ -1531,12 +1866,13 @@ Como se ve e como pestanexa o cursor ([Tecnoloxías › O cursor de Windows](../
 | Campo | Que garda |
 |---|---|
 | `settings` | Os axustes do cursor de Windows ([`CaretSettings`](meiga-win.md#cratesmeiga-winsrcwindowrs)): o tempo de cada metade do pestanexo, ou `None` se Windows non o permite; o tempo de espera, despois do que deixa de pestanexar; e o grosor. Lense ao crear a vista e cada vez que a xanela recupera o foco (`read_settings`). |
-| `dpi` e `thickness` | O DPI da xanela, e o grosor do cursor a ese DPI. |
+| `dpi` e `thickness` | O DPI da xanela, e o grosor do cursor a ese DPI. Desde a subfase 1.9, cambian coa escala (`set_dpi`). |
 | `focused` | Se a xanela ten o foco. |
 | `since` | Cando empezou a pestanexar: na última actividade, un cambio na pantalla ou recuperar o foco. |
 | `shown` | Se o cursor se ve agora. O fotograma no que cambia marca as súas celas como cambiadas ([`update`](#poñer-ao-día-update)). |
 
 - **`thickness`**: o grosor de Windows, en píxeles ao 100 %, á escala da xanela: `ancho × DPI / 96`, redondeado (sumar a metade de 96 antes de dividir), e polo menos un píxel. Co grosor por defecto, 1, ao 150 % (144 DPI) son 2 píxeles.
+- **`set_dpi`**, desde a subfase 1.9: cando cambia a escala, o grosor calcúlase para o DPI novo, cos mesmos axustes de Windows ([`dpi_changed`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)). Ata a 1.8, o DPI quedaba o do arranque.
 
 **`phase`** di se o cursor se ve no instante `now`, e cando cambia iso, mentres pestanexa:
 
@@ -1551,18 +1887,19 @@ Así, **en repouso a xanela non esperta**: despois do tempo de espera, `phase` n
 
 ## `crates/meiga/src/mouse.rs`
 
-Desde a subfase 1.8. O **rato da vista**: os clics que seleccionan texto, e os que van ao programa, se pediu o rato ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). As pezas que non dependen de Windows están en `meiga-core`: a cela debaixo do punteiro, os clics seguidos, as partes da roda e os informes para os programas ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)), e a selección, que vive na grella do terminal ([› `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)). Os eventos, a captura e o punteiro son de `meiga-win` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs) e [› `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs)). Este módulo xúntaos: con cada evento, decide que fai o rato ([Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis)).
+Desde a subfase 1.8. O **rato da vista**: os clics que seleccionan texto, e os que van ao programa, se pediu o rato ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). As pezas que non dependen de Windows están en `meiga-core`: a cela debaixo do punteiro, os clics seguidos, as partes da roda e os informes para os programas ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)), e a selección, que vive na grella do terminal ([› `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)). Os eventos, a captura e o punteiro son de `meiga-win` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs) e [› `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs)). Este módulo xúntaos: con cada evento, decide que fai o rato ([Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis)). Desde a 1.9, tamén a barra de desprazamento, que é súa ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)); a roda, que despraza o historial ou fai o zoom con Ctrl; e a selección que despraza a vista soa, fóra da grella ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom)).
 
 | O rato | Se os clics seleccionan | Se o programa pediu o rato (`?1000`, `?1002` ou `?1003`) e Maiús non está premido |
 |---|---|---|
 | Baixa o botón esquerdo | Empeza unha selección: de celas, de palabras ou de liñas, cun clic, con dous ou con tres. | Un informe para o programa. |
-| Móvese | Mentres o botón esquerdo está abaixo, a selección medra ata o punteiro. | Os movementos dun botón do programa, con `?1002` ou `?1003`, e os sen botóns, con `?1003`, só cando cambian de cela. |
+| Móvese | Mentres o botón esquerdo está abaixo, a selección medra ata o punteiro; desde a subfase 1.9, por riba ou por debaixo da grella, a vista desprázase soa. | Os movementos dun botón do programa, con `?1002` ou `?1003`, e os sen botóns, con `?1003`, só cando cambian de cela. |
 | Sobe o botón esquerdo | A selección vai ao portapapeis, e queda seleccionada. | Un informe. |
 | Baixa o botón dereito | Se a selección aínda medra, cópiaa. Quita a selección e pega o portapapeis. | Un informe. |
 | Baixa o botón do medio | Nada. | Un informe. |
-| Xira a roda | Na pantalla alternativa, frechas (`?1007`); na normal, nada ata a subfase 1.9. | Un informe por cada parte. |
+| Xira a roda | Con Ctrl, o zoom, desde a subfase 1.9. Sen el, na pantalla alternativa, frechas (`?1007`); e na principal, nada ata a 1.8, e desde a 1.9, despraza o historial. | Un informe por cada parte, tamén con Ctrl. |
+| Preme, arrastra ou xira a roda sobre a franxa da barra | Desde a subfase 1.9, a barra: o polgar móvese coa vista, e un clic fóra del pasa páxinas. A roda despraza o historial, ou fai o zoom con Ctrl. | O mesmo: a franxa é de meiga. |
 
-Coma no Windows Terminal, **Maiús garda o rato para meiga**: con el, os clics seleccionan texto tamén nun programa que pediu o rato, e a roda non fai nada ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). Os movementos e a soltura dun botón que se premeu para o programa son del, con Maiús ou sen el; e, se a xanela perde o rato antes de que o botón suba, o programa recibe a soltura entón ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)).
+Coma no Windows Terminal, **Maiús garda o rato para meiga**: con el, os clics seleccionan texto tamén nun programa que pediu o rato, e a roda, que ata a 1.8 non facía nada, despraza o historial ou, con Ctrl, fai o zoom ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). Desde a 1.9, a franxa da barra tamén é sempre de meiga. Os movementos e a soltura dun botón que se premeu para o programa son del, con Maiús ou sen el; e, se a xanela perde o rato antes de que o botón suba, o programa recibe a soltura entón ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)).
 
 ### `Context` e `Response`
 
@@ -1578,16 +1915,29 @@ pub struct Context<'a> {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Response {
-    /// The selection changed: a frame has to show it.
+    /// The selection or the view changed: a frame has to show it.
     pub redraw: bool,
     /// A message box was shown, and meanwhile the events of the window did
     /// not reach it.
     pub dialog: bool,
+    /// The wheel turned with Ctrl these notches, which zoom: in when they
+    /// are positive.
+    pub zoom: i32,
+}
+
+impl Response {
+    /// Only a frame.
+    pub const REDRAW: Self = Self {
+        redraw: true,
+        dialog: false,
+        zoom: 0,
+    };
 }
 ```
 
 - **`Context`** é o que necesita o rato para atender un evento: a xanela, para capturar o rato, escoller o punteiro, o portapapeis e a caixa de mensaxe; o que comparte a vista co fío lector, o terminal, coa selección e os modos do programa; a entrada do programa, `None` se non se lanzou; e o tamaño da cela, para saber que cela está debaixo do punteiro. A vista créao con cada evento ([`mouse`](#o-rato-mouse-e-dialog_closed)), coa xanela que lle pasa `App` e referencias aos seus campos: `'a` é a vida desas referencias, e un `Context` non pode durar máis ca elas, así que o rato non o garda.
-- **`Response`** é o que ten que facer a xanela despois: `redraw`, un fotograma, porque cambiou a selección; e `dialog`, poñerse ao día, porque se mostrou a caixa de mensaxe que pregunta antes de pegar, e mentres tanto os eventos da xanela non chegaron. Faino [`App::respond`](#respond-o-que-pide-a-vista). As teclas devolven o mesmo ([`key`](#as-teclas-e-o-foco-key-e-focus)). `Default` dá os dous a `false`: nada que facer.
+- **`Response`** é o que ten que facer a xanela despois: `redraw`, un fotograma, porque cambiou a selección ou, desde a subfase 1.9, a vista do historial ou a barra; `dialog`, poñerse ao día, porque se mostrou a caixa de mensaxe que pregunta antes de pegar, e mentres tanto os eventos da xanela non chegaron; e, desde a 1.9, `zoom`, as partes que xirou a roda con Ctrl, adiante positivas, que fan o zoom. Faino [`App::respond`](#respond-o-que-pide-a-vista), salvo o zoom, que fai antes a vista, porque ten a fonte ([`mouse`](#o-rato-mouse-e-dialog_closed)). As teclas devolven o mesmo ([`key`](#as-teclas-e-o-foco-key-e-focus)). `Default` dá `false`, `false` e 0: nada que facer.
+- **`Response::REDRAW`**, desde a 1.9: só un fotograma, a resposta máis común, nunha constante. Dentro de `impl Response`, `Self` é `Response`, e unha `const` pódese usar en calquera expresión, coma `then_some(Response::REDRAW)`. Ata a 1.8, cada sitio escribía `Response { redraw: true, dialog: false }`.
 - **Por que unha resposta.** O rato e a vista non teñen `Frames`, e un fotograma necesita o contido enteiro, onde está a vista, que segue prestada mentres atende o evento: a vista di o que fai falta, e `App` faino cando ela remata.
 
 ### `Mouse`
@@ -1600,8 +1950,26 @@ pub struct Mouse {
     reported: [bool; 3],
     reported_at: Option<GridPoint>,
     wheel: WheelTurns,
+    wheel_rows: WheelRows,
     encoder: KeyEncoder,
     bytes: Vec<u8>,
+    bar: ScrollBar,
+    autoscroll: Option<AutoScroll>,
+    dpi: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct AutoScroll {
+    /// Rows per second, towards older rows when it is positive.
+    speed: f32,
+    /// Where the pointer is.
+    at: Point,
+    /// When the view last moved, and the part of a row that it did not
+    /// move then.
+    last: Instant,
+    carry: f32,
+    /// Whether it can still move: not once it reached the end.
+    running: bool,
 }
 ```
 
@@ -1612,9 +1980,51 @@ pub struct Mouse {
 | `selecting` | Mentres o botón esquerdo selecciona, a cela e o lado da cela onde remata a selección; `None` se non. |
 | `reported` | Os botóns, esquerdo, do medio e dereito, que se premeron para o programa: os seus movementos e a súa soltura tamén son para el. |
 | `reported_at` | A cela do último clic ou movemento para o programa: só recibe os movementos a outra cela, e nela recibe a soltura dun botón que a xanela xa non pode seguir. |
-| `wheel` | As partes da roda que aínda non están enteiras ([`WheelTurns`](meiga-core.md#cratesmeiga-coresrcmousers)). |
+| `wheel` | As partes da roda que aínda non están enteiras ([`WheelTurns`](meiga-core.md#cratesmeiga-coresrcmousers)): as dos informes e as das frechas e, desde a subfase 1.9, as do zoom e as que pasan páxinas do historial. |
+| `wheel_rows` | Desde a subfase 1.9. Os xiros da roda que moven a vista do historial, en filas ([`WheelRows`](meiga-core.md#cratesmeiga-coresrcmousers)). |
 | `encoder` | O que converte as frechas da roda no que le o programa ([`KeyEncoder`](meiga-core.md#keyencoder)). |
 | `bytes` | O que vai ao programa, que se garda para non reservar memoria cada vez. |
+| `bar` | Desde a subfase 1.9. A barra de desprazamento ([`ScrollBar`](#scrollbar)): o rato atende os seus clics, e a vista ponna ao día e debúxaa. |
+| `autoscroll` | Desde a subfase 1.9. A vista que se move soa, mentres unha selección medra co punteiro por riba ou por debaixo da grella; `None` se non. |
+| `dpi` | Desde a subfase 1.9. Os puntos por polgada da xanela, para a velocidade da vista que se move soa, que se dá en píxeles ao 100 %. |
+
+- **`AutoScroll`**, desde a subfase 1.9: a vista que se move soa mentres unha selección medra fóra da grella ([`follow` e `autoscroll`](#a-vista-que-se-move-soa-tick-follow-e-autoscroll)). Garda a velocidade, en filas por segundo, cara ás filas máis antigas se é positiva; onde está o punteiro, onde remata a selección cada vez que a vista se move; cando se moveu por última vez, e a parte dunha fila que non se moveu entón (`carry`); e se aínda se pode mover (`running`): non despois de chegar a un extremo do historial. É `Copy`: só leva números e un `Instant`.
+
+```rust
+pub fn new(dpi: u32, client: Size) -> Self {
+    Self {
+        settings: window::mouse_settings(),
+        clicks: Clicks::new(),
+        selecting: None,
+        reported: [false; 3],
+        reported_at: None,
+        wheel: WheelTurns::new(),
+        wheel_rows: WheelRows::new(),
+        encoder: KeyEncoder::new(),
+        bytes: Vec::new(),
+        bar: ScrollBar::new(dpi, client),
+        autoscroll: None,
+        dpi,
+    }
+}
+
+pub const fn bar(&self) -> &ScrollBar {
+    &self.bar
+}
+
+pub const fn bar_mut(&mut self) -> &mut ScrollBar {
+    &mut self.bar
+}
+
+pub fn set_dpi(&mut self, dpi: u32) {
+    self.dpi = dpi;
+    self.bar.set_dpi(dpi);
+}
+```
+
+- **`new`**, desde a subfase 1.9, recibe o DPI e o tamaño da área cliente da xanela, para a barra, que nace coas súas medidas e no seu sitio ([`ScrollBar::new`](#scrollbar)). As preferencias do rato lense xa, coma antes.
+- **`bar` e `bar_mut`** danlle a barra á vista: para calcular a grella sen a franxa e movela co bordo da xanela ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)), para poñela ao día e para debuxala ([`update`](#poñer-ao-día-update) e [`draw`](#debuxar-draw-e-draw_row)). Son `const fn`: só dan unha referencia a un campo.
+- **`set_dpi`**: a xanela pasou a un monitor con outra escala ([`dpi_changed`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)). O rato garda o DPI novo, para a velocidade da vista que se move soa, e a barra calcula as súas medidas para el.
 
 ```rust
 pub fn event(&mut self, context: &Context<'_>, event: &Event) -> Response {
@@ -1644,12 +2054,20 @@ pub fn event(&mut self, context: &Context<'_>, event: &Event) -> Response {
             self.forget_buttons(context);
             Response::default()
         }
+        Event::MouseLeft => {
+            if self.bar.hover(false) {
+                Response::REDRAW
+            } else {
+                Response::default()
+            }
+        }
         _ => Response::default(),
     }
 }
 ```
 
 - **`event`** reparte cada evento do rato da xanela ([`Event`](meiga-win.md#cratesmeiga-winsrceventrs)) entre as funcións de abaixo. Os eventos levan o punto, en píxeles desde a esquina da área cliente, e as teclas modificadoras, tamén Alt. `CaptureLost` di que outra xanela colleu o rato. Os outros eventos non son do rato, e non fan nada.
+- **`MouseLeft`**, desde a subfase 1.9: o punteiro saíu da área cliente, despois de que o rato pedise o aviso ao entrar na franxa da barra ([`moved`](#mover-o-rato-moved)). O polgar, se estaba ancho, estréitase (`hover`), e un fotograma debúxao: o punteiro pode saír da xanela directamente desde a franxa, sen ningún `WM_MOUSEMOVE` fóra dela ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)).
 - `match *event`: o evento chega prestado, e `*event` mira o valor sen movelo; os campos que colle o patrón cópianse.
 
 ### Premer un botón: `down`
@@ -1662,6 +2080,19 @@ fn down(
     at: Point,
     modifiers: Modifiers,
 ) -> Response {
+    // The scroll bar is for meiga, unless another button is already
+    // selecting or reporting.
+    if self.bar.contains(at) && self.selecting.is_none() && !self.reported.contains(&true) {
+        if button == Button::Left && !self.bar.is_pressed() {
+            let mut shared = lock(context.shared);
+            self.bar.press(at, &mut shared.terminal, Instant::now());
+            drop(shared);
+            if self.bar.is_pressed() {
+                context.window.capture_mouse();
+            }
+        }
+        return Response::REDRAW;
+    }
     let mut shared = lock(context.shared);
     let modes = shared.terminal.modes();
     let (cell, side) = cell_at(at, context.cell, shared.terminal.size());
@@ -1687,10 +2118,7 @@ fn down(
             shared.terminal.select(kind, cell, side);
             self.selecting = Some((cell, side));
             context.window.capture_mouse();
-            Response {
-                redraw: true,
-                dialog: false,
-            }
+            Response::REDRAW
         }
         // As in Windows Terminal with `copyOnSelect`: the selection
         // went to the clipboard when the left button went up, or goes
@@ -1700,15 +2128,19 @@ fn down(
         Button::Right => {
             drop(shared);
             let redraw = if self.selecting.take().is_some() {
+                self.autoscroll = None;
                 self.release(context);
                 clipboard::copy(context.window, context.shared, true)
             } else {
                 lock(context.shared).terminal.clear_selection()
             };
-            let dialog = context
-                .input
-                .is_some_and(|input| clipboard::paste(context.window, context.shared, input));
-            Response { redraw, dialog }
+            let pasted = context.input.map_or_else(Response::default, |input| {
+                clipboard::paste(context.window, context.shared, input)
+            });
+            Response {
+                redraw: redraw || pasted.redraw,
+                ..pasted
+            }
         }
         Button::Middle => Response::default(),
     }
@@ -1717,14 +2149,18 @@ fn down(
 
 Un botón baixou, paso a paso:
 
-1. **A cela.** Baixo o *lock*, os modos do programa e a cela debaixo do punteiro, co lado da cela onde está ([`cell_at`](meiga-core.md#cratesmeiga-coresrcmousers)): un punto nas marxes, fóra da grella, dá a cela máis próxima.
-2. **Para o programa**, se pediu o rato (`is_tracked`) e Maiús non está premido, sexa cal sexa o botón: solta o *lock*, envíalle o informe de premer, anota o botón e a cela, e captura o rato, para seguir o botón aínda que o punteiro saia da xanela. Non hai nada que debuxar.
-3. **O botón esquerdo selecciona.** `Clicks` conta os clics coas medidas de Windows: un, celas; dous, palabras; tres, liñas; e despois do terceiro, outra vez un. [`select`](meiga-core.md#cratesmeiga-coresrctermselectionrs) empeza a selección na grella do terminal, en vez da que houbese: unha de celas está baleira ata que o punteiro pasa a outro lado dunha cela; unha de palabras ou de liñas xa ten a palabra ou a liña. Anota onde remata, captura o rato e pide un fotograma (`redraw`).
-4. **O botón dereito pega,** coma o Windows Terminal con `copyOnSelect` ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 7). Se a selección aínda está a medrar, porque o botón esquerdo segue abaixo, cópiaa e quítaa, e solta o rato, se ningún outro botón o necesita. Se non, só a quita: xa está no portapapeis desde que se soltou o botón esquerdo, e copiala outra vez substituiría o que se copiou despois, quizais noutro programa. Despois pega o portapapeis ([`paste`](#pegar-paste)). `redraw` se había selección, e `dialog` se se mostrou a caixa de mensaxe.
-5. **O botón do medio** só é para o programa: se non o pediu, nada.
+1. **A barra de desprazamento**, desde a subfase 1.9. Un clic na súa franxa é de meiga, aínda que o programa pedise o rato e Maiús non estea premido, salvo que outro botón xa estea seleccionando ou premido para o programa: entón segue o camiño de sempre, coma nunha cela da última columna, e o que xa estaba en marcha non se corta á metade. Na franxa:
+   - **O botón esquerdo** preme a barra, co terminal baixo o *lock* ([`press`](#premer-arrastrar-e-soltar-press-drag-e-release)): sobre o polgar, cólleo; fóra del, move a vista unha páxina cara ao punteiro. Se a barra queda premida, captura o rato, para seguir o arrastre fóra da xanela. Sen historial, a barra non fai nada, e o rato non se captura. Se xa estaba premida, nada.
+   - **Os outros botóns** non fan nada nela.
+   - Sempre un fotograma (`Response::REDRAW`): o polgar cambia de aspecto ou de sitio.
+2. **A cela.** Baixo o *lock*, os modos do programa e a cela debaixo do punteiro, co lado da cela onde está ([`cell_at`](meiga-core.md#cratesmeiga-coresrcmousers)): un punto nas marxes, fóra da grella, dá a cela máis próxima.
+3. **Para o programa**, se pediu o rato (`is_tracked`) e Maiús non está premido, sexa cal sexa o botón: solta o *lock*, envíalle o informe de premer, anota o botón e a cela, e captura o rato, para seguir o botón aínda que o punteiro saia da xanela. Non hai nada que debuxar.
+4. **O botón esquerdo selecciona.** `Clicks` conta os clics coas medidas de Windows: un, celas; dous, palabras; tres, liñas; e despois do terceiro, outra vez un. [`select`](meiga-core.md#cratesmeiga-coresrctermselectionrs) empeza a selección na grella do terminal, en vez da que houbese: unha de celas está baleira ata que o punteiro pasa a outro lado dunha cela; unha de palabras ou de liñas xa ten a palabra ou a liña. Anota onde remata, captura o rato e pide un fotograma (`Response::REDRAW`).
+5. **O botón dereito pega,** coma o Windows Terminal con `copyOnSelect` ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 7). Se a selección aínda está a medrar, porque o botón esquerdo segue abaixo, cópiaa e quítaa, para a vista que se movía soa (`autoscroll`, desde a 1.9), e solta o rato, se ningún outro botón o necesita. Se non, só a quita: xa está no portapapeis desde que se soltou o botón esquerdo, e copiala outra vez substituiría o que se copiou despois, quizais noutro programa. Despois pega o portapapeis ([`paste`](#pegar-paste)), que desde a 1.9 leva a vista á pantalla e devolve un `Response`: `redraw` se había selección ou se pegar moveu a vista, e `dialog` se se mostrou a caixa de mensaxe, que `..pasted` copia, co `zoom`. Sen programa, a resposta por defecto (`map_or_else`).
+6. **O botón do medio** só é para o programa: se non o pediu, nada.
 
-- **`drop(shared)`** destrúe o `MutexGuard` antes do final do bloque, e con el solta o *lock*: o informe, o portapapeis e a caixa de mensaxe van fóra del. `clipboard::copy` e `paste` collen o *lock* eles mesmos, e un `Mutex` de Rust non se pode coller dúas veces no mesmo fío: a segunda chamada a `lock` non volta, porque o fío queda bloqueado para sempre ou ten un pánico.
-- **Por que capturar o rato.** Sen captura, cando o punteiro sae da xanela, as mensaxes do rato van á xanela que está debaixo: a selección deixaría de medrar, e o botón subiría sen que meiga o soubese ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)). [`release`](#report-e-release) sóltao cando ningún botón o necesita.
+- **`drop(shared)`** destrúe o `MutexGuard` antes do final do bloque, e con el solta o *lock*: o informe, o portapapeis e a caixa de mensaxe van fóra del, e desde a 1.9, a captura do rato na franxa. `clipboard::copy` e `paste` collen o *lock* eles mesmos, e un `Mutex` de Rust non se pode coller dúas veces no mesmo fío: a segunda chamada a `lock` non volta, porque o fío queda bloqueado para sempre ou ten un pánico.
+- **Por que capturar o rato.** Sen captura, cando o punteiro sae da xanela, as mensaxes do rato van á xanela que está debaixo: a selección deixaría de medrar, o polgar deixaría de seguir o punteiro, e o botón subiría sen que meiga o soubese ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)). [`release`](#report-e-release) sóltao cando ningún botón o necesita.
 - **Unha primeira versión** copiaba sempre a selección co botón dereito antes de pegar, e pegaba o que acababa de copiar. `check-mouse.ps1` compróbao: unha copia de meiga que o fai pega a palabra seleccionada en vez do portapapeis, e falla.
 - `match self.clicks.press(…) { 1 => …, 2 => …, _ => … }`: `press` dá 1, 2 ou 3, e `_` colle o 3. As sangrías raras son as de rustfmt.
 
@@ -1738,6 +2174,16 @@ fn up(
     at: Point,
     modifiers: Modifiers,
 ) -> Response {
+    if button == Button::Left && self.bar.is_pressed() {
+        self.bar.release();
+        self.release(context);
+        // Holding the mouse may have ended the tracking of its leave.
+        if self.bar.contains(at) {
+            context.window.track_mouse_leave();
+        }
+        self.bar.hover(self.bar.contains(at));
+        return Response::REDRAW;
+    }
     if self.reported[index(button)] {
         self.reported[index(button)] = false;
         let (modes, cell) = {
@@ -1754,6 +2200,7 @@ fn up(
         );
         self.release(context);
     } else if button == Button::Left && self.selecting.take().is_some() {
+        self.autoscroll = None;
         self.release(context);
         // What is selected goes to the clipboard, and stays selected.
         clipboard::copy(context.window, context.shared, false);
@@ -1762,8 +2209,11 @@ fn up(
 }
 ```
 
+- **A barra**, desde a subfase 1.9: se sobe o botón esquerdo que premeu a barra, a barra sóltase ([`release`](#premer-arrastrar-e-soltar-press-drag-e-release)): o polgar deixa de seguir o punteiro, ou as páxinas paran. O rato sóltase, se ningún outro botón o necesita.
+  - **O aviso da saída do punteiro.** Se o punteiro segue sobre a franxa, o rato pide outra vez o aviso de cando saia da xanela (`track_mouse_leave`): mentres o botón estaba premido, a captura do rato puido rematar o seguimento, e sen el o polgar quedaría ancho ao saír o punteiro ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)).
+  - `hover` di se o punteiro segue sobre a franxa: o polgar queda ancho ou estréitase, e un fotograma (`Response::REDRAW`) debúxao co aspecto novo, que deixa de ser o do arrastre.
 - **Un botón do programa:** se se premeu para el, a súa soltura tamén é del, con Maiús ou sen el. O informe vai na cela onde sobe, coas teclas modificadoras dese momento, e `release` solta o rato se ningún outro botón o necesita. O botón sae de `reported`: se xa saíra, porque a xanela o esqueceu ao perder o rato ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)), esta soltura xa non vai ao programa, que a recibiu entón.
-- **O botón esquerdo que selecciona** remata a selección: solta o rato e **copia ao seleccionar**: o texto vai ao portapapeis e queda seleccionado (`copy` con `clear` a `false`, [ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 3). O final da selección non cambia, porque o puxo o último movemento: non hai nada que debuxar.
+- **O botón esquerdo que selecciona** remata a selección: para a vista que se movía soa, desde a 1.9 (`autoscroll`), solta o rato e **copia ao seleccionar**: o texto vai ao portapapeis e queda seleccionado (`copy` con `clear` a `false`, [ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 3). O final da selección non cambia, porque o puxo o último movemento: non hai nada que debuxar.
 - **Calquera outro,** nada: por exemplo, o botón dereito, que pegou ao baixar.
 
 ### Mover o rato: `moved`
@@ -1777,52 +2227,76 @@ fn moved(
     modifiers: Modifiers,
 ) -> Response {
     let mut shared = lock(context.shared);
+    if self.bar.is_pressed() {
+        context.window.set_pointer(Pointer::Arrow);
+        self.bar.drag(at, &mut shared.terminal, Instant::now());
+        return Response::REDRAW;
+    }
     let modes = shared.terminal.modes();
     let tracked = mouse::is_tracked(&modes);
+    let free = self.selecting.is_none() && !self.reported.contains(&true);
+    let on_bar = free && self.bar.contains(at);
     // The shape is the one of the next move: Windows asks for it first.
-    context.window.set_pointer(if tracked && !modifiers.shift {
-        Pointer::Arrow
-    } else {
-        Pointer::Text
-    });
-    let (cell, side) = cell_at(at, context.cell, shared.terminal.size());
+    context
+        .window
+        .set_pointer(if on_bar || (tracked && !modifiers.shift) {
+            Pointer::Arrow
+        } else {
+            Pointer::Text
+        });
+    let size = shared.terminal.size();
+    let (cell, side) = cell_at(at, context.cell, size);
     if let Some(end) = self.selecting {
+        let started = self.follow(at, size, context.cell, Instant::now());
         if end == (cell, side) {
-            return Response::default();
+            return Response {
+                redraw: started,
+                ..Response::default()
+            };
         }
         self.selecting = Some((cell, side));
         shared.terminal.select_to(cell, side);
-        return Response {
-            redraw: true,
-            dialog: false,
-        };
+        return Response::REDRAW;
     }
     drop(shared);
+    let mut response = Response::default();
+    if free && self.bar.hover(on_bar) {
+        if on_bar {
+            context.window.track_mouse_leave();
+        }
+        response.redraw = true;
+    }
+    if on_bar {
+        return response;
+    }
     // The moves of a button whose press went to the program, or, if it
     // asked for all of them (`?1003`), the moves without buttons.
     let held = button.filter(|&button| self.reported[index(button)]);
     let action = match (held, button) {
         (Some(held), _) => MouseAction::Move(Some(held)),
         (None, None) if tracked && !modifiers.shift => MouseAction::Move(None),
-        _ => return Response::default(),
+        _ => return response,
     };
     if self.reported_at != Some(cell) {
         self.reported_at = Some(cell);
         self.report(context, action, cell, modifiers, &modes);
     }
-    Response::default()
+    response
 }
 ```
 
 O rato moveuse, paso a paso:
 
-1. **O punteiro.** Windows pregúntalle á xanela polo punteiro (`WM_SETCURSOR`) antes de cada `WM_MOUSEMOVE`, así que o que se escolle agora vese no seguinte movemento ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)): a frecha se os clics van ao programa, e a barra de texto se seleccionan. Así, ao premer ou soltar Maiús, o punteiro cambia en canto se move o rato.
-2. **A selección** segue o punteiro mentres o botón esquerdo selecciona, pero só cando cambian a cela ou o lado, que é cando pode cambiar o que se selecciona. [`select_to`](meiga-core.md#cratesmeiga-coresrctermselectionrs) move o seu final, e `redraw` pide un fotograma, que só debuxa as celas onde cambiou. Fóra da xanela, coa captura, `cell_at` dá a cela máis próxima: arrastrar fóra dela selecciona ata o bordo da grella.
-3. **Para o programa,** os movementos dun botón que se premeu para el (`Move(Some(…))`), con Maiús ou sen el, ou, se non hai ningún botón abaixo e Maiús non está premido, os movementos sen botóns (`Move(None)`). [`report`](#report-e-release) só os envía se o programa os pediu: os dun botón, con `?1002` ou `?1003`, e os outros, só con `?1003`. E só cando o rato cambia de cela (`reported_at`): Windows envía moitos `WM_MOUSEMOVE` mentres o rato cruza unha cela, e tamén algúns sen que o rato se mova.
+1. **A barra premida**, desde a subfase 1.9: mentres o botón esquerdo segue abaixo despois dun clic na franxa, o punteiro é a frecha, e a barra segue o punteiro ([`drag`](#premer-arrastrar-e-soltar-press-drag-e-release)), co terminal baixo o *lock*: o polgar collido move a vista, ou as páxinas seguen cara ao punteiro. Sempre un fotograma.
+2. **O punteiro.** Windows pregúntalle á xanela polo punteiro (`WM_SETCURSOR`) antes de cada `WM_MOUSEMOVE`, así que o que se escolle agora vese no seguinte movemento ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)): a frecha se os clics van ao programa e, desde a 1.9, sobre a franxa da barra; e a barra de texto se seleccionan. Así, ao premer ou soltar Maiús, o punteiro cambia en canto se move o rato. A franxa só conta se ningún botón está seleccionando nin premido para o programa (`free`): entón, o clic seguinte na franxa sería da barra ([`down`](#premer-un-botón-down)).
+3. **A selección** segue o punteiro mentres o botón esquerdo selecciona, pero só cando cambian a cela ou o lado, que é cando pode cambiar o que se selecciona. [`select_to`](meiga-core.md#cratesmeiga-coresrctermselectionrs) move o seu final, e `Response::REDRAW` pide un fotograma, que só debuxa as celas onde cambiou. Fóra da xanela, coa captura, `cell_at` dá a cela máis próxima: arrastrar fóra dela selecciona ata o bordo da grella.
+   - **A vista que se move soa**, desde a 1.9: se o punteiro está por riba ou por debaixo da grella, a vista empeza a desprazarse soa, e a selección medra con ela ([`follow`](#a-vista-que-se-move-soa-tick-follow-e-autoscroll)); dentro da grella, para. `follow` di se empeza agora: entón pídese un fotograma aínda que a cela non cambie, porque é o fotograma o que move a vista, e di cando o seguinte ([`update`](#poñer-ao-día-update)).
+4. **A franxa da barra**, desde a 1.9: se o punteiro entra nela ou sae dela (`hover` di se cambiou), o polgar ensánchase ou estréitase, e pídese un fotograma. Ao entrar, o rato pídelle a Windows un aviso para cando o punteiro saia da xanela (`track_mouse_leave`, que trae `Event::MouseLeft`), por se sae directamente desde a franxa ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)): fóra dela, nin avisos nin temporizadores. Sobre a franxa, os movementos non van ao programa.
+5. **Para o programa,** os movementos dun botón que se premeu para el (`Move(Some(…))`), con Maiús ou sen el, ou, se non hai ningún botón abaixo e Maiús non está premido, os movementos sen botóns (`Move(None)`). [`report`](#report-e-release) só os envía se o programa os pediu: os dun botón, con `?1002` ou `?1003`, e os outros, só con `?1003`. E só cando o rato cambia de cela (`reported_at`): Windows envía moitos `WM_MOUSEMOVE` mentres o rato cruza unha cela, e tamén algúns sen que o rato se mova.
 
 - `button.filter(…)`: o botón do evento só conta se se premeu para o programa. `MouseMoved` só di o primeiro dos botóns que están abaixo, na orde esquerdo, do medio e dereito ([`Event`](meiga-win.md#cratesmeiga-winsrceventrs)).
-- O patrón `(None, None) if …`: ningún botón do programa, e ningún botón abaixo. Cun botón abaixo que non é do programa, coma o dereito despois de pegar, nada.
-- `drop(shared)` solta o *lock* antes dos informes, coma en `down`. Os dous `return` de antes sóltano ao saír da función.
+- O patrón `(None, None) if …`: ningún botón do programa, e ningún botón abaixo. Cun botón abaixo que non é do programa, coma o dereito despois de pegar, nada. Desde a 1.9, os `return` de despois do `drop` devolven `response`, que pode levar o fotograma da franxa.
+- `drop(shared)` solta o *lock* antes dos informes, coma en `down`. Os `return` de antes sóltano ao saír da función.
 
 ### A roda: `turned`
 
@@ -1835,33 +2309,36 @@ fn turned(
     horizontal: bool,
     modifiers: Modifiers,
 ) -> Response {
-    let notches = self.wheel.add(delta, horizontal);
-    let Some(input) = context.input.filter(|_| notches != 0 && !modifiers.shift) else {
-        return Response::default();
-    };
-    let wheel = match (horizontal, notches > 0) {
-        (false, true) => Wheel::Up,
-        (false, false) => Wheel::Down,
-        (true, true) => Wheel::Right,
-        (true, false) => Wheel::Left,
-    };
     let (modes, size) = {
         let shared = lock(context.shared);
         (shared.terminal.modes(), shared.terminal.size())
     };
+    let for_meiga = modifiers.shift || self.bar.contains(at);
     self.bytes.clear();
-    if mouse::is_tracked(&modes) {
+    if mouse::is_tracked(&modes) && !for_meiga {
+        let notches = self.wheel.add(delta, horizontal);
         let (cell, _) = cell_at(at, context.cell, size);
         for _ in 0..notches.unsigned_abs() {
             mouse::report(
-                MouseAction::Wheel(wheel),
+                MouseAction::Wheel(direction(horizontal, notches)),
                 cell,
                 modifiers,
                 &modes,
                 &mut self.bytes,
             );
         }
-    } else if modes.alt_screen && modes.alternate_scroll {
+    } else if modifiers.ctrl {
+        let notches = if horizontal {
+            0
+        } else {
+            self.wheel.add(delta, false)
+        };
+        return Response {
+            zoom: notches,
+            ..Response::default()
+        };
+    } else if modes.alt_screen && modes.alternate_scroll && !for_meiga {
+        let notches = self.wheel.add(delta, horizontal);
         let per_notch = if horizontal {
             self.settings.wheel_chars
         } else {
@@ -1869,29 +2346,162 @@ fn turned(
             self.settings.wheel_lines.unwrap_or(u32::from(size.rows))
         };
         for _ in 0..notches.unsigned_abs().saturating_mul(per_notch) {
-            for key in &arrow_keys(wheel) {
+            for key in &arrow_keys(direction(horizontal, notches)) {
                 self.encoder.encode(key, &modes, &mut self.bytes);
             }
         }
+    } else if !horizontal {
+        return self.scroll_history(context, delta);
     }
-    if !self.bytes.is_empty() {
+    if let Some(input) = context.input
+        && !self.bytes.is_empty()
+    {
         input.write(&self.bytes);
     }
     Response::default()
 }
 ```
 
-A roda xirou, paso a paso ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 10):
+A roda xirou, paso a paso ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 10; desde a subfase 1.9, [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 9 e 12):
 
-1. **As partes enteiras.** `WheelTurns` suma os xiros ata facer partes enteiras, de 120, porque algúns ratos e *touchpads* xiran a anacos. Sen ningunha parte enteira, sen programa ou con Maiús, nada.
-2. **A dirección:** adiante é arriba e atrás, abaixo; a roda inclinada vai á dereita ou á esquerda.
-3. **Ao programa,** se pediu o rato: un informe por cada parte, na cela do punteiro. Abonda `?1000`: os clics e a roda van xuntos.
-4. **Frechas,** na pantalla alternativa, a un programa que non pediu o rato, coma `less`, mentres non desactive `?1007` (`alternate_scroll`), que está activo ao principio ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)): por cada parte, tantas frechas coma liñas din as preferencias de Windows, 3 por defecto, ou, se a roda despraza unha pantalla, as filas da pantalla; cara aos lados, os caracteres das preferencias. Cada frecha baixa e sobe ([`arrow_keys`](meiga-core.md#cratesmeiga-coresrcmousers)), e o `KeyEncoder` do rato convértea coma unha tecla de verdade: en win32-input-mode, se o ConPTY o pediu, ou co que envía un terminal VT.
-5. **Nunha escritura:** os informes ou as frechas de todas as partes xúntanse en `bytes`, e van ao programa cun só `write`.
+1. **Para meiga** (`for_meiga`): con Maiús, coma na 1.8, e, desde a 1.9, co punteiro sobre a franxa da barra, que nunca vai ao programa.
+2. **Ao programa,** se pediu o rato e a roda non é para meiga: un informe por cada parte enteira, na cela do punteiro, tamén con Ctrl. Abonda `?1000`: os clics e a roda van xuntos. `WheelTurns` suma os xiros ata facer partes enteiras, de 120, porque algúns ratos e *touchpads* xiran a anacos.
+3. **O zoom,** desde a 1.9: se non foi ao programa, Ctrl e a roda devolven as súas partes enteiras en `zoom`, adiante positivas, e a vista fai o zoom, un punto por parte ([`mouse`](#o-rato-mouse-e-dialog_closed)). A roda inclinada, con Ctrl, nada: cero partes.
+4. **Frechas,** na pantalla alternativa, a un programa que non pediu o rato, coma `less`, mentres non desactive `?1007` (`alternate_scroll`), que está activo ao principio, e se a roda non é para meiga ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)): por cada parte, tantas frechas coma liñas din as preferencias de Windows, 3 por defecto, ou, se a roda despraza unha pantalla, as filas da pantalla; cara aos lados, os caracteres das preferencias. Cada frecha baixa e sobe ([`arrow_keys`](meiga-core.md#cratesmeiga-coresrcmousers)), e o `KeyEncoder` do rato convértea coma unha tecla de verdade: en win32-input-mode, se o ConPTY o pediu, ou co que envía un terminal VT.
+5. **O historial,** desde a 1.9, en todos os demais casos, coa roda vertical ([`scroll_history`](#a-vista-do-historial-coa-roda-scroll_history)): na pantalla principal, cun programa sen o rato e, con Maiús ou sobre a franxa, tamén cun que o pediu. Na alternativa non hai historial, e non se move nada. A roda inclinada, nada.
+6. **Nunha escritura:** os informes ou as frechas de todas as partes xúntanse en `bytes`, e van ao programa cun só `write`, se hai programa e algo que enviar.
 
-- **Na pantalla normal,** a un programa sen o rato, a roda aínda non fai nada: desde a subfase 1.9 desprazará o historial.
+- **Ata a 1.8,** `WheelTurns` sumaba os xiros antes de nada, e a roda non facía nada con Maiús, sen programa, nin na pantalla principal cun programa sen o rato. Desde a 1.9, cada camiño suma os xiros cando os usa: o historial cóntaos en filas, con `WheelRows`, e non en partes.
+- `direction` dá a dirección das partes ([máis abaixo](#report-e-release)): ata a 1.8 ía eiquí, nun `match`, e agora úsana os informes e as frechas.
 - `unsigned_abs` dá as partes sen signo, e `saturating_mul` evita que as frechas pasen de `u32::MAX`, digan o que digan as preferencias.
-- `context.input.filter(…)`: `Option<&Input>` cópiase, e `filter` só deixa a entrada se hai algo que enviar.
+- `if let Some(input) = context.input && !self.bytes.is_empty()` (*let chains*): sen programa, ou sen nada que enviar, non se escribe nada. Ata a 1.8, sen programa, a roda non facía nada; agora o zoom e o historial non o necesitan.
+
+### A vista do historial coa roda: `scroll_history`
+
+```rust
+fn scroll_history(&mut self, context: &Context<'_>, delta: i16) -> Response {
+    let mut shared = lock(context.shared);
+    let moved = match self.settings.wheel_lines {
+        Some(lines) => {
+            let rows = self.wheel_rows.add(delta, lines);
+            rows != 0 && shared.terminal.scroll(Scroll::Rows(rows))
+        }
+        None => {
+            let notches = self.wheel.add(delta, false);
+            let page = if notches > 0 {
+                Scroll::PageUp
+            } else {
+                Scroll::PageDown
+            };
+            (0..notches.unsigned_abs())
+                .fold(false, |moved, _| shared.terminal.scroll(page) || moved)
+        }
+    };
+    // A selection that is growing ends under the pointer, in the rows
+    // that the view shows now.
+    if moved && let Some((cell, side)) = self.selecting {
+        shared.terminal.select_to(cell, side);
+    }
+    Response {
+        redraw: moved,
+        ..Response::default()
+    }
+}
+```
+
+Desde a subfase 1.9. Move a vista do historial do terminal por un xiro da roda, baixo o *lock* ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 9):
+
+- **As liñas das preferencias de Windows** por parte, 3 por defecto ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)): [`WheelRows`](meiga-core.md#cratesmeiga-coresrcmousers) suma os xiros en 120 avos dunha fila, así que un *touchpad* que xira a anacos move a vista unha fila en canto fai unha, sen esperar a unha parte enteira; e un cambio de sentido empeza de novo. Adiante, as filas son positivas: cara arriba, ás máis antigas ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs)).
+- **Unha pantalla** por parte, se Windows di que a roda despraza unha pantalla (`wheel_lines` a `None`): as partes enteiras de `WheelTurns`, unha páxina cada unha. `fold` move a vista unha páxina por parte e di se se moveu algunha vez: `scroll(page) || moved` chama sempre a `scroll`, porque vai primeiro.
+- **Unha selección que medra** remata debaixo do punteiro, nas filas que mostra agora a vista: a cela anotada en `selecting` é a mesma, pero agora mostra outro texto ([`select_to`](meiga-core.md#cratesmeiga-coresrctermselectionrs)). `if moved && let Some(…) = …` (*let chains*): só se a vista se moveu.
+- **Un fotograma**, se a vista se moveu. Nos extremos do historial, ou sen historial, coma na pantalla alternativa, nada.
+
+### A vista que se move soa: `tick`, `follow` e `autoscroll`
+
+```rust
+/// The dots per inch at a scale of 100 %.
+const BASE_DPI: u32 = 96;
+
+pub fn tick(&mut self, terminal: &mut Terminal, now: Instant, cell: Size) -> Option<Instant> {
+    let paging = self.bar.tick(terminal, now);
+    let selecting = self.autoscroll(terminal, now, cell);
+    paging.into_iter().chain(selecting).min()
+}
+
+fn follow(&mut self, at: Point, size: GridSize, cell: Size, now: Instant) -> bool {
+    // A grid is far smaller than an i32.
+    let bottom = i32::from(size.rows) * cell.height as i32;
+    let distance = if at.y < 0 {
+        at.y
+    } else if at.y >= bottom {
+        at.y - bottom + 1
+    } else {
+        self.autoscroll = None;
+        return false;
+    };
+    let pixels = distance.unsigned_abs() as f32 * BASE_DPI as f32 / self.dpi.max(1) as f32;
+    let speed = pixels * pixels / 25.0 + 2.0;
+    let speed = if distance < 0 { speed } else { -speed };
+    match &mut self.autoscroll {
+        Some(scroll) => {
+            scroll.speed = speed;
+            scroll.at = at;
+            let restarts = !scroll.running;
+            if restarts {
+                scroll.running = true;
+                scroll.last = now;
+            }
+            restarts
+        }
+        None => {
+            self.autoscroll = Some(AutoScroll {
+                speed,
+                at,
+                last: now,
+                carry: 0.0,
+                running: true,
+            });
+            true
+        }
+    }
+}
+
+fn autoscroll(&mut self, terminal: &mut Terminal, now: Instant, cell: Size) -> Option<Instant> {
+    let scroll = self.autoscroll.as_mut().filter(|scroll| scroll.running)?;
+    let elapsed = now.saturating_duration_since(scroll.last).as_secs_f32();
+    scroll.last = now;
+    let rows = scroll.speed * elapsed + scroll.carry;
+    scroll.carry = rows.fract();
+    // At most some thousands of rows per frame.
+    let rows = rows.trunc() as i32;
+    if rows != 0 {
+        if !terminal.scroll(Scroll::Rows(rows)) {
+            scroll.running = false;
+            return None;
+        }
+        let end = cell_at(scroll.at, cell, terminal.size());
+        terminal.select_to(end.0, end.1);
+        self.selecting = Some(end);
+    }
+    now.checked_add(frames::interval())
+}
+```
+
+Desde a subfase 1.9. A vista do historial móvese soa en dous casos: mentres o botón esquerdo segue premido na franxa da barra, fóra do polgar, que pasa páxinas; e mentres unha selección se arrastra por riba ou por debaixo da grella, que medra coa vista ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 10 e 11).
+
+- **`tick`**, en cada fotograma, baixo o *lock* ([`update`](#poñer-ao-día-update)): as páxinas da barra ([`ScrollBar::tick`](#as-páxinas-tick)) e a selección que se despraza soa (`autoscroll`). Devolve o momento máis próximo no que ten que mover a vista outra vez, ou `None`: `into_iter` converte o primeiro `Option` nun iterador de cero ou un elementos, `chain` engade o segundo, e `min` dá o menor.
+- **Co temporizador dos fotogramas**, sen fíos nin temporizadores novos: a vista dálle o momento a `Frames`, que programa para el o temporizador, e o fotograma seguinte volta chamar a `tick`. Só mentres dura: despois, `None`, e en repouso a xanela non esperta.
+- **`follow`**, desde [`moved`](#mover-o-rato-moved), mentres medra unha selección, co punteiro en `at`, nunha grella de `size` celas de `cell` píxeles:
+  - **Dentro da grella**, a vista non se move soa (`autoscroll` a `None`).
+  - **Por riba ou por debaixo**, a distancia en píxeles ata o seu bordo: negativa por riba, desde −1, e positiva por debaixo, desde 1. Por debaixo da grella pode ser aínda na xanela, nas marxes de abaixo.
+  - **A velocidade,** coma no Windows Terminal: 2 filas por segundo, máis o cadrado da distancia en píxeles ao 100 % entre 25. A distancia pásase a píxeles ao 100 % co DPI da xanela (`BASE_DPI`, e `max(1)` evita dividir entre 0): o mesmo xesto dá a mesma velocidade a calquera escala. Por exemplo, a 10 píxeles ao 100 %, 6 filas por segundo; a 50, 102. Por riba, positiva: cara ás filas máis antigas.
+  - **Se xa se movía,** cambian a velocidade e o punto; se parara nun extremo do historial (`running` a `false`), volta probar desde agora. Se non, empeza un novo, sen fracción pendente.
+  - Devolve se empeza agora: entón `moved` pide un fotograma, que é o que pon a andar `tick`.
+- **`autoscroll`**, en cada fotograma, mentres se move:
+  - **As filas** que lle tocan pola súa velocidade desde a última vez, máis a fracción que non se moveu entón (`carry`): así, a velocidade non depende do ritmo dos fotogramas. `fract` garda a parte decimal, e `trunc` dá as filas enteiras, cara a cero, coas dúas co signo da velocidade. `as i32` non perde nada: como moito, uns miles de filas por fotograma.
+  - **Se a vista non se pode mover,** porque chegou ao principio do historial ou á pantalla, para (`running` a `false`), e xa non pide máis fotogramas. Se se moveu, a selección medra con ela ata a cela debaixo do punteiro, a máis próxima dentro da grella (`cell_at`), e esa cela é agora o final da selección (`selecting`), para o seguinte movemento.
+  - **O seguinte paso**, un intervalo dos fotogramas despois ([`frames::interval`](#funcións-auxiliares)). `checked_add` dá `None` se a suma non cabe nun `Instant`.
+  - `as_mut().filter(…)?`: unha referencia ao `AutoScroll` só se aínda se move; se non, `?` volta con `None`.
 
 ### Cando a xanela perde o rato: `forget_buttons`
 
@@ -1914,9 +2524,11 @@ pub fn forget_buttons(&mut self, context: &Context<'_>) {
             }
         }
     }
+    self.autoscroll = None;
     if self.selecting.take().is_some() {
         clipboard::copy(context.window, context.shared, false);
     }
+    self.bar.release();
     self.release(context);
 }
 ```
@@ -1924,8 +2536,9 @@ pub fn forget_buttons(&mut self, context: &Context<'_>) {
 A xanela xa non pode seguir os botóns: outra xanela colleu o rato (`Event::CaptureLost`, que vén de `WM_CAPTURECHANGED`), por exemplo con Alt+Tab ou Win+L mentres un botón está abaixo; ou unha caixa de mensaxe o tivo mentres estaba aberta ([`dialog_closed`](#o-rato-mouse-e-dialog_closed)).
 
 1. **Os botóns do programa** esquécense: `mem::take` devolve `reported` e déixao todo a `false`. O programa recibe a soltura de cada un deles, na última cela que recibiu (`reported_at`) e sen teclas modificadoras, que non se coñecen: a soltura de verdade xa non chegará a meiga, e o programa, coma vim ou tmux con `?1002`, seguiría crendo que o botón está abaixo. `report` mira o que pediu o programa, así que, se xa non quere o rato, non lle envía nada.
-2. **Unha selección que medraba** remata onde estaba, e cópiase sen quitala, coma ao soltar o botón.
-3. **O rato sóltase** (`release`), se aínda o ten: `release_mouse` só chama a `ReleaseCapture` se a captura é da xanela.
+2. **Unha selección que medraba** remata onde estaba, e cópiase sen quitala, coma ao soltar o botón. Desde a subfase 1.9, a vista deixa de moverse soa (`autoscroll`).
+3. **A barra**, desde a 1.9, solta o polgar, ou as páxinas paran ([`release`](#premer-arrastrar-e-soltar-press-drag-e-release)): o botón que a premía xa non se pode seguir.
+4. **O rato sóltase** (`release`), se aínda o ten: `release_mouse` só chama a `ReleaseCapture` se a captura é da xanela. A barra sóltase antes, porque `release` tamén garda o rato mentres ela está premida.
 
 - **Desde a revisión do código.** Antes, ao perder o rato, meiga esquecía os botóns do programa sen dicirllo: en vim ou en tmux con `?1002;1006`, premer e facer Alt+Tab ou Win+L deixaba o botón premido para o programa, que nunca recibía a soltura; e a que chegase despois sobre a xanela xa non ía a el. `check-mouse.ps1` compróbao: preme o botón esquerdo e publica `WM_CAPTURECHANGED` antes de soltalo, e o programa ten que recibir a soltura, unha vez ([Código › ferramentas](ferramentas.md#toolscheck-mouseps1)).
 - `if let Some(cell) = self.reported_at && pressed.contains(&true)` encadea un `if let` cunha condición (*let chains*, da edición 2024): sen ningún botón do programa, nin sequera se colle o *lock*.
@@ -1953,8 +2566,17 @@ fn report(
 }
 
 fn release(&self, context: &Context<'_>) {
-    if self.selecting.is_none() && !self.reported.contains(&true) {
+    if self.selecting.is_none() && !self.reported.contains(&true) && !self.bar.is_pressed() {
         context.window.release_mouse();
+    }
+}
+
+const fn direction(horizontal: bool, notches: i32) -> Wheel {
+    match (horizontal, notches > 0) {
+        (false, true) => Wheel::Up,
+        (false, false) => Wheel::Down,
+        (true, true) => Wheel::Right,
+        (true, false) => Wheel::Left,
     }
 }
 
@@ -1968,14 +2590,409 @@ const fn index(button: Button) -> usize {
 ```
 
 - **`report`** envíalle ao programa o informe dunha acción nunha cela, se a pediu. Sen programa, nada. [`mouse::report`](meiga-core.md#cratesmeiga-coresrcmousers) escríbeo en `bytes`, que se reutiliza, no formato que pediu o programa: SGR (`?1006`), UTF-8 (`?1005`) ou o do primeiro xterm. Devolve `false` se o programa non pediu esa acción, ou se a cela non cabe no formato: no do primeiro xterm, alén da columna ou da fila 95, porque o ConPTY le a entrada coma UTF-8 ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). Cada informe vai nunha escritura, porque o ConPTY le cada escritura enteira ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 9).
-- **`release`** solta o rato (`release_mouse`) só se ningún botón o necesita: nin unha selección que medra, nin un botón do programa. Con dous botóns premidos para o programa, o rato segue capturado ata que sobe o último.
+- **`release`** solta o rato (`release_mouse`) só se ningún botón o necesita: nin unha selección que medra, nin un botón do programa, nin, desde a subfase 1.9, a barra premida, que segue o arrastre do polgar fóra da xanela. Con dous botóns premidos para o programa, o rato segue capturado ata que sobe o último.
+- **`direction`**, desde a 1.9: a dirección das partes da roda, adiante arriba e atrás abaixo, ou, coa roda inclinada, á dereita e á esquerda. Ata a 1.8 ía dentro de `turned`; agora úsana os informes e as frechas, cada un coas súas partes.
 - `index` dá o sitio de cada botón en `reported`.
 
-**Sen probas unitarias.** O que se pode probar sen xanela, a cela debaixo do punteiro, os clics seguidos, as partes da roda, os informes e as frechas, próbano as de `meiga-core` ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)). Este módulo, que necesita a xanela, o portapapeis e un programa, compróbao `check-mouse.ps1` (ver [Comprobacións feitas](#comprobacións-feitas)).
+**Sen probas unitarias.** O que se pode probar sen xanela, a cela debaixo do punteiro, os clics seguidos, as partes da roda e, desde a subfase 1.9, as súas filas, os informes e as frechas, próbano as de `meiga-core` ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)); e a barra de desprazamento, as de [`scrollbar.rs`](#cratesmeigasrcscrollbarrs). Este módulo, que necesita a xanela, o portapapeis e un programa, compróbano `check-mouse.ps1` e, desde a 1.9, `check-resize.ps1` (ver [Comprobacións feitas](#comprobacións-feitas)).
+
+## `crates/meiga/src/scrollbar.rs`
+
+Desde a subfase 1.9. A **barra de desprazamento**: unha franxa á dereita da xanela, cun polgar (*thumb*) que mostra que parte do historial se ve, coma no Windows Terminal ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 10; [Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)). A franxa está sempre, para que a grella non perda columnas cando aparece o historial. O polgar é fino, e ancho mentres o punteiro está sobre a franxa ou o botón esquerdo está premido nela. Arrastralo move a vista; un clic na franxa fóra del móvea unha páxina cara ao punteiro, e outra vez mentres o botón segue premido, ata que o polgar chega ao punteiro, coma nas barras de Windows. Sen historial, coma na pantalla alternativa, a franxa está baleira.
+
+É do rato da vista ([`Mouse`](#mouse)), que lle leva os clics, os movementos e a saída do punteiro; a vista ponna ao día antes de cada fotograma e debúxaa despois da grella ([`update`](#poñer-ao-día-update) e [`draw`](#debuxar-draw-e-draw_row)). Non depende de Windows, só do terminal, que move a vista ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs)), e do lenzo, onde se debuxa ([`Canvas`](meiga-render.md#canvas)): ten probas unitarias, sen xanela. meiga debúxaa no seu *framebuffer*, coma o resto, e non usa a barra de Windows (`WS_VSCROLL`), que Windows debuxa co seu tema, clara e con frechas, fóra da área cliente.
+
+### As medidas e as cores
+
+```rust
+/// The dots per inch at a scale of 100 %, where the sizes below are in
+/// pixels.
+const BASE_DPI: u32 = 96;
+/// The width of the strip.
+const STRIP: u32 = 12;
+/// The width of the thumb: thin, and wide.
+const THIN: u32 = 3;
+const WIDE: u32 = 8;
+/// The space above and below the thumb.
+const MARGIN: u32 = 2;
+/// The shortest thumb: it can still be grabbed with a long history.
+const MIN_LENGTH: u32 = 24;
+
+/// The colour of the thumb: thin, wide, and dragged.
+const THIN_COLOR: Rgb = Rgb::new(0x4e, 0x53, 0x5c);
+const WIDE_COLOR: Rgb = Rgb::new(0x6e, 0x74, 0x7f);
+const DRAGGED_COLOR: Rgb = Rgb::new(0x8e, 0x94, 0x9f);
+
+/// While the button stays down outside the thumb, the view moves another
+/// page after `FIRST_REPEAT`, and then after each `REPEAT`.
+const FIRST_REPEAT: Duration = Duration::from_millis(250);
+const REPEAT: Duration = Duration::from_millis(50);
+```
+
+As medidas danse en píxeles ao 100 % (`BASE_DPI`), e escálanse co DPI da xanela, redondeando, polo menos a un píxel ([`scale`](#scale-e-page)):
+
+| Medida | Ao 100 % | Ao 150 % |
+|---|---|---|
+| A franxa (`STRIP`) | 12 | 18 |
+| O polgar, fino e ancho (`THIN` e `WIDE`) | 3 e 8 | 5 e 12 |
+| A marxe por riba e por debaixo do polgar (`MARGIN`) | 2 | 3 |
+| O polgar máis curto (`MIN_LENGTH`) | 24 | 36 |
+
+- **O polgar máis curto**: cun historial longo, o polgar que mide o que se ve sería de moi poucos píxeles, e non se podería coller.
+- **As cores** do polgar: fino, `#4E535C`; ancho, mentres o punteiro está sobre a franxa ou pasa páxinas, `#6E747F`; e máis claro mentres se arrastra, `#8E949F`. A franxa ten a cor do fondo da paleta, coma as marxes ([`draw`](#poñer-ao-día-e-debuxar-update-e-draw)). `Rgb::new` é unha `const fn`: as cores calcúlanse ao compilar.
+- **As páxinas** repítense aos 250 ms (`FIRST_REPEAT`) e despois cada 50 ms (`REPEAT`), mentres o botón segue premido ([`tick`](#as-páxinas-tick)).
+
+### `Look`, `Thumb` e `Paging`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Look {
+    Thin,
+    Wide,
+    Dragged,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Thumb {
+    top: i32,
+    bottom: i32,
+    /// How far its top can move.
+    travel: u64,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Paging {
+    /// Towards older rows.
+    up: bool,
+    /// Where the pointer is: the view stops when the thumb reaches it.
+    y: i32,
+    /// When the view moves again, or `None` once the thumb reached the
+    /// pointer.
+    next: Option<Instant>,
+}
+```
+
+- **`Look`**: como se ve o polgar: fino, ancho ou arrastrado. `PartialEq` permite comparalo co que mostra a xanela ([`update`](#poñer-ao-día-e-debuxar-update-e-draw)).
+- **`Thumb`**: onde está o polgar, en píxeles desde o alto da xanela: o seu bordo superior e o inferior, que non inclúe, coma os rectángulos de meiga ([`Rect`](meiga-core.md#cratesmeiga-coresrcgeometryrs)); e `travel`, canto pode baixar o seu bordo superior desde a marxe de arriba: o carril, a franxa sen as dúas marxes, menos o polgar. Del saen a posición do polgar para cada vista, e a vista para cada posición ([`thumb` e `offset_at`](#o-polgar-look-strip_rect-thumb-rect-e-offset_at)).
+- **`Paging`**: as páxinas, mentres o botón esquerdo segue premido na franxa fóra do polgar. O sentido do primeiro clic, cara arriba, ás filas máis antigas, ou abaixo, que non cambia; onde está o punteiro, que se move co arrastre; e cando se move outra vez a vista, ou `None` cando o polgar chegou ao punteiro.
+- Os tres son `Copy`: tipos pequenos, que se copian en vez de prestarse.
+
+### `ScrollBar`
+
+```rust
+pub struct ScrollBar {
+    strip: u32,
+    thin: u32,
+    wide: u32,
+    margin: u32,
+    min_length: u32,
+    client: Size,
+    hover: bool,
+    grab: Option<i32>,
+    paging: Option<Paging>,
+    shown: Option<(Rect, Look)>,
+}
+```
+
+| Campo | Que garda |
+|---|---|
+| `strip`, `thin`, `wide`, `margin` e `min_length` | As medidas, en píxeles á escala da xanela. |
+| `client` | O tamaño da área cliente da xanela: a franxa vai no seu bordo dereito, de arriba abaixo. |
+| `hover` | Se o punteiro está sobre a franxa. |
+| `grab` | Mentres se arrastra o polgar, a que distancia por debaixo do seu bordo superior o colleu o punteiro: así o polgar móvese co punteiro sen saltar. |
+| `paging` | As páxinas, mentres o botón segue premido fóra do polgar. |
+| `shown` | O polgar que mostra a xanela, e o seu aspecto: `None` sen historial. É o que debuxa `draw`, e con el sabe `update` se cambiou. |
+
+```rust
+pub fn new(dpi: u32, client: Size) -> Self {
+    let mut bar = Self {
+        strip: 0,
+        thin: 0,
+        wide: 0,
+        margin: 0,
+        min_length: 0,
+        client,
+        hover: false,
+        grab: None,
+        paging: None,
+        shown: None,
+    };
+    bar.set_dpi(dpi);
+    bar
+}
+
+pub fn width_at(dpi: u32) -> u32 {
+    scale(STRIP, dpi)
+}
+
+pub const fn width(&self) -> u32 {
+    self.strip
+}
+
+pub fn set_dpi(&mut self, dpi: u32) {
+    self.strip = scale(STRIP, dpi);
+    self.thin = scale(THIN, dpi);
+    self.wide = scale(WIDE, dpi);
+    self.margin = scale(MARGIN, dpi);
+    self.min_length = scale(MIN_LENGTH, dpi);
+}
+
+pub fn set_client(&mut self, client: Size) {
+    self.client = client;
+}
+```
+
+- **`new`**: a barra dunha xanela de `client` píxeles a `dpi`. As medidas calcúlaas `set_dpi`, o mesmo código ca cando cambia a escala. Non mostra ningún polgar: o primeiro fotograma debúxao, se hai historial.
+- **`width_at`**: o ancho da franxa a un DPI, sen barra. Úsao [`terminal`](#appnew-e-terminal) para a primeira grella, antes de que existan a vista, o seu rato e a súa barra. **`width`**: o da barra, para a grella cada vez que cambia o tamaño da xanela ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)).
+- **`set_dpi`**: a xanela pasou a un monitor con outra escala ([`Mouse::set_dpi`](#mouse)). O polgar calcúlase coas medidas novas no seguinte fotograma.
+- **`set_client`**: a xanela cambiou de tamaño ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)): a franxa vai ao bordo dereito novo, e o polgar mide o alto novo.
+
+### O punteiro e a franxa: `contains`, `is_pressed` e `hover`
+
+```rust
+pub fn contains(&self, at: Point) -> bool {
+    let strip = self.strip_rect();
+    (strip.left..strip.right).contains(&at.x) && (strip.top..strip.bottom).contains(&at.y)
+}
+
+pub const fn is_pressed(&self) -> bool {
+    self.grab.is_some() || self.paging.is_some()
+}
+
+pub fn hover(&mut self, over: bool) -> bool {
+    mem::replace(&mut self.hover, over) != over
+}
+```
+
+- **`contains`**: se un punto, en píxeles da área cliente, está na franxa. Un rango `a..b` inclúe `a` e non `b`, coma os bordos dos rectángulos. Fóra da xanela, coa captura do rato, os puntos poden ser negativos ou pasar do bordo, e non están na franxa.
+- **`is_pressed`**: se o botón esquerdo baixou na franxa e segue abaixo, arrastrando o polgar ou pasando páxinas.
+- **`hover`**: o punteiro está sobre a franxa, ou non. Devolve se cambiou, para pedir un fotograma só entón: `mem::replace` pon o valor novo e devolve o vello.
+
+### Poñer ao día e debuxar: `update` e `draw`
+
+```rust
+pub fn update(&mut self, history: History, rows: u16) -> Option<Rect> {
+    let look = self.look();
+    let shown = self
+        .thumb(history, rows)
+        .map(|thumb| (self.rect(thumb, look), look));
+    if shown == self.shown {
+        return None;
+    }
+    let old = mem::replace(&mut self.shown, shown).map(|(rect, _)| rect);
+    match (old, shown.map(|(rect, _)| rect)) {
+        (Some(old), Some(new)) => Some(old.union(new)),
+        (old, new) => old.or(new),
+    }
+}
+
+pub fn draw(&self, canvas: &mut Canvas<'_>, background: Rgb) {
+    let strip = self.strip_rect();
+    if !strip.intersects(canvas.clip()) {
+        return;
+    }
+    canvas.fill(strip, background);
+    if let Some((rect, look)) = self.shown {
+        let color = match look {
+            Look::Thin => THIN_COLOR,
+            Look::Wide => WIDE_COLOR,
+            Look::Dragged => DRAGGED_COLOR,
+        };
+        canvas.fill(rect, color);
+    }
+}
+```
+
+- **`update`**, antes de cada fotograma ([`TerminalView::update`](#poñer-ao-día-update)), co historial do terminal, cantas filas ten e onde está a vista ([`History`](meiga-core.md#cratesmeiga-coresrctermmodrs)), e coas filas da pantalla: calcula o polgar e o seu aspecto, e compárao co que mostra a xanela. Se é o mesmo, devolve `None`, e a barra non se debuxa. Se non, devolve a zona que cambiou, para o *damage*: o rectángulo que xunta o polgar de antes e o novo (`union`), ou só un deles, cando o historial aparece ou desaparece.
+- **Cando cambia:** cando a vista se move, cando o historial medra e o polgar encolle ou sobe, cando o punteiro entra ou sae da franxa, cando se colle ou se solta o polgar, e cando cambian o tamaño da xanela ou a escala. Mentres o programa escribe coa vista na pantalla, o polgar só cambia cando a súa lonxitude, en píxeles enteiros, é outra; e cando xa mide o mínimo, non cambia: queda abaixo de todo.
+- **`draw`** debuxa a franxa, coa cor do fondo que recibe, e o polgar da última posta ao día, coa cor do seu aspecto, só se a franxa toca o recorte do lenzo: os fotogramas que só cambian celas da grella non a tocan. `fill` recorta todo ao recorte, así que, nun fotograma que só debuxa a zona de `update`, a franxa pinta o fondo onde estaba o polgar de antes, e o polgar novo enriba. O fondo é o da paleta da copia da pantalla: se o programa cambia o fondo, a xanela enteira debúxase de novo, e a franxa con ela.
+
+### Premer, arrastrar e soltar: `press`, `drag` e `release`
+
+```rust
+pub fn press(&mut self, at: Point, terminal: &mut Terminal, now: Instant) {
+    self.hover = true;
+    let Some(thumb) = self.thumb(terminal.history(), terminal.size().rows) else {
+        return;
+    };
+    if (thumb.top..thumb.bottom).contains(&at.y) {
+        self.grab = Some(at.y - thumb.top);
+        return;
+    }
+    let up = at.y < thumb.top;
+    terminal.scroll(page(up));
+    self.paging = Some(Paging {
+        up,
+        y: at.y,
+        next: now.checked_add(FIRST_REPEAT),
+    });
+}
+
+pub fn drag(&mut self, at: Point, terminal: &mut Terminal, now: Instant) {
+    if let Some(grab) = self.grab {
+        let offset = self.offset_at(
+            at.y.saturating_sub(grab),
+            terminal.history(),
+            terminal.size().rows,
+        );
+        terminal.scroll_to(offset);
+    } else if let Some(paging) = &mut self.paging {
+        paging.y = at.y;
+        if paging.next.is_none() {
+            paging.next = now.checked_add(REPEAT);
+        }
+    }
+}
+
+pub fn release(&mut self) {
+    self.grab = None;
+    self.paging = None;
+}
+```
+
+- **`press`**: o botón esquerdo baixou na franxa ([`Mouse::down`](#premer-un-botón-down)), co terminal baixo o *lock*. O punteiro está sobre ela (`hover`). Sen historial, nada máis: nin se colle o polgar nin se pasan páxinas, e a barra non queda premida.
+  - **Sobre o polgar,** cólleo: `grab` garda a que distancia do seu bordo superior, para que o polgar non salte ao punteiro.
+  - **Fóra del,** a vista móvese xa unha páxina cara ao punteiro ([`page`](#scale-e-page)), e as seguintes, se o botón segue premido, desde os 250 ms (`FIRST_REPEAT`). `checked_add` dá `None` se a suma non cabe nun `Instant`.
+- **`drag`**: o punteiro moveuse co botón aínda premido ([`Mouse::moved`](#mover-o-rato-moved)).
+  - **Co polgar collido,** a vista vai á fila que pon o bordo superior do polgar onde o leva o punteiro, á máis próxima ([`offset_at`](#o-polgar-look-strip_rect-thumb-rect-e-offset_at)), con [`Terminal::scroll_to`](meiga-core.md#cratesmeiga-coresrctermmodrs). Por riba ou por debaixo da franxa, o polgar queda no seu extremo. `saturating_sub` non pasa dos límites dun `i32`.
+  - **Pasando páxinas,** só se move o punto onde paran: o sentido segue sendo o do primeiro clic. Se xa pararan, porque o polgar chegara ao punteiro, seguen 50 ms despois (`REPEAT`), pero só se o punteiro quedou máis alá do polgar, no sentido do primeiro clic: nunca voltan atrás ([`tick`](#as-páxinas-tick)).
+- **`release`**: o botón subiu ([`Mouse::up`](#soltar-un-botón-up)), ou a xanela perdeu o rato ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)): o polgar sóltase, e as páxinas paran.
+
+### As páxinas: `tick`
+
+```rust
+pub fn tick(&mut self, terminal: &mut Terminal, now: Instant) -> Option<Instant> {
+    let Paging { up, y, next } = self.paging?;
+    let next = next?;
+    if now < next {
+        return Some(next);
+    }
+    let reached = self
+        .thumb(terminal.history(), terminal.size().rows)
+        .is_none_or(|thumb| if up { thumb.top <= y } else { thumb.bottom > y });
+    let next = if !reached && terminal.scroll(page(up)) {
+        now.checked_add(REPEAT)
+    } else {
+        None
+    };
+    if let Some(paging) = &mut self.paging {
+        paging.next = next;
+    }
+    next
+}
+```
+
+En cada fotograma, baixo o *lock* ([`Mouse::tick`](#a-vista-que-se-move-soa-tick-follow-e-autoscroll)), mentres o botón segue premido fóra do polgar: se é a hora, move a vista outra páxina cara ao punteiro, e devolve cando outra vez, para o temporizador dos fotogramas.
+
+1. Sen páxinas, ou xa paradas (`next` a `None`), nada: os dous `?` voltan con `None`. `Paging` é `Copy`, e o patrón copia os seus campos.
+2. Antes da hora, devolve a hora: o temporizador dos fotogramas vence entón.
+3. **Chegou o polgar ao punteiro?** Subindo, cando o seu bordo superior está á altura do punteiro ou por riba; baixando, cando o seu bordo inferior está por debaixo del: en ambos casos, o punteiro está sobre o polgar ou xa detrás del. Sen historial, tamén (`is_none_or`).
+4. Se non chegou e a vista se move, a seguinte páxina, 50 ms despois (`REPEAT`). Se chegou, ou nun extremo do historial, paran (`None`), pero `paging` queda ata que o botón sobe: se o punteiro vai máis alá, seguen ([`drag`](#premer-arrastrar-e-soltar-press-drag-e-release)).
+
+- **Unha páxina** é unha pantalla, coma con Maiús+RePáx ([`page`](#scale-e-page)).
+- **Sempre no sentido do primeiro clic, ata que o polgar chega ao punteiro,** coma nas barras de Windows ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 10).
+
+### O polgar: `look`, `strip_rect`, `thumb`, `rect` e `offset_at`
+
+```rust
+fn look(&self) -> Look {
+    if self.grab.is_some() {
+        Look::Dragged
+    } else if self.hover || self.paging.is_some() {
+        Look::Wide
+    } else {
+        Look::Thin
+    }
+}
+
+fn strip_rect(&self) -> Rect {
+    let right = i32::try_from(self.client.width).unwrap_or(i32::MAX);
+    let bottom = i32::try_from(self.client.height).unwrap_or(i32::MAX);
+    // The strip is a few dozen pixels.
+    Rect::new(right.saturating_sub(self.strip as i32), 0, right, bottom)
+}
+
+fn thumb(&self, history: History, rows: u16) -> Option<Thumb> {
+    if history.rows == 0 {
+        return None;
+    }
+    let track = u64::from(self.client.height.saturating_sub(2 * self.margin));
+    let above = history.rows as u64;
+    let length = (track * u64::from(rows) / (above + u64::from(rows)))
+        .max(u64::from(self.min_length))
+        .min(track);
+    let travel = track - length;
+    let offset = history.offset.min(history.rows) as u64;
+    // The client area is far smaller than an i32.
+    let top = u64::from(self.margin) + travel * (above - offset) / above;
+    Some(Thumb {
+        top: top as i32,
+        bottom: (top + length) as i32,
+        travel,
+    })
+}
+
+fn rect(&self, thumb: Thumb, look: Look) -> Rect {
+    let width = match look {
+        Look::Thin => self.thin,
+        Look::Wide | Look::Dragged => self.wide,
+    };
+    let left = self.strip_rect().left + (self.strip.saturating_sub(width) / 2) as i32;
+    Rect::new(left, thumb.top, left + width as i32, thumb.bottom)
+}
+
+fn offset_at(&self, top: i32, history: History, rows: u16) -> usize {
+    let Some(thumb) = self.thumb(history, rows) else {
+        return 0;
+    };
+    if thumb.travel == 0 {
+        return history.offset;
+    }
+    let from_top = u64::try_from(i64::from(top) - i64::from(self.margin))
+        .unwrap_or(0)
+        .min(thumb.travel);
+    // At most the rows of the history, which is a usize.
+    let below = (from_top * history.rows as u64 + thumb.travel / 2) / thumb.travel;
+    history.rows - below as usize
+}
+```
+
+- **`look`**: arrastrado mentres se colleu o polgar; ancho mentres o punteiro está sobre a franxa ou se pasan páxinas; e fino se non.
+- **`strip_rect`**: a franxa, no bordo dereito da área cliente, de arriba abaixo. As conversións non poden fallar cunha xanela de verdade, pero o tipo non o garante.
+- **`thumb`**: o polgar ([Tecnoloxías › A barra de desprazamento](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)):
+  - **O carril** (`track`): o alto da franxa sen as dúas marxes.
+  - **A lonxitude:** a parte do carril que son as filas da pantalla entre todas, as do historial e as da pantalla; polo menos `min_length`, e como moito o carril enteiro, nunha xanela moi baixa.
+  - **A posición:** o percorrido (`travel`), o carril menos o polgar, repártese entre as filas do historial. Coa vista na pantalla (`offset` 0), o polgar está abaixo de todo; no principio do historial (`offset` igual ás súas filas), arriba de todo. `min` protexe a resta dunha vista alén do historial.
+  - **Sen historial,** ningún polgar: a franxa está baleira.
+  - As contas van en `u64`, sen desbordar: o historial ten como moito 10 000 filas. Ao 100 %, nunha xanela de 100 píxeles de alto, con 5 filas na pantalla e 15 no historial, o carril mide 96 píxeles, o polgar 24 (96 × 5 / 20, que é tamén o mínimo) e o percorrido 72: coa vista na pantalla, o polgar vai do 74 ao 98, e no principio do historial, do 2 ao 26.
+- **`rect`**: o polgar na xanela, no medio da franxa, co ancho do seu aspecto. Ao 100 %, o fino deixa 4 píxeles á súa esquerda e 5 á súa dereita, e o ancho, 2 e 2.
+- **`offset_at`**: a vista que pon o bordo superior do polgar en `top`, á fila máis próxima. A distancia desde a marxe de arriba, entre 0 e o percorrido, repártese entre as filas do historial ao revés ca en `thumb`, e sumar a metade do percorrido antes de dividir redondea á máis próxima, e non cara abaixo. Por riba da marxe, `try_from` dá un erro, e `unwrap_or(0)`, o principio do historial; e alén do final do percorrido, `min`, a pantalla. Sen percorrido, porque o polgar enche o carril, a vista non se move.
+
+### `scale` e `page`
+
+```rust
+fn scale(pixels: u32, dpi: u32) -> u32 {
+    (pixels.saturating_mul(dpi).saturating_add(BASE_DPI / 2) / BASE_DPI).max(1)
+}
+
+const fn page(up: bool) -> Scroll {
+    if up { Scroll::PageUp } else { Scroll::PageDown }
+}
+```
+
+- **`scale`**: `round(píxeles × DPI / 96)`, polo menos 1, coma o grosor do cursor ([`thickness`](#o-pestanexo-caret)): sumar a metade de 96 antes de dividir redondea. Ao 150 % (144 DPI): 18, 5, 12, 3 e 36. `saturating_mul` e `saturating_add` non pasan de `u32::MAX`, digan o que digan os números.
+- **`page`**: unha pantalla cara arriba, ás filas máis antigas, ou cara abaixo ([`Scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs)). Un `if` é unha expresión, e unha `const fn` pode usalo.
+
+**Probas.** Catro, cun terminal de 10 × 5 celas con 15 filas de historial (`setup` escribe 20 liñas, do 1 ao 20) e a barra dunha xanela de 100 × 100 píxeles ao 100 %: a franxa vai do píxel 88 ao 100, e o polgar, de 24 píxeles, móvese entre o 2 e o 98.
+
+- `the_thumb_follows_the_view_and_widens_under_the_pointer`: a primeira posta ao día dá o polgar fino, abaixo de todo, no medio da franxa (do 92 ao 95, e do 74 ao 98), e a segunda, sen cambios, nada. Coa vista no principio do historial, dá a zona que xunta as dúas posicións (do 2 ao 98). Co punteiro sobre a franxa, `hover` di que cambiou, e a segunda vez xa non, e o polgar é ancho (do 90 ao 98, e do 2 ao 26). `draw` pinta o polgar coa cor do ancho, o resto da franxa coa cor do fondo que recibe, e nada fóra dela.
+- `dragging_the_thumb_moves_the_view_to_the_nearest_row`: un clic 6 píxeles por debaixo do bordo superior do polgar cólleo, sen mover a vista. Levado arriba de todo, a vista vai ao principio do historial (15 filas); co seu bordo superior no 38, a metade do percorrido, 7,5 filas por riba da pantalla, que dan 7; e por debaixo da xanela, á pantalla (0). Soltalo deixa a barra sen premer.
+- `a_press_outside_the_thumb_moves_by_pages_until_the_thumb_reaches_the_pointer`: un clic por riba do polgar, no 40, move xa a vista unha pantalla (5 filas); antes dos 250 ms non pasa nada, e `tick` devolve esa hora; aos 250, outra (10), e a seguinte, aos 300; aos 300, o polgar, do 26 ao 50, xa está debaixo do punteiro, e paran. Co punteiro máis abaixo, no 90, non voltan atrás, coma en Windows; máis arriba, no 10, seguen 50 ms despois, ata o principio do historial (15), e paran.
+- `without_history_the_strip_is_empty`: sen historial, a posta ao día non dá ningunha zona, e un clic na franxa non a deixa premida; e ao 150 %, a franxa mide 18 píxeles.
 
 ## `crates/meiga/src/clipboard.rs`
 
-Desde a subfase 1.8. **Copiar e pegar**: a selección do terminal ao portapapeis de Windows, e o portapapeis ao programa ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). O portapapeis en si é de `meiga-win` ([Código › meiga-win › `clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs), [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)), e o texto que le o programa ao pegar, de `meiga-core` ([Código › meiga-core › `paste.rs`](meiga-core.md#cratesmeiga-coresrcpasters)). Úsano as teclas da vista ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)) e o rato ([`down`](#premer-un-botón-down), [`up`](#soltar-un-botón-up) e [`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)).
+Desde a subfase 1.8. **Copiar e pegar**: a selección do terminal ao portapapeis de Windows, e o portapapeis ao programa ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). O portapapeis en si é de `meiga-win` ([Código › meiga-win › `clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs), [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)), e o texto que le o programa ao pegar, de `meiga-core` ([Código › meiga-core › `paste.rs`](meiga-core.md#cratesmeiga-coresrcpasters)). Úsano as teclas da vista ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)) e o rato ([`down`](#premer-un-botón-down), [`up`](#soltar-un-botón-up) e [`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)). Desde a 1.9, pegar leva a vista do historial á pantalla.
 
 ### Copiar: `copy`
 
@@ -2017,7 +3034,7 @@ pub fn copy(window: &Window, shared: &Mutex<Shared>, clear: bool) -> bool {
 ### Pegar: `paste`
 
 ```rust
-pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> bool {
+pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> Response {
     // A clipboard that another program keeps open, or without text.
     let text = clipboard::read_text(window)
         .ok()
@@ -2026,16 +3043,24 @@ pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> bool {
     let modes = lock(shared).terminal.modes();
     let paste = Paste::new(&text, &modes);
     if paste.is_empty() {
-        return false;
+        return Response::default();
     }
-    let asked = !paste.bracketed && paste.is_multiline();
-    if asked && !window.confirm(TITLE, &question(&paste.text)) {
-        return true;
+    let dialog = !paste.bracketed && paste.is_multiline();
+    if dialog && !window.confirm(TITLE, &question(&paste.text)) {
+        return Response {
+            dialog,
+            ..Response::default()
+        };
     }
+    let redraw = lock(shared).terminal.scroll(Scroll::Bottom);
     let mut bytes = Vec::with_capacity(paste.text.len() + 12);
     paste.write_to(&mut bytes);
     input.write(&bytes);
-    asked
+    Response {
+        redraw,
+        dialog,
+        zoom: 0,
+    }
 }
 ```
 
@@ -2045,8 +3070,9 @@ Pega o portapapeis no programa, paso a paso ([Tecnoloxías › Pegar no terminal
 2. **O filtro.** [`Paste::new`](meiga-core.md#cratesmeiga-coresrcpasters) quita os caracteres de control, salvo o tabulador e os fins de liña, que pasan a ser CR, e, se o programa non pediu o *bracketed paste*, os brancos do final dun texto dunha liña: así, o texto non pode enviar Esc nin rematar o pegado antes de tempo, e un comando copiado co seu fin de liña non se executa só ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 5). Os modos léense baixo o *lock*, nunha liña.
 3. **Nada que pegar:** un texto baleiro sen *bracketed paste*. Co *bracketed paste* vai igual, só coas marcas: hai programas que, ao recibilas, len unha imaxe do portapapeis.
 4. **A pregunta.** Se o texto ten máis dunha liña e o programa non pediu o *bracketed paste*, cada liña podería executarse ao chegar o seu Intro, coma no PSReadLine: meiga pregunta antes, nunha caixa de mensaxe co título «meiga» (`TITLE`, de [`app.rs`](#content-e-app)) e o texto de [`question`](#a-pregunta-question) (decisión 6). Con *Cancel*, non pega nada.
-5. **O envío.** As marcas, se van, e o texto, nun búfer co sitio xusto: o texto e as dúas marcas, `ESC [ 200 ~` e `ESC [ 201 ~`, de 6 bytes cada unha. Van á entrada da sesión, coma as teclas, sen esperar ([`Input::write`](meiga-win.md#input)).
-6. **Devolve se mostrou a caixa,** pegase ou non: mentres estaba aberta, os eventos da xanela non chegaron á vista, e [`App::respond`](#respond-o-que-pide-a-vista) ten que sabelo.
+5. **A vista volta á pantalla**, onde escribe o programa, desde a subfase 1.9: antes de escribir o texto, coma no Windows Terminal, para que se vexa chegar ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs) con `Scroll::Bottom`, [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 7). Se non se pega nada, a vista non se move.
+6. **O envío.** As marcas, se van, e o texto, nun búfer co sitio xusto: o texto e as dúas marcas, `ESC [ 200 ~` e `ESC [ 201 ~`, de 6 bytes cada unha. Van á entrada da sesión, coma as teclas, sen esperar ([`Input::write`](meiga-win.md#input)).
+7. **Devolve un [`Response`](#context-e-response)**, desde a subfase 1.9, en vez dun `bool`: `redraw`, se a vista estaba no historial e hai que debuxar a pantalla; e `dialog`, se mostrou a caixa, pegase ou non: mentres estaba aberta, os eventos da xanela non chegaron á vista, e [`App::respond`](#respond-o-que-pide-a-vista) ten que sabelo. `zoom` sempre é 0. A variábel que se chamaba `asked` chámase agora `dialog`, coma o campo, e `..Response::default()` pon o resto dos campos aos seus valores por defecto.
 
 - **A caixa** ([`Window::confirm`](meiga-win.md#cratesmeiga-winsrcwindowrs)) ten *OK* e *Cancel*, a icona de aviso e *Cancel* escollido (`MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2`): un Intro de máis non pega nada. É a de Windows, que xa ten o teclado, a escala e a accesibilidade. Mentres está aberta, o seu bucle de mensaxes reparte tamén as da xanela, pero `confirm` non volta ata que se pecha ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)).
 - **Por que só sen *bracketed paste*.** Un programa que o pediu recibe o texto marcado, e non executa nada ata Intro, coma bash; preguntar sempre molestaría onde nada se executa. Os programas da consola de Windows nunca reciben as marcas: o ConPTY quítallas.
@@ -2130,7 +3156,7 @@ pub trait Scene {
 
 O que mostra a xanela. En cada fotograma, `Frames` chama a `update` e a `draw`; coa xanela minimizada, só a `update_hidden`.
 
-**`update`**, desde a subfase 1.6, pon ao día a escena no instante `now`, e dálle a `damage` as zonas que cambiaron nela. O terminal copia eiquí o que cambiou no terminal da sesión ([`TerminalView::update`](#poñer-ao-día-update)). Devolve cando hai que poñela ao día outra vez, aínda que non cambie nada máis: a hora límite dunha actualización sincronizada, ou o seguinte cambio do pestanexo. Por defecto non fai nada nin pide ningún momento: é o caso dos modos de medición, que marcan as súas zonas antes de cada fotograma.
+**`update`**, desde a subfase 1.6, pon ao día a escena no instante `now`, e dálle a `damage` as zonas que cambiaron nela. O terminal copia eiquí o que cambiou no terminal da sesión ([`TerminalView::update`](#poñer-ao-día-update)). Devolve cando hai que poñela ao día outra vez, aínda que non cambie nada máis: a hora límite dunha actualización sincronizada, ou o seguinte cambio do pestanexo; e, desde a 1.9, cando pode darlles a grella nova ao terminal e ao programa, ou cando ten que mover outra vez a vista do historial, que se move soa mentres pasan as páxinas da barra ou mentres unha selección se arrastra fóra da grella. Por defecto non fai nada nin pide ningún momento: é o caso dos modos de medición, que marcan as súas zonas antes de cada fotograma.
 
 **`update_hidden`**, coa xanela minimizada, fai só o que non pode esperar a que se restaure, sen poñer ao día a escena, e devolve cando hai que facelo outra vez. O terminal remata eiquí á súa hora a actualización sincronizada que o programa deixou aberta, para que reciba as respostas ás súas preguntas ([`TerminalView::update_hidden`](#coa-xanela-minimizada-update_hidden)). Por defecto, nada.
 
@@ -2245,7 +3271,7 @@ pub fn timer(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), Ha
 ```
 
 - `damage` anota unha zona que cambiou, recortada ao *framebuffer*: o que queda fóra non se debuxa. Úsana os modos de medición; o terminal dá as súas zonas en `update`.
-- **`changed`**: a escena cambiou, pero as súas zonas só se saben ao poñela ao día. Marca `changed`, para que haxa fotograma aínda sen zonas, e pídeo coma `request`. Chámano o aviso do fío lector e o cambio do foco ([`app.rs`](#os-eventos)), desde a subfase 1.8 a vista cando cambia a selección ([`respond`](#respond-o-que-pide-a-vista)), e `timer`.
+- **`changed`**: a escena cambiou, pero as súas zonas só se saben ao poñela ao día. Marca `changed`, para que haxa fotograma aínda sen zonas, e pídeo coma `request`. Chámano o aviso do fío lector e o cambio do foco ([`app.rs`](#os-eventos)), desde a subfase 1.8 a vista cando cambia a selección ([`respond`](#respond-o-que-pide-a-vista)), desde a 1.9 a vista cando cambian a vista do historial ou a fonte, e `timer`.
 - **`request`** decide cando se debuxa o que cambiou:
   - coa xanela minimizada, nunca: os cambios esperan en `damage` e na escena, e `changed` segue marcado. A escena só fai o que non pode esperar ([`hidden`](#coa-xanela-minimizada-hidden));
   - se non cambiou nada, só queda programar o temporizador para o momento que pediu a escena (`wait_for_scene`), que pode ser novo: ao cambiar o tamaño da xanela, `compose_all` acaba de poñela ao día;
@@ -2267,7 +3293,7 @@ pub fn schedule(&mut self, window: &Window) -> Result<(), HandlerError> {
 }
 ```
 
-Para os modos de medición: pide un fotograma para o primeiro momento que permita o *pacer*, aínda que non cambiase nada. A diferenza con `request` é que nunca debuxa no momento, sempre co temporizador, para que o bucle de mensaxes trate as mensaxes entre un fotograma e o seguinte.
+Para os modos de medición e, desde a revisión do código da subfase 1.9, para o cambio de escala: pide un fotograma para o primeiro momento que permita o *pacer*, aínda que non cambiase nada. A diferenza con `request` é que nunca debuxa no momento, sempre co temporizador. Nos modos de medición, para que o bucle de mensaxes trate as mensaxes entre un fotograma e o seguinte; co cambio de escala, para que antes chegue o tamaño novo da xanela, que Windows envía de inmediato ([Os eventos](#os-eventos)).
 
 ### `draw`
 
@@ -2431,7 +3457,7 @@ pub fn resized(&mut self, window: &Window, size: Size, minimized: bool, scene: &
 - **Cun tamaño novo**, o *framebuffer* adáptase: con marxe (`Room`) mentres o usuario redimensiona co rato, e exacto (`Exact`) noutro caso, como ao maximizar. Despois compónse enteiro, coa escena ao día, sen presentalo:
   - **ao restaurala**, píntase a xanela enteira desde o *framebuffer* (`invalidate`), que xa inclúe todos os cambios: non queda nada que presentar, nin marcas. O temporizador detense, porque aínda pode estar programado para o que a escena tiña que facer coa xanela minimizada: se a escena non pide ningún momento, `wait_for_scene` non o toca, e ese temporizador vencería despois e pediría un fotograma inútil. Despois, `wait_for_scene` prográmao para o momento da escena, se o pediu;
   - **noutro caso**, Windows pide `WM_PAINT` para a parte nova da xanela, e o resto segue igual; as zonas que cambiaran e aínda non se presentaran preséntanse co seguinte fotograma (`request`).
-- **Compóñese enteiro**, porque despois dun cambio de tamaño o *framebuffer* pode ter memoria nova, sen píxeles, ou zonas que antes quedaban fóra da xanela. É máis sinxelo ca levar a conta das partes que seguen ben, e o contido pode depender do tamaño: as marxes do terminal dependen del e, desde a subfase 1.9, tamén a súa grella. Mentres se redimensiona co rato, cada paso compón a xanela enteira, pero só presenta a parte nova.
+- **Compóñese enteiro**, porque despois dun cambio de tamaño o *framebuffer* pode ter memoria nova, sen píxeles, ou zonas que antes quedaban fóra da xanela. É máis sinxelo ca levar a conta das partes que seguen ben, e o contido pode depender do tamaño: as marxes do terminal dependen del e, desde a subfase 1.9, tamén a súa grella, que a vista calcula antes ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)) e cambia ao poñerse ao día, e a franxa da barra de desprazamento, que vai no bordo dereito. Mentres se redimensiona co rato, cada paso compón a xanela enteira, pero só presenta a parte nova.
 
 ```rust
 pub fn size_move_ended(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
@@ -2462,7 +3488,7 @@ pub fn paint(&mut self, dc: HDC, area: Rect) -> Result<(), HandlerError> {
 ### Funcións auxiliares
 
 ```rust
-fn interval() -> Duration {
+pub fn interval() -> Duration {
     auto_interval(window::is_remote_session())
 }
 
@@ -2481,6 +3507,7 @@ fn log(trace: &mut Option<Trace>, record: &Record<'_>) -> Result<(), HandlerErro
 }
 ```
 
+- **`interval`** dá o intervalo entre fotogramas de agora ([`request`](#pedir-un-fotograma)). Desde a subfase 1.9 é pública: a vista úsaa para darlles a grella nova ao terminal e ao programa como moito unha vez por intervalo ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)), e o rato, para o ritmo da selección que despraza a vista soa ([`autoscroll`](#a-vista-que-se-move-soa-tick-follow-e-autoscroll)).
 - `erase` borra as marcas presentando de novo os catro lados do bordo de cada unha.
 - `log` escribe no rexistro, se o hai. Se falla, por exemplo porque o disco está cheo, meiga para cunha mensaxe: o rexistro só se usa para comprobar e medir, e un rexistro incompleto daría resultados falsos.
 - As marcas son magenta (`#FF00FF`), para que se distingan do contido, e dun píxel de ancho.
@@ -2600,22 +3627,24 @@ O debuxo dun fotograma de texto:
 - **A fonte** chega en `Bench::new(mode, font)`: créaa [`App`](#cratesmeigasrcapprs) co DPI da xanela, e só a usa este modo. Sen fonte, os fotogramas de texto só pintan o fondo: o programa sempre lla dá, pero o tipo non o pode garantir. Como a fonte se crea antes do primeiro fotograma, os glifos rasterízanse nel, e os fotogramas que se miden só os buscan na caché.
 - **As cores e a fonte son as do terminal.** Desde a 1.6, sen a demo, as cores veñen de `meiga-core`: o texto e o fondo de meiga ([`FOREGROUND` e `BACKGROUND`](meiga-core.md#cratesmeiga-coresrccolorrs)). O fondo é tamén o de `partial` e a primeira cor de `full`. A fonte é a da vista do terminal ([`FONT_FAMILIES` e `FONT_POINTS`](#constantes)), sempre co estilo normal (`FontStyle::REGULAR`). Así, os fotogramas de texto miden o mesmo texto que debuxa o terminal.
 
-**Probas.** Catro: o cadrado avanza e marca o sitio vello e o novo; volta á esquerda ao chegar á dereita (tamén nunha xanela máis estreita ca el); os fotogramas completos marcan a xanela enteira e alternan as dúas cores; e os de texto cobren a xanela enteira, con píxeles da cor do texto, e cada cela cambia dun fotograma ao seguinte, sen quedar nunca en branco (`!` e `~` son o primeiro e o último carácter).
+**Probas.** Catro: o cadrado avanza e marca o sitio vello e o novo; volta á esquerda ao chegar á dereita (tamén nunha xanela máis estreita ca el); os fotogramas completos marcan a xanela enteira e alternan as dúas cores; e os de texto cobren a xanela enteira, con píxeles da cor do texto, e cada cela cambia dun fotograma ao seguinte, sen quedar nunca en branco (`!` e `~` son o primeiro e o último carácter). Desde a subfase 1.9, a de texto crea a fonte con `f32::from(FONT_POINTS)`, coma `App`, porque os puntos son agora un número enteiro.
 
 ## Comprobacións feitas
 
-- `cargo build --release` xera `target\release\meiga.exe`, duns 509 KB (520 704 bytes; na 1.7, 486 912).
+- `cargo build --release` xera `target\release\meiga.exe`, duns 545 KB (557 568 bytes; na 1.8, 520 704).
 - Ao abrilo sen argumentos, aparece a xanela, sen ningunha consola, con PowerShell 7 dentro: a súa cabeceira, o *prompt* e, despois del, o cursor, unha barra. Ao pechala, o proceso remata co código 0.
 - Un script de PowerShell que escribe as 16 cores, as 256, un degradado *truecolor*, a negra, a cursiva, o texto tenue, inverso e oculto, os cinco subliñados, o riscado e caracteres anchos móstraos todos como describe [`view.rs`](#cratesmeigasrcviewrs): os ideogramas e o emoji, en dúas celas (o emoji, dunha soa cor, [ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Outro, que cambia a cor do fondo, a do texto e a vermella da paleta (`OSC 11`, `10` e `4`), cambia tamén a cor do texto que xa estaba escrito.
 - Cun programa que non existe, o terminal mostra o erro de `CreateProcessW` coa liña de comandos que fallou, sen cursor. Cun programa que remata, a súa saída queda na xanela, cunha liña como `[process exited with code 3 (0x00000003)]` debaixo, e a xanela segue aberta ata que se pecha.
 - O texto compárase co do Windows Terminal coa mesma fonte, o mesmo tamaño e as mesmas cores: os glifos teñen exactamente os mesmos píxeles cubertos, enteiros e parciais, e a tinta dunha liña é a mesma, cunha diferenza menor do 0,5 % ([Tecnoloxías › Mesturar o texto co fondo](../tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste)).
-- O crate ten 19 probas unitarias (`cargo test -p meiga`). As novas da 1.6 son `the_program_and_its_arguments_are_the_command_line`, en `options.rs`; `the_window_is_woken_up_once_until_it_takes_what_changed`, `a_synchronized_update_wakes_the_window_once_and_ends_at_its_deadline` e `the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor`, en `session.rs`; e `the_cursor_blinks_until_the_timeout_and_stays_shown`, `the_cursor_does_not_blink_unless_everything_allows_it`, `a_dotted_underline_keeps_its_dots_when_a_frame_draws_part_of_it` e `styles_give_the_colours_of_the_text_and_its_background`, en `view.rs`. A das opcións sen argumentos é agora `no_options_run_the_default_shell`, e as sete da demo desapareceron con ela. A da actualización sincronizada e a do subliñado de puntos chegaron co arranxo de dous erros que atopou unha revisión do código: coa xanela minimizada, unha actualización sincronizada que o programa deixaba aberta non remataba ata restaurala, e as preguntas de dentro quedaban sen resposta; e os puntos do subliñado desprazábanse un píxel cando un fotograma debuxaba só parte da liña. A 1.7 non engade probas ao programa: a das opcións comproba tamén `--marks`, e as do teclado están en [`meiga-core`](meiga-core.md#cratesmeiga-coresrcinputrs) e [`meiga-win`](meiga-win.md#probas-do-teclado). A 1.8 engade dúas: `the_question_counts_the_lines_and_shows_the_first_ones`, en `clipboard.rs`, e `the_clipboard_of_the_program_wakes_the_window_once`, en `session.rs`; e a do fin do programa comproba tamén que quedan desactivados o rato e o *bracketed paste*. As do rato, da selección e do texto que se pega están en `meiga-core` ([`mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers), [`paste.rs`](meiga-core.md#cratesmeiga-coresrcpasters) e [`term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)), e as das mensaxes do rato e do portapapeis, en `meiga-win` ([`event.rs`](meiga-win.md#cratesmeiga-winsrceventrs) e [`clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs)).
+- O crate ten 23 probas unitarias (`cargo test -p meiga`). As novas da 1.6 son `the_program_and_its_arguments_are_the_command_line`, en `options.rs`; `the_window_is_woken_up_once_until_it_takes_what_changed`, `a_synchronized_update_wakes_the_window_once_and_ends_at_its_deadline` e `the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor`, en `session.rs`; e `the_cursor_blinks_until_the_timeout_and_stays_shown`, `the_cursor_does_not_blink_unless_everything_allows_it`, `a_dotted_underline_keeps_its_dots_when_a_frame_draws_part_of_it` e `styles_give_the_colours_of_the_text_and_its_background`, en `view.rs`. A das opcións sen argumentos é agora `no_options_run_the_default_shell`, e as sete da demo desapareceron con ela. A da actualización sincronizada e a do subliñado de puntos chegaron co arranxo de dous erros que atopou unha revisión do código: coa xanela minimizada, unha actualización sincronizada que o programa deixaba aberta non remataba ata restaurala, e as preguntas de dentro quedaban sen resposta; e os puntos do subliñado desprazábanse un píxel cando un fotograma debuxaba só parte da liña. A 1.7 non engade probas ao programa: a das opcións comproba tamén `--marks`, e as do teclado están en [`meiga-core`](meiga-core.md#cratesmeiga-coresrcinputrs) e [`meiga-win`](meiga-win.md#probas-do-teclado). A 1.8 engade dúas: `the_question_counts_the_lines_and_shows_the_first_ones`, en `clipboard.rs`, e `the_clipboard_of_the_program_wakes_the_window_once`, en `session.rs`; e a do fin do programa comproba tamén que quedan desactivados o rato e o *bracketed paste*. As do rato, da selección e do texto que se pega están en `meiga-core` ([`mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers), [`paste.rs`](meiga-core.md#cratesmeiga-coresrcpasters) e [`term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)), e as das mensaxes do rato e do portapapeis, en `meiga-win` ([`event.rs`](meiga-win.md#cratesmeiga-winsrceventrs) e [`clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs)). A 1.9 engade as catro da barra de desprazamento, en [`scrollbar.rs`](#cratesmeigasrcscrollbarrs): `the_thumb_follows_the_view_and_widens_under_the_pointer`, `dragging_the_thumb_moves_the_view_to_the_nearest_row`, `a_press_outside_the_thumb_moves_by_pages_until_the_thumb_reaches_the_pointer` e `without_history_the_strip_is_empty`. As do historial e do cambio de tamaño do terminal están en `meiga-core` ([`term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs)), e a das filas da roda, en [`mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers); e a do cambio de tamaño da pseudoconsola e a da orde dun cambio de escala, en `meiga-win` ([`tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs) e [`window_proc`](meiga-win.md#window_proc)).
 - Desde a 1.7, as teclas chegan ao programa: [`tools/check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) teclea na xanela, co teclado español ou co estadounidense, e comproba o carácter, a tecla e as modificadoras que le PowerShell para cada unha, tamén as teclas mortas e AltGr. Detecta os erros: unha copia de meiga que non usa o win32-input-mode falla 10 das 38 teclas do teclado español, e outra na que a tecla que espera polo seu carácter non o colle cando chega outra tecla, 18. O panel de emoji (Win + .) e o ditado (Win + H) escriben no terminal ([ADR 0014](../adr/0014-o-teclado.md)).
-- Desde a 1.8, o rato selecciona, copia e pega, e chega aos programas: [`tools/check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) lanza meiga tres veces, cada unha cun script de PowerShell no seu terminal, e publica na xanela mensaxes do rato e das teclas. Comproba a selección cun clic, con dous e con tres, e arrastrando, e o que chega ao portapapeis; Ctrl+C, Ctrl+Maiús+C e Esc, con selección e sen ela; o botón dereito, que pega; Ctrl+V e Ctrl+Maiús+V, que preguntan nunha caixa de mensaxe antes de pegar varias liñas; unha tecla que colleu meiga e sobe mentres a caixa está aberta, que a seguinte vez chega ao programa; o texto que copia un programa (OSC 52), que só cambia o portapapeis coa xanela en primeiro plano; os eventos do rato dun programa para Windows; Maiús, que garda o rato para meiga; os informes en SGR e no formato do primeiro xterm; a soltura dun botón cando a xanela perde o rato, por outra xanela ou por unha caixa de mensaxe; as frechas da roda na pantalla alternativa; e o *bracketed paste*. Mostra 18 liñas `OK:`.
+- Desde a 1.8, o rato selecciona, copia e pega, e chega aos programas: [`tools/check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) lanza meiga tres veces, cada unha cun script de PowerShell no seu terminal, e publica na xanela mensaxes do rato e das teclas. Comproba a selección cun clic, con dous e con tres, e arrastrando, e o que chega ao portapapeis; Ctrl+C, Ctrl+Maiús+C e Esc, con selección e sen ela; o botón dereito, que pega; Ctrl+V e Ctrl+Maiús+V, que preguntan nunha caixa de mensaxe antes de pegar varias liñas; unha tecla que colleu meiga e sobe mentres a caixa está aberta, que a seguinte vez chega ao programa; o texto que copia un programa (OSC 52), que só cambia o portapapeis coa xanela en primeiro plano; os eventos do rato dun programa para Windows; Maiús, que garda o rato para meiga; os informes en SGR e no formato do primeiro xterm; a soltura dun botón cando a xanela perde o rato, por outra xanela ou por unha caixa de mensaxe; as frechas da roda na pantalla alternativa; e o *bracketed paste*. Mostra 18 liñas `OK:`. Desde a 1.9, desconta a franxa da barra de desprazamento ao medir as celas.
 - `check-mouse.ps1` detecta os erros: oito copias de meiga, cun erro cada unha, fállana. Nunha, Maiús non garda o rato para meiga, e arrastrar con Maiús chega ao programa coma eventos do rato; noutra, Ctrl+V pega varias liñas sen preguntar; noutra, Esc chega ao programa aínda que haxa selección; noutra, o botón dereito copia outra vez a selección antes de pegar, e pega a palabra seleccionada en vez do portapapeis; noutra, a roda non envía frechas na pantalla alternativa; noutra, ao perder o rato por outra xanela, meiga esquece o botón sen a súa soltura; noutra, ao pecharse a caixa, meiga segue os botóns, e o programa non recibe a soltura; e na última, ao pecharse a caixa, meiga garda as teclas que colleu, e o seguinte C non chega ao programa. As tres últimas desfán as correccións da revisión do código: a primeira, a de [`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons), e as dúas metades da segunda, a de [`dialog_closed`](#o-rato-mouse-e-dialog_closed).
+- Desde a 1.9, a grella segue o tamaño da xanela, e o historial e o zoom funcionan: [`tools/check-resize.ps1`](ferramentas.md#toolscheck-resizeps1) lanza meiga cun script de PowerShell no seu terminal, cambia o tamaño da xanela e publica nela mensaxes do rato e das teclas. Despois de cada cambio de tamaño, selecciona a pantalla enteira de meiga, e compara o texto que chega ao portapapeis coas filas que o script le do búfer da consola, que o ConPTY tamén reparte. Mostra 9 liñas `OK:`: o programa recibe a grella que enche a xanela, e a pantalla ten as filas da consola, cando a xanela se fai máis estreita, máis baixa, máis ancha e máis alta (70 × 20, 45 × 14, 90 × 18 e 60 × 24 celas), tamén despois de que o script escriba onde está o cursor; na pantalla alternativa, a 50 × 16, a principal recibe o tamaño novo cando o programa volta a ela; se a xanela cambia de tamaño, a 66 × 15, mentres está aberta a caixa de mensaxe que pregunta antes de pegar, o programa recibe a grella que a enche ao pecharse a caixa; a roda, coas filas por parte das preferencias de Windows, 3 por defecto, e Maiús+RePáx, Ctrl+Maiús+↑, Ctrl+Maiús+Inicio e Ctrl+Maiús+Fin moven a vista do historial; arrastrar o polgar move a vista, ata o principio do historial, e un clic na franxa debaixo del baixa unha páxina; unha tecla para o programa, e pegar, levan a vista á pantalla; unha selección arrastrada por riba da xanela despraza a vista soa; Ctrl e `+`, e Ctrl e a roda, fan as celas máis grandes e a grella máis pequena, que recibe o programa, e Ctrl e `-`, e Ctrl+0, devolven a grella de antes; e meiga sae co código 0 ao pechar a xanela.
+- `check-resize.ps1` detecta os erros: cinco copias de meiga, cun cambio cada unha, fállana. Nunha, sen a franxa da barra de desprazamento, a primeira grella ten menos de 70 columnas, 66 ao 150 %; noutra, unha tecla para o programa non leva a vista á pantalla; noutra, a selección arrastrada fóra da grella non despraza a vista soa; noutra, a pantalla principal repártese mentres se ve a alternativa, en vez de quedar á parte; e na última, sen `catch_up`, o programa non recibe a grella nova ao pecharse a caixa de mensaxe. O ritmo dos cambios de tamaño, como moito un por intervalo dos fotogramas, non o pode ver a comprobación, que cambia o tamaño unha vez en cada paso. A orde dun cambio de escala, primeiro o DPI e despois o tamaño, compróbaa unha proba de `meiga-win` ([`window_proc`](meiga-win.md#window_proc)), porque `WM_DPICHANGED` non se pode publicar desde outro programa; e o resto, a man ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)).
 - `tools/check-window.ps1` comproba o subsistema, a xanela, a escala por monitor e o código de saída. Desde a 1.6, abre meiga con `cmd` no terminal, e comproba tamén que meiga lanza `cmd` e a súa consola, que o título da xanela pasa a ser o que pon `cmd` e que, ao pechar a xanela, `cmd` e a súa consola rematan tamén.
 - `tools/check-present.ps1` comproba os fotogramas no rexistro (`--trace-frames`). Desde a 1.6, executa no terminal un script de PowerShell que escribe na pantalla un paso cada vez, cando a comprobación llo pide, e fai dez comprobacións: o primeiro `paint` cobre a xanela enteira; mentres cambia unha fila, cada fotograma presenta só esa fila; en repouso non se debuxa nada; moitos cambios escritos de golpe agrúpanse en poucos fotogramas; unha cor de fondo nova (`OSC 11`) dá un fotograma completo; coa xanela minimizada non se debuxa nada, aínda que a saída cambie; aínda minimizada, o programa abre unha actualización sincronizada cun título dentro e non a remata: remata igual á súa hora, o título chega á xanela, e non se debuxa nada; ao restaurala, píntase enteira; ao medrar a xanela, compón o tamaño novo e píntao; e, ao pechala, meiga sae co código 0. O script oculta antes o cursor, para que o pestanexo non debuxe nada en repouso (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)).
 - `check-present.ps1` detecta os erros: comprobouse na subfase 1.2, cando aínda enviaba eventos do rato á demo, con copias de `frames.rs` con erros feitos a propósito. Debuxando cada cambio no momento, sen agrupalos, o clic e os 40 movementos enviados de golpe dan 41 fotogramas; e debuxando coa xanela minimizada, aparecen fotogramas. Nos dous casos, a comprobación falla. Sen pedir o repintado ao restaurar a xanela, pasa igual, porque Windows xa o pide. Na 1.6, unha copia de meiga sen o arranxo das actualizacións sincronizadas coa xanela minimizada falla a sétima comprobación: o título non chega á xanela.
 - Os modos de medición funcionan: o temporizador dá os fotogramas ao ritmo pedido, tamén mentres se move a xanela, aínda que entón máis lentos (ver [ADR 0008](../adr/0008-temporizador-dos-fotogramas.md)).
 - O manifesto que leva dentro, extraído con `mt.exe`, ten as tres declaracións, e un só `trustInfo`.
-- `dumpbin /dependents` mostra que só depende de DLL do sistema: `kernel32.dll`, `dwrite.dll`, `ntdll.dll`, `oleaut32.dll`, `combase.dll`, `gdi32.dll`, `user32.dll` e `api-ms-win-core-synch-l1-2-0.dll`. As tres novas da subfase 1.3 son DirectWrite e as dúas que usa o crate `windows` (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Ata a 1.4, `kernel32.dll` aparecía dúas veces, unha delas como `KERNEL32.dll`, porque a biblioteca estándar de Rust e `windows-sys` declaraban as súas funcións de forma distinta; desde a 1.5, as dúas van nunha soa entrada (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)). Windows cárgaa sempre unha soa vez. A 1.6 non engade ningunha: a ConPTY de Windows, as tubaxes, os procesos e os *jobs* están en `kernel32.dll`, e a ConPTY que vai no paquete, `conpty.dll`, cárgase ao lanzar a sesión (`LoadLibraryExW`). A 1.7 tampouco: as funcións do teclado están en `user32.dll`. Nin a 1.8, como mostra [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1), que dá a mesma lista ca na 1.7: o portapapeis, a captura e o punteiro do rato e a caixa de mensaxe están en `user32.dll`, e a memoria do portapapeis (`GlobalAlloc` e `GlobalLock`), en `kernel32.dll`.
+- `dumpbin /dependents` mostra que só depende de DLL do sistema: `kernel32.dll`, `dwrite.dll`, `ntdll.dll`, `oleaut32.dll`, `combase.dll`, `gdi32.dll`, `user32.dll` e `api-ms-win-core-synch-l1-2-0.dll`. As tres novas da subfase 1.3 son DirectWrite e as dúas que usa o crate `windows` (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Ata a 1.4, `kernel32.dll` aparecía dúas veces, unha delas como `KERNEL32.dll`, porque a biblioteca estándar de Rust e `windows-sys` declaraban as súas funcións de forma distinta; desde a 1.5, as dúas van nunha soa entrada (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)). Windows cárgaa sempre unha soa vez. A 1.6 non engade ningunha: a ConPTY de Windows, as tubaxes, os procesos e os *jobs* están en `kernel32.dll`, e a ConPTY que vai no paquete, `conpty.dll`, cárgase ao lanzar a sesión (`LoadLibraryExW`). A 1.7 tampouco: as funcións do teclado están en `user32.dll`. Nin a 1.8, como mostra [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1), que dá a mesma lista ca na 1.7: o portapapeis, a captura e o punteiro do rato e a caixa de mensaxe están en `user32.dll`, e a memoria do portapapeis (`GlobalAlloc` e `GlobalLock`), en `kernel32.dll`. Nin a 1.9: `TrackMouseEvent` está en `user32.dll`; `ResizePseudoConsole`, en `kernel32.dll`; e `ConptyResizePseudoConsole`, a do paquete, en `conpty.dll`, que se carga ao lanzar a sesión.
