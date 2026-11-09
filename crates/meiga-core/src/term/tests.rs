@@ -34,13 +34,15 @@ fn the_output_reaches_the_screen() {
     );
     assert_eq!(screen.row_text(1), "mundo");
     assert_eq!(screen.row_text(2), "");
+    // A bar that blinks, unless the program chooses another cursor.
     let cursor = Cursor {
         row: 1,
         column: 5,
-        shape: CursorShape::Block,
-        blinking: false,
+        shape: CursorShape::Beam,
+        blinking: true,
     };
     assert_eq!(screen.cursor(), cursor);
+    assert_eq!(screen.palette(), &Palette::MEIGA);
 }
 
 #[test]
@@ -90,9 +92,80 @@ fn the_program_gets_its_answers() {
     // alacritty_terminal, 0.26.0.
     assert_eq!(terminal.feed(b"\x1b[>c"), answers);
     assert_eq!(responses(&mut terminal), b"\x1b[>0;2600;1c");
-    // The size in pixels waits for the renderer of the terminal (1.6).
+    // The size in pixels, only once the terminal knows the size of a cell:
+    // 3 rows of 20 pixels and 10 columns of 9.
     assert_eq!(terminal.feed(b"\x1b[14t"), Changes::default());
     assert_eq!(responses(&mut terminal), b"");
+    terminal.set_cell_size(Size::new(9, 20));
+    assert_eq!(terminal.feed(b"\x1b[14t"), answers);
+    assert_eq!(responses(&mut terminal), b"\x1b[4;60;90t");
+}
+
+#[test]
+fn questions_about_colours_are_answered_with_the_palette() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    // A colour of the palette (OSC 4), the text (10), the background (11)
+    // and the cursor (12), each with the end that the question used: BEL or
+    // ST. The cursor has the colour of the text.
+    terminal.feed(b"\x1b]4;1;?\x07\x1b]10;?\x1b\\\x1b]11;?\x07\x1b]12;?\x07");
+    assert_eq!(
+        String::from_utf8(responses(&mut terminal)).unwrap(),
+        "\x1b]4;1;rgb:c5c5/0f0f/1f1f\x07\
+         \x1b]10;rgb:d4d4/d7d7/dddd\x1b\\\
+         \x1b]11;rgb:1616/1818/1d1d\x07\
+         \x1b]12;rgb:d4d4/d7d7/dddd\x07"
+    );
+    // With the colours that the program changed, and in the order of the
+    // questions: the attributes (DA1) after the colour.
+    terminal.feed(b"\x1b]11;#ffffff\x07\x1b[c\x1b]11;?\x07\x1b[c");
+    assert_eq!(
+        String::from_utf8(responses(&mut terminal)).unwrap(),
+        "\x1b[?6c\x1b]11;rgb:ffff/ffff/ffff\x07\x1b[?6c"
+    );
+    // And with the theme.
+    let mut theme = Palette::MEIGA;
+    theme.colors[1] = Rgb::new(1, 2, 3);
+    terminal.set_theme(theme);
+    terminal.feed(b"\x1b]4;1;?\x07");
+    assert_eq!(responses(&mut terminal), b"\x1b]4;1;rgb:0101/0202/0303\x07");
+}
+
+#[test]
+fn a_change_of_the_palette_changes_every_cell() {
+    let mut terminal = Terminal::new(GridSize::new(4, 2));
+    terminal.feed(b"\x1b[31mab");
+    let mut screen = Screen::new();
+    terminal.copy_damage(&mut screen);
+    screen.clear_changes();
+
+    // The cells keep the index of their colour, which now is another one.
+    terminal.feed(b"\x1b]4;1;rgb:ff/00/00\x07");
+    terminal.copy_damage(&mut screen);
+    assert!(screen.all_changed());
+    assert_eq!(screen.palette().colors[1], Rgb::new(0xff, 0, 0));
+    assert_eq!(screen.row(0)[0].fg, Color::Indexed(1));
+    screen.clear_changes();
+
+    // Back to the colour of the theme.
+    terminal.feed(b"\x1b]104;1\x07");
+    terminal.copy_damage(&mut screen);
+    assert!(screen.all_changed());
+    assert_eq!(screen.palette(), &Palette::MEIGA);
+    screen.clear_changes();
+
+    // The colour of the cursor only changes the cells of the cursor.
+    terminal.feed(b"\x1b]12;#00ff00\x07");
+    terminal.copy_damage(&mut screen);
+    assert!(!screen.all_changed());
+    assert_eq!(
+        screen.changes().collect::<Vec<_>>(),
+        [(0, Columns::new(2, 4))]
+    );
+    assert_eq!(screen.palette().cursor, Rgb::new(0, 0xff, 0));
+    screen.clear_changes();
+
+    terminal.copy_damage(&mut screen);
+    assert_eq!(screen.changes().count(), 0);
 }
 
 #[test]
@@ -291,39 +364,45 @@ fn the_cursor_follows_the_program() {
         let cursor = copy(terminal).cursor();
         (cursor.column, cursor.shape, cursor.blinking)
     };
-    assert_eq!(cursor(&mut terminal, b""), (0, CursorShape::Block, false));
+    // A bar that blinks, until the program chooses another one.
+    assert_eq!(cursor(&mut terminal, b""), (0, CursorShape::Beam, true));
     // DECSCUSR.
     assert_eq!(
         cursor(&mut terminal, b"\x1b[6 q"),
         (0, CursorShape::Beam, false)
     );
     assert_eq!(
-        cursor(&mut terminal, b"\x1b[5 q"),
-        (0, CursorShape::Beam, true)
+        cursor(&mut terminal, b"\x1b[1 q"),
+        (0, CursorShape::Block, true)
     );
     assert_eq!(
         cursor(&mut terminal, b"\x1b[4 q"),
         (0, CursorShape::Underline, false)
     );
     assert_eq!(
+        cursor(&mut terminal, b"\x1b[?12h"),
+        (0, CursorShape::Underline, true)
+    );
+    // Back to the one of meiga.
+    assert_eq!(
         cursor(&mut terminal, b"\x1b[0 q"),
-        (0, CursorShape::Block, false)
+        (0, CursorShape::Beam, true)
     );
     assert_eq!(
-        cursor(&mut terminal, b"\x1b[?12h"),
-        (0, CursorShape::Block, true)
+        cursor(&mut terminal, b"\x1b[?12l"),
+        (0, CursorShape::Beam, false)
     );
     assert_eq!(
         cursor(&mut terminal, b"\x1b[?25l"),
-        (0, CursorShape::Hidden, true)
+        (0, CursorShape::Hidden, false)
     );
     assert_eq!(
         cursor(&mut terminal, b"\x1b[?25h"),
-        (0, CursorShape::Block, true)
+        (0, CursorShape::Beam, false)
     );
     // On the right half of a wide character, it is drawn over all of it.
     let on_wide = cursor(&mut terminal, "a中\x1b[3G".as_bytes());
-    assert_eq!(on_wide, (1, CursorShape::Block, true));
+    assert_eq!(on_wide, (1, CursorShape::Beam, false));
 }
 
 #[test]
@@ -337,7 +416,7 @@ fn the_cursor_on_a_lone_right_half_stays_in_its_cell() {
     let cursor = screen.cursor();
     assert_eq!(
         (cursor.row, cursor.column, cursor.shape),
-        (0, 0, CursorShape::Block)
+        (0, 0, CursorShape::Beam)
     );
     // And after a narrow character, which is not its left half.
     terminal.feed("\x1b[2Ja中\x1b[2G\x1b[P".as_bytes());

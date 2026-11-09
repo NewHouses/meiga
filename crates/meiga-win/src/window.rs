@@ -20,17 +20,18 @@ use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetCapture, ReleaseCapture, SetCapture};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA,
-    GetClientRect, GetSystemMetrics, GetWindowLongPtrW, IDC_ARROW, IsWindow, KillTimer,
-    LoadCursorW, MB_ICONERROR, MB_OK, MSG, MWMO_INPUTAVAILABLE, MessageBoxW,
-    MsgWaitForMultipleObjectsEx, PM_REMOVE, PeekMessageW, PostQuitMessage, QS_ALLINPUT,
-    RegisterClassExW, SM_REMOTESESSION, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER, SetTimer,
-    SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, USER_DEFAULT_SCREEN_DPI,
-    USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP,
-    WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_TIMER,
-    WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
+    GetCaretBlinkTime, GetClientRect, GetSystemMetrics, GetWindowLongPtrW, IDC_ARROW, IsWindow,
+    KillTimer, LoadCursorW, MB_ICONERROR, MB_OK, MSG, MWMO_INPUTAVAILABLE, MessageBoxW,
+    MsgWaitForMultipleObjectsEx, PM_REMOVE, PeekMessageW, PostMessageW, PostQuitMessage,
+    QS_ALLINPUT, RegisterClassExW, SM_CARETBLINKINGENABLED, SM_REMOTESESSION, SPI_GETCARETTIMEOUT,
+    SPI_GETCARETWIDTH, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER, SetTimer, SetWindowLongPtrW,
+    SetWindowPos, SetWindowTextW, ShowWindow, SystemParametersInfoW, TranslateMessage,
+    USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_DESTROY, WM_DPICHANGED,
+    WM_ENTERMENULOOP, WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT,
+    WM_QUIT, WM_TIMER, WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
 };
 
-use crate::event::{Event, Handler, HandlerError, decode};
+use crate::event::{Event, Handler, HandlerError, WM_WAKE, decode};
 use crate::{Error, wide};
 
 /// Name of the window class of meiga windows.
@@ -39,6 +40,16 @@ const CLASS_NAME: &str = "meiga";
 /// Identifier of the window timer that replaces the frame timer while
 /// Windows runs its own message loop.
 const FRAME_TIMER_ID: usize = 1;
+
+/// The longest time that a caret can stay shown, and then hidden, while it
+/// blinks, in milliseconds. Windows Terminal does not make it blink with
+/// more: Windows lets the user choose between 200 and 1 200 ms, and
+/// `GetCaretBlinkTime` gives `INFINITE` when the caret does not blink.
+const MAX_BLINK_MS: u32 = 10_000;
+
+/// How long the caret of Windows blinks before it stops, if Windows does not
+/// say: its default value.
+const DEFAULT_CARET_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// How a new window looks.
 pub struct WindowOptions<'a> {
@@ -252,6 +263,21 @@ impl Window {
         unsafe { InvalidateRect(self.handle, rect, 0) };
     }
 
+    /// Changes the text of the title bar, which the taskbar also shows.
+    pub fn set_title(&self, title: &str) {
+        let title = wide(title);
+        // SAFETY: the window is of this thread, and the string is
+        // null-terminated and outlives the call. Windows sends WM_SETTEXT to
+        // the window, which DefWindowProcW handles without the handler, so
+        // it can be called from the handler.
+        unsafe { SetWindowTextW(self.handle, title.as_ptr()) };
+    }
+
+    /// What wakes this window up from another thread.
+    pub fn waker(&self) -> Waker {
+        Waker(self.handle as usize)
+    }
+
     /// Dispatches the messages of this thread until WM_QUIT. Between them,
     /// it sleeps until another message arrives or the frame timer is due.
     fn pump(&self, state: &State<'_>) -> Result<(), Error> {
@@ -377,6 +403,81 @@ impl Drop for Window {
 pub fn is_remote_session() -> bool {
     // SAFETY: GetSystemMetrics has no preconditions.
     unsafe { GetSystemMetrics(SM_REMOTESESSION) != 0 }
+}
+
+/// Wakes the message loop of a window up from any thread: the window gives
+/// [`Event::Wake`] to its handler.
+///
+/// Each call posts a message to the window, which waits in its queue until
+/// the loop takes it: whoever calls it should not post another one while one
+/// is waiting. Once the window is destroyed, it does nothing.
+#[derive(Clone, Debug)]
+pub struct Waker(
+    /// The handle of the window, as a number, which can go to other threads.
+    usize,
+);
+
+impl Waker {
+    pub fn wake(&self) {
+        // SAFETY: PostMessageW accepts any handle, and fails without effects
+        // if the window no longer exists. The message has no parameters.
+        unsafe { PostMessageW(self.0 as HWND, WM_WAKE, 0, 0) };
+    }
+}
+
+/// How the user wants the text caret, which a terminal also uses for its
+/// cursor. The settings can change while meiga runs: for example, Remote
+/// Desktop turns blinking off.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CaretSettings {
+    /// How long the caret stays shown, and then hidden, while it blinks, or
+    /// `None` if it does not blink. It blinks, as in Windows Terminal, if
+    /// `SM_CARETBLINKINGENABLED` says so and `GetCaretBlinkTime` gives a
+    /// time of at most 10 s.
+    pub blink: Option<Duration>,
+    /// How long it blinks before it stops, shown, until there is activity
+    /// again: `SPI_GETCARETTIMEOUT`, 5 s by default.
+    pub timeout: Duration,
+    /// Its width in pixels at a scale of 100 %, `SPI_GETCARETWIDTH`: the
+    /// "text cursor thickness" of the accessibility settings, 1 by default.
+    pub width: u32,
+}
+
+/// The current settings of the caret.
+pub fn caret_settings() -> CaretSettings {
+    // SAFETY: neither function has preconditions. GetSystemMetrics takes the
+    // index as an i32, which the constant fits in.
+    let (enabled, blink) = unsafe {
+        (
+            GetSystemMetrics(SM_CARETBLINKINGENABLED as i32),
+            GetCaretBlinkTime(),
+        )
+    };
+    let blink = (enabled != 0 && (1..=MAX_BLINK_MS).contains(&blink))
+        .then(|| Duration::from_millis(u64::from(blink)));
+    let timeout = system_parameter(SPI_GETCARETTIMEOUT)
+        .filter(|&ms| ms > 0)
+        .map_or(DEFAULT_CARET_TIMEOUT, |ms| {
+            Duration::from_millis(u64::from(ms))
+        });
+    let width = system_parameter(SPI_GETCARETWIDTH)
+        .filter(|&width| width > 0)
+        .unwrap_or(1);
+    CaretSettings {
+        blink,
+        timeout,
+        width,
+    }
+}
+
+/// A system parameter that Windows gives as a `DWORD`, or `None` if it
+/// fails, for example because the version of Windows does not have it.
+fn system_parameter(action: u32) -> Option<u32> {
+    let mut value = 0_u32;
+    // SAFETY: for these actions, pvParam points to a DWORD that receives the
+    // value. 0: the user profile does not change.
+    let read = unsafe { SystemParametersInfoW(action, 0, ptr::from_mut(&mut value).cast(), 0) };
+    (read != 0).then_some(value)
 }
 
 /// Shows an error message and waits until the user closes it.

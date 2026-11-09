@@ -7,10 +7,11 @@
 
 mod app;
 mod bench;
-mod demo;
 mod frames;
 mod options;
+mod session;
 mod trace;
+mod view;
 
 use std::env;
 use std::error::Error;
@@ -18,7 +19,7 @@ use std::process::ExitCode;
 
 use meiga_win::window::{self, Window, WindowOptions};
 
-use crate::app::App;
+use crate::app::{App, TITLE};
 use crate::options::{Options, USAGE};
 use crate::trace::Trace;
 
@@ -52,8 +53,8 @@ fn run(options: &Options) -> Result<(), Box<dyn Error>> {
             })?),
             None => None,
         };
-    let window = Window::create(&WindowOptions { title: "meiga" })?;
-    let mut app = App::new(&window, options.bench, trace)?;
+    let window = Window::create(&WindowOptions { title: TITLE })?;
+    let mut app = App::new(&window, options, trace)?;
     window.run(&mut app)
 }
 

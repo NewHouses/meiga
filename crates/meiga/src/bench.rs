@@ -2,12 +2,11 @@
 //! partial frame, a full frame and a full frame of text cost to meiga and to
 //! the rest of the system.
 
-use meiga_core::color::Rgb;
+use meiga_core::color::{BACKGROUND, FOREGROUND, Rgb};
 use meiga_core::geometry::{Point, Rect, Size};
 use meiga_core::text::CellChar;
-use meiga_render::{Canvas, Font};
+use meiga_render::{Canvas, Font, FontStyle};
 
-use crate::demo::{BACKGROUND, TEXT};
 use crate::options::BenchMode;
 
 /// The side of the square of the partial frames, and how far it moves at
@@ -84,7 +83,14 @@ impl Bench {
                     row.clear();
                     row.extend((0..columns).map(|x| text_at(self.frame, y, x)));
                     let top = i32::try_from(y * cell.height).unwrap_or(i32::MAX);
-                    font.draw(canvas, Point::new(0, top), row, TEXT, BACKGROUND);
+                    font.draw(
+                        canvas,
+                        Point::new(0, top),
+                        row,
+                        FontStyle::REGULAR,
+                        FOREGROUND,
+                        BACKGROUND,
+                    );
                 }
             }
         }
@@ -114,7 +120,7 @@ mod tests {
     use meiga_render::{FontSystem, pixel};
 
     use super::*;
-    use crate::demo::{FONT_FAMILIES, FONT_POINTS};
+    use crate::view::{FONT_FAMILIES, FONT_POINTS};
 
     const SIZE: Size = Size::new(200, 100);
 
@@ -160,7 +166,7 @@ mod tests {
         let mut canvas = Canvas::new(&mut pixels, SIZE, SIZE.width as usize).unwrap();
         bench.draw(&mut canvas);
         assert!(pixels.iter().all(|&p| p != 0));
-        assert!(pixels.contains(&pixel(TEXT)));
+        assert!(pixels.contains(&pixel(FOREGROUND)));
         for (row, column) in [(0, 0), (3, 17)] {
             assert_ne!(text_at(1, row, column), text_at(2, row, column));
             assert_ne!(text_at(1, row, column), CellChar::Blank);

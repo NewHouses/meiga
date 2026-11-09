@@ -83,7 +83,7 @@ jobs:
       - name: Check that meiga.exe does not need the Visual C++ runtime
         run: ./tools/check-imports.ps1
 
-      - name: Check that meiga.exe opens its window and closes it cleanly
+      - name: Check that meiga.exe opens its window, runs its program and closes cleanly
         run: ./tools/check-window.ps1
 
       - name: Check that meiga.exe presents only what changes

@@ -8,11 +8,15 @@ use meiga_core::geometry::{Point, Rect, Size};
 use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::HDC;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    SIZE_MINIMIZED, WM_CAPTURECHANGED, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
-    WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SIZE,
+    SIZE_MINIMIZED, WM_APP, WM_CAPTURECHANGED, WM_KEYDOWN, WM_KILLFOCUS, WM_LBUTTONDOWN,
+    WM_LBUTTONUP, WM_MOUSEMOVE, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
 };
 
 use crate::window::Window;
+
+/// The message of [`Waker`](crate::window::Waker): the first one that
+/// Windows leaves to the programs for their own windows.
+pub(crate) const WM_WAKE: u32 = WM_APP;
 
 /// The `wParam` flag of mouse messages for a pressed left button. It is in
 /// the `Win32_System_SystemServices` feature of `windows-sys`, which would
@@ -81,8 +85,15 @@ pub enum Event {
         key: Key,
         repeat: bool,
     },
+    /// The window gained or lost the keyboard focus.
+    Focus {
+        focused: bool,
+    },
     /// The frame timer ([`Window::start_frame_timer`]) is due.
     FrameTimer,
+    /// Another thread woke the window up with its
+    /// [`Waker`](crate::window::Waker).
+    Wake,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -134,6 +145,9 @@ pub(crate) fn decode(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<Eve
             key: Key(wparam as u16),
             repeat: lparam & KEY_WAS_DOWN != 0,
         },
+        WM_SETFOCUS => Event::Focus { focused: true },
+        WM_KILLFOCUS => Event::Focus { focused: false },
+        WM_WAKE => Event::Wake,
         _ => return None,
     })
 }
@@ -227,7 +241,21 @@ mod tests {
     }
 
     #[test]
+    fn focus_and_wake_messages_are_events() {
+        assert_eq!(
+            decode(WM_SETFOCUS, 0, 0),
+            Some(Event::Focus { focused: true })
+        );
+        assert_eq!(
+            decode(WM_KILLFOCUS, 0, 0),
+            Some(Event::Focus { focused: false })
+        );
+        assert_eq!(decode(WM_WAKE, 0, 0), Some(Event::Wake));
+    }
+
+    #[test]
     fn other_messages_are_not_events() {
         assert_eq!(decode(0x0400, 0, 0), None);
+        assert_eq!(decode(WM_WAKE + 1, 0, 0), None);
     }
 }

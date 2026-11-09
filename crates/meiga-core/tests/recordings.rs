@@ -140,12 +140,13 @@ fn the_spinner_only_changes_what_it_draws_again() {
     assert!(row[2..10].iter().all(|cell| cell.flags == CellFlags::BOLD));
     assert!(row[11..16].iter().all(|cell| cell.flags == CellFlags::DIM));
     assert!(shown.text[1..].iter().all(String::is_empty));
-    // Shown again when the scenario ends, in the next row.
+    // Shown again when the scenario ends, in the next row: a bar that
+    // blinks, as the program did not choose another cursor.
     let cursor = Cursor {
         row: 1,
         column: 0,
-        shape: CursorShape::Block,
-        blinking: false,
+        shape: CursorShape::Beam,
+        blinking: true,
     };
     assert_eq!(shown.cursor, cursor);
     assert_eq!(shown.modes, MODES_AT_THE_END);

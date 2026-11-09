@@ -3,13 +3,16 @@
 Checks that meiga.exe opens its window and closes it cleanly.
 
 .DESCRIPTION
-Starts meiga.exe and checks that:
+Starts meiga.exe with cmd in its terminal, which waits about a second and
+sets its title, and checks that:
 
 - it is a GUI program (Windows subsystem), so it opens no console window;
 - it shows a window of class "meiga" with the title "meiga";
 - the window is DPI aware per monitor (v2), as the embedded manifest asks;
+- the title of the window becomes the one that cmd sets;
 - it ends with exit code 0 when the window is closed, as when the user clicks
-  the X button of the title bar.
+  the X button of the title bar;
+- then cmd and its console host end too.
 
 If a check fails, the script ends meiga.exe, so that it never stays open.
 
@@ -86,8 +89,17 @@ public static extern bool AreDpiAwarenessContextsEqual(IntPtr first, IntPtr seco
 '@
 }
 
+$title = 'meiga-check'
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+# With /k, cmd shows each command in the title while it runs ("cmd.exe -
+# ping ..."), as soon as it starts, and the title "meiga" could be gone
+# before the check below. With /c it does not. pause keeps cmd running until
+# the window closes, and there is no space before & because it would be part
+# of the title.
+foreach ($argument in 'cmd', '/d', '/c', "ping -n 2 127.0.0.1 >nul & title $title& pause >nul") {
+    $info.ArgumentList.Add($argument)
+}
 $process = [Diagnostics.Process]::Start($info)
 try {
     # WaitForInputIdle returns when meiga has painted its window and waits for
@@ -121,6 +133,31 @@ try {
     }
     Write-Host 'OK: the window is DPI aware per monitor (v2).'
 
+    # As administrator, as on the CI runners, cmd puts "Administrator: " (in
+    # the language of Windows) before the title that it is given.
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $process.Refresh()
+        $shown = $process.MainWindowTitle
+        if ($shown -eq $title -or $shown.EndsWith(" $title")) {
+            break
+        }
+        if ($process.HasExited -or [DateTime]::UtcNow -gt $deadline) {
+            throw "The title of the window is '$shown' and not '$title', the one that cmd sets in the terminal."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    Write-Host "OK: the program in the terminal sets the title of the window ('$shown')."
+
+    # The programs that meiga started: the console host of the session and
+    # cmd.
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.CreationDate -ge $process.StartTime })
+    $names = @($children | ForEach-Object Name | Sort-Object)
+    if ($names -notcontains 'cmd.exe' -or -not ($names -match '^(OpenConsole|conhost)\.exe$')) {
+        throw "meiga.exe started $($names -join ', ') instead of cmd.exe and its console host."
+    }
+
     # CloseMainWindow sends WM_CLOSE, as the X button does.
     if (-not $process.CloseMainWindow()) {
         throw "Could not ask the window of $exe to close."
@@ -132,6 +169,19 @@ try {
         throw "$exe ended with exit code $($process.ExitCode) instead of 0."
     }
     Write-Host 'OK: it ends with exit code 0 when its window closes.'
+
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $alive = @($children | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction Ignore })
+        if ($alive.Count -eq 0) {
+            break
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$(($alive | ForEach-Object Name) -join ' and ') still running $TimeoutSeconds s after meiga.exe ended."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    Write-Host "OK: then the program in the terminal and its console end too ($($names -join ', '))."
 }
 finally {
     if (-not $process.HasExited) {

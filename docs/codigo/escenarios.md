@@ -1,6 +1,6 @@
 # Código › escenarios de carga (`tools/perf/`)
 
-> Estado: subfase 0.7.
+> Estado: subfase 1.6.
 
 Cargas de traballo reproducíbeis para medir os terminais con [`measure.ps1`](perf.md#toolsperfmeasureps1). Imitan o que fai un terminal cada día: unha IA que pensa e responde, un indicador de progreso que xira e a saída dun arquivo grande. Cada escenario existe en PowerShell e en bash, para medir a mesma carga nunha tab de pwsh e nunha de WSL, e as dúas versións debuxan exactamente o mesmo: os mesmos textos, coas mesmas cores e as mesmas secuencias de escape.
 
@@ -26,6 +26,13 @@ pwsh -File .\tools\perf\run-scenario.ps1 bigfile WindowsTerminal              # 
 pwsh -File .\tools\perf\run-scenario.ps1 idle warp                            # o terminal en repouso
 ```
 
+Con `-Start`, en vez do nome do terminal, recibe a ruta dun terminal que executa o programa da súa liña de comandos, como meiga, e arráncao el mesmo, co escenario como programa: non hai que escribir o comando no terminal medido, e en meiga nin se podería, porque aínda non ten teclado (subfase 1.7). Ao final, o script pecha a xanela do terminal (ver [Con `-Start`](#con--start)):
+
+```powershell
+pwsh -File .\tools\perf\run-scenario.ps1 spinner -Start .\target\release\meiga.exe   # meiga, que arranca co escenario como programa
+pwsh -File .\tools\perf\run-scenario.ps1 idle -Start .\target\release\meiga.exe      # meiga en repouso, coa súa shell por defecto
+```
+
 Os escenarios tamén funcionan sós, sen medir nada, ata que premes Ctrl+C (bigfile remata ao imprimir o arquivo):
 
 ```powershell
@@ -47,7 +54,7 @@ sequenceDiagram
     participant E as escenario (no terminal medido)
     participant M as measure.ps1
     R->>D: controller
-    R->>R: mostra o comando do escenario
+    R->>R: mostra o comando do escenario (con -Start, arranca o terminal con el)
     E->>D: started-spinner-pwsh-<PID>
     R->>D: conta os started-*
     R->>R: espera -Warmup segundos
@@ -61,7 +68,7 @@ sequenceDiagram
 
 | Arquivo | Créao | Significa |
 |---|---|---|
-| `controller` | `run-scenario.ps1`, antes de mostrar o comando | Alguén coordina os escenarios. Sen el, un escenario corre só ata Ctrl+C e non crea ningún arquivo. |
+| `controller` | `run-scenario.ps1`, antes de mostrar o comando ou, con `-Start`, de arrancar o terminal | Alguén coordina os escenarios. Sen el, un escenario corre só ata Ctrl+C e non crea ningún arquivo. |
 | `started-<escenario>-<shell>-<PID>` | O escenario, ao arrancar; bórrao ao rematar | Unha copia do escenario está a correr. Con `-Instances 5`, `run-scenario.ps1` agarda a 5. |
 | `go-<n>` | `measure.ps1`, ao empezar a medición *n* (`-StartedFile`) | Só para bigfile: imprime o arquivo agora. |
 | `finished-<n>` | bigfile, ao rematar de imprimir | Os segundos que levou imprimir. `measure.ps1` remata a medición cando aparece (`-StopFile`). |
@@ -387,12 +394,12 @@ function Get-Number([int]$Count) {
 
 Mide un terminal mentres corre un escenario. Os pasos:
 
-1. Comproba que o terminal está aberto e baleira `.perf\run\`; despois crea `controller`.
-2. Mostra o comando que arranca o escenario no terminal medido: `pwsh -NoProfile -File "…\spinner.ps1"` ou, con `-Shell wsl`, `bash '/mnt/c/…/spinner.sh'` (a ruta de WSL dáa `wslpath`). Para bigfile, se non existe `.perf\bigfile.txt`, antes créao con `gen-bigfile.ps1`.
+1. Comproba que o terminal está aberto (con `-Start`, que existe o seu executábel) e baleira `.perf\run\`; despois crea `controller`.
+2. Mostra o comando que arranca o escenario no terminal medido: `pwsh -NoProfile -File "…\spinner.ps1"` ou, con `-Shell wsl`, `bash '/mnt/c/…/spinner.sh'` (a ruta de WSL dáa `wslpath`). Para bigfile, se non existe `.perf\bigfile.txt`, antes créao con `gen-bigfile.ps1`. Con `-Start`, en vez de mostrar o comando, arranca o terminal co escenario como programa e mostra `Started meiga.exe (process <PID>) with the scenario: <comando>`; o que mide despois é exactamente ese proceso, polo seu PID (ver [Con `-Start`](#con--start)).
 3. Agarda a que arranquen `-Instances` copias do escenario, mostrando cantas van.
-4. Agarda `-Warmup` segundos, para que deixes o terminal como o queres medir (por exemplo, coa tab do escenario diante, ou detrás).
+4. Agarda `-Warmup` segundos, para que deixes o terminal como o queres medir (por exemplo, coa tab do escenario diante, ou detrás). Con `-Start` non che pide que o colocues, porque o terminal acaba de abrirse e non ten máis ca o escenario: só avisa de cando empeza a medir.
 5. Fai `-Runs` medicións seguidas con `measure.ps1 -Quiet -PassThru`. Para bigfile engade `-SampleInterval 1 -StartedFile go-<n> -StopFile finished-<n>`, e o límite de cada medición pasa a 600 s.
-6. Crea `stop` e agarda ata 5 s a que os escenarios borren os seus marcadores. Se queda algún, avisa. Isto tamén pasa se o cancelas con Ctrl+C.
+6. Crea `stop` e agarda ata 5 s a que os escenarios borren os seus marcadores. Se queda algún, avisa. Con `-Start`, despois pecha o terminal como o botón X (`CloseMainWindow`), agarda ata 5 s a que remate e, se aínda segue aberto, remátao con `Kill`. Isto tamén pasa se o cancelas con Ctrl+C.
 7. Mostra o resumo e o veredicto, e garda o resumo en CSV.
 
 | Parámetro | Por defecto | Que fai |
@@ -400,16 +407,77 @@ Mide un terminal mentres corre un escenario. Os pasos:
 | `-Scenario` | — | `idle`, `spinner`, `ai-stream` ou `bigfile`. É o primeiro parámetro, así que se pode escribir sen o nome. |
 | `-Name` | — | Nome do executábel do terminal, como en `measure.ps1`. É o segundo parámetro. |
 | `-Id` | — | Os PID do terminal, en vez de `-Name`. |
-| `-Shell` | `pwsh` | Onde corre o escenario: `pwsh` ou `wsl`. Só cambia o comando que se mostra. |
-| `-Instances` | 1 | Cantas copias do escenario esperar, por exemplo 5 para o spinner en 5 tabs. bigfile só admite unha. |
+| `-Start` | — | En vez de `-Name` ou `-Id`, a ruta dun terminal que executa o programa da súa liña de comandos, como meiga. O script arráncao co escenario como programa: `pwsh -NoProfile -File <script>` ou, con `-Shell wsl`, `wsl.exe -e bash <ruta de Linux>`. En `idle`, arráncao sen programa, e meiga lanza a súa shell por defecto. Mide ese proceso e, ao final, pecha a súa xanela. |
+| `-Shell` | `pwsh` | Onde corre o escenario: `pwsh` ou `wsl`. Só cambia o comando que se mostra ou, con `-Start`, o programa do terminal. |
+| `-Instances` | 1 | Cantas copias do escenario esperar, por exemplo 5 para o spinner en 5 tabs. bigfile e `-Start` só admiten unha. |
 | `-Runs` | 3 | Número de medicións. |
 | `-Duration` | 60 | Segundos de cada medición. En bigfile, o máximo (600 se non o indicas). |
 | `-Warmup` | 5 | Segundos entre o arranque da última copia do escenario e a primeira medición. |
 | `-Delay` | 10 | En `idle`, segundos antes da primeira medición. |
-| `-Label` | terminal e escenario | Nome para os CSV, como `WindowsTerminal-spinner`, `warp-spinner-5` ou `warp-ai-stream-wsl`. |
+| `-Label` | terminal e escenario | Nome para os CSV, como `WindowsTerminal-spinner`, `warp-spinner-5` ou `warp-ai-stream-wsl`. Con `-Start`, o terminal é o nome do arquivo sen extensión, como en `meiga-spinner`. |
 | `-OutDir` | `.perf\` | Cartafol dos CSV. |
 
-`idle` non arranca ningún escenario: mide o terminal tal como o deixas, por exemplo con 5 tabs abertas, despois de `-Delay` segundos para que o poñas diante.
+`idle` non arranca ningún escenario: mide o terminal tal como o deixas, por exemplo con 5 tabs abertas, despois de `-Delay` segundos para que o poñas diante. Con `-Start`, arranca o terminal sen programa, coa súa shell por defecto, e agarda os mesmos `-Delay` segundos sen pedirche nada.
+
+### Con `-Start`
+
+Desde a subfase 1.6. Sen `-Start`, o escenario arráncao quen mide, escribindo o comando no terminal, e en meiga aínda non se pode escribir nada. Pero meiga executa o programa da súa liña de comandos ([Código › meiga](meiga.md#cratesmeigasrcoptionsrs)), así que o script pode arrancalo co escenario xa dentro. A coordinación, as medicións, o resumo e os CSV non cambian.
+
+```powershell
+elseif ($PSCmdlet.ParameterSetName -eq 'Start') {
+    $Start = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Start)
+    if (-not (Test-Path -LiteralPath $Start -PathType Leaf)) {
+        throw "$Start does not exist."
+    }
+    if ($Instances -ne 1) {
+        throw '-Start opens a single terminal: use -Instances 1.'
+    }
+    $terminalLabel = [IO.Path]::GetFileNameWithoutExtension($Start)
+}
+```
+
+- `-Start` é un terceiro conxunto de parámetros (`ParameterSetName = 'Start'`), xunto a `-Name` e `-Id`: PowerShell esixe un dos tres e non deixa usar dous á vez. Coma eles, compróbase antes de nada.
+- A ruta resólvese contra o cartafol actual de PowerShell, como nos outros scripts. .NET, ao arrancar o proceso, resolveríaa contra o cartafol de traballo do proceso, que PowerShell non actualiza ao facer `cd` (ver [Código › ferramentas](ferramentas.md#toolsthird-party-noticesps1)).
+- Un terminal arrancado así executa un só programa, e meiga aínda non ten tabs: por iso `-Instances` ten que ser 1.
+- A etiqueta leva o nome do executábel sen `.exe`: `meiga-spinner` ou, con `-Shell wsl`, `meiga-ai-stream-wsl`.
+
+```powershell
+function Start-Terminal {
+    $info = [Diagnostics.ProcessStartInfo]::new($Start)
+    $info.UseShellExecute = $false
+    foreach ($argument in $program) {
+        $info.ArgumentList.Add($argument)
+    }
+    $process = [Diagnostics.Process]::Start($info)
+    $script:target = @{ Id = $process.Id }
+    $process
+}
+```
+
+- `$program` é o comando do escenario como unha lista de argumentos, que o script prepara xunto co comando que mostra: `pwsh`, `-NoProfile`, `-File` e a ruta do script ou, con `-Shell wsl`, `wsl.exe`, `-e`, `bash` e a ruta de Linux. O comando que se mostra sen `-Start` é para escribilo nunha tab de WSL, onde xa hai unha shell de Linux; eiquí non hai ningunha, e `wsl.exe -e` executa bash directamente na distribución por defecto. En `idle`, a lista está baleira: meiga lanza entón a súa shell por defecto, PowerShell 7 ou Windows PowerShell ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+- `ArgumentList` pon a cada argumento as comiñas que lle fagan falta ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)), como en [`test-scenarios.ps1`](#test-scenariosps1): a ruta do escenario pode ter espazos, por exemplo no nome do usuario. `Start-Process` non serve, porque xunta os argumentos de `-ArgumentList` cun espazo, sen comiñas, e unha ruta con espazos chegaría partida en varios argumentos. meiga sepáraos coas mesmas regras e volta a xuntalos igual para lanzar o programa, así que o escenario recibe exactamente estes.
+- `$target` son os parámetros que identifican o terminal en cada medición de `measure.ps1`: eiquí, `-Id` co PID do proceso que se acaba de arrancar. O prefixo `$script:` fai falta porque, sen el, a asignación crearía unha variábel da función, que desaparecería ao rematar.
+- **Polo PID, non polo nome.** Co nome, `measure.ps1` mediría tamén calquera outro meiga aberto na máquina. A partir do PID, atopa os seus descendentes coma os de calquera terminal: o seu `OpenConsole.exe` vai ao grupo `console` e o escenario, ao grupo `shells` (ver [Código › medición › Os grupos](perf.md#os-grupos)).
+- O terminal arráncase despois de crear `controller` (ver [Como se coordinan](#como-se-coordinan)): o escenario atópao ao arrancar e crea o seu marcador, como cando se arranca a man.
+- En `idle`, os `-Delay` segundos son para que a shell remate de arrancar. Ademais, mentres a xanela ten o foco, o cursor de meiga pestanexa ata que pasa o tempo de espera de Windows sen cambios na pantalla, 5 s por defecto ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)): co `-Delay` por defecto, normalmente xa parou cando empeza a medición.
+- **O ConPTY.** Para medir o meiga que se distribúe, `target\release\meiga.exe` ten que ter ao lado o seu ConPTY, que deixa alí [`package.ps1`](ferramentas.md#toolspackageps1). Sen el, meiga usa sen avisar o de Windows, e no grupo `console` mediríase `conhost.exe` en vez de `OpenConsole.exe`.
+
+```powershell
+    # The terminal that this script started closes as the X button does.
+    if ($terminalProcess) {
+        if (-not $terminalProcess.HasExited -and $terminalProcess.CloseMainWindow()) {
+            $null = $terminalProcess.WaitForExit(5000)
+        }
+        if (-not $terminalProcess.HasExited) {
+            $terminalProcess.Kill()
+        }
+        $terminalProcess.Dispose()
+    }
+```
+
+- Vai no bloque `finally`, despois de crear `stop` e de agardar polos marcadores: primeiro remata o escenario, coma sen `-Start`, e despois péchase a xanela. Cando o seu programa remata, meiga non pecha a xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), así que o script péchaa con `CloseMainWindow`, que lle envía `WM_CLOSE` coma o botón X, igual ca [`check-window.ps1`](ferramentas.md#toolscheck-windowps1). En `idle`, a shell segue aberta, e remata cando se pecha meiga ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)).
+- Se 5 s despois aínda non rematou, ou se non se lle puido pedir (`CloseMainWindow` devolve `$false` se o proceso non ten xanela, por exemplo se se cancela xusto ao arrancalo), `Kill` remátao. Como vai no `finally`, pasa tamén despois dun erro ou de Ctrl+C: o terminal nunca queda aberto.
+- As medicións xa remataron, así que pechar o terminal non conta en ningunha.
 
 ### O resumo e o veredicto
 

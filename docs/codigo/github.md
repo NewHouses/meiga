@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 1.4.
+> Estado: subfase 1.6.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -199,7 +199,7 @@ Desde a subfase 1.4, as probas de `meiga-win` lanzan programas no ConPTY que vai
       - name: Check that meiga.exe does not need the Visual C++ runtime
         run: ./tools/check-imports.ps1
 
-      - name: Check that meiga.exe opens its window and closes it cleanly
+      - name: Check that meiga.exe opens its window, runs its program and closes cleanly
         run: ./tools/check-window.ps1
 
       - name: Check that meiga.exe presents only what changes
@@ -212,10 +212,11 @@ Desde a subfase 1.4, as probas de `meiga-win` lanzan programas no ConPTY que vai
         run: ./tools/perf/measure-frames.ps1 -Duration 3 -Warmup 1
 ```
 
-- Compila en modo *release*, crea o `.zip` en `dist/`, co ConPTY, e comproba as DLL das que depende `meiga.exe` (ver [Código › ferramentas](ferramentas.md)).
-- `check-window.ps1` abre `meiga.exe` e comproba a xanela, a escala por monitor e que remata co código 0 ao pechala (ver [Código › ferramentas](ferramentas.md#toolscheck-windowps1)). Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade, aínda que ninguén a vexa. Leva un segundo.
-- `check-present.ps1` debuxa na xanela con eventos do rato e comproba no rexistro dos fotogramas que meiga presenta só o que cambia, agrupa os cambios e non debuxa en repouso nin coa xanela minimizada (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Leva uns segundos.
-- `measure-startup.ps1` arranca meiga 4 veces e mide o tempo ata o primeiro fotograma (ver [Código › medición](perf.md#toolsperfmeasure-startupps1)), e `measure-frames.ps1` mide 3 s de cada tipo de fotograma: parciais, completos e completos de texto (ver [Código › medición](perf.md#toolsperfmeasure-framesps1)). Só comproban que os scripts seguen funcionando: igual que co arnés de medición, os números dunha máquina compartida non se comparan con nada.
+- Compila en modo *release*, crea o `.zip` en `dist/`, co ConPTY, e comproba as DLL das que depende `meiga.exe` (ver [Código › ferramentas](ferramentas.md)). Desde a subfase 1.6, `package.ps1` deixa tamén o ConPTY ao lado de `target\release\meiga.exe`, así que os pasos seguintes executan meiga co mesmo ConPTY ca o paquete, e non co de Windows (ver [`package.ps1`](ferramentas.md#toolspackageps1)).
+- `check-window.ps1` abre `meiga.exe` con `cmd` no seu terminal, e comproba a xanela, a escala por monitor, que o título pasa a ser o que pon cmd, que meiga remata co código 0 ao pechala e que, despois, rematan tamén cmd e o anfitrión da súa consola, `OpenConsole.exe` (ver [Código › ferramentas](ferramentas.md#toolscheck-windowps1)). Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade, aínda que ninguén a vexa. Leva uns segundos: cmd espera un segundo antes de poñer o título.
+- Ata a subfase 1.5, o paso de `check-window.ps1` chamábase *Check that meiga.exe opens its window and closes it cleanly*. O nome novo di o que comproba desde a 1.6: tamén o programa do terminal. Os nomes dos pasos, ao contrario ca o do job, non os esixen as regras da rama `main`, así que cambialo non obriga a cambiar nada máis.
+- `check-present.ps1` lanza en meiga un script de PowerShell que escribe na pantalla paso a paso, e comproba no rexistro dos fotogramas que meiga presenta só o que cambia, agrupa os cambios, presenta a xanela enteira cando cambia a cor do fondo e non debuxa en repouso nin coa xanela minimizada, tamén cando o programa escribe mentres tanto; e que, coa xanela minimizada, meiga remata á súa hora límite unha actualización sincronizada que o programa deixa aberta: o título escrito nela chega á xanela (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Ata a subfase 1.5 debuxaba na demo con eventos do rato. Leva uns segundos.
+- `measure-startup.ps1` arranca meiga 4 veces e mide o tempo ata o primeiro fotograma, que desde a subfase 1.6 inclúe lanzar a shell por defecto (ver [Código › medición](perf.md#toolsperfmeasure-startupps1)), e `measure-frames.ps1` mide 3 s de cada tipo de fotograma: parciais, completos e completos de texto (ver [Código › medición](perf.md#toolsperfmeasure-framesps1)). Só comproban que os scripts seguen funcionando: igual que co arnés de medición, os números dunha máquina compartida non se comparan con nada.
 
 #### Subir o artefacto
 

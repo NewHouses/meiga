@@ -13,8 +13,9 @@ use meiga_core::geometry::{Rect, Size};
 use windows::Win32::Foundation::{E_FAIL, RECT};
 use windows::Win32::Globalization::GetUserDefaultLocaleName;
 use windows::Win32::Graphics::DirectWrite::{
-    DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_METRICS, DWRITE_FONT_STRETCH_NORMAL,
-    DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_GLYPH_METRICS, DWRITE_GLYPH_RUN,
+    DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_METRICS, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE,
+    DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT,
+    DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_GLYPH_METRICS, DWRITE_GLYPH_RUN,
     DWRITE_GRID_FIT_MODE, DWRITE_GRID_FIT_MODE_ENABLED, DWRITE_MEASURING_MODE_NATURAL,
     DWRITE_READING_DIRECTION, DWRITE_READING_DIRECTION_LEFT_TO_RIGHT, DWRITE_RENDERING_MODE,
     DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC, DWRITE_TEXT_ANTIALIAS_MODE_GRAYSCALE,
@@ -89,6 +90,21 @@ fn user_locale() -> Rc<[u16]> {
     }
 }
 
+/// A line that crosses the cells, such as the underline: where its top is,
+/// in pixels from the top of a cell, and how thick it is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Line {
+    pub top: u32,
+    pub thickness: u32,
+}
+
+/// Where the lines of the text go in a cell, as the font says.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Decorations {
+    pub underline: Line,
+    pub strikeout: Line,
+}
+
 /// A font for the cells of a grid, at a size and a DPI: the size of a cell,
 /// where its baseline is, and the coverage of its glyphs.
 pub struct Typeface {
@@ -96,26 +112,35 @@ pub struct Typeface {
     /// The family that was found, among the ones that were asked for.
     family: String,
     family_name: HSTRING,
+    /// How bold and how slanted it is, which the fallback also uses.
+    weight: DWRITE_FONT_WEIGHT,
+    style: DWRITE_FONT_STYLE,
     face: IDWriteFontFace,
     /// The size of the em square, in pixels.
     em: f32,
     cell: Size,
     /// The distance from the top of a cell to the baseline, in pixels.
     baseline: f32,
+    decorations: Decorations,
     /// The texture of the last glyph, kept to rasterize the next one without
     /// allocating memory.
     texture: Vec<u8>,
 }
 
 impl Typeface {
-    /// The first of `families` that is installed, at `points` and `dpi`.
+    /// The first of `families` that is installed, at `points` and `dpi`, of
+    /// normal weight and upright.
     pub fn new(
         system: &FontSystem,
         families: &[&str],
         points: f32,
         dpi: u32,
     ) -> Result<Self, Error> {
-        let Some((family, face)) = families.iter().find_map(|&name| find(system, name)) else {
+        let (weight, style) = (DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL);
+        let Some((family, face)) = families
+            .iter()
+            .find_map(|&name| find(system, name, weight, style))
+        else {
             return Err(Error::no_font(families));
         };
         let em = points * dpi as f32 / 72.0;
@@ -134,14 +159,49 @@ impl Typeface {
             .unwrap_or(em / 2.0);
         // Both are small positive numbers, so the conversions are exact.
         let cell = Size::new(advance.round().max(1.0) as u32, height.max(1.0) as u32);
+        let decorations = decorations(&metrics, units, baseline, cell);
         Ok(Self {
             system: system.clone(),
             family_name: HSTRING::from(family.as_str()),
             family,
+            weight,
+            style,
             face,
             em,
             cell,
             baseline,
+            decorations,
+            texture: Vec::new(),
+        })
+    }
+
+    /// The same family, bold or slanted (italic), in the same cells, with
+    /// the same baseline. If the family does not have that style,
+    /// DirectWrite simulates it: it thickens the outlines, or slants them.
+    pub fn styled(&self, bold: bool, italic: bool) -> Result<Self, Error> {
+        let weight = if bold {
+            DWRITE_FONT_WEIGHT_BOLD
+        } else {
+            DWRITE_FONT_WEIGHT_NORMAL
+        };
+        let style = if italic {
+            DWRITE_FONT_STYLE_ITALIC
+        } else {
+            DWRITE_FONT_STYLE_NORMAL
+        };
+        let (_, face) = find(&self.system, &self.family, weight, style)
+            .ok_or_else(|| Error::no_font(&[self.family.as_str()]))?;
+        Ok(Self {
+            system: self.system.clone(),
+            family: self.family.clone(),
+            family_name: self.family_name.clone(),
+            weight,
+            style,
+            face,
+            em: self.em,
+            cell: self.cell,
+            baseline: self.baseline,
+            decorations: self.decorations,
             texture: Vec::new(),
         })
     }
@@ -152,6 +212,10 @@ impl Typeface {
 
     pub const fn cell(&self) -> Size {
         self.cell
+    }
+
+    pub const fn decorations(&self) -> Decorations {
+        self.decorations
     }
 
     /// Rasterizes `c` in a box of `columns` cells, 1 or 2, and writes its
@@ -280,8 +344,8 @@ impl Typeface {
                 len,
                 &self.system.collection,
                 &self.family_name,
-                DWRITE_FONT_WEIGHT_NORMAL,
-                DWRITE_FONT_STYLE_NORMAL,
+                self.weight,
+                self.style,
                 DWRITE_FONT_STRETCH_NORMAL,
                 &mut mapped_len,
                 &mut font,
@@ -310,9 +374,15 @@ fn rendering() -> (DWRITE_RENDERING_MODE, DWRITE_GRID_FIT_MODE) {
     )
 }
 
-/// The family `name` and its face of normal weight, width and style, if the
-/// family is installed.
-fn find(system: &FontSystem, name: &str) -> Option<(String, IDWriteFontFace)> {
+/// The family `name` and its face that is closest to `weight` and `style`,
+/// with normal width, if the family is installed. The face simulates what
+/// the family lacks: a bold that it does not have, or a slant.
+fn find(
+    system: &FontSystem,
+    name: &str,
+    weight: DWRITE_FONT_WEIGHT,
+    style: DWRITE_FONT_STYLE,
+) -> Option<(String, IDWriteFontFace)> {
     let (mut index, mut exists) = (0, BOOL(0));
     // SAFETY: the name is valid during the call, and the two out parameters
     // receive the result.
@@ -328,17 +398,42 @@ fn find(system: &FontSystem, name: &str) -> Option<(String, IDWriteFontFace)> {
     // SAFETY: `index` is the one that FindFamilyName returned.
     let family = unsafe { system.collection.GetFontFamily(index) }.ok()?;
     // SAFETY: GetFirstMatchingFont only takes the three properties.
-    let font = unsafe {
-        family.GetFirstMatchingFont(
-            DWRITE_FONT_WEIGHT_NORMAL,
-            DWRITE_FONT_STRETCH_NORMAL,
-            DWRITE_FONT_STYLE_NORMAL,
-        )
-    }
-    .ok()?;
-    // SAFETY: CreateFontFace has no parameters.
+    let font =
+        unsafe { family.GetFirstMatchingFont(weight, DWRITE_FONT_STRETCH_NORMAL, style) }.ok()?;
+    // SAFETY: CreateFontFace has no parameters. The face has the
+    // simulations of the font.
     let face = unsafe { font.CreateFontFace() }.ok()?;
     Some((name.to_owned(), face))
+}
+
+/// Where the underline and the strikeout go in a cell of `cell` pixels, with
+/// the baseline at `baseline`, from the `metrics` of the font in its units,
+/// `units` pixels each. Both have at least one pixel, and stay in the cell.
+fn decorations(
+    metrics: &DWRITE_FONT_METRICS,
+    units: f32,
+    baseline: f32,
+    cell: Size,
+) -> Decorations {
+    // The positions are of the top of each line, up from the baseline, as
+    // in the tables of OpenType: the underline is below it, so negative.
+    let line = |position: i16, thickness: u16| {
+        let thickness = (f32::from(thickness) * units).round().max(1.0);
+        let top = (baseline - f32::from(position) * units).round().max(0.0);
+        // A cell is a few dozen pixels, so the conversions are exact.
+        let thickness = (thickness as u32).min(cell.height);
+        Line {
+            top: (top as u32).min(cell.height - thickness),
+            thickness,
+        }
+    };
+    Decorations {
+        underline: line(metrics.underlinePosition, metrics.underlineThickness),
+        strikeout: line(
+            metrics.strikethroughPosition,
+            metrics.strikethroughThickness,
+        ),
+    }
 }
 
 fn font_metrics(face: &IDWriteFontFace) -> DWRITE_FONT_METRICS {
@@ -556,5 +651,55 @@ mod tests {
         // A noncharacter, which no font has.
         let missing = coverage(&mut typeface, '\u{fdd0}', 1);
         assert!(missing.iter().any(|&c| c != 0));
+    }
+
+    #[test]
+    fn bold_and_italic_change_the_glyphs_but_not_the_cells() {
+        let mut regular = typeface(144);
+        let mut bold = regular.styled(true, false).unwrap();
+        let mut italic = regular.styled(false, true).unwrap();
+        assert_eq!(bold.cell(), regular.cell());
+        assert_eq!(italic.cell(), regular.cell());
+        assert_eq!(bold.decorations(), regular.decorations());
+
+        let ink = |coverage: &[u8]| coverage.iter().map(|&c| u32::from(c)).sum::<u32>();
+        let m = ink(&coverage(&mut regular, 'M', 1));
+        assert!(ink(&coverage(&mut bold, 'M', 1)) > m * 11 / 10);
+
+        // An italic I leans to the right: the middle of its ink is further
+        // right in its top row than in its bottom row.
+        let width = regular.cell().width as usize;
+        let middles = |coverage: &[u8]| -> Vec<f32> {
+            coverage
+                .chunks_exact(width)
+                .filter_map(|row| {
+                    let ink: u32 = row.iter().map(|&c| u32::from(c)).sum();
+                    let moment: u32 = (0..).zip(row).map(|(x, &c)| x * u32::from(c)).sum();
+                    (ink > 0).then(|| moment as f32 / ink as f32)
+                })
+                .collect()
+        };
+        let upright = middles(&coverage(&mut regular, 'I', 1));
+        let (top, bottom) = (upright[0], upright[upright.len() - 1]);
+        assert!((top - bottom).abs() < 1.0, "{upright:?}");
+        let slanted = middles(&coverage(&mut italic, 'I', 1));
+        let (top, bottom) = (slanted[0], slanted[slanted.len() - 1]);
+        assert!(top > bottom + 1.0, "{slanted:?}");
+    }
+
+    #[test]
+    fn the_underline_goes_below_the_baseline_and_the_strikeout_above() {
+        for dpi in [96, 120, 144] {
+            let typeface = typeface(dpi);
+            let Decorations {
+                underline,
+                strikeout,
+            } = typeface.decorations();
+            let baseline = typeface.baseline as u32;
+            assert!(underline.thickness >= 1 && strikeout.thickness >= 1);
+            assert!(underline.top >= baseline, "{dpi}: {underline:?}");
+            assert!(underline.top + underline.thickness <= typeface.cell().height);
+            assert!(strikeout.top > 0 && strikeout.top + strikeout.thickness <= baseline);
+        }
     }
 }

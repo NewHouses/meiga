@@ -53,4 +53,4 @@
 
 - Microsoft Learn, [Windows Advanced Rasterization Platform (WARP) Guide](https://learn.microsoft.com/en-us/windows/win32/direct3darticles/directx-warp).
 - Windows Terminal v1.25.2733.0, [`src/renderer/atlas/AtlasEngine.r.cpp`, liñas 192–201](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/renderer/atlas/AtlasEngine.r.cpp#L192-L201): se o adaptador é por software, o modo automático escolle Direct2D.
-- [Arquitectura › Fluxo de datos](../arquitectura.md#3-fluxo-de-datos-previsto)
+- [Arquitectura › Fluxo de datos](../arquitectura.md#3-fluxo-de-datos)

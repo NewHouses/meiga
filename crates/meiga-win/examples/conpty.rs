@@ -28,7 +28,7 @@ use std::time::Instant;
 
 use meiga_core::geometry::GridSize;
 use meiga_core::term::recording::Recorder;
-use meiga_win::conpty::{Conpty, Output, Source};
+use meiga_win::conpty::{Conpty, Input, Output, Source};
 
 /// The size of the pseudoconsole: the default of a console window.
 const SIZE: GridSize = GridSize::new(120, 30);
@@ -44,7 +44,7 @@ struct Printer {
 }
 
 impl Output for Printer {
-    fn received(&mut self, bytes: &[u8]) {
+    fn received(&mut self, bytes: &[u8], _input: &Input) {
         if let Some((path, recorder)) = &mut self.recording
             && let Err(error) = recorder.record(bytes)
         {

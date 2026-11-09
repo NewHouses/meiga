@@ -24,3 +24,4 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 1.3 | Texto: fontes e caché de glifos | [PR #9](https://github.com/NewHouses/meiga/pull/9) | [1.3-texto.md](1.3-texto.md) |
 | 1.4 | ConPTY | [PR #10](https://github.com/NewHouses/meiga/pull/10) | [1.4-conpty.md](1.4-conpty.md) |
 | 1.5 | Fachada do terminal | [PR #11](https://github.com/NewHouses/meiga/pull/11) | [1.5-fachada.md](1.5-fachada.md) |
+| 1.6 | Da saída á pantalla | [PR #12](https://github.com/NewHouses/meiga/pull/12) | [1.6-saida.md](1.6-saida.md) |

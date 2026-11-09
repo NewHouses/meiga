@@ -20,12 +20,12 @@ use alacritty_terminal::term::cell::{Cell as TermCell, Flags};
 use alacritty_terminal::term::{
     self, ClipboardType, Config, LineDamageBounds, Osc52, Term, TermDamage, TermMode,
 };
-use alacritty_terminal::vte::ansi::{self, Processor};
+use alacritty_terminal::vte::ansi::{self, CursorStyle, NamedColor, Processor};
 
 pub use screen::{Cell, CellFlags, Color, Columns, Cursor, CursorShape, Screen};
 
-use crate::color::Rgb;
-use crate::geometry::GridSize;
+use crate::color::{Palette, Rgb};
+use crate::geometry::{GridSize, Size};
 use crate::text::CellChar;
 use scanner::Scanner;
 
@@ -37,6 +37,13 @@ pub const SCROLLBACK_LINES: usize = 10_000;
 /// needs two columns.
 pub const MIN_SIZE: GridSize =
     GridSize::new(term::MIN_COLUMNS as u16, term::MIN_SCREEN_LINES as u16);
+
+/// The cursor when the program does not choose one: a bar that blinks, as
+/// in Windows Terminal.
+const DEFAULT_CURSOR: CursorStyle = CursorStyle {
+    shape: ansi::CursorShape::Beam,
+    blinking: true,
+};
 
 /// What happened when the terminal read output, besides changes on the
 /// screen.
@@ -93,8 +100,21 @@ pub struct Modes {
 struct Pending {
     changes: Changes,
     responses: Vec<u8>,
+    /// The questions that only the terminal can answer, with where their
+    /// answers go among `responses`.
+    questions: Vec<(usize, Question)>,
     title: Option<String>,
     clipboard: Option<String>,
+}
+
+/// A question of the program that needs what `alacritty_terminal` does not
+/// know.
+enum Question {
+    /// A colour (OSC 4, 10, 11 or 12 with `?`): its index in the colours of
+    /// `alacritty_terminal`, and how to write the answer.
+    Color(usize, Arc<dyn Fn(ansi::Rgb) -> String + Send + Sync>),
+    /// The size of the text area in pixels (`CSI 14 t`).
+    TextAreaSize,
 }
 
 /// Receives the events of `alacritty_terminal` while it reads output.
@@ -114,6 +134,18 @@ impl EventListener for Listener {
                 pending.responses.extend_from_slice(text.as_bytes());
                 pending.changes.responses = true;
             }
+            // The terminal answers them once the output is read, in the
+            // same order: some programs ask the attributes (DA1) after
+            // another question, and take an answer to DA1 first as a
+            // terminal that does not know the other one.
+            Event::ColorRequest(index, answer) => {
+                let at = pending.responses.len();
+                pending.questions.push((at, Question::Color(index, answer)));
+            }
+            Event::TextAreaSizeRequest(_) => {
+                let at = pending.responses.len();
+                pending.questions.push((at, Question::TextAreaSize));
+            }
             Event::Title(title) => {
                 // An empty title is no title: the tab shows its own.
                 pending.title = Some(title).filter(|title| !title.is_empty());
@@ -130,8 +162,6 @@ impl EventListener for Listener {
                 pending.changes.clipboard = true;
             }
             // Reading the clipboard is never allowed (Osc52::OnlyCopy). The
-            // answers that need the palette or the size of a cell in pixels
-            // come with the renderer of the terminal (subphase 1.6). The
             // rest is for the event loop of Alacritty, which meiga does not
             // use.
             _ => {}
@@ -140,9 +170,9 @@ impl EventListener for Listener {
 }
 
 /// The size of the grid as `alacritty_terminal` asks for it.
-struct Size(GridSize);
+struct TermSize(GridSize);
 
-impl Dimensions for Size {
+impl Dimensions for TermSize {
     fn total_lines(&self) -> usize {
         self.screen_lines()
     }
@@ -165,41 +195,84 @@ pub struct Terminal {
     pending: Arc<Mutex<Pending>>,
     size: GridSize,
     title: Option<String>,
+    /// The colours of the theme, which the program can change.
+    theme: Palette,
+    /// The size of a cell in pixels, or 0 × 0 while it is not known.
+    cell: Size,
     /// The damaged rows, reused at every copy.
     damaged: Vec<LineDamageBounds>,
 }
 
 // The reader thread of a tab feeds its terminal, and the window thread copies
-// from it (subphase 1.6): it has to be able to go from one thread to another.
+// from it: it has to be able to go from one thread to another.
 const _: () = {
     const fn send<T: Send>() {}
     send::<Terminal>();
 };
 
 impl Terminal {
-    /// A terminal of `size`, with at least [`MIN_SIZE`].
+    /// A terminal of `size`, with at least [`MIN_SIZE`], and the colours of
+    /// meiga.
     pub fn new(size: GridSize) -> Self {
         let size = at_least_min_size(size);
         let pending = Arc::new(Mutex::new(Pending::default()));
         let config = Config {
             scrolling_history: SCROLLBACK_LINES,
+            default_cursor_style: DEFAULT_CURSOR,
             osc52: Osc52::OnlyCopy,
             kitty_keyboard: false,
             ..Config::default()
         };
         Self {
-            term: Term::new(config, &Size(size), Listener(Arc::clone(&pending))),
+            term: Term::new(config, &TermSize(size), Listener(Arc::clone(&pending))),
             parser: Processor::new(),
             scanner: Scanner::new(),
             pending,
             size,
             title: None,
+            theme: Palette::MEIGA,
+            cell: Size::new(0, 0),
             damaged: Vec::new(),
         }
     }
 
     pub const fn size(&self) -> GridSize {
         self.size
+    }
+
+    /// Changes the colours of the theme. The ones that the program changed
+    /// keep its colour.
+    pub fn set_theme(&mut self, theme: Palette) {
+        self.theme = theme;
+    }
+
+    /// Gives the size of a cell in pixels, with which the terminal answers
+    /// the programs that ask for the size of the text area in pixels (`CSI
+    /// 14 t`). Until it has it, it does not answer them.
+    pub fn set_cell_size(&mut self, cell: Size) {
+        self.cell = cell;
+    }
+
+    /// The colours with which the cells are drawn: the ones of the theme,
+    /// except those that the program changed (OSC 4, 10, 11 and 12).
+    pub fn palette(&self) -> Palette {
+        let mut palette = self.theme.clone();
+        let colors = self.term.colors();
+        for (index, color) in palette.colors.iter_mut().enumerate() {
+            if let Some(changed) = colors[index] {
+                *color = rgb(changed);
+            }
+        }
+        for (name, color) in [
+            (NamedColor::Foreground, &mut palette.foreground),
+            (NamedColor::Background, &mut palette.background),
+            (NamedColor::Cursor, &mut palette.cursor),
+        ] {
+            if let Some(changed) = colors[name] {
+                *color = rgb(changed);
+            }
+        }
+        palette
     }
 
     /// Reads what the program wrote.
@@ -248,7 +321,7 @@ impl Terminal {
     /// Changes the size of the grid, with at least [`MIN_SIZE`].
     pub fn resize(&mut self, size: GridSize) {
         self.size = at_least_min_size(size);
-        self.term.resize(Size(self.size));
+        self.term.resize(TermSize(self.size));
     }
 
     /// When the synchronized update that the program started (`?2026`) has
@@ -265,11 +338,12 @@ impl Terminal {
         self.take_changes()
     }
 
-    /// Copies to `screen` the rows that changed since the last copy, and the
-    /// cursor, and adds to the changes of `screen` the cells that are now
-    /// different. When the cursor moves, or changes its shape, the changes
-    /// also have its cells, where it was and where it is, if it is drawn:
-    /// the renderer draws it over them.
+    /// Copies to `screen` the rows that changed since the last copy, the
+    /// cursor and the palette, and adds to the changes of `screen` the cells
+    /// that are now different. When the cursor moves, or changes its shape,
+    /// the changes also have its cells, where it was and where it is, if it
+    /// is drawn: the renderer draws it over them. When the palette changes,
+    /// every cell changes.
     pub fn copy_damage(&mut self, screen: &mut Screen) {
         let resized = screen.size() != self.size;
         if resized {
@@ -300,25 +374,20 @@ impl Terminal {
             }
         }
         let cursor = self.cursor();
-        let before = screen.cursor();
-        if cursor != before {
-            // Only where it is drawn: two cells, in case it is over a wide
-            // character.
-            for Cursor {
-                row, column, shape, ..
-            } in [before, cursor]
-            {
-                if shape != CursorShape::Hidden {
-                    let end = column.saturating_add(2).min(self.size.columns);
-                    screen.mark_changed(row, Columns::new(column, end));
-                }
-            }
+        if cursor != screen.cursor() {
+            screen.mark_cursor_changed();
             screen.set_cursor(cursor);
+            screen.mark_cursor_changed();
         }
+        // When a colour changes, alacritty_terminal damages every row, but
+        // the cells keep the index of their colour, so they compare equal:
+        // the palette is compared on its own.
+        screen.set_palette(&self.palette());
         self.term.reset_damage();
     }
 
-    fn cursor(&self) -> Cursor {
+    /// Where the cursor is now, and how the program wants it.
+    pub fn cursor(&self) -> Cursor {
         let style = self.term.cursor_style();
         let shape = if self.term.mode().contains(TermMode::SHOW_CURSOR) {
             match style.shape {
@@ -369,12 +438,64 @@ impl Terminal {
 
     fn take_changes(&mut self) -> Changes {
         let mut pending = lock(&self.pending);
+        if !pending.questions.is_empty() {
+            let palette = self.palette();
+            let questions = mem::take(&mut pending.questions);
+            let responses = mem::take(&mut pending.responses);
+            let mut answered = Vec::with_capacity(responses.len() + 32 * questions.len());
+            let mut from = 0;
+            for (at, question) in &questions {
+                // The positions only grow, and the answers only went to the
+                // end while the output was read.
+                let at = (*at).clamp(from, responses.len());
+                answered.extend_from_slice(&responses[from..at]);
+                from = at;
+                if let Some(answer) = self.answer(question, &palette) {
+                    answered.extend_from_slice(answer.as_bytes());
+                    pending.changes.responses = true;
+                }
+            }
+            answered.extend_from_slice(&responses[from..]);
+            pending.responses = answered;
+        }
         let changes = mem::take(&mut pending.changes);
         if changes.title {
             self.title = pending.title.take();
         }
         changes
     }
+
+    /// The answer to `question`, with the colours of `palette`, or `None`
+    /// if the terminal does not know it.
+    fn answer(&self, question: &Question, palette: &Palette) -> Option<String> {
+        match question {
+            Question::Color(index, answer) => {
+                let color = match *index {
+                    index @ 0..256 => palette.colors[index],
+                    index if index == NamedColor::Foreground as usize => palette.foreground,
+                    index if index == NamedColor::Background as usize => palette.background,
+                    index if index == NamedColor::Cursor as usize => palette.cursor,
+                    _ => return None,
+                };
+                Some(answer(ansi::Rgb {
+                    r: color.r,
+                    g: color.g,
+                    b: color.b,
+                }))
+            }
+            // As alacritty_terminal writes it, but without its multiplication
+            // of 16-bit numbers, which can overflow.
+            Question::TextAreaSize => (!self.cell.is_empty()).then(|| {
+                let height = u64::from(self.size.rows) * u64::from(self.cell.height);
+                let width = u64::from(self.size.columns) * u64::from(self.cell.width);
+                format!("\x1b[4;{height};{width}t")
+            }),
+        }
+    }
+}
+
+fn rgb(color: ansi::Rgb) -> Rgb {
+    Rgb::new(color.r, color.g, color.b)
 }
 
 fn lock(pending: &Mutex<Pending>) -> MutexGuard<'_, Pending> {
@@ -445,7 +566,7 @@ fn color(color: ansi::Color) -> Color {
             _ => Color::Default,
         },
         ansi::Color::Indexed(index) => Color::Indexed(index),
-        ansi::Color::Spec(rgb) => Color::Rgb(Rgb::new(rgb.r, rgb.g, rgb.b)),
+        ansi::Color::Spec(spec) => Color::Rgb(rgb(spec)),
     }
 }
 

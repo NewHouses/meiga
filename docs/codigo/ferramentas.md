@@ -1,16 +1,17 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 1.5.
+> Estado: subfase 1.6.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
 | Arquivo | Para que |
 |---|---|
-| [`package.ps1`](#toolspackageps1) | Compilar en modo *release* e crear o `.zip` que se distribúe. |
-| [`fetch-conpty.ps1`](#toolsfetch-conptyps1) | Descargar o ConPTY que vai con meiga, comprobalo e deixalo en `target\conpty\`; avisar se hai unha versión nova. |
+| [`package.ps1`](#toolspackageps1) | Compilar en modo *release*, crear o `.zip` que se distribúe e deixar o ConPTY ao lado de `meiga.exe`. |
+| [`fetch-conpty.ps1`](#toolsfetch-conptyps1) | Descargar o ConPTY que vai con meiga, comprobalo e deixalo en `target\conpty\` e nos cartafoles que se lle digan; avisar se hai unha versión nova. |
 | [`check-imports.ps1`](#toolscheck-importsps1) | Comprobar que `meiga.exe` non depende do *runtime* de Visual C++. |
-| [`check-window.ps1`](#toolscheck-windowps1) | Comprobar que `meiga.exe` abre a súa xanela e se pecha ben. |
-| [`check-present.ps1`](#toolscheck-presentps1) | Comprobar que `meiga.exe` presenta só o que cambia e non debuxa en repouso nin minimizado. |
+| [`check-window.ps1`](#toolscheck-windowps1) | Comprobar que `meiga.exe` abre a súa xanela, executa o seu programa e se pecha ben, sen deixar procesos. |
+| [`check-present.ps1`](#toolscheck-presentps1) | Comprobar que `meiga.exe` presenta só o que cambia na saída dun programa e non debuxa en repouso nin minimizado. |
+| [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
 | [`third-party-notices.ps1`](#toolsthird-party-noticesps1) | Xerar os avisos de licenza das dependencias. |
@@ -20,7 +21,7 @@ Todos os scripts empezan igual: a axuda, os parámetros e unha comprobación da 
 
 ## `tools/package.ps1`
 
-Compila meiga en modo *release* e crea o paquete que se distribúe:
+Compila meiga en modo *release* e crea o paquete que se distribúe. Desde a subfase 1.6, deixa tamén o ConPTY ao lado de `target\release\meiga.exe`, para que as outras ferramentas executen meiga co mesmo ConPTY ca o paquete:
 
 ```powershell
 .\tools\package.ps1            # compila e crea dist\meiga-<versión>-x86_64-pc-windows-msvc.zip
@@ -123,13 +124,18 @@ Compila desde a raíz do repositorio coas versións exactas do `Cargo.lock` (`--
 
 ```powershell
     Copy-Item -LiteralPath $exe -Destination $staging
-    & (Join-Path $PSScriptRoot 'fetch-conpty.ps1') -Destination $staging
+    & (Join-Path $PSScriptRoot 'fetch-conpty.ps1') -Destination $staging, (Split-Path -Parent $exe)
     Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $staging 'LICENSE.txt')
     Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $staging
     & (Join-Path $PSScriptRoot 'third-party-notices.ps1') -OutFile (Join-Path $staging 'THIRD-PARTY-NOTICES.txt')
 ```
 
 Copia os arquivos e xera os avisos de terceiros. `&` é o operador de chamada: executa o script cuxa ruta se calcula na propia liña. `fetch-conpty.ps1` comproba o ConPTY e cópiao ao cartafol do paquete; se aínda non está descargado, descárgao, así que o paquete sempre o leva.
+
+**O ConPTY ao lado de `meiga.exe`.** Desde a subfase 1.6, `fetch-conpty.ps1` cópiao tamén ao cartafol de `meiga.exe`, `target\release\`, e por iso a súa saída ten dúas liñas `Copied to …`, unha por cartafol.
+
+- `-Destination` recibe unha lista: os elementos van separados por comas. `Split-Path -Parent` dá o cartafol dunha ruta, e as parénteses fan que se execute antes, para que o seu resultado sexa o segundo elemento.
+- **Por que.** meiga busca `conpty.dll` e `OpenConsole.exe` no seu propio cartafol e, se non os atopa, usa sen avisar o ConPTY de Windows, co seu `conhost.exe` ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). Varias ferramentas executan `target\release\meiga.exe` cunha sesión no seu terminal: [`check-window.ps1`](#toolscheck-windowps1), [`check-present.ps1`](#toolscheck-presentps1), [`measure-startup.ps1`](perf.md#toolsperfmeasure-startupps1) e [`run-scenario.ps1 -Start`](escenarios.md#con--start). Sen esta copia, probarían e medirían un ConPTY distinto do que vai no paquete.
 
 ```powershell
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
@@ -148,11 +154,12 @@ Write-Host "Wrote $zip"
 
 ## `tools/fetch-conpty.ps1`
 
-Desde a subfase 1.4. Descarga o ConPTY que vai con meiga ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)), o paquete NuGet `Microsoft.Windows.Console.ConPTY` na versión que fixa o propio script, e compróbao. Deixa os dous arquivos que usa meiga en `target\conpty\`, onde os buscan as [probas](meiga-win.md#cratesmeiga-wintestsconptyrs) e o [exemplo](meiga-win.md#cratesmeiga-winexamplesconptyrs) de `meiga-win`, e desde onde os copia [`package.ps1`](#toolspackageps1).
+Desde a subfase 1.4. Descarga o ConPTY que vai con meiga ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)), o paquete NuGet `Microsoft.Windows.Console.ConPTY` na versión que fixa o propio script, e compróbao. Deixa os dous arquivos que usa meiga en `target\conpty\`, onde os buscan as [probas](meiga-win.md#cratesmeiga-wintestsconptyrs) e o [exemplo](meiga-win.md#cratesmeiga-winexamplesconptyrs) de `meiga-win`, e desde onde os copia aos cartafoles que se lle digan: [`package.ps1`](#toolspackageps1) pídelle o do paquete e, desde a subfase 1.6, o de `target\release\meiga.exe`.
 
 ```powershell
 .\tools\fetch-conpty.ps1                         # descarga e comproba; os arquivos quedan en target\conpty\
 .\tools\fetch-conpty.ps1 -Destination <cartafol> # ademais, copia os dous arquivos a <cartafol>
+.\tools\fetch-conpty.ps1 -Destination <a>, <b>   # ou a varios cartafoles
 .\tools\fetch-conpty.ps1 -CheckLatest            # só mira en nuget.org se hai unha versión estábel máis nova
 ```
 
@@ -324,19 +331,32 @@ Write-Host "conpty.dll and OpenConsole.exe are in $folder"
 - A versión de cada arquivo (`VersionInfo.FileVersion`) é a do Windows Terminal do que sae: a do paquete, escrita doutra maneira.
 
 ```powershell
-if ($Destination) {
+foreach ($target in $Destination) {
     # Resolve a relative path against the current PowerShell location, not
     # the working directory of the process.
-    $Destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
-    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    $target = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($target)
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
     foreach ($name in $Files.Keys) {
-        Copy-Item -LiteralPath (Join-Path $folder $name) -Destination $Destination
+        $source = Join-Path $folder $name
+        $copy = Join-Path $target $name
+        # Copy only what changed, for the same reason: meiga may be running
+        # from that folder.
+        if (-not (Test-Path -LiteralPath $copy) -or
+            (Get-FileHash -LiteralPath $copy -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash) {
+            Copy-Item -LiteralPath $source -Destination $copy
+        }
     }
-    Write-Host "Copied to $Destination"
+    Write-Host "Copied to $target"
 }
 ```
 
-Con `-Destination`, copia os dous arquivos a ese cartafol: é o que fai `package.ps1` co cartafol do paquete. A ruta resólvese coma en [`third-party-notices.ps1`](#toolsthird-party-noticesps1).
+Con `-Destination`, copia os dous arquivos a eses cartafoles: é o que fai `package.ps1` co cartafol do paquete e co de `meiga.exe`.
+
+- Desde a subfase 1.6, `-Destination` é unha lista de cartafoles (`[string[]]`), separados por comas. Sen el, `$Destination` vale `$null`, e `foreach` non dá ningunha volta: non fai falta ningún `if`.
+- Cada ruta resólvese coma en [`third-party-notices.ps1`](#toolsthird-party-noticesps1).
+- **Só copia o que cambiou**, pola mesma razón ca ao extraer: se un meiga corre desde ese cartafol, `conpty.dll` está cargada nel e, mentres a súa sesión está aberta, `OpenConsole.exe` está en uso, e Windows non deixa substituílos. Desde a 1.6, `package.ps1` copia o ConPTY a `target\release\`, de onde se executa meiga mentres se desenvolve: sen esta comprobación, a copia fallaría cun meiga aberto desde alí, aínda que os arquivos fosen os mesmos. Se cambiaron de verdade, por exemplo cunha versión nova do ConPTY, a copia falla igual, e hai que pechar antes ese meiga.
+- Compara o SHA-256 da copia co do arquivo de `target\conpty\`, que xa está comprobado. A condición ocupa dúas liñas: a primeira remata en `-or`, e PowerShell segue lendo na seguinte.
+- A liña `Copied to …` sae por cada cartafol, tamén se os arquivos xa estaban: di onde están.
 
 **Actualizar o ConPTY.** Cando o job `conpty` falla, ou `-CheckLatest` di que hai unha versión nova:
 
@@ -453,7 +473,7 @@ Busca as DLL do *runtime*: `vcruntime*.dll` (o *runtime* de Visual C++), `msvcp*
 
 ## `tools/check-window.ps1`
 
-Comproba que `meiga.exe` fai o que promete a subfase 1.1: abre a súa xanela, sen consola e coa escala por monitor, e remata ben cando se pecha. Inicia o programa de verdade, así que a xanela aparece un instante.
+Comproba que `meiga.exe` fai o que prometen as subfases 1.1 e 1.6: abre a súa xanela, sen consola e coa escala por monitor; executa no seu terminal o programa da liña de comandos, que lle pon título á xanela; e, cando se pecha, remata ben, e con el o programa e a súa consola. Inicia o programa de verdade, con `cmd` no terminal, así que a xanela vese durante un segundo, máis ou menos.
 
 ```powershell
 .\tools\check-window.ps1                                  # comproba target\release\meiga.exe
@@ -467,8 +487,12 @@ Saída esperada:
 OK: it is a GUI program, so it opens no console window.
 OK: it opens its window (class 'meiga', title 'meiga').
 OK: the window is DPI aware per monitor (v2).
+OK: the program in the terminal sets the title of the window ('meiga-check').
 OK: it ends with exit code 0 when its window closes.
+OK: then the program in the terminal and its console end too (cmd.exe, OpenConsole.exe).
 ```
+
+A última liña di `conhost.exe` en vez de `OpenConsole.exe` se o ConPTY non está ao lado de `meiga.exe`, por exemplo despois dun `cargo build --release` sen [`package.ps1`](#toolspackageps1): meiga usa entón o de Windows.
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1. Pase o que pase, `meiga.exe` non queda aberto.
 
@@ -479,7 +503,7 @@ Explicación por partes:
 [int]$TimeoutSeconds = 10
 ```
 
-O tempo máximo de cada espera: primeiro, a que se abra a xanela; despois, a que remate o proceso. Abrir a xanela leva milisegundos, así que 10 s só se esgotan se algo vai mal.
+O tempo máximo de cada espera: que se abra a xanela, que cambie o título, que remate o proceso e, despois, que rematen o programa e a súa consola. Abrir a xanela leva milisegundos, e cmd cambia o título despois dun segundo, así que 10 s só se esgotan se algo vai mal.
 
 ```powershell
 $header = [byte[]]::new(4096)
@@ -538,8 +562,30 @@ public static extern bool AreDpiAwarenessContextsEqual(IntPtr first, IntPtr seco
 - `GetClassNameW` dá o nome da clase dunha xanela, e `GetWindowDpiAwarenessContext`, como escala a xanela. `[return: MarshalAs(UnmanagedType.Bool)]` indica que o `BOOL` de Windows (un número de 4 bytes) se converte nun `bool`.
 
 ```powershell
+$title = 'meiga-check'
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+# With /k, cmd shows each command in the title while it runs ("cmd.exe -
+# ping ..."), as soon as it starts, and the title "meiga" could be gone
+# before the check below. With /c it does not. pause keeps cmd running until
+# the window closes, and there is no space before & because it would be part
+# of the title.
+foreach ($argument in 'cmd', '/d', '/c', "ping -n 2 127.0.0.1 >nul & title $title& pause >nul") {
+    $info.ArgumentList.Add($argument)
+}
+```
+
+Desde a subfase 1.6, meiga executa no seu terminal o programa da súa liña de comandos ([Código › meiga](meiga.md#cratesmeigasrcoptionsrs)). O script dálle un `cmd` que fai algo que se ve desde fóra sen ler a pantalla: cambiar o título da xanela.
+
+- `UseShellExecute = $false`: Windows crea o proceso directamente, sen pasar polo Explorador.
+- `ArgumentList` pasa cada argumento por separado, e .NET pon as comiñas que fagan falta: o último leva espazos, así que vai entre comiñas. meiga recibe os catro e xúntaos outra vez, coas mesmas regras, para lanzar cmd ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)). Polo camiño, ninguén interpreta o `>nul` nin o `&`: chegan ao cmd de dentro de meiga, que quita as comiñas de fóra e executa o que hai dentro.
+- `/d`: cmd non executa os comandos `AutoRun` do rexistro de Windows, que alguén pode ter configurados e que cambiarían o que fai.
+- `/c`: cmd executa os comandos e remata. Con `/k`, que despois segue aberto esperando ordes, coma unha shell, cmd mostra no título cada comando mentres o executa (`C:\Windows\SYSTEM32\cmd.exe - ping  -n 2 127.0.0.1`), e faino en canto arranca: o título «meiga» podía desaparecer antes de que o script mirase a xanela. Pasou nunha execución da CI: o título de cmd chega poucos milisegundos despois de abrirse a xanela. Con `/c`, cmd non toca o título: só o cambia `title`.
+- `ping -n 2 127.0.0.1 >nul` envía dous *pings* ao propio equipo, cun segundo entre eles: sen rede e, con `>nul`, sen escribir nada. É o xeito clásico de esperar un segundo en cmd. A espera fai que o título aínda sexa «meiga» cando o script mira a xanela, xusto despois de que se abra, e que cambie despois: sen ela, `title` podería cambialo antes, e a comprobación da xanela fallaría ás veces.
+- `&` executa un comando despois do outro, e `title` cambia o título da consola co texto que ten detrás, ata o seguinte `&`: por iso non hai un espazo antes del, que sería parte do título. O ConPTY envíallo ao terminal como unha secuencia OSC ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
+- `pause >nul` agarda a que se prema unha tecla, sen escribir nada, e ninguén a preme: así cmd segue aberto ata que se pecha a xanela, e a última comprobación, que cmd remata cando se pecha meiga, demostra algo. Sen el, cmd remataría despois de poñer o título.
+
+```powershell
 $process = [Diagnostics.Process]::Start($info)
 try {
     # WaitForInputIdle returns when meiga has painted its window and waits for
@@ -553,8 +599,7 @@ try {
     }
 ```
 
-- `UseShellExecute = $false`: Windows crea o proceso directamente, sen pasar polo Explorador.
-- `WaitForInputIdle` agarda a que o programa remate de arrancar e quede esperando mensaxes, sen ningunha pendente: no caso de meiga, coa xanela xa pintada (ver [Código › meiga-win](meiga-win.md#windowrun)). Devolve `$false` se pasa o tempo, e produce un erro se o proceso xa rematou, por iso o `try`/`catch`.
+`WaitForInputIdle` agarda a que o programa remate de arrancar e quede esperando mensaxes, sen ningunha pendente: no caso de meiga, coa xanela xa pintada (ver [Código › meiga-win](meiga-win.md#windowrun)) e, desde a subfase 1.6, co programa do terminal xa lanzado, porque meiga lanza a súa sesión antes do primeiro fotograma ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Devolve `$false` se pasa o tempo, e produce un erro se o proceso xa rematou, por iso o `try`/`catch`.
 
 ```powershell
     $process.Refresh()
@@ -582,6 +627,49 @@ try {
 O **contexto de escala** da xanela di como escala (ver [Tecnoloxías › Manifesto](../tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)). `-4` é o valor que Windows define para «por monitor, versión 2» (`DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`). O contexto que devolve Windows non ten por que ser ese número, así que a documentación manda comparalos con `AreDpiAwarenessContextsEqual`, e non con `-eq`. Se o manifesto non estivese incrustado, a xanela non escalaría e a comprobación fallaría.
 
 ```powershell
+    # As administrator, as on the CI runners, cmd puts "Administrator: " (in
+    # the language of Windows) before the title that it is given.
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $process.Refresh()
+        $shown = $process.MainWindowTitle
+        if ($shown -eq $title -or $shown.EndsWith(" $title")) {
+            break
+        }
+        if ($process.HasExited -or [DateTime]::UtcNow -gt $deadline) {
+            throw "The title of the window is '$shown' and not '$title', the one that cmd sets in the terminal."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    Write-Host "OK: the program in the terminal sets the title of the window ('$shown')."
+```
+
+**O título** é a forma máis simple de ver desde fóra que a saída dun programa chega á xanela, e para chegar pasa por todo o camiño da subfase 1.6: cmd cambia o título da consola, o ConPTY escríbeo na súa saída, o fío lector de meiga pásallo ao terminal e avisa á xanela, e a xanela colle o título e pono na barra de título ([Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage) e [› O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)). Se falla calquera paso, o título non cambia.
+
+- O script mira o título cada 0,1 s ata que é o de cmd. `Refresh()` fai falta en cada volta: sen el, .NET devolvería sempre o título que leu a primeira vez.
+- **Como administrador**, cmd pon diante do título que lle dan `Administrator: `, na lingua de Windows, e un espazo. Por iso vale tamén un título que remate nun espazo e `meiga-check`. Os *runners* da CI corren como administrador, e alí a liña do resultado é `OK: the program in the terminal sets the title of the window ('Administrator:  meiga-check').` O prefixo pono cmd, non o ConPTY: o título que escribe un programa cunha secuencia OSC chega tal cal, como o de [`check-present.ps1`](#toolscheck-presentps1).
+- Se meiga remata, ou se pasa o tempo, falla e di que título ten a xanela.
+- A liña do resultado mostra o título que ten a xanela.
+
+```powershell
+    # The programs that meiga started: the console host of the session and
+    # cmd.
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.CreationDate -ge $process.StartTime })
+    $names = @($children | ForEach-Object Name | Sort-Object)
+    if ($names -notcontains 'cmd.exe' -or -not ($names -match '^(OpenConsole|conhost)\.exe$')) {
+        throw "meiga.exe started $($names -join ', ') instead of cmd.exe and its console host."
+    }
+```
+
+**Os fillos de meiga**, antes de pechar a xanela: cmd e o anfitrión da consola da sesión ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)).
+
+- `Get-CimInstance Win32_Process` le os procesos a través de CIM, a interface moderna de WMI, que dá de cada un o PID do seu pai (`ParentProcessId`). O filtro aplícao o propio WMI, que só devolve os fillos de meiga.
+- `CreationDate -ge $process.StartTime`: Windows reutiliza os PID, así que un proceso cuxo pai rematou hai tempo pode ter como `ParentProcessId` o PID que agora ten meiga. Un fillo de verdade sempre se creou despois ca o pai, como se ten en conta tamén en [`measure.ps1`](perf.md#toolsperfmeasureps1).
+- Ten que haber un `cmd.exe` e un anfitrión: `OpenConsole.exe`, o do ConPTY que vai con meiga, ou `conhost.exe`, o de Windows. Cunha lista á esquerda, `-match` devolve os elementos que coinciden, e unha lista baleira conta como falso.
+- **Por que antes de pechar.** Despois, cmd e o anfitrión poderían ter rematado xa, e o script non os atoparía: non podería distinguir entre «remataron» e «nunca existiron», e a última comprobación pasaría igual. Así, ten a lista exacta dos procesos polos que esperar, e sabe que existiron.
+
+```powershell
     if (-not $process.CloseMainWindow()) {
         throw "Could not ask the window of $exe to close."
     }
@@ -590,6 +678,23 @@ O **contexto de escala** da xanela di como escala (ver [Tecnoloxías › Manifes
     }
     if ($process.ExitCode -ne 0) {
         throw "$exe ended with exit code $($process.ExitCode) instead of 0."
+    }
+```
+
+- `CloseMainWindow` envía `WM_CLOSE` á xanela, a mesma mensaxe que o botón X da barra de título, e `WaitForExit` agarda a que remate o proceso.
+- O código de saída ten que ser 0, tamén co programa do terminal aínda aberto, coma neste caso. Unha caixa de erro pechada así daría 1 (ver [Código › meiga](meiga.md#cratesmeigasrcmainrs)).
+
+```powershell
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $alive = @($children | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction Ignore })
+        if ($alive.Count -eq 0) {
+            break
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$(($alive | ForEach-Object Name) -join ' and ') still running $TimeoutSeconds s after meiga.exe ended."
+        }
+        Start-Sleep -Milliseconds 100
     }
 }
 finally {
@@ -600,15 +705,17 @@ finally {
 }
 ```
 
-- `CloseMainWindow` envía `WM_CLOSE` á xanela, a mesma mensaxe que o botón X da barra de título, e `WaitForExit` agarda a que remate o proceso.
-- O código de saída ten que ser 0. Unha caixa de erro pechada así daría 1 (ver [Código › meiga](meiga.md#cratesmeigasrcmainrs)).
+**Despois de meiga, os seus fillos.** Cando meiga remata, a súa sesión péchase, e con ela o ConPTY: cmd e o anfitrión teñen que rematar tamén ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Un terminal que, ao pecharse, deixase vivos a shell e o anfitrión da súa consola deixaría procesos sen xanela, que ninguén ve nin pecha, cada vez que se pecha unha xanela.
+
+- `Get-Process -Id … -ErrorAction Ignore` non devolve nada, sen erro, se o proceso xa non existe: `$alive` son os que seguen vivos. O script mira cada 0,1 s ata que non queda ningún, e se pasa o tempo, falla e di cales seguen.
+- O script pecha a xanela cando cmd xa leva polo menos un segundo aberto. Pechala mentres un programa aínda se está a conectar á consola é outro caso, que estuda o [ADR 0011](../adr/0011-fin-e-peche-das-sesions.md).
 - O bloque `finally` execútase sempre, tamén despois dun `throw`: se meiga segue aberto, remátao (`Kill`), e libera os recursos do obxecto do proceso (`Dispose`).
 
-A CI executa este script en cada PR, despois de empaquetar (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade.
+A CI executa este script en cada PR, despois de empaquetar (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)), así que o anfitrión é `OpenConsole.exe`: `package.ps1` deixou o ConPTY ao lado de `meiga.exe`. Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade.
 
 ## `tools/check-present.ps1`
 
-Comproba que `meiga.exe` fai o que promete a subfase 1.2: presenta só o que cambia, agrupa os cambios en fotogramas e non debuxa nada en repouso nin coa xanela minimizada. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), envíalle á xanela eventos do rato, como faría unha persoa, e comproba no rexistro o que debuxou. Leva uns 7 segundos.
+Comproba que `meiga.exe` fai o que prometen as subfases 1.2 e 1.6: presenta só o que cambia, agrupa os cambios en fotogramas e non debuxa nada en repouso nin coa xanela minimizada, tamén cando quen cambia a pantalla é un programa; e, coa xanela minimizada, remata á súa hora límite unha actualización sincronizada que o programa deixa aberta. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, no seu terminal, un script de PowerShell que escribe na pantalla un paso cada vez, cando llo di a comprobación; despois de cada paso, comproba no rexistro o que debuxou meiga. Leva uns segundos.
 
 ```powershell
 .\tools\check-present.ps1                                  # comproba target\release\meiga.exe
@@ -616,25 +723,30 @@ Comproba que `meiga.exe` fai o que promete a subfase 1.2: presenta só o que cam
 .\tools\check-present.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
 ```
 
-Mentres corre, non premas o rato nin o teclado. Os eventos van directamente á xanela, sen mover o rato de verdade, pero un clic ou a tecla Esc na xanela cambiarían o que debuxa. Mover o rato, sen premelo, non lle afecta.
+Necesita PowerShell 7 no `PATH`: meiga lanza o script do terminal con `pwsh`, polo nome.
 
-Saída esperada, cos números que dependan da pantalla:
+Ata a subfase 1.5, a comprobación enviáballe á demo eventos do rato, e un clic na xanela cambiaba o que debuxaba. Desde a 1.6 a demo xa non existe, e o que cambia a pantalla é o programa do terminal, así que o rato xa non lle afecta. Aínda así, mentres corre, non toques a xanela de meiga: a comprobación minimízaa, restáuraa e cambia o seu tamaño, e espera uns fotogramas concretos.
+
+Saída esperada, cos píxeles que dependen da pantalla:
 
 ```text
 OK: the first paint covers the whole window (… x … pixels).
-OK: drawing a rectangle made … frames, all inside it (… pixels in total).
+OK: a row that changed 5 times made 5 frames, all inside it (… pixels in total).
 OK: while nothing changes, it draws nothing (1 s).
-OK: 40 moves sent at once made 2 frames.
-OK: clearing the window makes one full frame.
-OK: minimized, it draws nothing.
+OK: 40 changes written at once made 2 frames.
+OK: another background colour makes one full frame.
+OK: minimized, it draws nothing, even when the output changes.
+OK: minimized, a synchronized update that the program leaves open ends at its deadline.
 OK: restoring the window paints all of it.
 OK: when the window grows (… x … pixels), it is composed and painted at the new size.
 OK: it ends with exit code 0 when its window closes.
 ```
 
+Os fotogramas da segunda e da cuarta liña son os normais; a comprobación acepta tamén outros números, como se explica nos pasos, máis abaixo.
+
 Se falla unha comprobación, o script mostra as liñas do rexistro que o demostran e remata cun erro que explica cal, e código de saída 1. Ademais, garda o rexistro e di onde está: `The frame log is in …`. Pase o que pase, `meiga.exe` non queda aberto.
 
-**Comprobado:** con copias de meiga con erros feitos a propósito, o script falla (ver [Código › meiga](meiga.md#comprobacións-feitas)).
+**Comprobado:** na subfase 1.6, con tres copias de meiga con erros feitos a propósito. A que presenta a xanela enteira en cada cambio falla na segunda comprobación; a que debuxa coa xanela minimizada, na sexta; e a que coa xanela minimizada non fai nada, nin sequera rematar as actualizacións sincronizadas, como na primeira versión da subfase 1.6, na sétima. As copias das subfases anteriores explícanse en [Código › meiga](meiga.md#comprobacións-feitas).
 
 Explicación por partes. O comezo (a axuda, os parámetros, a versión de PowerShell, a ruta de `meiga.exe` e a espera con `WaitForInputIdle`) é igual ca en [`check-window.ps1`](#toolscheck-windowps1).
 
@@ -646,7 +758,7 @@ public struct RECT { public int Left, Top, Right, Bottom; }
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
-public static extern bool PostMessageW(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+public static extern bool ShowWindowAsync(IntPtr window, int command);
 …
 '@
 }
@@ -656,31 +768,98 @@ As funcións de Windows que usa, declaradas en C# como en `check-window.ps1`:
 
 | Función | Para que |
 |---|---|
-| `PostMessageW` | Deixa unha mensaxe na cola da xanela, sen esperar a que a trate: os eventos do rato. |
-| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell (ver máis abaixo). |
 | `ShowWindowAsync` | Minimiza e restaura a xanela. |
 | `SetWindowPos` | Cambia o tamaño da xanela. |
 | `GetClientRect` | Le o tamaño da zona de debuxo da xanela, sen o marco nin a barra de título. |
+| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell (ver máis abaixo). |
 
 - `RECT` é a estrutura de Windows cos catro bordos dun rectángulo. `[StructLayout(LayoutKind.Sequential)]` garda os campos na orde en que se declaran, que é a que espera Windows.
 - `ShowWindowAsync` e `SetWindowPos` coa opción `SWP_ASYNCWINDOWPOS` (máis abaixo) non esperan a que meiga trate a petición: se meiga se bloquease, o script non quedaría parado, e fallaría na comprobación seguinte.
+- Ata a subfase 1.5 usaba tamén `PostMessageW`, para os eventos do rato.
+- **O título da xanela**, que mira o paso 7, non se le cunha función nova nesta clase, senón con `$process.MainWindowTitle`, como en `check-window.ps1`. PowerShell garda o tipo creado con `Add-Type` durante toda a sesión, e o script non o crea outra vez se xa existe (`-as [type]`, ver [`check-window.ps1`](#toolscheck-windowps1)): se na mesma sesión xa correra unha versión anterior do script, a clase sería a vella, sen a función nova, e a comprobación fallaría ao chamala.
 
 ```powershell
+# The script that runs in the terminal. Each time the check sets the event
+# <Name>-go, it writes the next step and sets <Name>-done.
+$program = @'
+param([Parameter(Mandatory)][string]$Name)
+$ErrorActionPreference = 'Stop'
+$go = [Threading.EventWaitHandle]::OpenExisting("$Name-go")
+$done = [Threading.EventWaitHandle]::OpenExisting("$Name-done")
+$e = [char]27
+$out = [Console]::Out
+$steps = @(
+    # Hide the cursor, so that it never blinks, and clear the screen.
+    { $out.Write("$e[?25l$e[2J$e[H") },
+    # Row 5, five times, slowly.
+    { foreach ($i in 1..5) { $out.Write("$e[5;3Hrow 5, $i of 5"); Start-Sleep -Milliseconds 80 } },
+    # Row 8, 40 times at once.
+    { foreach ($i in 1..40) { $out.Write("$e[8;3Hrow 8, $i of 40") } },
+    # Another background colour, which changes every pixel.
+    { $out.Write("$e]11;#202830$e\") },
+    # Rows 10 to 14, while the window is minimized.
+    { foreach ($i in 10..14) { $out.Write("$e[$i;3Hrow $i"); Start-Sleep -Milliseconds 50 } },
+    # Still minimized, a synchronized update that is never ended, with a
+    # title in it.
+    { $out.Write("$e[?2026h$e]0;meiga-sync$e\") }
+)
+foreach ($step in $steps) {
+    if (-not $go.WaitOne(60000)) { exit 1 }
+    & $step
+    $null = $done.Set()
+}
+# Until the window closes, which ends this script.
+$null = $go.WaitOne()
+'@
+```
+
+**O script do terminal.** Desde a subfase 1.6, a xanela de meiga só mostra o seu terminal, e a pantalla do terminal só cambia coa saída do seu programa. Por iso a comprobación necesita un programa propio, que escriba exactamente o que ela quere, e cando o quere.
+
+- `$program` é o código dese programa, outro script de PowerShell. Vai entre `@'` e `'@`, unha cadea literal de varias liñas: PowerShell non substitúe as variábeis de dentro (`$Name`, `$e`…), que son do script do terminal.
+- `$steps` é unha lista de bloques de código (`{ … }`), un por paso, e `& $step` executa un. Escriben con `[Console]::Out`, que envía o texto á consola no momento: no segundo paso, cada escritura sae antes da pausa seguinte.
+- `$e` é o carácter ESC. `ESC [ 5 ; 3 H` leva o cursor á fila 5, columna 3, e despois vai o texto: cada vez a mesma fila, cun número distinto, así que a fila cambia cada vez ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
+- **O primeiro paso oculta o cursor** (`ESC [ ? 25 l`), e despois borra a pantalla (`ESC [ 2 J`) e leva o cursor ao principio (`ESC [ H`). Mentres a xanela ten o foco, o cursor de meiga pestanexa, e cada cambio do pestanexo é un fotograma ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)): aparecerían no rexistro fotogramas que non pediu o script, e o paso 3, que non espera ningún, fallaría. Ademais, que pestanexe ou non depende da máquina: por Escritorio remoto, Windows desactiva o pestanexo. Oculto, o cursor non debuxa nada en ningunha.
+- **Outra cor de fondo** (`ESC ] 11 ; #202830 ESC \`, *OSC 11*) cambia o fondo de todas as celas e das marxes que sobran arredor da grella, así que meiga ten que presentar a xanela enteira, e nun só fotograma ([Tecnoloxías › A paleta e os estilos](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)). Borrar a pantalla non serviría: meiga só presentaría as celas que cambiaron de verdade, sen as marxes.
+- **O último paso** abre unha actualización sincronizada (`ESC [ ? 2026 h`, *DECSET 2026*) e non a remata nunca: non escribe `ESC [ ? 2026 l`. Dentro vai un título (`ESC ] 0 ; meiga-sync ESC \`, *OSC 0*), que só chega á xanela cando remata a actualización (ver o paso 7, máis abaixo).
+- Antes de cada paso, o script agarda o evento `go`; despois, sinala `done`. Se pasa un minuto sen `go`, por exemplo porque a comprobación se interrompeu, remata só (`exit 1`), en vez de quedar esperando para sempre.
+- Despois do último paso segue esperando, sen límite e sen escribir nada, ata que se pecha a xanela, que o remata. Se rematase antes, meiga escribiría na pantalla a liña co seu código de saída ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), e a pantalla cambiaría durante os últimos pasos.
+
+```powershell
+$name = "meiga-check-present-$PID"
+$log = Join-Path ([IO.Path]::GetTempPath()) "$name.csv"
+$script = Join-Path ([IO.Path]::GetTempPath()) "$name.ps1"
+Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+$go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
+$done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
+```
+
+- O rexistro e o script do terminal van ao cartafol temporal, e os eventos levan o mesmo nome, co número do proceso de PowerShell (`$PID`): dúas comprobacións á vez non comparten arquivos nin eventos.
+- O script escríbese nun arquivo, e pwsh execútao con `-File`: así o seu código non pasa polas liñas de comandos de meiga e de pwsh, onde as súas comiñas e os seus `$` terían que ir escapados.
+- **Os eventos con nome.** A comprobación e o script do terminal son procesos distintos, e non se poden falar polo terminal: a comprobación non pode escribir nel, porque meiga aínda non ten teclado, e o que escribe o script vai á pantalla de meiga. Un evento (`EventWaitHandle`) é un obxecto de Windows que está sinalado ou non ([Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos)), e un evento con nome pódeo abrir calquera proceso da mesma sesión de Windows que saiba o nome. O script do terminal ábreos con `OpenExisting`, que falla se non existen: por iso a comprobación os crea antes de arrancar meiga.
+- **De reinicio automático** (`AutoReset`): cada `Set` deixa pasar unha soa espera, e o evento volta a quedar sen sinalar. Así, cada `go` é exactamente un paso, e cada `done`, un paso escrito. Se a comprobación sinala `go` antes de que o script chegue a esperalo, como no primeiro paso, mentres pwsh aínda arranca, o evento queda sinalado ata entón: o aviso non se perde.
+- Os escenarios de carga coordínanse con arquivos, porque teñen que funcionar tamén dentro de WSL ([Código › escenarios de carga](escenarios.md#como-se-coordinan)). Eiquí os dous lados son procesos de Windows, e un evento esperta o outro no momento, sen mirar nada cada pouco.
+
+```powershell
+# As per monitor (v2), the same as meiga, the size of the window is in pixels,
+# as in its log.
 $previousDpi = [Meiga.Tools.PresentCheck]::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
 ```
 
-**A escala do fío.** Comprobouse que Windows axusta as coordenadas das mensaxes do rato segundo a escala do fío que as envía. PowerShell non escala por monitor, así que, nunha pantalla ao 150 %, as coordenadas que chegaban a meiga non eran as que se enviaran, e os rectángulos non caían onde os esperaba o script. Con `-4`, por monitor (v2) como meiga (ver [`check-window.ps1`](#toolscheck-windowps1)), son píxeles da xanela, os mesmos do rexistro. Ao rematar, o fío volta á escala que tiña.
+**A escala do fío.** Windows dá os tamaños dunha xanela (`GetClientRect`) e entende os que se lle piden (`SetWindowPos`) segundo a escala do fío que chama. PowerShell non escala por monitor, así que, nunha pantalla ao 150 %, os tamaños do script non serían os do rexistro de meiga. Con `-4`, por monitor (v2) como meiga (ver [`check-window.ps1`](#toolscheck-windowps1)), son píxeles da xanela, os mesmos do rexistro. Ao rematar, o fío volta á escala que tiña. Ata a subfase 1.5, a escala facía falta sobre todo para as coordenadas dos eventos do rato, que Windows tamén axusta.
 
 ```powershell
-$log = Join-Path ([IO.Path]::GetTempPath()) "meiga-check-present-$PID.csv"
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
-$info.ArgumentList.Add('--trace-frames')
-$info.ArgumentList.Add($log)
+foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
+    '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name) {
+    $info.ArgumentList.Add($argument)
+}
 ```
 
-- O rexistro vai ao cartafol temporal, cun nome que leva o número do proceso de PowerShell (`$PID`): dúas comprobacións á vez non escriben no mesmo arquivo.
-- `ArgumentList` pasa cada argumento por separado, e .NET pon as comiñas que fagan falta: a ruta pode ter espazos.
+- `--trace-frames <rexistro>` é unha opción de meiga; `pwsh`, o primeiro argumento que non é unha opción, é o programa, e todo o que vai despois son os seus argumentos ([Código › meiga](meiga.md#cratesmeigasrcoptionsrs)).
+- `ArgumentList` pasa cada argumento por separado, e .NET pon as comiñas que fagan falta: as rutas do cartafol temporal poden ter espazos. meiga xunta outra vez o programa e os seus argumentos coas mesmas regras, así que pwsh recibe exactamente estes ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)).
+- As opcións de pwsh: sen o texto de benvida (`-NoLogo`); sen o perfil do usuario (`-NoProfile`), que podería escribir na pantalla ou tardar; sen preguntar nada (`-NonInteractive`), porque ninguén podería responder; e sen a directiva de execución (`-ExecutionPolicy Bypass`), que podería impedir executar un script novo do cartafol temporal. `-Name` é o parámetro do script: o nome dos eventos.
+- Se meiga non pode lanzar pwsh, móstrao no seu terminal, e a comprobación falla no primeiro paso, porque o script non responde.
 
 ```powershell
     function Get-Log {
@@ -701,10 +880,20 @@ $info.ArgumentList.Add($log)
 - **`Wait-Quiet`** espera a que meiga leve 0,4 s sen escribir nada, máis de 10 intervalos entre fotogramas, e devolve as liñas novas: as que van despois das `$From` primeiras. Así, cada paso sabe que meiga xa debuxou todo o que tiña que debuxar. Se meiga non para de escribir, o paso falla despois de `TimeoutSeconds`.
 
 ```powershell
-    function Send-Mouse([int]$Message, [int]$Buttons, [int]$X, [int]$Y) {
-        $position = [IntPtr](($Y -shl 16) -bor ($X -band 0xFFFF))
-        if (-not [Meiga.Tools.PresentCheck]::PostMessageW($window, $Message, [IntPtr]$Buttons, $position)) {
-            throw "Could not send a mouse message to the window of $exe."
+    function Invoke-Step([string]$What) {
+        $null = $go.Set()
+        if (-not $done.WaitOne($TimeoutSeconds * 1000)) {
+            if ($process.HasExited) {
+                throw "$exe ended with exit code $($process.ExitCode) before the script in its terminal could $What."
+            }
+            throw "The script in the terminal did not $What within $TimeoutSeconds s."
+        }
+    }
+
+    function Get-Areas($Line) {
+        foreach ($area in ($Line.areas -split ';' | Where-Object { $_ })) {
+            $x, $y, $w, $h = [int[]]($area -split ' ')
+            [pscustomobject]@{ Left = $x; Top = $y; Right = $x + $w; Bottom = $y + $h }
         }
     }
 
@@ -713,28 +902,62 @@ $info.ArgumentList.Add($log)
     }
 ```
 
-- Unha mensaxe do rato leva dous datos (ver [como os le meiga](meiga-win.md#decode)): `wParam`, os botóns premidos (`MK_LBUTTON`, o esquerdo), e `lParam`, a posición, coa `x` nos 16 bits baixos e a `y` nos 16 altos. `-shl 16` despraza a `y` 16 bits á esquerda, e `-band 0xFFFF` deixa a `x` nos 16 baixos.
+- **`Invoke-Step`** dille ao script do terminal que escriba o seguinte paso (`go`) e agarda a que o escribiu (`done`). `done` só di que o script o escribiu na consola: o ConPTY e meiga aínda o poden estar procesando, e por iso cada paso agarda despois con `Wait-Quiet` a que meiga deixe de escribir no rexistro. Se `done` non chega a tempo, o erro di que paso era e se meiga rematou.
+- `Get-Areas` le as zonas dunha liña do rexistro: a columna `areas` leva `x y ancho alto` por zona, separadas por `;` ([Código › meiga](meiga.md#cratesmeigasrctracers)). `Where-Object { $_ }` descarta os textos baleiros, e `$x, $y, $w, $h = …` asigna os catro números dunha vez.
 - `Test-Full` di se unha liña cubriu a xanela enteira. Os valores do CSV son textos, e `[long]` convérteos en números: sen el, PowerShell compararía textos.
 
 Os pasos, en orde:
 
-| Paso | Que fai o script | Que ten que haber no rexistro |
+| Paso | Que fai o script do terminal, ou a comprobación | Que ten que haber no rexistro |
 |---|---|---|
-| 1 | Nada: espera ao primeiro fotograma. | Un `paint` da xanela enteira. A xanela ten que medir polo menos 400 × 300 píxeles, para que caiban os rectángulos. |
-| 2 | Debuxa un rectángulo de (40, 40) a (240, 160): un clic, 10 movementos cunha pausa de 15 ms entre eles, e soltar. | Polo menos 2 fotogramas, ningún completo, e todas as zonas dentro do rectángulo. |
+| 1 | O script oculta o cursor e borra a pantalla. | Un `paint` da xanela enteira. A xanela ten que medir polo menos 400 × 300 píxeles. |
+| 2 | O script escribe na fila 5 cinco veces, cunha pausa de 80 ms entre elas. | Polo menos 2 fotogramas, e todas as súas zonas na mesma franxa, que non pasa dunha décima do alto da xanela: a fila. |
 | 3 | Nada, durante 1 s. | Ningunha liña. |
-| 4 | Outro rectángulo: un clic, 40 movementos de golpe e soltar. | Entre 1 e 3 fotogramas. |
-| 5 | Un clic co botón dereito, que borra a xanela. | Un fotograma, da xanela enteira. |
-| 6 | Minimiza a xanela e debuxa outro rectángulo. | Ningunha liña. |
-| 7 | Restaura a xanela. | Un `paint` da xanela enteira. |
-| 8 | Fai a xanela máis pequena e despois máis grande. | Un `compose` co tamaño novo e algún `paint`. |
-| 9 | Pecha a xanela, como o botón X. | O código de saída 0. |
+| 4 | O script escribe na fila 8 corenta veces, de golpe. | Entre 1 e 3 fotogramas. |
+| 5 | O script cambia a cor do fondo. | Un fotograma, da xanela enteira. |
+| 6 | A comprobación minimiza a xanela, e o script escribe nas filas 10 a 14. | Ningunha liña. |
+| 7 | Coa xanela aínda minimizada, o script abre unha actualización sincronizada cun título dentro, e non a remata. | Ningunha liña. Ademais, o título da xanela ten que pasar a ser `meiga-sync`. |
+| 8 | A comprobación restaura a xanela. | Un `paint` da xanela enteira. |
+| 9 | A comprobación fai a xanela máis pequena e despois máis grande. | Un `compose` co tamaño novo e algún `paint`. |
+| 10 | A comprobación pecha a xanela, como o botón X. | O código de saída 0. |
 
-- **Paso 2.** Coas pausas, os movementos chegan en momentos distintos: uns debúxanse no momento e outros co temporizador, como cando se arrastra o rato de verdade.
-- **Paso 4.** Os 41 cambios (o clic e os 40 movementos) chegan case á vez. O normal son 2 fotogramas: o clic, no momento, e todos os movementos xuntos, co temporizador. Se o envío leva máis dun intervalo, por exemplo nunha máquina moi ocupada, pode haber un terceiro. Sen agrupar os cambios, serían 41.
-- **Paso 6.** O rectángulo cambia o contido, pero non se presenta: os cambios esperan a que se restaure a xanela.
-- **Paso 7.** O `paint` mostra tamén o rectángulo do paso 6, porque o *framebuffer* se compón ao restaurar a xanela. O script non mira os píxeles: só comproba que se pintou a xanela enteira.
-- **Paso 8.** `SetWindowPos` cambia o tamaño da xanela co marco; por iso o tamaño que se compara co do `compose` é o da zona de debuxo, que dá `GetClientRect`. As opcións: sen movela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`), sen activala (`SWP_NOACTIVATE`) e sen esperar (`SWP_ASYNCWINDOWPOS`).
+- **Paso 1.** O primeiro `paint` é o da xanela recén aberta, antes de que o script escriba nada. Nunha xanela moito máis pequena ca o mínimo, unha fila sería unha parte grande dela, e o paso 2 non demostraría nada.
+- **Paso 2.** Así se comproba que as zonas están todas na fila:
+
+  ```powershell
+      $frames = @($lines | Where-Object kind -EQ 'frame')
+      $areas = @($frames | ForEach-Object { Get-Areas $_ })
+      $tops = @($areas | ForEach-Object Top | Sort-Object -Unique)
+      $bottoms = @($areas | ForEach-Object Bottom | Sort-Object -Unique)
+      if ($frames.Count -lt 2 -or $tops.Count -ne 1 -or $bottoms.Count -ne 1 -or 10 * ($bottoms[0] - $tops[0]) -gt $height) {
+  ```
+
+  `Sort-Object -Unique` deixa cada valor unha vez: se todas as zonas teñen o mesmo bordo de arriba e o mesmo de abaixo, queda un de cada, e están todas na mesma franxa. A franxa non pode pasar dunha décima do alto da xanela: é a fila 5, non a xanela. Coas pausas, máis longas ca un intervalo entre fotogramas, cada escritura chega nun momento distinto e debúxase no momento: o normal son 5 fotogramas, e a comprobación acepta 2 ou máis, por se a máquina está ocupada. Unha copia de meiga que presente a xanela enteira en cada cambio falla eiquí.
+- **Paso 3.** Ningún fotograma en 1 s: o script espera sen escribir, e o cursor, oculto, non pestanexa.
+- **Paso 4.** As 40 escrituras chegan case á vez. O ConPTY pode xuntar varias nun mesmo bloque de saída, e meiga xunta os cambios que chegan dentro dun intervalo ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). O normal son 2 fotogramas: o primeiro cambio, no momento, e o resto xuntos, co temporizador. Se o envío leva máis dun intervalo, por exemplo nunha máquina moi ocupada, pode haber un terceiro.
+- **Paso 5.** Un só fotograma, e completo (`Test-Full`): a xanela enteira, marxes incluídas, porque se non as marxes quedarían coa cor vella.
+- **Paso 6.** A comprobación agarda a que meiga deixe de escribir despois de minimizar a xanela, e só entón lle di ao script que escriba. As filas cambian a pantalla do terminal, que segue lendo a saída, pero non se presenta nada: os cambios esperan a que se restaure a xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Despois, unha pausa de 300 ms dálle tempo á saída para chegar a meiga e, se meiga debuxase, ao fotograma para aparecer no rexistro. Unha copia de meiga que debuxe coa xanela minimizada falla eiquí.
+- **Paso 7.** Coa xanela aínda minimizada, o script abre unha actualización sincronizada e non a remata. A comprobación le o título da xanela cada 50 ms, ata que é o que vai dentro da actualización:
+
+  ```powershell
+      $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+      $process.Refresh()
+      while ($process.MainWindowTitle -ne 'meiga-sync') {
+          if ([DateTime]::UtcNow -gt $deadline) {
+              throw "Minimized, a synchronized update that the program did not end did not end at its deadline: the title of the window is still '$($process.MainWindowTitle)'."
+          }
+          Start-Sleep -Milliseconds 50
+          $process.Refresh()
+      }
+  ```
+
+  `Refresh()` fai falta antes de cada lectura, como en [`check-window.ps1`](#toolscheck-windowps1). Se o título non chega en `TimeoutSeconds`, falla e di o que ten a xanela. Despois, o rexistro non pode ter ningunha liña nova: rematar a actualización non debuxa nada mentres a xanela está minimizada.
+
+  **Por que importa.** Mentres unha actualización sincronizada está aberta, `vte` garda todo o que escribe o programa, tamén as súas preguntas, ata que o programa a remata ou meiga a remata á súa hora límite, 150 ms despois de abrila ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Na primeira versión da subfase 1.6, meiga só a remataba antes dun fotograma, e unha xanela minimizada non debuxa ningún fotograma: un programa que preguntase algo dentro dunha actualización agardaba a resposta ata que se restauraba a xanela. Agora o fío lector avisa á xanela cando o programa abre unha, tamén coa xanela minimizada, e a xanela programa o temporizador dos fotogramas para a súa hora límite e remátaa entón, sen debuxar nada ([Código › meiga](meiga.md#cratesmeigasrcframesrs)). Unha copia de meiga que non faga nada coa xanela minimizada falla eiquí.
+
+  **Por que o título.** Sae do terminal polo mesmo camiño ca unha resposta, cando remata a actualización ([Código › meiga](meiga.md#cratesmeigasrcviewrs)), e chega á xanela: velo na barra de título demostra que a actualización rematou, sen ter que ler ningunha resposta no script do terminal.
+- **Paso 8.** O `paint` mostra xa as filas do paso 6, porque, ao restaurar a xanela, o *framebuffer* se compón co que hai entón na pantalla do terminal. A comprobación non mira os píxeles: só comproba que se pintou a xanela enteira.
+- **Paso 9.** `SetWindowPos` cambia o tamaño da xanela co marco; por iso o tamaño que se compara co do `compose` é o da zona de debuxo, que dá `GetClientRect`. As opcións: sen movela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`), sen activala (`SWP_NOACTIVATE`) e sen esperar (`SWP_ASYNCWINDOWPOS`). A grella do terminal non cambia co tamaño da xanela ata a subfase 1.9: ao medrar, o que sobra son marxes, da cor do fondo ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). A xanela compónse e píntase enteira igual.
 
 ```powershell
 finally {
@@ -745,6 +968,9 @@ finally {
         }
         $process.Dispose()
     }
+    $go.Dispose()
+    $done.Dispose()
+    Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     }
@@ -755,9 +981,109 @@ finally {
 ```
 
 - O fío de PowerShell volta á súa escala, e meiga non queda aberto.
-- Se todo foi ben, bórrase o rexistro; se non, gárdase para poder miralo.
+- `Dispose` pecha os eventos. Windows destrúeos cando se pecha o último *handle* de cada un, o da comprobación ou o do script do terminal.
+- O script do terminal bórrase sempre. O rexistro bórrase se todo foi ben; se non, gárdase para poder miralo.
 
 A CI executa este script en cada PR, despois de `check-window.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
+
+## `tools/terminal-sample.ps1`
+
+Desde a subfase 1.6. Escribe unha mostra do que ten que saber mostrar un terminal, para comprobala a ollo: as cores, os estilos e os caracteres que non son ASCII. Ata a 1.5, a demo de meiga mostraba un texto fixo; desde a 1.6, meiga só mostra o que escribe o seu programa, e esta mostra é o programa que ensina de vez todo o que debuxa. Tamén se pode executar noutro terminal, para comparar. Non comproba nada soa: hai que mirala.
+
+```powershell
+.\target\release\meiga.exe pwsh -NoProfile -File tools\terminal-sample.ps1   # en meiga, desde a raíz do repositorio
+pwsh -File .\tools\terminal-sample.ps1                                        # no terminal onde se executa, para comparar
+pwsh -File .\tools\terminal-sample.ps1 -Wait 30                               # e espera 30 s antes de rematar
+```
+
+- Mentres meiga non ten teclado (subfase 1.7), non se pode escribir ningún comando na súa shell: o script vai como o seu programa, na liña de comandos. pwsh resolve a ruta relativa desde o seu cartafol actual, que herda de meiga, e meiga do terminal desde o que se lanza: por iso funciona desde a raíz do repositorio. `-NoProfile` evita que o perfil do usuario escriba algo antes da mostra.
+- Cando o script remata, meiga escribe debaixo da mostra `[process exited with code 0 (0x00000000)]` e oculta o cursor, e a xanela queda aberta ata que se pecha ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+- A mostra ocupa 20 filas, e as máis anchas, 72 columnas. A grella de meiga ten o tamaño da xanela ao arrancar e non cambia con ela ata a subfase 1.9: nunha xanela máis pequena, as liñas longas pasan á fila seguinte.
+
+Que mirar:
+
+| Parte | Que escribe | Como ten que verse |
+|---|---|---|
+| O título | `ESC ] 0 ; meiga sample ESC \` | O título da xanela, ou o da tab, pasa a ser «meiga sample». |
+| As 16 cores | `30`–`37` e `90`–`97` como cor do texto, e `40`–`47` e `100`–`107` como cor do fondo, cada unha co seu código | As cores do esquema *Campbell* ([Tecnoloxías › A paleta e os estilos](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)), as brillantes máis claras ca as normais. |
+| As 256 cores | O cubo de 6 × 6 × 6 (`48;5;16` a `48;5;231`), en 6 filas de 36 cores, e os 24 grises (`232` a `255`) | En cada fila, o verde sobe cada 6 cores, e o azul dentro de cada grupo de 6; os grises van do máis escuro ao máis claro. |
+| *Truecolor* | 72 celas de `48;2;r;g;b`, do azul (`0;80;255`) ao vermello (`255;80;0`) | Un degradado continuo. |
+| Os estilos | Negra, cursiva, negra cursiva, tenue, inverso, oculto entre corchetes e riscado | Cada palabra co seu estilo. A negra, coa fonte negra e a mesma cor; entre os corchetes do oculto, só o fondo. |
+| Os subliñados | Simple, dobre, ondulado, de puntos e de trazos (`4`, `4:2`, `4:3`, `4:4` e `4:5`), e `bold red` en negra, subliñado e vermello | Cada un co seu debuxo; o de `bold red`, vermello, porque o subliñado ten a cor do texto. |
+| Os caracteres anchos | `[中文] [日本語] [한국어] [😀]` | Cada carácter en dúas celas, cos corchetes xusto ao seu lado, sen tapalo nin deixar oco. |
+| As letras | `á é í ó ú ñ ç €` | Estas letras e o euro, e non `?` nin outros caracteres. |
+| As caixas | `┌─┬─┐ ╔═╗ ░▒▓█` | As liñas unidas, e os bloques de sombra cada vez máis cheos. |
+
+En meiga, polo de agora, os emoji son dunha soa cor (en cor, na subfase 8.1), e entre as celas dalgunhas liñas de caixa e bloques pode quedar un oco dun píxel (arránxase na 8.2): ver o [ADR 0013](../adr/0013-da-saida-a-pantalla.md). Ao comparar con outro terminal, a negra pode ser distinta: o xterm, por exemplo, pode debuxala coa cor brillante.
+
+Explicación por partes:
+
+```powershell
+$e = [char]27
+$sample = [Text.StringBuilder]::new()
+function Add-Text([string]$Text) {
+    $null = $sample.Append($Text)
+}
+
+Add-Text "$e]0;meiga sample$e\"
+```
+
+- A mostra constrúese enteira nun `StringBuilder`, un texto que crece sen copiarse cada vez, e escríbese ao final, dunha vez (máis abaixo).
+- `Append` devolve o propio `StringBuilder`. `$null =` descártao: sen el, sería a saída de `Add-Text`, e PowerShell mostraría o obxecto na consola por cada texto que se engade.
+- O primeiro é o título, `ESC ] 0 ; texto`, unha secuencia *OSC* que remata con `ESC \` ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). meiga pono na barra de título da xanela ([Tecnoloxías › O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
+
+```powershell
+Add-Text "Text colours (30-37 and 90-97):`r`n"
+foreach ($first in 30, 90) {
+    foreach ($code in $first..($first + 7)) {
+        Add-Text "$e[${code}m $code $e[0m"
+    }
+    Add-Text "`r`n"
+}
+```
+
+- Cada cor leva escrito o seu código, para saber cal é cal ao comparala. `${code}`, coas chaves, porque despois vén a letra `m`, que PowerShell lería como parte do nome da variábel.
+- `ESC [ 0 m` restablece o formato despois de cada cor e, no resto da mostra, antes de cada salto de liña: a cor do fondo non pasa ao que vén despois.
+- Cada liña remata en `` `r`n ``, retorno de carro e salto de liña, para non depender de que a consola engada ela o retorno ([Código › escenarios de carga](escenarios.md#que-debuxan-as-secuencias-de-escape)).
+
+```powershell
+foreach ($row in 0..5) {
+    foreach ($column in 0..35) {
+        Add-Text "$e[48;5;$(16 + 36 * $row + $column)m  "
+    }
+    Add-Text "$e[0m`r`n"
+}
+```
+
+- O cubo: a cor `16 + 36 r + 6 g + b`, con cada compoñente de 0 a 5 ([Tecnoloxías › A paleta e os estilos](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)). Cada fila é un valor do vermello, e nela `$column` percorre o verde e o azul: `6 g + b`. `$(…)` calcula a expresión dentro do texto.
+- Cada cor do cubo ocupa dúas celas, e cada gris, tres: as dúas partes miden 72 columnas, como o degradado *truecolor*, que vai do azul ao vermello en 72 pasos, co verde fixo.
+
+```powershell
+Add-Text "Wide: [`u{4E2D}`u{6587}] [`u{65E5}`u{672C}`u{8A9E}] [`u{D55C}`u{AD6D}`u{C5B4}] [`u{1F600}]  Latin: `u{E1} `u{E9} `u{ED} `u{F3} `u{FA} `u{F1} `u{E7} `u{20AC}`r`n"
+```
+
+- **Só ASCII.** O arquivo só ten caracteres ASCII, coma os escenarios ([Código › escenarios de carga](escenarios.md#scenariopsm1)): Windows PowerShell 5.1 le os arquivos sen marca de bytes como Windows-1252, e uns bytes de UTF-8 mal lidos poderían impedirlle ler o arquivo, e entón non mostraría a mensaxe que pide PowerShell 7. Os outros caracteres escríbense coa secuencia `` `u{…} `` de PowerShell 7 e o seu código Unicode: `` `u{4E2D} `` é 中. Windows PowerShell 5.1 non a coñece, pero le o texto sen erro: para el, `` `u `` é só unha `u`.
+- Os corchetes arredor dos caracteres anchos fan visíbel onde acaba cada un: cada carácter ocupa dúas celas ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)) e, se o terminal lle dese unha, o corchete seguinte taparía a metade do glifo.
+
+```powershell
+$encoding = [Console]::OutputEncoding
+try {
+    [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+    [Console]::Out.Write($sample.ToString())
+    [Console]::Out.Flush()
+}
+finally {
+    [Console]::OutputEncoding = $encoding
+}
+if ($Wait -gt 0) {
+    Start-Sleep -Seconds $Wait
+}
+```
+
+- **A páxina de códigos.** A consola interpreta os bytes que recibe segundo a súa páxina de códigos, que en Windows en galego ou español adoita ser a 850 ou a 437, e nelas non están os caracteres chineses nin o euro. Poñer `[Console]::OutputEncoding` en UTF-8 cambia a páxina de códigos da consola á 65001, e .NET escribe o texto en UTF-8. `$false` quere dicir sen a marca de bytes ao principio (BOM).
+- **Só mentres escribe.** A páxina de códigos é da consola, non do script, e a consola dura máis ca el: nunha tab, a shell desde a que se executou quedaría coa páxina nova. Por iso o bloque `finally` volta á anterior, tamén despois dun erro ou de Ctrl+C. É a mesma idea ca en [`Scenario.psm1`](escenarios.md#scenariopsm1). En meiga daría igual, porque a consola remata co script, pero o script vale para calquera terminal.
+- Por iso tamén se escribe todo dunha vez: o cambio de páxina só envolve unha chamada. `Flush` garante que saíu todo o texto antes de voltar á páxina anterior.
+- **`-Wait`** espera eses segundos antes de rematar. En meiga, mentres o programa segue vivo, a mostra queda sen a liña do código de saída e co cursor visíbel.
 
 ## `tools/check-docs.ps1`
 
@@ -932,10 +1258,10 @@ A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso 
    }
    ```
 
-`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.4 son 18:
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.6, con [`terminal-sample.ps1`](#toolsterminal-sampleps1), son 19:
 
 ```text
-OK: the 18 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+OK: the 19 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
 ```
 
 | Comprobación | Como |

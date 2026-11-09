@@ -4,23 +4,28 @@ Checks that meiga.exe presents only what changes, groups changes into frames
 and draws nothing while it is idle or minimized.
 
 .DESCRIPTION
-Starts meiga.exe with its frame log (--trace-frames), sends mouse events to
-its window as the user would, and checks in the log that:
+Starts meiga.exe with its frame log (--trace-frames) and, in its terminal, a
+PowerShell script that writes to the screen one step at a time, when this
+check tells it to. The script hides the cursor first, so that it never
+blinks. Then the check reads the log and checks that:
 
 - the first paint covers the whole window;
-- while a rectangle is drawn with the mouse, each frame presents only part of
-  the window, inside that rectangle;
+- while one row changes, each frame presents only that row;
 - an idle window draws nothing;
-- 40 mouse moves sent at once make at most 3 frames, because the changes are
+- 40 changes written at once make at most 3 frames, because the changes are
   grouped into frames, at most one per interval;
-- the right button, which clears the window, makes a full frame;
-- a minimized window draws nothing, and restoring it paints all of it;
+- another background colour (OSC 11), which changes every pixel, makes one
+  full frame;
+- a minimized window draws nothing, even when the output changes;
+- while it is minimized, a synchronized update (DECSET 2026) that the
+  program never ends still ends at its deadline: the title written in it
+  reaches the window;
+- restoring the window paints all of it;
 - when the window grows, meiga composes the new size and paints it;
 - it ends with exit code 0 when its window closes.
 
-The events are posted to the window (PostMessage), so the real mouse is not
-used. Even so, do not click or type while the check runs: a click or the Esc
-key in the window would change what it draws.
+The check tells the script when to write with two named events. It needs
+PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
 
 If a check fails, the script ends meiga.exe and keeps the frame log.
 
@@ -68,13 +73,6 @@ public struct RECT { public int Left, Top, Right, Bottom; }
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
-public static extern bool PostMessageW(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
-
-[DllImport("user32.dll")]
-public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
-
-[DllImport("user32.dll")]
-[return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool ShowWindowAsync(IntPtr window, int command);
 
 [DllImport("user32.dll")]
@@ -84,31 +82,67 @@ public static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool GetClientRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
 '@
 }
 
-$WM_MOUSEMOVE = 0x0200
-$WM_LBUTTONDOWN = 0x0201
-$WM_LBUTTONUP = 0x0202
-$WM_RBUTTONDOWN = 0x0204
-$WM_RBUTTONUP = 0x0205
-$MK_LBUTTON = 0x0001
-$MK_RBUTTON = 0x0002
 $SW_MINIMIZE = 6
 $SW_RESTORE = 9
 # SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS
 $SWP_RESIZE_ONLY = 0x0002 -bor 0x0004 -bor 0x0010 -bor 0x4000
 
-# Windows scales the coordinates of the mouse messages that a thread sends
-# with its own DPI awareness. As per monitor (v2), the same as meiga, they
-# are pixels of the window, as in its log.
+# The script that runs in the terminal. Each time the check sets the event
+# <Name>-go, it writes the next step and sets <Name>-done.
+$program = @'
+param([Parameter(Mandatory)][string]$Name)
+$ErrorActionPreference = 'Stop'
+$go = [Threading.EventWaitHandle]::OpenExisting("$Name-go")
+$done = [Threading.EventWaitHandle]::OpenExisting("$Name-done")
+$e = [char]27
+$out = [Console]::Out
+$steps = @(
+    # Hide the cursor, so that it never blinks, and clear the screen.
+    { $out.Write("$e[?25l$e[2J$e[H") },
+    # Row 5, five times, slowly.
+    { foreach ($i in 1..5) { $out.Write("$e[5;3Hrow 5, $i of 5"); Start-Sleep -Milliseconds 80 } },
+    # Row 8, 40 times at once.
+    { foreach ($i in 1..40) { $out.Write("$e[8;3Hrow 8, $i of 40") } },
+    # Another background colour, which changes every pixel.
+    { $out.Write("$e]11;#202830$e\") },
+    # Rows 10 to 14, while the window is minimized.
+    { foreach ($i in 10..14) { $out.Write("$e[$i;3Hrow $i"); Start-Sleep -Milliseconds 50 } },
+    # Still minimized, a synchronized update that is never ended, with a
+    # title in it.
+    { $out.Write("$e[?2026h$e]0;meiga-sync$e\") }
+)
+foreach ($step in $steps) {
+    if (-not $go.WaitOne(60000)) { exit 1 }
+    & $step
+    $null = $done.Set()
+}
+# Until the window closes, which ends this script.
+$null = $go.WaitOne()
+'@
+
+$name = "meiga-check-present-$PID"
+$log = Join-Path ([IO.Path]::GetTempPath()) "$name.csv"
+$script = Join-Path ([IO.Path]::GetTempPath()) "$name.ps1"
+Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+$go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
+$done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
+
+# As per monitor (v2), the same as meiga, the size of the window is in pixels,
+# as in its log.
 $previousDpi = [Meiga.Tools.PresentCheck]::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
 
-$log = Join-Path ([IO.Path]::GetTempPath()) "meiga-check-present-$PID.csv"
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
-$info.ArgumentList.Add('--trace-frames')
-$info.ArgumentList.Add($log)
+foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
+    '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name) {
+    $info.ArgumentList.Add($argument)
+}
 $process = $null
 $passed = $false
 try {
@@ -151,10 +185,15 @@ try {
         }
     }
 
-    function Send-Mouse([int]$Message, [int]$Buttons, [int]$X, [int]$Y) {
-        $position = [IntPtr](($Y -shl 16) -bor ($X -band 0xFFFF))
-        if (-not [Meiga.Tools.PresentCheck]::PostMessageW($window, $Message, [IntPtr]$Buttons, $position)) {
-            throw "Could not send a mouse message to the window of $exe."
+    # Tells the script in the terminal to write its next step, and waits
+    # until it has written it.
+    function Invoke-Step([string]$What) {
+        $null = $go.Set()
+        if (-not $done.WaitOne($TimeoutSeconds * 1000)) {
+            if ($process.HasExited) {
+                throw "$exe ended with exit code $($process.ExitCode) before the script in its terminal could $What."
+            }
+            throw "The script in the terminal did not $What within $TimeoutSeconds s."
         }
     }
 
@@ -182,7 +221,9 @@ try {
         $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels, areas -AutoSize | Out-Host
     }
 
-    # 1. The first paint.
+    # 1. The first paint, before the script in the terminal starts. Then the
+    # script hides the cursor and clears the screen.
+    Invoke-Step 'start'
     $lines = @(Wait-Quiet 0)
     $paint = @($lines | Where-Object kind -EQ 'paint') | Select-Object -First 1
     if (-not $paint -or -not (Test-Full $paint)) {
@@ -196,27 +237,20 @@ try {
     }
     Write-Host "OK: the first paint covers the whole window ($width x $height pixels)."
 
-    # 2. A rectangle drawn with the mouse, from (40, 40) to (240, 160).
+    # 2. One row changes five times, slowly: every frame is inside that row.
     $start = @(Get-Log).Count
-    Send-Mouse $WM_LBUTTONDOWN $MK_LBUTTON 40 40
-    for ($step = 1; $step -le 10; $step++) {
-        Start-Sleep -Milliseconds 15
-        Send-Mouse $WM_MOUSEMOVE $MK_LBUTTON (40 + 20 * $step) (40 + 12 * $step)
-    }
-    Send-Mouse $WM_LBUTTONUP 0 240 160
+    Invoke-Step 'write one row'
     $lines = @(Wait-Quiet $start)
     $frames = @($lines | Where-Object kind -EQ 'frame')
-    $outside = @($frames | Where-Object {
-            (Test-Full $_) -or @(Get-Areas $_ | Where-Object {
-                    $_.Left -lt 40 -or $_.Top -lt 40 -or $_.Right -gt 241 -or $_.Bottom -gt 161
-                }).Count -gt 0
-        })
-    if ($frames.Count -lt 2 -or $outside.Count -gt 0) {
+    $areas = @($frames | ForEach-Object { Get-Areas $_ })
+    $tops = @($areas | ForEach-Object Top | Sort-Object -Unique)
+    $bottoms = @($areas | ForEach-Object Bottom | Sort-Object -Unique)
+    if ($frames.Count -lt 2 -or $tops.Count -ne 1 -or $bottoms.Count -ne 1 -or 10 * ($bottoms[0] - $tops[0]) -gt $height) {
         Show-Lines $lines
-        throw 'While drawing the rectangle, the frames did not present only parts of it.'
+        throw 'While one row changed, the frames did not present only that row.'
     }
     $pixels = ($frames | Measure-Object -Property pixels -Sum).Sum
-    Write-Host "OK: drawing a rectangle made $($frames.Count) frames, all inside it ($pixels pixels in total)."
+    Write-Host "OK: a row that changed 5 times made $($frames.Count) frames, all inside it ($pixels pixels in total)."
 
     # 3. Nothing changes: nothing is drawn.
     $start = @(Get-Log).Count
@@ -228,47 +262,61 @@ try {
     }
     Write-Host 'OK: while nothing changes, it draws nothing (1 s).'
 
-    # 4. A burst of 40 moves, sent at once, in a second rectangle.
+    # 4. 40 changes of another row, written at once.
     $start = @(Get-Log).Count
-    Send-Mouse $WM_LBUTTONDOWN $MK_LBUTTON 300 40
-    for ($step = 1; $step -le 40; $step++) {
-        Send-Mouse $WM_MOUSEMOVE $MK_LBUTTON (300 + 2 * $step) (40 + 2 * $step)
-    }
-    Send-Mouse $WM_LBUTTONUP 0 380 120
+    Invoke-Step 'write 40 changes'
     $frames = @(Wait-Quiet $start | Where-Object kind -EQ 'frame')
     if ($frames.Count -lt 1 -or $frames.Count -gt 3) {
         Show-Lines $frames
-        throw "40 moves sent at once made $($frames.Count) frames instead of 1 to 3."
+        throw "40 changes written at once made $($frames.Count) frames instead of 1 to 3."
     }
-    Write-Host "OK: 40 moves sent at once made $($frames.Count) frames."
+    Write-Host "OK: 40 changes written at once made $($frames.Count) frames."
 
-    # 5. The right button clears the window.
+    # 5. Another background colour changes every pixel, margins included.
     $start = @(Get-Log).Count
-    Send-Mouse $WM_RBUTTONDOWN $MK_RBUTTON 50 50
-    Send-Mouse $WM_RBUTTONUP 0 50 50
+    Invoke-Step 'change the background colour'
     $frames = @(Wait-Quiet $start | Where-Object kind -EQ 'frame')
     if ($frames.Count -ne 1 -or -not (Test-Full $frames[0])) {
         Show-Lines $frames
-        throw 'Clearing the window did not make one full frame.'
+        throw 'Another background colour did not make one full frame.'
     }
-    Write-Host 'OK: clearing the window makes one full frame.'
+    Write-Host 'OK: another background colour makes one full frame.'
 
-    # 6. Minimized, it draws nothing, even if the content changes.
+    # 6. Minimized, it draws nothing, even if the output changes.
     $null = [Meiga.Tools.PresentCheck]::ShowWindowAsync($window, $SW_MINIMIZE)
     $null = Wait-Quiet 0
     $start = @(Get-Log).Count
-    Send-Mouse $WM_LBUTTONDOWN $MK_LBUTTON 60 200
-    Send-Mouse $WM_MOUSEMOVE $MK_LBUTTON 160 260
-    Send-Mouse $WM_LBUTTONUP 0 160 260
+    Invoke-Step 'write while the window is minimized'
     Start-Sleep -Milliseconds 300
     $lines = @(Wait-Quiet $start)
     if ($lines.Count -gt 0) {
         Show-Lines $lines
         throw 'The window drew while it was minimized.'
     }
-    Write-Host 'OK: minimized, it draws nothing.'
+    Write-Host 'OK: minimized, it draws nothing, even when the output changes.'
 
-    # 7. Restored, all of it is painted, with what changed meanwhile.
+    # 7. Still minimized, a synchronized update that the program does not
+    # end ends at its deadline: the title written in it reaches the window,
+    # and nothing is drawn.
+    $start = @(Get-Log).Count
+    Invoke-Step 'open a synchronized update while the window is minimized'
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $process.Refresh()
+    while ($process.MainWindowTitle -ne 'meiga-sync') {
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "Minimized, a synchronized update that the program did not end did not end at its deadline: the title of the window is still '$($process.MainWindowTitle)'."
+        }
+        Start-Sleep -Milliseconds 50
+        $process.Refresh()
+    }
+    $lines = @(Get-Log | Select-Object -Skip $start)
+    if ($lines.Count -gt 0) {
+        Show-Lines $lines
+        throw 'The window drew while it was minimized.'
+    }
+    Write-Host 'OK: minimized, a synchronized update that the program leaves open ends at its deadline.'
+
+    # 8. Restored, all of it is painted, with what changed meanwhile.
     $start = @(Get-Log).Count
     $null = [Meiga.Tools.PresentCheck]::ShowWindowAsync($window, $SW_RESTORE)
     $lines = @(Wait-Quiet $start)
@@ -279,7 +327,7 @@ try {
     }
     Write-Host 'OK: restoring the window paints all of it.'
 
-    # 8. Smaller and then bigger.
+    # 9. Smaller and then bigger.
     $start = @(Get-Log).Count
     $null = [Meiga.Tools.PresentCheck]::SetWindowPos($window, [IntPtr]::Zero, 0, 0, 500, 400, $SWP_RESIZE_ONLY)
     $null = Wait-Quiet $start
@@ -316,6 +364,9 @@ finally {
         }
         $process.Dispose()
     }
+    $go.Dispose()
+    $done.Dispose()
+    Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     }

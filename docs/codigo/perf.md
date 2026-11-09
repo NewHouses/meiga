@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 1.3.
+> Estado: subfase 1.6.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -675,7 +675,7 @@ A CI executa esta proba en cada PR (ver [Código › .github](github.md#comproba
 
 ## `tools/perf/measure-startup.ps1`
 
-Mide canto tarda meiga en abrir a súa xanela: desde que se crea o proceso ata que a xanela está pintada e meiga agarda mensaxes. É o **tempo ata o primeiro fotograma** (ver [Tecnoloxías › Tempo ata o primeiro fotograma](../tecnoloxias.md#tempo-ata-o-primeiro-fotograma)).
+Mide canto tarda meiga en abrir a súa xanela: desde que se crea o proceso ata que a xanela está pintada e meiga agarda mensaxes. É o **tempo ata o primeiro fotograma** (ver [Tecnoloxías › Tempo ata o primeiro fotograma](../tecnoloxias.md#tempo-ata-o-primeiro-fotograma)). Desde a subfase 1.6, meiga lanza a súa shell por defecto antes do primeiro fotograma ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), así que o tempo inclúe tamén lanzar a sesión: non se pode comparar directamente co das subfases anteriores.
 
 ```powershell
 .\tools\perf\measure-startup.ps1                            # 2 + 20 arranques de target\release\meiga.exe
@@ -720,9 +720,9 @@ function Measure-Start {
         $clock.Stop()
 ```
 
-- `Stopwatch` é o cronómetro de alta resolución de .NET. Ponse en marcha xusto antes de crear o proceso, así que o tempo inclúe todo o arranque: que Windows cree o proceso e cargue `meiga.exe` e as súas DLL, e que meiga rexistre a clase, cree a xanela e a pinte.
+- `Stopwatch` é o cronómetro de alta resolución de .NET. Ponse en marcha xusto antes de crear o proceso, así que o tempo inclúe todo o arranque: que Windows cree o proceso e cargue `meiga.exe` e as súas DLL, e que meiga rexistre a clase, cree a xanela, lance a súa sesión e pinte a xanela. Lanzar a sesión, desde a subfase 1.6, é crear a pseudoconsola e arrancar nela a shell por defecto: PowerShell 7 ou, se non está, Windows PowerShell.
 - `WaitForInputIdle` volta cando meiga quedou esperando mensaxes coa xanela xa pintada, como en [`check-window.ps1`](ferramentas.md#toolscheck-windowps1), e o cronómetro párase.
-- O que non se conta: despois, o DWM compón a pantalla co fotograma novo e, por Escritorio remoto, envíao. Iso pasa fóra de meiga e mídeo `measure.ps1` cos grupos `dwm` e `termservice`.
+- O que non se conta: despois, o DWM compón a pantalla co fotograma novo e, por Escritorio remoto, envíao. Iso pasa fóra de meiga e mídeo `measure.ps1` cos grupos `dwm` e `termservice`. Tampouco se conta o que tarda a shell en arrancar e escribir o seu *prompt*: lanzala é rápido, pero ela tarda moito máis en escribir, e o que escribe chega a meiga despois do primeiro fotograma, coma calquera outra saída.
 
 ```powershell
         if (-not $process.CloseMainWindow()) {

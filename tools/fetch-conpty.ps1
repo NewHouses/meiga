@@ -14,7 +14,7 @@ To update the ConPTY, change $Version and $Sha256 below. -CheckLatest tells
 when there is a newer version.
 
 .PARAMETER Destination
-Also copy conpty.dll and OpenConsole.exe to this folder.
+Also copy conpty.dll and OpenConsole.exe to these folders.
 
 .PARAMETER CheckLatest
 Download nothing: only check on nuget.org that there is no stable version
@@ -22,7 +22,7 @@ newer than the pinned one, and fail if there is.
 #>
 [CmdletBinding()]
 param(
-    [string]$Destination,
+    [string[]]$Destination,
     [switch]$CheckLatest
 )
 
@@ -145,13 +145,20 @@ foreach ($name in $Files.Keys) {
 }
 Write-Host "conpty.dll and OpenConsole.exe are in $folder"
 
-if ($Destination) {
+foreach ($target in $Destination) {
     # Resolve a relative path against the current PowerShell location, not
     # the working directory of the process.
-    $Destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
-    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    $target = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($target)
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
     foreach ($name in $Files.Keys) {
-        Copy-Item -LiteralPath (Join-Path $folder $name) -Destination $Destination
+        $source = Join-Path $folder $name
+        $copy = Join-Path $target $name
+        # Copy only what changed, for the same reason: meiga may be running
+        # from that folder.
+        if (-not (Test-Path -LiteralPath $copy) -or
+            (Get-FileHash -LiteralPath $copy -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash) {
+            Copy-Item -LiteralPath $source -Destination $copy
+        }
     }
-    Write-Host "Copied to $Destination"
+    Write-Host "Copied to $target"
 }
