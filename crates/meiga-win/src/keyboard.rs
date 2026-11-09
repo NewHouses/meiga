@@ -6,8 +6,8 @@ use meiga_core::input::{ControlKeys, KeyEvent};
 use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyboardLayout, GetKeyboardState, MAPVK_VSC_TO_VK_EX, MapVirtualKeyW, ToUnicodeEx,
-    VK_CAPITAL, VK_F4, VK_LCONTROL, VK_LMENU, VK_LWIN, VK_NUMLOCK, VK_PROCESSKEY, VK_RCONTROL,
-    VK_RMENU, VK_RWIN, VK_SCROLL, VK_SHIFT, VK_SPACE,
+    VK_CAPITAL, VK_F4, VK_LCONTROL, VK_LMENU, VK_LWIN, VK_MENU, VK_NUMLOCK, VK_PROCESSKEY,
+    VK_RCONTROL, VK_RMENU, VK_RWIN, VK_SCROLL, VK_SHIFT, VK_SPACE,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     MSG, PM_NOREMOVE, PM_REMOVE, PeekMessageW, WM_CHAR, WM_DEADCHAR, WM_KEYDOWN, WM_KEYUP,
@@ -53,7 +53,9 @@ pub(crate) enum Destination {
 /// A program can also post key messages to the window, as automation tools
 /// do. Then the next key message can come before the character of the
 /// first key, which is the first character in the queue: the event of the
-/// first key takes it from there, and goes first.
+/// first key takes it from there, and goes first. A key that goes up does
+/// not wait for the characters that are still in the queue, which are of
+/// the keys before it: only Alt writes one when it goes up.
 #[derive(Default)]
 pub(crate) struct Keyboard {
     waiting: Cell<Option<Waiting>>,
@@ -135,7 +137,13 @@ impl Keyboard {
             controls,
             repeat: bits.repeat(),
         };
-        if let Some(system) = system.posted_character() {
+        // Of the keys that go up, only Alt writes a character: the one of
+        // the code typed with it on the numeric keypad. A character in the
+        // queue when another key goes up is of a key before it, such as the
+        // second one of a dead key that does not join, posted with the keys.
+        if (event.down || key == VK_MENU)
+            && let Some(system) = system.posted_character()
+        {
             self.waiting.set(Some(Waiting { event, system }));
             return Destination::Program;
         }
@@ -384,9 +392,7 @@ mod tests {
     use std::cell::RefCell;
     use std::collections::VecDeque;
 
-    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-        VK_CONTROL, VK_F10, VK_LEFT, VK_MENU, VK_OEM_7,
-    };
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_F10, VK_LEFT, VK_OEM_7};
 
     use super::*;
 
@@ -619,6 +625,32 @@ mod tests {
                 event(0x58, 45, 0xb4, true),
                 event(0x58, 45, 0x78, true),
                 event(0, 0, 0x4e2d, true),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_key_that_goes_up_leaves_the_characters_of_the_keys_before_it() {
+        // ´ and x, posted by a program: x goes up before its two characters
+        // come, and the second one is not for the key that goes up.
+        let mut test = Test::default();
+        let x = Fake {
+            character: 0x78,
+            key_at: 0x58,
+            ..Fake::default()
+        };
+        x.post(WM_CHAR, 0xb4);
+        x.post(WM_CHAR, 0x78);
+        test.handle(&x, WM_KEYDOWN, 0x58, down(45));
+        test.handle(&x, WM_KEYUP, 0x58, up(45));
+        test.next_character(&x, down(45));
+        assert_eq!(x.next(), None);
+        assert_eq!(
+            test.take(),
+            [
+                event(0x58, 45, 0xb4, true),
+                event(0x58, 45, 0x78, false),
+                event(0x58, 45, 0x78, true),
             ]
         );
     }
