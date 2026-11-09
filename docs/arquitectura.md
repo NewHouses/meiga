@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 1.6. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola e mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite. Aínda non se pode escribir nel: o teclado chega na subfase 1.7. O que falta, como as tabs, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 1.7. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola, mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite, e envíalle as teclas coma unha consola de Windows. O que falta, como as tabs, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -83,7 +83,7 @@ sequenceDiagram
 | ConPTY | 1.4 (feita) |
 | Fachada do terminal (parser e grella) | 1.5 (feita) |
 | Da saída á pantalla | 1.6 (feita) |
-| Teclado | 1.7 |
+| Teclado | 1.7 (feita) |
 | Varias sesións, unha por tab | 2.2 |
 
 ### Sesións: a shell, o ConPTY e os dous fíos
@@ -92,7 +92,7 @@ Desde a subfase 1.4, `meiga-win` lanza un programa nunha pseudoconsola e fala co
 
 ```mermaid
 flowchart LR
-    write["Input::write<br/>(as respostas; desde a 1.7, o teclado)"] --> input["Entrada pendente<br/>Vec + evento"]
+    write["Input::write<br/>(as respostas, as teclas e o foco)"] --> input["Entrada pendente<br/>Vec + evento"]
     input --> writer["Fío escritor"]
     writer -- "tubaxe de entrada" --> conpty["ConPTY<br/>(OpenConsole)"]
     conpty <--> shell["Programa<br/>(pwsh, cmd, wsl…)"]
@@ -102,7 +102,7 @@ flowchart LR
 ```
 
 1. `Conpty::spawn` crea as dúas tubaxes, a pseudoconsola e un *job*, lanza o programa nela e dentro do *job*, e arranca os dous fíos da sesión. Devolve un `Pty` ([Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winsrcconptyrs)).
-2. `Input::write` deixa os bytes na entrada pendente e esperta o escritor, que os escribe na tubaxe de entrada. Nunca espera. `Input` pódese clonar e usar desde calquera fío: o `Pty` dá unha copia (`Pty::input`), e o lector recibe outra con cada bloque, para responder ao programa.
+2. `Input::write` deixa os bytes na entrada pendente e esperta o escritor, que os escribe na tubaxe de entrada. Nunca espera. `Input` pódese clonar e usar desde calquera fío: o `Pty` dá unha copia (`Pty::input`), coa que a vista do terminal envía as teclas desde a 1.7, e o lector recibe outra con cada bloque, para responder ao programa.
 3. O lector le a saída en bloques de ata 64 KiB e pásaos a un `Output`: en `meiga.exe`, o lector da sesión, que llos dá ao terminal.
 4. O escritor espera á vez a entrada e o fin do programa. Cando o programa remata, ou cando se destrúe o `Pty`, pecha a pseudoconsola: o ConPTY remata, a tubaxe de saída péchase, e o lector avisa do fin co código de saída do programa. Se pasan 10 s sen que remate ningún dos programas que tiña a sesión ao pechala, está bloqueada, e o escritor remata todos os do *job*: o programa e os que arrancou ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
 5. meiga usa o ConPTY que leva ao lado de `meiga.exe` (`conpty.dll` e `OpenConsole.exe`) ou, se non está, o de Windows ([ADR 0004](adr/0004-conpty-empaquetado.md)).
@@ -160,6 +160,32 @@ flowchart LR
 7. Cando o programa remata, o lector dálle ao terminal unha liña co código de saída e oculta o cursor; a xanela queda aberta ata que se pecha.
 
 A grella ten o tamaño da xanela ao arrancar, e as marxes que sobran pintan a cor do fondo: cambiará coa xanela na subfase 1.9.
+
+### O teclado: da tecla ao programa
+
+Desde a subfase 1.7, as teclas chegan ao programa da sesión coma eventos de tecla enteiros, os mesmos que le un programa da consola de Windows ([ADR 0014](adr/0014-o-teclado.md)):
+
+```mermaid
+flowchart LR
+    win["Windows<br/>as mensaxes das teclas"] --> loop["Bucle de mensaxes<br/>TranslateMessage publica<br/>os caracteres"]
+    loop --> kb["Teclado da xanela<br/>xunta tecla e carácter"]
+    kb -- "Alt+F4 e Alt+Espazo" --> def["DefWindowProcW"]
+    kb -- "Event::Key" --> view["Vista do terminal<br/>TerminalView::key"]
+    view --> mode{"O ConPTY pediu<br/>o win32-input-mode?"}
+    mode -- "si" --> w32["O evento enteiro<br/>ESC [ Vk ; Sc ; Uc ; Kd ; Cs ; Rc _"]
+    mode -- "non" --> vt["VT: o carácter<br/>ou a secuencia da tecla"]
+    w32 --> input["Input::write<br/>(sen esperar)"]
+    vt --> input
+    input --> conpty["ConPTY"]
+    conpty --> program["Programa<br/>(PSReadLine…)"]
+```
+
+1. Windows envíalle á xanela unha mensaxe cando unha tecla baixa e outra cando sobe, e o bucle de mensaxes chama a `TranslateMessage`, que publica na cola o carácter da tecla, se escribe algún ([Tecnoloxías › O teclado en Windows](tecnoloxias.md#41-o-teclado-en-windows)).
+2. O teclado da xanela xunta cada tecla co seu carácter nun evento: a tecla espera polo seu carácter, que é a seguinte mensaxe ([Código › meiga-win › `keyboard.rs`](codigo/meiga-win.md#cratesmeiga-winsrckeyboardrs)). Unha tecla morta baixa sen carácter, e o composto vai coa seguinte. Alt+F4 e Alt+Espazo van a Windows, que pecha a xanela e abre o seu menú; o resto, tamén Alt só, F10 e as teclas que soben, ao programa. As teclas de Windows e as que colle un IME non van a ningures.
+3. A vista do terminal convérteo no que le o programa ([Código › meiga-core › `input.rs`](codigo/meiga-core.md#cratesmeiga-coresrcinputrs)): o evento enteiro en **win32-input-mode**, que o ConPTY pide ao arrancar, ou, antes diso ou se o desactiva, o que envía un terminal VT ([Tecnoloxías › As teclas no terminal](tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt)). O ConPTY convérteo de novo nun evento para o programa: así o PSReadLine distingue Maiús+Intro de Intro, e chegan AltGr e as teclas mortas.
+4. `Input::write` deixa os bytes na entrada da sesión e esperta o fío escritor, sen esperar: a xanela nunca queda bloqueada porque o programa non le ([Sesións](#sesións-a-shell-o-conpty-e-os-dous-fíos)). A tecla non pide ningún fotograma: o que escriba o programa en resposta chega coma calquera saída ([Da saída á pantalla](#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma)).
+5. Cando a xanela gaña ou perde o foco, o programa recibe `ESC [ I` ou `ESC [ O`, se o pediu.
+6. O texto dun IME, do panel de emoji e do ditado de Windows chega coma caracteres sen tecla, e vai ao programa igual ([Tecnoloxías › O IME](tecnoloxias.md#43-o-ime-e-o-panel-de-emoji)).
 
 ### Fotogramas: do cambio á pantalla
 
@@ -237,7 +263,7 @@ Ningún cambio chega a `main` sen pasar por un PR e pola CI:
 ```mermaid
 flowchart LR
     rama["Rama da subfase"] --> pr["Pull request"]
-    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · ConPTY · test · release<br/>zip · DLL · xanela · presentación · arranque · fotogramas"]
+    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · ConPTY · test · release<br/>zip · DLL · xanela · presentación · teclado · arranque · fotogramas"]
     pr --> scen["Load scenarios (bash)<br/>ShellCheck · escenarios en bash"]
     pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
     win --> art["Artefacto<br/>meiga-…-msvc.zip"]
@@ -270,6 +296,7 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0011](adr/0011-fin-e-peche-das-sesions.md) | O escritor de cada sesión espera tamén polo programa e pecha a pseudoconsola; cada sesión ten un *job*, e unha sesión pechada remata sempre. |
 | [0012](adr/0012-fachada-do-terminal.md) | A fachada do terminal: tipos propios, a copia do que cambia cela a cela, as respostas e o escáner de `?9001`. |
 | [0013](adr/0013-da-saida-a-pantalla.md) | Da saída á pantalla: un aviso pendente como moito, as respostas desde o fío lector, a paleta, os estilos e un cursor que só pestanexa se Windows o permite e por pouco tempo. |
+| [0014](adr/0014-o-teclado.md) | O teclado: eventos de tecla enteiros coma os da consola, nos que a tecla espera polo seu carácter; Alt+F4 e Alt+Espazo para Windows; o win32-input-mode e VT de reserva; e o IME, que se mantén. |
 
 ## 8. Medición do rendemento
 
@@ -317,24 +344,25 @@ flowchart LR
 
 - `run-scenario.ps1` corre **noutro terminal**, para que o seu traballo non se sume ao do terminal medido. Coordínase cos escenarios con arquivos baleiros nun cartafol que ven Windows e WSL, así que non fan falta portos nin procesos extra.
 - Mide varias veces seguidas (por defecto, 3 medicións de 60 s) e di se os resultados son **estábeis**: se os ciclos do terminal varían pouco entre medicións ou, en bigfile, o tempo de imprimir. Se non o son, hai que voltar medir coa máquina máis tranquila.
-- Con `-Start`, `run-scenario.ps1` arranca el mesmo un terminal que acepta o programa na súa liña de comandos, como meiga, co escenario como programa: así se mide meiga mentres non ten teclado.
+- Con `-Start`, `run-scenario.ps1` arranca el mesmo un terminal que acepta o programa na súa liña de comandos, como meiga, co escenario como programa: así non hai que escribir nada no terminal medido. Ata a subfase 1.7, era a única forma de medir meiga, que non tiña teclado.
 - A CI comproba que os escenarios debuxan exactamente o esperado, en PowerShell e en bash, pero non mide nada.
 
 O código explícase en [Código › escenarios de carga](codigo/escenarios.md). Na subfase 0.8 mediuse en local a liña base co Warp e o Windows Terminal, que fixou os orzamentos de rendemento de cada fase. Esas medicións non se publican, porque describen unha máquina concreta.
 
 ## 9. Estado actual
 
-Despois da subfase 1.6:
+Despois da subfase 1.7:
 
-- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal e as comiñas da liña de comandos; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor de Windows e as sesións de ConPTY.
-- `meiga.exe` é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell 7 (`pwsh`) ou, se non está instalado, Windows PowerShell, e mostra a súa saída: as cores (16, 256 e *truecolor*), a negra, a cursiva, o texto tenue, inverso e oculto, cinco subliñados e o riscado, os caracteres anchos e un cursor en forma de barra, que só pestanexa se a xanela ten o foco e Windows o permite, e para despois duns segundos sen actividade. A xanela leva o título que pon o programa. Responde ao programa, tamén ás preguntas polas cores e polo tamaño en píxeles, e aplica os cambios da paleta. Cando o programa remata, mostra o seu código de saída, e a xanela queda aberta ata que se pecha. Aínda non se pode escribir nel (subfase 1.7), e a grella ten o tamaño da xanela ao arrancar (1.9).
-- Cada fotograma presenta só as celas que cambian, que se poden ver cun bordo magenta (tecla P). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e os seus tres fíos dormen. Ao pechala, meiga remata co código 0, e o programa da sesión tamén.
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal, as comiñas da liña de comandos e as teclas, coma eventos e coma o que le o programa; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, o teclado da xanela, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor de Windows e as sesións de ConPTY.
+- `meiga.exe` é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell 7 (`pwsh`) ou, se non está instalado, Windows PowerShell, e mostra a súa saída: as cores (16, 256 e *truecolor*), a negra, a cursiva, o texto tenue, inverso e oculto, cinco subliñados e o riscado, os caracteres anchos e un cursor en forma de barra, que só pestanexa se a xanela ten o foco e Windows o permite, e para despois duns segundos sen actividade. A xanela leva o título que pon o programa. Responde ao programa, tamén ás preguntas polas cores e polo tamaño en píxeles, e aplica os cambios da paleta. Cando o programa remata, mostra o seu código de saída, e a xanela queda aberta ata que se pecha. A grella ten o tamaño da xanela ao arrancar (1.9).
+- Pódese escribir nel coma nunha consola de Windows: as teclas chegan ao programa coma eventos enteiros, co teclado español e galego, AltGr e as teclas mortas, e o PSReadLine distingue Maiús+Intro de Intro. Alt+F4 pecha a xanela e Alt+Espazo abre o seu menú. O panel de emoji e o ditado de Windows tamén escriben nel. O rato aínda non chega ao programa (1.8).
+- Cada fotograma presenta só as celas que cambian, que se poden ver cun bordo magenta (coa opción `--marks`). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e os seus tres fíos dormen, tamén coa xanela enfocada. Ao pechala, meiga remata co código 0, e o programa da sesión tamén.
 - Ten tres modos de medición, `--bench partial`, `--bench full` e `--bench text`, e un rexistro dos fotogramas, `--trace-frames`.
 - `meiga-win` usa o ConPTY do Windows Terminal que vai no paquete ou, se non está, o de Windows. As probas lanzan programas de verdade cos dous, e un exemplo de consola mostra o que escribe calquera programa e grávao. O terminal de `meiga-core` usa `alacritty_terminal` detrás dunha fachada; as súas probas usan saída gravada do ConPTY, e outro exemplo de consola mide a que velocidade le unha gravación.
-- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 470 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que remata ben, e que o programa remata con ela.
+- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 475 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que as teclas chegan ao programa co teclado español e co estadounidense, que remata ben, e que o programa remata con ela.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). As dependencias externas son `windows-sys`, `windows` e `windows-core`, de Microsoft, `unicode-width`, `alacritty_terminal`, co seu parser, `vte`, e `memchr`.
 - Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe` e o ConPTY (`conpty.dll` e `OpenConsole.exe`). `tools/fetch-conpty.ps1` descarga o ConPTY do seu paquete NuGet, cunha versión e un SHA-256 fixados, e comproba que está asinado por Microsoft; cada luns, a CI avisa se hai unha versión nova.
-- As decisións de arquitectura están escritas en trece ADR.
+- As decisións de arquitectura están escritas en catorce ADR.
 - O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, coa súa sesión, e `measure-frames.ps1`, canto custan os seus fotogramas: parciais, completos e completos de texto.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis. Con `-Start`, arranca el mesmo meiga co escenario como programa.
 - Os scripts de `tools/` necesitan PowerShell 7. En Windows PowerShell 5.1 non se executan: só mostran o comando para facelo con `pwsh`.

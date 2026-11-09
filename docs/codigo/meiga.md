@@ -1,8 +1,8 @@
 # Código › `meiga` (o programa)
 
-> Estado: subfase 1.6. O programa é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell, e mostra a súa saída na xanela, coas cores, os estilos, o cursor e o título que pon o programa. Presenta só as zonas que cambian. Tamén ten tres modos de medición (`--bench`) e un rexistro dos fotogramas (`--trace-frames`). Na 1.6 desapareceu a demo, e chegaron `session.rs` e `view.rs`. Aínda non se pode escribir nel (subfase 1.7), e a grella non cambia co tamaño da xanela (1.9).
+> Estado: subfase 1.7. O programa é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell, mostra a súa saída na xanela, coas cores, os estilos, o cursor e o título que pon o programa, e envíalle as teclas e o foco. Presenta só as zonas que cambian. Tamén ten tres modos de medición (`--bench`), un rexistro dos fotogramas (`--trace-frames`) e as marcas das zonas presentadas (`--marks`). Na 1.6 desapareceu a demo, e chegaron `session.rs` e `view.rs`; na 1.7, o teclado, e as marcas pasaron da tecla P á opción `--marks`. A grella aínda non cambia co tamaño da xanela (1.9).
 
-**Responsabilidade:** unir as pezas. Crea a xanela, lanza o programa nunha sesión de ConPTY e leva a súa saída á pantalla co fluxo de fotogramas, usando os outros tres crates. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates) e, para o camiño da saída, [Arquitectura › Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma).
+**Responsabilidade:** unir as pezas. Crea a xanela, lanza o programa nunha sesión de ConPTY, leva a súa saída á pantalla co fluxo de fotogramas e as teclas ao programa, usando os outros tres crates. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates) e, para o camiño da saída, [Arquitectura › Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma); para o das teclas, [Arquitectura › O teclado](../arquitectura.md#o-teclado-da-tecla-ao-programa).
 
 | Arquivo | Contido |
 |---|---|
@@ -13,7 +13,7 @@
 | [`src/options.rs`](#cratesmeigasrcoptionsrs) | As opcións da liña de comandos, co programa que se lanza. |
 | [`src/app.rs`](#cratesmeigasrcapprs) | `App`, o *handler* da xanela: crea o contido, o terminal ou un modo de medición, e leva os eventos a el e aos fotogramas. |
 | [`src/session.rs`](#cratesmeigasrcsessionrs) | A sesión do terminal: o programa, e o fío lector que lle dá a súa saída ao terminal, responde ao programa e esperta a xanela. |
-| [`src/view.rs`](#cratesmeigasrcviewrs) | `TerminalView`, o terminal na xanela: a súa copia da pantalla, posta ao día antes de cada fotograma, e o debuxo das celas, as súas liñas e o cursor. |
+| [`src/view.rs`](#cratesmeigasrcviewrs) | `TerminalView`, o terminal na xanela: a súa copia da pantalla, posta ao día antes de cada fotograma, o debuxo das celas, as súas liñas e o cursor, e as teclas e o foco, que lle envía ao programa. |
 | [`src/frames.rs`](#cratesmeigasrcframesrs) | `Frames`, o fluxo de fotogramas: que cambiou, cando debuxalo e como chega á xanela. |
 | [`src/trace.rs`](#cratesmeigasrctracers) | O rexistro dos fotogramas, en CSV. |
 | [`src/bench.rs`](#cratesmeigasrcbenchrs) | Os tres modos de medición: fotogramas parciais, completos e completos de texto, sen parar. |
@@ -32,12 +32,15 @@ graph LR
     frames -- "cando" --> pacer["FramePacer<br/>(meiga-core)"]
     frames -- "compoñer e presentar" --> surface["Surface<br/>(meiga-render)"]
     frames -- "unha liña por fotograma" --> trace["Trace"]
+    app -- "Event::Key:<br/>TerminalView::key" --> content
+    content -- "as teclas e o foco<br/>(Input::write)" --> conpty
 ```
 
 1. O fío lector da sesión ([`session.rs`](#cratesmeigasrcsessionrs)) dálle cada bloque de saída ao terminal, baixo o *lock* de `Shared`, envía as respostas ao programa e esperta a xanela con `WM_WAKE`, só se non había outro aviso pendente.
 2. `App::wake` ([`app.rs`](#cratesmeigasrcapprs)) pon o título e, se cambiou a pantalla, pídelle un fotograma a `Frames` (`changed`), que o fai no momento ou ao final do intervalo ([`frames.rs`](#cratesmeigasrcframesrs)).
 3. O fotograma pon primeiro ao día o contido (`Scene::update`): a vista do terminal ([`view.rs`](#cratesmeigasrcviewrs)) copia baixo o *lock* só o que cambiou, e di que zonas son. Despois, fóra do *lock*, compón esas zonas (`draw`) e preséntaas.
 4. Coa xanela minimizada non hai fotogramas, e a vista non copia nada: só fai o que non pode esperar (`Scene::update_hidden`): rematar á súa hora unha actualización sincronizada que o programa deixou aberta, para que as súas preguntas teñan resposta ([`frames.rs`](#coa-xanela-minimizada-hidden)).
+5. Desde a subfase 1.7, as teclas chegan á xanela coma `Event::Key`, e `App` pásallas á vista, que as converte no que le o programa, segundo os modos que activou, e as escribe na entrada da sesión, sen esperar: o fío escritor da sesión lévaas ao ConPTY ([`key` e `focus`](#as-teclas-e-o-foco-key-e-focus)). Os cambios do foco tamén lle chegan ao programa, se os pediu.
 
 ## `crates/meiga/Cargo.toml`
 
@@ -242,14 +245,17 @@ fn report(text: &str) {
 ## `crates/meiga/src/options.rs`
 
 ```rust
-pub const USAGE: &str = "Usage: meiga [--trace-frames <file>] [--] [<program> [<arguments>]]
-       meiga [--trace-frames <file>] --bench partial|full|text
+pub const USAGE: &str =
+    "Usage: meiga [--trace-frames <file>] [--marks] [--] [<program> [<arguments>]]
+       meiga [--trace-frames <file>] [--marks] --bench partial|full|text
 
   <program>              The program to run in the terminal, and its arguments.
                          Without it, PowerShell 7 (pwsh) or, if it is not
                          installed, Windows PowerShell.
   --                     The end of the options: what follows is the program.
   --trace-frames <file>  Write a line per frame to <file> (CSV).
+  --marks                Draw a magenta border around the areas that each frame
+                         presents.
   --bench partial        Instead of a terminal, move a small square without stopping.
   --bench full           Instead of a terminal, change the whole window without stopping.
   --bench text           Instead of a terminal, fill the whole window with text that
@@ -263,6 +269,8 @@ pub enum BenchMode {
 
 pub struct Options {
     pub trace_frames: Option<PathBuf>,
+    /// Whether the window shows the areas that each frame presents.
+    pub marks: bool,
     pub bench: Option<BenchMode>,
     /// The command line of the program, quoted for Windows, or `None` for
     /// the default shell.
@@ -277,6 +285,7 @@ As opcións da liña de comandos. Hai dúas formas de usar meiga: cun terminal, 
 | `<programa> [<argumentos>]` | O programa que se executa no terminal, cos seus argumentos. Sen el, PowerShell 7 (`pwsh`) ou, se non está instalado, Windows PowerShell (ver [`session.rs`](#cratesmeigasrcsessionrs)). Úsano `check-window.ps1`, `check-present.ps1` e `run-scenario.ps1 -Start`, que lanzan meiga cun programa propio. |
 | `--` | O fin das opcións: o seguinte argumento é o programa, aínda que empece por `-`. |
 | `--trace-frames <arquivo>` | Escribe unha liña por fotograma nese arquivo CSV (ver [`trace.rs`](#cratesmeigasrctracers)). É o que usan `check-present.ps1` e `measure-frames.ps1`. |
+| `--marks` | Desde a subfase 1.7. Debuxa un bordo magenta arredor das zonas que presenta cada fotograma ([`frames.rs`](#crear-framesnew)), para ver que se debuxa. Ata a 1.6 activábanse coa tecla P, que agora vai ao programa coma todas ([ADR 0014](../adr/0014-o-teclado.md)). Vale co terminal e cos modos de medición. |
 | `--bench partial` | En vez dun terminal, un cadrado de 64 píxeles que cruza a xanela sen parar: fotogramas parciais. |
 | `--bench full` | En vez dun terminal, a xanela enteira cambia de cor en cada fotograma: fotogramas completos. |
 | `--bench text` | En vez dun terminal, a xanela enteira chea de texto que cambia en cada fotograma: fotogramas completos de texto. |
@@ -286,6 +295,7 @@ Por exemplo:
 ```text
 meiga
 meiga cmd
+meiga --marks
 meiga --trace-frames frames.csv pwsh -NoProfile -File "C:\my scripts\spinner.ps1"
 meiga --bench full
 ```
@@ -301,6 +311,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Self, String> {
                 let path = args.next().ok_or("--trace-frames needs the path of a file.")?;
                 options.trace_frames = Some(PathBuf::from(path));
             }
+            Some("--marks") => options.marks = true,
             Some("--bench") => {
                 options.bench = Some(match args.next().as_deref().and_then(OsStr::to_str) {
                     Some("partial") => BenchMode::Partial,
@@ -353,9 +364,9 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Self, String> {
 - `args.map(text).collect::<Result<Vec<_>, _>>()?` converte cada argumento e xúntaos nun `Vec`, ou para no primeiro erro: un iterador de `Result` pódese recoller nun `Result` dunha colección.
 - **A liña de comandos.** En Windows, un programa recibe os seus argumentos nun só texto ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)). [`shell::command_line`](meiga-core.md#cratesmeiga-coresrcshellrs) xunta o programa e os argumentos, coas comiñas e as barras invertidas que fagan falta para que o programa os divida igual ca os recibiu meiga: `C:\my scripts\spinner.ps1`, por exemplo, vai como `"C:\my scripts\spinner.ps1"`. Por iso `Options` garda un `String`, e non unha lista: é o que recibe a pseudoconsola.
 - **Un programa con comiñas** é un erro: ningún nome de arquivo as pode ter, e Windows le o nome do programa sen ningunha forma de escapalas. `command_line` devolve `None`, e `ok_or_else` convérteo no erro, creando o texto só se fai falta.
-- `Options` deriva `Default` (as tres opcións a `None`) e `PartialEq`, para comparalas nas probas.
+- `Options` deriva `Default` (sen ningunha opción: `None` e `false`) e `PartialEq`, para comparalas nas probas.
 
-**Probas.** Catro: sen argumentos, e con `--` só, a shell por defecto; as opcións cos seus valores, en calquera orde, e os tres modos; o programa e os seus argumentos forman a liña de comandos, coas comiñas de Windows, as opcións despois do programa son súas, e despois de `--` o programa pode empezar por `-`; e os erros: unha opción descoñecida, tamén antes do programa (`-NoProfile pwsh`), `--trace-frames` sen arquivo, `--bench` sen modo ou cun que non existe, `--bench` cun programa e un programa con comiñas.
+**Probas.** Catro: sen argumentos, e con `--` só, a shell por defecto; as opcións cos seus valores, en calquera orde, os tres modos e, desde a 1.7, `--marks`; o programa e os seus argumentos forman a liña de comandos, coas comiñas de Windows, as opcións despois do programa son súas, e despois de `--` o programa pode empezar por `-`; e os erros: unha opción descoñecida, tamén antes do programa (`-NoProfile pwsh`), `--trace-frames` sen arquivo, `--bench` sen modo ou cun que non existe, `--bench` cun programa e un programa con comiñas.
 
 ## `crates/meiga/src/app.rs`
 
@@ -425,7 +436,7 @@ pub fn new(window: &Window, options: &Options, trace: Option<Trace>) -> Result<S
         Some(mode) => (Content::Bench(Box::new(Bench::new(mode, None))), None),
         None => terminal(window, options.command.as_deref())?,
     };
-    let mut frames = Frames::new(window, &mut content, trace)?;
+    let mut frames = Frames::new(window, &mut content, trace, options.marks)?;
     if options.bench.is_some() {
         frames.schedule(window)?;
     }
@@ -437,7 +448,7 @@ pub fn new(window: &Window, options: &Options, trace: Option<Trace>) -> Result<S
 - **As fontes.** Só o contido con texto le as fontes do sistema ([`FontSystem`](meiga-render.md#fontsystem)): o terminal e o modo `text`, cunha fonte ao DPI da xanela ([`Window::dpi`](meiga-win.md#windowdpi)). Os modos `partial` e `full` non cargan nada de DirectWrite, e miden o mesmo ca na subfase 1.2.
 - Os erros de `meiga-render` convértense en `HandlerError` con `?`, como os de `meiga-win`: se non hai ningunha das fontes, meiga para cunha caixa de mensaxe que o di.
 - `Frames::new` crea o *framebuffer* co tamaño da xanela, pon ao día o contido e compóno enteiro nel. Así, cando Windows pide o primeiro `WM_PAINT`, só hai que copialo.
-- **As marcas** (o bordo magenta das zonas presentadas) empezan sempre desactivadas, e a tecla P actívaas: no terminal son unha axuda para ver que presenta cada fotograma, e nos modos de medición engadirían traballo aos fotogramas que se miden.
+- **As marcas** (o bordo magenta das zonas presentadas) só se debuxan coa opción `--marks`: no terminal son unha axuda para ver que presenta cada fotograma, e nos modos de medición engadirían traballo aos fotogramas que se miden. Ata a subfase 1.6 activábaas a tecla P; desde a 1.7, todas as teclas van ao programa.
 - Un modo de medición pide xa o seu primeiro fotograma (`schedule`), que chegará en canto a xanela empece o seu bucle de mensaxes.
 
 ```rust
@@ -478,7 +489,7 @@ O terminal, paso a paso:
 5. **`Shared`** ([`session.rs`](#cratesmeigasrcsessionrs)), o terminal e as súas marcas, vai nun `Arc<Mutex<…>>`: o `Mutex` deixa usalo desde dous fíos, un cada vez, e o `Arc`, un contador de referencias que se pode compartir entre fíos, mantén vivo o que comparten mentres o use calquera deles.
 6. **O `Waker`** da xanela é o que usa o fío lector para espertala ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcwindowrs)): garda o *handle* da xanela, e pódese copiar e levar a outro fío.
 7. **A sesión** lánzase xa, antes do primeiro fotograma: así o programa empeza canto antes, e o que escriba mentres meiga compón ese fotograma xa está no terminal, ou chega en seguida ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Se non se pode lanzar, a mensaxe vai ao terminal coma se a escribise o programa, e o primeiro fotograma móstraa.
-8. **`Pty::input`** dá unha copia da entrada da sesión para a vista, que a usa para as poucas respostas que aparecen cando ela remata unha actualización sincronizada (ver [`update`](#poñer-ao-día-update)).
+8. **`Pty::input`** dá unha copia da entrada da sesión para a vista, que a usa para as teclas e os eventos de foco, desde a subfase 1.7 ([`key` e `focus`](#as-teclas-e-o-foco-key-e-focus)), e para as poucas respostas que aparecen cando ela remata unha actualización sincronizada (ver [`update`](#poñer-ao-día-update)).
 
 ### `wake`: o aviso do fío lector
 
@@ -543,8 +554,11 @@ fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
                 self.frames.changed(window, &mut self.content)?;
             }
         }
-        // Until the keyboard reaches the program (subphase 1.7).
-        Event::KeyDown { key: Key::P, repeat: false } => self.frames.toggle_marks(window),
+        Event::Key(key) => {
+            if let Content::Terminal(view) = &mut self.content {
+                view.key(&key);
+            }
+        }
         _ => {}
     }
     Ok(())
@@ -558,12 +572,12 @@ fn paint(&mut self, _window: &Window, dc: HDC, area: Rect) -> Result<(), Handler
 | Evento | Que fai |
 |---|---|
 | `Wake` | O fío lector avisou: `wake` pon o título e, se cambiou a pantalla, pide un fotograma; coa xanela minimizada, a vista só fai o que non pode esperar. |
-| `Focus` | A xanela gañou ou perdeu o foco ([`Event::Focus`](meiga-win.md#cratesmeiga-winsrceventrs)): o cursor do terminal cambia ([`focus`](#terminalview)), e pídese un fotograma para debuxalo. Nos modos de medición, nada. |
+| `Focus` | A xanela gañou ou perdeu o foco ([`Event::Focus`](meiga-win.md#cratesmeiga-winsrceventrs)): o cursor do terminal cambia, o programa sabe do foco se o pediu ([`focus`](#as-teclas-e-o-foco-key-e-focus)), e pídese un fotograma para debuxar o cursor. Nos modos de medición, nada. |
 | `FrameTimer` | Toca debuxar. Nun modo de medición, primeiro avanza un paso e marca as zonas que cambian. Despois, `Frames` debuxa o fotograma pendente; se non había ningún, é o momento que pediu o terminal, como o seguinte cambio do pestanexo do cursor, e pide un fotograma para el ([`timer`](#pedir-un-fotograma)). Coa xanela minimizada, o temporizador só se programa para a hora límite dunha actualización sincronizada, e a vista remátaa sen debuxar nada. Nun modo de medición, despois pide o seguinte fotograma. |
 | `Resized` | `Frames` adapta o *framebuffer* ao tamaño novo, ou, se a xanela se minimizou, deixa de debuxar, e o temporizador queda só para a hora límite dunha actualización sincronizada aberta, se a hai. Nun modo de medición, ao restaurala, os fotogramas continúan. A grella do terminal non cambia: se a xanela medra, as marxes medran, e se se fai pequena, a grella córtase. |
 | `SizeMoveStarted` e `SizeMoveEnded` | O usuario empeza e remata de mover ou redimensionar a xanela: mentres tanto, o *framebuffer* reserva memoria con marxe ([`Fit::Room`](meiga-render.md#fit-e-surface)). Ao rematar, preséntase o que cambiase mentres tanto. |
-| Tecla P | Activa ou desactiva as marcas. `repeat: false`: manter a tecla premida non as acende e apaga sen parar. Ata que o teclado chegue ao programa, na subfase 1.7, é a única tecla que fai algo. |
-| Calquera outro | Nada: as outras teclas e o rato aínda non chegan ao programa. |
+| `Key` | Desde a subfase 1.7. Unha tecla baixou ou subiu ([`Event::Key`](meiga-win.md#cratesmeiga-winsrckeyboardrs)): a vista envíalla ao programa ([`key`](#as-teclas-e-o-foco-key-e-focus)). Non pide ningún fotograma: o que escriba o programa en resposta chega coma calquera saída. Nos modos de medición, nada. |
+| Calquera outro | Nada: o rato aínda non chega ao programa (subfase 1.8). |
 
 - `WM_PAINT` (`paint`) copia a zona que pide Windows desde o *framebuffer*. `_window`: o guión baixo indica que o parámetro non se usa.
 - `is_bench` di se o contido é un modo de medición: `matches!` compara un valor cun patrón e dá `true` ou `false`.
@@ -819,18 +833,21 @@ pub struct TerminalView {
     caret: Caret,
     run: Vec<CellChar>,
     answers: Vec<u8>,
+    encoder: KeyEncoder,
+    keys: Vec<u8>,
 }
 ```
 
 | Campo | Que garda |
 |---|---|
 | `shared` | O que comparte co fío lector: o terminal e as súas marcas ([`Shared`](#shared-e-lock)). |
-| `input` | A entrada da sesión, para as respostas que aparecen cando a vista remata unha actualización sincronizada. `None` se o programa non se lanzou. |
+| `input` | A entrada da sesión, para as teclas, os eventos de foco e as respostas que aparecen cando a vista remata unha actualización sincronizada. `None` se o programa non se lanzou. |
 | `waker` | Para espertar a xanela cando esa actualización cambia o título. |
 | `font` e `cell` | A fonte, coa súa caché de glifos, e o tamaño da súa cela. |
 | `screen` | A copia da pantalla: as celas, o cursor, a paleta e o que cambiou desde o último fotograma. |
 | `caret` | Como se ve e como pestanexa o cursor ([`Caret`](#o-pestanexo-caret)). |
 | `run` e `answers` | Os caracteres dun tramo de celas e as respostas, que se gardan para non reservar memoria cada vez. |
+| `encoder` e `keys` | Desde a subfase 1.7. O que converte as teclas no que le o programa ([`KeyEncoder`](meiga-core.md#keyencoder)), e o que le para unha tecla, que se garda polo mesmo motivo. |
 
 ```rust
 pub fn new(shared: Arc<Mutex<Shared>>, input: Option<Input>, waker: Waker, font: Font, dpi: u32) -> Self {
@@ -844,7 +861,26 @@ pub fn new(shared: Arc<Mutex<Shared>>, input: Option<Input>, waker: Waker, font:
         caret: Caret::new(dpi, Instant::now()),
         run: Vec::new(),
         answers: Vec::new(),
+        encoder: KeyEncoder::new(),
+        keys: Vec::new(),
     }
+}
+```
+
+- **`new`**: `cell: font.cell()` vai antes ca `font` porque os campos se avalían na orde na que se escriben, e despois de mover a fonte ao seu campo xa non se podería usar. A copia da pantalla empeza baleira, sen celas: a primeira copia dálle o tamaño do terminal e marca todas as celas como cambiadas.
+- `area` dá os píxeles dunhas columnas dunha fila, e `shared` dálle a [`App::wake`](#wake-o-aviso-do-fío-lector) o que comparte co fío lector.
+
+### As teclas e o foco: `key` e `focus`
+
+```rust
+pub fn key(&mut self, event: &KeyEvent) {
+    let Some(input) = &self.input else {
+        return;
+    };
+    let modes = lock(&self.shared).terminal.modes();
+    self.keys.clear();
+    self.encoder.encode(event, &modes, &mut self.keys);
+    input.write(&self.keys);
 }
 
 pub fn focus(&mut self, focused: bool, now: Instant) {
@@ -859,15 +895,22 @@ pub fn focus(&mut self, focused: bool, now: Instant) {
     }
     self.caret.focused = focused;
     self.screen.mark_cursor_changed();
+    if let Some(input) = &self.input {
+        let modes = lock(&self.shared).terminal.modes();
+        input.write(focus_sequence(focused, &modes));
+    }
 }
 ```
 
-- **`new`**: `cell: font.cell()` vai antes ca `font` porque os campos se avalían na orde na que se escriben, e despois de mover a fonte ao seu campo xa non se podería usar. A copia da pantalla empeza baleira, sen celas: a primeira copia dálle o tamaño do terminal e marca todas as celas como cambiadas.
+- **`key`**, desde a subfase 1.7: envía unha tecla ao programa ([ADR 0014](../adr/0014-o-teclado.md)). Se o programa non se lanzou, non hai a quen.
+  - **Os modos** saen do terminal da sesión, baixo o *lock*: se o ConPTY activou o win32-input-mode, e os modos das frechas e do Intro. `modes()` dá unha copia, e o *lock* sóltase ao final da mesma liña, porque o `MutexGuard` é temporal: o resto faise fóra del.
+  - **O que le o programa** escríbeo [`KeyEncoder`](meiga-core.md#keyencoder) en `keys`, que se baleira e se reutiliza: enviar unha tecla non reserva memoria.
+  - **`input.write`** non espera: deixa os bytes nun búfer da sesión e avisa ao seu fío escritor, que os escribe na tubaxe do ConPTY ([Código › meiga-win › `Input`](meiga-win.md#input)). Así, a xanela nunca queda bloqueada porque o programa non le.
 - **`focus`**: a xanela gañou ou perdeu o foco ([Tecnoloxías › O foco](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
   - Ao gañalo, volta ler os axustes do cursor de Windows, que poden cambiar mentres meiga corre, e o pestanexo empeza de novo: recuperar o foco é actividade.
   - `mark_cursor_changed` marca as celas do cursor como cambiadas, e o seguinte fotograma debúxao coa forma nova: a súa ou, sen o foco, un rectángulo baleiro. Ese fotograma pídeo [`App`](#os-eventos).
   - O cursor empeza sen o foco (`focused: false`): Windows envía `WM_SETFOCUS` ao mostrar e activar a xanela.
-- `area` dá os píxeles dunhas columnas dunha fila, e `shared` dálle a [`App::wake`](#wake-o-aviso-do-fío-lector) o que comparte co fío lector.
+  - Desde a subfase 1.7, o programa tamén o sabe, se o pediu: [`focus_sequence`](meiga-core.md#os-eventos-de-foco) dá `ESC [ I` ou `ESC [ O`, ou nada. O ConPTY pídeo ao arrancar ([Tecnoloxías › As teclas no terminal](../tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt)).
 
 ### Poñer ao día: `update`
 
@@ -1356,7 +1399,7 @@ pub struct Frames {
 | `due` | Cando hai que poñer ao día a escena outra vez, como ela pediu, ou `None`. |
 | `minimized` | Se a xanela está minimizada: entón non se debuxa nada, e a escena só fai o que non pode esperar ([`hidden`](#coa-xanela-minimizada-hidden)). |
 | `live_resize` | Se o usuario está movendo ou redimensionando a xanela. |
-| `marks` | Coas marcas activadas, as zonas que presentou o último fotograma, que levan un bordo na xanela. `None` coas marcas desactivadas, como empezan. |
+| `marks` | Con `--marks`, as zonas que presentou o último fotograma, que levan un bordo na xanela. `None` sen a opción. |
 | `trace` | O rexistro dos fotogramas, se se pediu. |
 
 **A regra que mantén:** a xanela mostra o *framebuffer*, agás nas zonas de `damage`, que cambiaron e que o seguinte fotograma compón e presenta. O que cambiou na escena e aínda non se copiou (`changed`) chega a `damage` ao principio dese fotograma.
@@ -1364,7 +1407,12 @@ pub struct Frames {
 ### Crear: `Frames::new`
 
 ```rust
-pub fn new(window: &Window, scene: &mut dyn Scene, trace: Option<Trace>) -> Result<Self, HandlerError> {
+pub fn new(
+    window: &Window,
+    scene: &mut dyn Scene,
+    trace: Option<Trace>,
+    marks: bool,
+) -> Result<Self, HandlerError> {
     let mut frames = Self {
         surface: Surface::new(window.client_size()?)?,
         damage: Damage::new(),
@@ -1373,7 +1421,7 @@ pub fn new(window: &Window, scene: &mut dyn Scene, trace: Option<Trace>) -> Resu
         due: None,
         minimized: false,
         live_resize: false,
-        marks: None,
+        marks: marks.then(Vec::new),
         trace,
     };
     frames.compose_all(scene)?;
@@ -1388,7 +1436,7 @@ pub fn new(window: &Window, scene: &mut dyn Scene, trace: Option<Trace>) -> Resu
 - `compose_all` pon ao día a escena e compón o *framebuffer* enteiro. No terminal, esa primeira copia leva todo o que haxa: a pantalla baleira, ou o que xa escribise o programa, que se lanzou antes ([`app.rs`](#appnew-e-terminal)).
 - `damage.clear()`: a primeira copia deu a xanela enteira como cambiada, pero non hai nada que presentar: o primeiro `WM_PAINT` copia a xanela enteira desde o *framebuffer*.
 - `wait_for_scene` programa o temporizador se a escena pediu un momento ([máis abaixo](#a-escena-e-o-temporizador-update-e-wait_for_scene)).
-- As marcas empezan desactivadas, e a tecla P actívaas ([`app.rs`](#os-eventos)).
+- As marcas só están coa opción `--marks` ([`options.rs`](#cratesmeigasrcoptionsrs)): `bool::then` dá `Some(Vec::new())` se é certo, e `None` se non. `Vec::new` vai sen chamar, coma función: `then` só a chama se fai falta. Ata a subfase 1.6 empezaban desactivadas, e a tecla P activábaas e desactivábaas (`toggle_marks`).
 
 ### Pedir un fotograma
 
@@ -1630,7 +1678,7 @@ pub fn size_move_ended(&mut self, window: &Window, scene: &mut dyn Scene) -> Res
 
 Ao rematar de redimensionar co rato, o *framebuffer* devolve a memoria de máis (`Exact`). Se a memoria é nova, compónse de novo, coa escena ao día. A xanela xa mostra o mesmo, agás o que cambiase na escena mentres tanto, que presenta o seguinte fotograma (`request`).
 
-### `WM_PAINT` e as marcas
+### `WM_PAINT`: `paint`
 
 ```rust
 pub fn paint(&mut self, dc: HDC, area: Rect) -> Result<(), HandlerError> {
@@ -1638,19 +1686,10 @@ pub fn paint(&mut self, dc: HDC, area: Rect) -> Result<(), HandlerError> {
     let _ = self.surface.paint(dc, area);
     …
 }
-
-pub fn toggle_marks(&mut self, window: &Window) {
-    match self.marks.take() {
-        Some(marks) => {
-            let _ = erase(&self.surface, window.handle(), &marks);
-        }
-        None => self.marks = Some(Vec::new()),
-    }
-}
 ```
 
 - **`paint`** copia a zona que pide Windows e anótao no rexistro. Se a copia falla, esa zona queda mal ata o seguinte repintado, que non é motivo para parar meiga. Como `BeginPaint` xa validou a zona, Windows non a volta pedir, e non hai bucle.
-- **`toggle_marks`**: ao desactivalas, bórranse as que hai na xanela; ao activalas, o seguinte fotograma xa as debuxa.
+- Ata a subfase 1.6, eiquí estaba tamén `toggle_marks`, que activaba e desactivaba as marcas coa tecla P. Desde a 1.7, as marcas decídense ao arrancar, con `--marks`, e quedan toda a vida da xanela.
 
 ### Funcións auxiliares
 
@@ -1703,7 +1742,7 @@ frame,time_ms,kind,cause,interval_ms,width,height,rects,pixels,compose_us,presen
 | `areas` | As zonas, como `x y ancho alto`, separadas por `;`. |
 
 - Co terminal, o rexistro empeza igual, cun `compose` e un `paint` da xanela enteira, e despois cada `frame` presenta as celas que cambiaron.
-- As marcas (tecla P) non contan nas zonas: son unha axuda visual, e os modos de medición non as usan.
+- As marcas (`--marks`) non contan nas zonas: son unha axuda visual, e as ferramentas de medición non as piden.
 - Os decimais van sempre cun punto, aínda que Windows estea en galego.
 
 ```rust
@@ -1797,15 +1836,16 @@ O debuxo dun fotograma de texto:
 
 ## Comprobacións feitas
 
-- `cargo build --release` xera `target\release\meiga.exe`, duns 470 KB.
+- `cargo build --release` xera `target\release\meiga.exe`, duns 475 KB.
 - Ao abrilo sen argumentos, aparece a xanela, sen ningunha consola, con PowerShell 7 dentro: a súa cabeceira, o *prompt* e, despois del, o cursor, unha barra. Ao pechala, o proceso remata co código 0.
 - Un script de PowerShell que escribe as 16 cores, as 256, un degradado *truecolor*, a negra, a cursiva, o texto tenue, inverso e oculto, os cinco subliñados, o riscado e caracteres anchos móstraos todos como describe [`view.rs`](#cratesmeigasrcviewrs): os ideogramas e o emoji, en dúas celas (o emoji, dunha soa cor, [ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Outro, que cambia a cor do fondo, a do texto e a vermella da paleta (`OSC 11`, `10` e `4`), cambia tamén a cor do texto que xa estaba escrito.
 - Cun programa que non existe, o terminal mostra o erro de `CreateProcessW` coa liña de comandos que fallou, sen cursor. Cun programa que remata, a súa saída queda na xanela, cunha liña como `[process exited with code 3 (0x00000003)]` debaixo, e a xanela segue aberta ata que se pecha.
 - O texto compárase co do Windows Terminal coa mesma fonte, o mesmo tamaño e as mesmas cores: os glifos teñen exactamente os mesmos píxeles cubertos, enteiros e parciais, e a tinta dunha liña é a mesma, cunha diferenza menor do 0,5 % ([Tecnoloxías › Mesturar o texto co fondo](../tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste)).
-- O crate ten 17 probas unitarias (`cargo test -p meiga`). As novas da 1.6 son `the_program_and_its_arguments_are_the_command_line`, en `options.rs`; `the_window_is_woken_up_once_until_it_takes_what_changed`, `a_synchronized_update_wakes_the_window_once_and_ends_at_its_deadline` e `the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor`, en `session.rs`; e `the_cursor_blinks_until_the_timeout_and_stays_shown`, `the_cursor_does_not_blink_unless_everything_allows_it`, `a_dotted_underline_keeps_its_dots_when_a_frame_draws_part_of_it` e `styles_give_the_colours_of_the_text_and_its_background`, en `view.rs`. A das opcións sen argumentos é agora `no_options_run_the_default_shell`, e as sete da demo desapareceron con ela. A da actualización sincronizada e a do subliñado de puntos chegaron co arranxo de dous erros que atopou unha revisión do código: coa xanela minimizada, unha actualización sincronizada que o programa deixaba aberta non remataba ata restaurala, e as preguntas de dentro quedaban sen resposta; e os puntos do subliñado desprazábanse un píxel cando un fotograma debuxaba só parte da liña.
+- O crate ten 17 probas unitarias (`cargo test -p meiga`). As novas da 1.6 son `the_program_and_its_arguments_are_the_command_line`, en `options.rs`; `the_window_is_woken_up_once_until_it_takes_what_changed`, `a_synchronized_update_wakes_the_window_once_and_ends_at_its_deadline` e `the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor`, en `session.rs`; e `the_cursor_blinks_until_the_timeout_and_stays_shown`, `the_cursor_does_not_blink_unless_everything_allows_it`, `a_dotted_underline_keeps_its_dots_when_a_frame_draws_part_of_it` e `styles_give_the_colours_of_the_text_and_its_background`, en `view.rs`. A das opcións sen argumentos é agora `no_options_run_the_default_shell`, e as sete da demo desapareceron con ela. A da actualización sincronizada e a do subliñado de puntos chegaron co arranxo de dous erros que atopou unha revisión do código: coa xanela minimizada, unha actualización sincronizada que o programa deixaba aberta non remataba ata restaurala, e as preguntas de dentro quedaban sen resposta; e os puntos do subliñado desprazábanse un píxel cando un fotograma debuxaba só parte da liña. A 1.7 non engade probas ao programa: a das opcións comproba tamén `--marks`, e as do teclado están en [`meiga-core`](meiga-core.md#cratesmeiga-coresrcinputrs) e [`meiga-win`](meiga-win.md#probas-do-teclado).
+- Desde a 1.7, as teclas chegan ao programa: [`tools/check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) teclea na xanela, co teclado español ou co estadounidense, e comproba o carácter, a tecla e as modificadoras que le PowerShell para cada unha, tamén as teclas mortas e AltGr. Detecta os erros: unha copia de meiga que non usa o win32-input-mode falla 10 das 38 teclas do teclado español, e outra na que a tecla que espera polo seu carácter non o colle cando chega outra tecla, 18. O panel de emoji (Win + .) e o ditado (Win + H) escriben no terminal ([ADR 0014](../adr/0014-o-teclado.md)).
 - `tools/check-window.ps1` comproba o subsistema, a xanela, a escala por monitor e o código de saída. Desde a 1.6, abre meiga con `cmd` no terminal, e comproba tamén que meiga lanza `cmd` e a súa consola, que o título da xanela pasa a ser o que pon `cmd` e que, ao pechar a xanela, `cmd` e a súa consola rematan tamén.
 - `tools/check-present.ps1` comproba os fotogramas no rexistro (`--trace-frames`). Desde a 1.6, executa no terminal un script de PowerShell que escribe na pantalla un paso cada vez, cando a comprobación llo pide, e fai dez comprobacións: o primeiro `paint` cobre a xanela enteira; mentres cambia unha fila, cada fotograma presenta só esa fila; en repouso non se debuxa nada; moitos cambios escritos de golpe agrúpanse en poucos fotogramas; unha cor de fondo nova (`OSC 11`) dá un fotograma completo; coa xanela minimizada non se debuxa nada, aínda que a saída cambie; aínda minimizada, o programa abre unha actualización sincronizada cun título dentro e non a remata: remata igual á súa hora, o título chega á xanela, e non se debuxa nada; ao restaurala, píntase enteira; ao medrar a xanela, compón o tamaño novo e píntao; e, ao pechala, meiga sae co código 0. O script oculta antes o cursor, para que o pestanexo non debuxe nada en repouso (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)).
 - `check-present.ps1` detecta os erros: comprobouse na subfase 1.2, cando aínda enviaba eventos do rato á demo, con copias de `frames.rs` con erros feitos a propósito. Debuxando cada cambio no momento, sen agrupalos, o clic e os 40 movementos enviados de golpe dan 41 fotogramas; e debuxando coa xanela minimizada, aparecen fotogramas. Nos dous casos, a comprobación falla. Sen pedir o repintado ao restaurar a xanela, pasa igual, porque Windows xa o pide. Na 1.6, unha copia de meiga sen o arranxo das actualizacións sincronizadas coa xanela minimizada falla a sétima comprobación: o título non chega á xanela.
 - Os modos de medición funcionan: o temporizador dá os fotogramas ao ritmo pedido, tamén mentres se move a xanela, aínda que entón máis lentos (ver [ADR 0008](../adr/0008-temporizador-dos-fotogramas.md)).
 - O manifesto que leva dentro, extraído con `mt.exe`, ten as tres declaracións, e un só `trustInfo`.
-- `dumpbin /dependents` mostra que só depende de DLL do sistema: `kernel32.dll`, `dwrite.dll`, `ntdll.dll`, `oleaut32.dll`, `combase.dll`, `gdi32.dll`, `user32.dll` e `api-ms-win-core-synch-l1-2-0.dll`. As tres novas da subfase 1.3 son DirectWrite e as dúas que usa o crate `windows` (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Ata a 1.4, `kernel32.dll` aparecía dúas veces, unha delas como `KERNEL32.dll`, porque a biblioteca estándar de Rust e `windows-sys` declaraban as súas funcións de forma distinta; desde a 1.5, as dúas van nunha soa entrada (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)). Windows cárgaa sempre unha soa vez. A 1.6 non engade ningunha: a ConPTY de Windows, as tubaxes, os procesos e os *jobs* están en `kernel32.dll`, e a ConPTY que vai no paquete, `conpty.dll`, cárgase ao lanzar a sesión (`LoadLibraryExW`).
+- `dumpbin /dependents` mostra que só depende de DLL do sistema: `kernel32.dll`, `dwrite.dll`, `ntdll.dll`, `oleaut32.dll`, `combase.dll`, `gdi32.dll`, `user32.dll` e `api-ms-win-core-synch-l1-2-0.dll`. As tres novas da subfase 1.3 son DirectWrite e as dúas que usa o crate `windows` (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Ata a 1.4, `kernel32.dll` aparecía dúas veces, unha delas como `KERNEL32.dll`, porque a biblioteca estándar de Rust e `windows-sys` declaraban as súas funcións de forma distinta; desde a 1.5, as dúas van nunha soa entrada (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)). Windows cárgaa sempre unha soa vez. A 1.6 non engade ningunha: a ConPTY de Windows, as tubaxes, os procesos e os *jobs* están en `kernel32.dll`, e a ConPTY que vai no paquete, `conpty.dll`, cárgase ao lanzar a sesión (`LoadLibraryExW`). A 1.7 tampouco: as funcións do teclado están en `user32.dll`.

@@ -1,6 +1,6 @@
 # Código › `meiga-render`
 
-> Estado: subfase 1.6. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo. Na 1.6 chegaron ao texto a negra, a cursiva e a posición do subliñado e do riscado; o resto non cambiou desde a 1.3.
+> Estado: subfase 1.7. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo. Na 1.6 chegaron ao texto a negra, a cursiva e a posición do subliñado e do riscado; o resto non cambiou desde a 1.3. Na 1.7 non cambiou o código: só as marcas, que agora se activan cunha opción.
 
 **Responsabilidade:** o renderizado por CPU. Compón no *framebuffer* só o que cambiou e presenta na xanela só os rectángulos modificados. O texto debúxase desde unha caché de glifos, que DirectWrite rasteriza unha soa vez. Ver [Arquitectura › Fotogramas](../arquitectura.md#fotogramas-do-cambio-á-pantalla) e [Arquitectura › Texto](../arquitectura.md#texto-da-cela-aos-píxeles).
 
@@ -447,7 +447,7 @@ fn copy(&self, target: HDC, rects: &[Rect]) -> Result<(), Error> {
 pub fn mark(&self, window: HWND, rects: &[Rect], color: Rgb, thickness: u32) -> Result<(), Error> { … }
 ```
 
-Debuxa directamente na xanela, e non no *framebuffer*, o bordo de cada rectángulo, cunha brocha (`FillRect` para cada lado). Son as **marcas**, que se activan e se desactivan coa tecla P: deixan ver que zonas presentou o último fotograma. Como non están no *framebuffer*, presentar de novo eses rectángulos bórraas.
+Debuxa directamente na xanela, e non no *framebuffer*, o bordo de cada rectángulo, cunha brocha (`FillRect` para cada lado). Son as **marcas**, que se activan coa opción `--marks` de meiga (ata a subfase 1.6, coa tecla P): deixan ver que zonas presentou o último fotograma. Como non están no *framebuffer*, presentar de novo eses rectángulos bórraas.
 
 ### `Dib`
 

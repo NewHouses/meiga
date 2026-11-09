@@ -1,6 +1,6 @@
 # Código › escenarios de carga (`tools/perf/`)
 
-> Estado: subfase 1.6.
+> Estado: subfase 1.7.
 
 Cargas de traballo reproducíbeis para medir os terminais con [`measure.ps1`](perf.md#toolsperfmeasureps1). Imitan o que fai un terminal cada día: unha IA que pensa e responde, un indicador de progreso que xira e a saída dun arquivo grande. Cada escenario existe en PowerShell e en bash, para medir a mesma carga nunha tab de pwsh e nunha de WSL, e as dúas versións debuxan exactamente o mesmo: os mesmos textos, coas mesmas cores e as mesmas secuencias de escape.
 
@@ -26,7 +26,7 @@ pwsh -File .\tools\perf\run-scenario.ps1 bigfile WindowsTerminal              # 
 pwsh -File .\tools\perf\run-scenario.ps1 idle warp                            # o terminal en repouso
 ```
 
-Con `-Start`, en vez do nome do terminal, recibe a ruta dun terminal que executa o programa da súa liña de comandos, como meiga, e arráncao el mesmo, co escenario como programa: non hai que escribir o comando no terminal medido, e en meiga nin se podería, porque aínda non ten teclado (subfase 1.7). Ao final, o script pecha a xanela do terminal (ver [Con `-Start`](#con--start)):
+Con `-Start`, en vez do nome do terminal, recibe a ruta dun terminal que executa o programa da súa liña de comandos, como meiga, e arráncao el mesmo, co escenario como programa: non hai que escribir o comando no terminal medido. Ata a subfase 1.7, en meiga nin se podía, porque non tiña teclado. Ao final, o script pecha a xanela do terminal (ver [Con `-Start`](#con--start)):
 
 ```powershell
 pwsh -File .\tools\perf\run-scenario.ps1 spinner -Start .\target\release\meiga.exe   # meiga, que arranca co escenario como programa
