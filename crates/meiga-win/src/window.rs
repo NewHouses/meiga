@@ -4,12 +4,13 @@ use std::cell::{Cell, RefCell};
 use std::ptr;
 use std::time::{Duration, Instant};
 
-use meiga_core::geometry::{Rect, Size};
+use meiga_core::geometry::{Point, Rect, Size};
+use meiga_core::mouse::ClickSettings;
 use windows_sys::Win32::Foundation::{
-    CloseHandle, HANDLE, HWND, LPARAM, LRESULT, RECT, WAIT_FAILED, WAIT_OBJECT_0, WPARAM,
+    CloseHandle, HANDLE, HWND, LPARAM, LRESULT, POINT, RECT, WAIT_FAILED, WAIT_OBJECT_0, WPARAM,
 };
 use windows_sys::Win32::Graphics::Gdi::{
-    BeginPaint, EndPaint, InvalidateRect, PAINTSTRUCT, UpdateWindow, ValidateRect,
+    BeginPaint, EndPaint, InvalidateRect, PAINTSTRUCT, ScreenToClient, UpdateWindow, ValidateRect,
 };
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Threading::{
@@ -17,18 +18,22 @@ use windows_sys::Win32::System::Threading::{
     SetWaitableTimer, TIMER_ALL_ACCESS,
 };
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetCapture, ReleaseCapture, SetCapture};
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+    GetCapture, GetDoubleClickTime, GetKeyState, ReleaseCapture, SetCapture, VK_MENU,
+};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA,
-    GetCaretBlinkTime, GetClientRect, GetSystemMetrics, GetWindowLongPtrW, IDC_ARROW, IsWindow,
-    KillTimer, LoadCursorW, MB_ICONERROR, MB_OK, MSG, MWMO_INPUTAVAILABLE, MessageBoxW,
+    GetCaretBlinkTime, GetClientRect, GetForegroundWindow, GetSystemMetrics, GetWindowLongPtrW,
+    HCURSOR, HTCLIENT, IDC_ARROW, IDC_IBEAM, IDOK, IsWindow, KillTimer, LoadCursorW, MB_DEFBUTTON2,
+    MB_ICONERROR, MB_ICONWARNING, MB_OK, MB_OKCANCEL, MSG, MWMO_INPUTAVAILABLE, MessageBoxW,
     MsgWaitForMultipleObjectsEx, PM_REMOVE, PeekMessageW, PostMessageW, PostQuitMessage,
-    QS_ALLINPUT, RegisterClassExW, SM_CARETBLINKINGENABLED, SM_REMOTESESSION, SPI_GETCARETTIMEOUT,
-    SPI_GETCARETWIDTH, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER, SetTimer, SetWindowLongPtrW,
-    SetWindowPos, SetWindowTextW, ShowWindow, SystemParametersInfoW, TranslateMessage,
-    USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_DESTROY, WM_DPICHANGED,
-    WM_ENTERMENULOOP, WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT,
-    WM_QUIT, WM_TIMER, WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
+    QS_ALLINPUT, RegisterClassExW, SM_CARETBLINKINGENABLED, SM_CXDOUBLECLK, SM_CYDOUBLECLK,
+    SM_REMOTESESSION, SPI_GETCARETTIMEOUT, SPI_GETCARETWIDTH, SPI_GETWHEELSCROLLCHARS,
+    SPI_GETWHEELSCROLLLINES, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER, SetCursor, SetTimer,
+    SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow, SystemParametersInfoW,
+    TranslateMessage, USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_DESTROY,
+    WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP,
+    WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_SETCURSOR, WM_TIMER, WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
 };
 
 use crate::event::{Event, Handler, HandlerError, WM_WAKE, decode};
@@ -58,6 +63,15 @@ pub struct WindowOptions<'a> {
     pub title: &'a str,
 }
 
+/// The shape of the mouse pointer over the client area of the window.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Pointer {
+    /// The arrow: the clicks go to the program in the terminal.
+    Arrow,
+    /// The I-beam of text: the clicks select text.
+    Text,
+}
+
 /// A top-level window.
 ///
 /// It belongs to the thread that creates it. It lives until the user closes
@@ -66,6 +80,10 @@ pub struct WindowOptions<'a> {
 pub struct Window {
     handle: HWND,
     timer: FrameTimer,
+    arrow: HCURSOR,
+    text: HCURSOR,
+    /// The pointer over the client area.
+    pointer: Cell<HCURSOR>,
 }
 
 impl Window {
@@ -82,10 +100,15 @@ impl Window {
             return Err(Error::last("GetModuleHandleW"));
         }
 
-        // SAFETY: IDC_ARROW is a predefined system cursor, which is loaded
-        // without an instance handle.
-        let cursor = unsafe { LoadCursorW(ptr::null_mut(), IDC_ARROW) };
-        if cursor.is_null() {
+        // SAFETY: both are predefined system cursors, which are loaded
+        // without an instance handle, and are never destroyed.
+        let (arrow, text) = unsafe {
+            (
+                LoadCursorW(ptr::null_mut(), IDC_ARROW),
+                LoadCursorW(ptr::null_mut(), IDC_IBEAM),
+            )
+        };
+        if arrow.is_null() || text.is_null() {
             return Err(Error::last("LoadCursorW"));
         }
 
@@ -96,7 +119,7 @@ impl Window {
             cbSize: size_of::<WNDCLASSEXW>() as u32,
             lpfnWndProc: Some(window_proc),
             hInstance: instance,
-            hCursor: cursor,
+            hCursor: arrow,
             lpszClassName: class_name.as_ptr(),
             ..Default::default()
         };
@@ -129,7 +152,13 @@ impl Window {
         if handle.is_null() {
             return Err(Error::last("CreateWindowExW"));
         }
-        Ok(Self { handle, timer })
+        Ok(Self {
+            handle,
+            timer,
+            arrow,
+            text,
+            pointer: Cell::new(arrow),
+        })
     }
 
     /// The Windows handle of the window, for the functions that draw in it.
@@ -251,6 +280,14 @@ impl Window {
         }
     }
 
+    /// Whether the window is the one that the user is using: the
+    /// foreground window. A window that a program starts in the background
+    /// can have the focus of its thread without being it.
+    pub fn is_foreground(&self) -> bool {
+        // SAFETY: GetForegroundWindow has no preconditions.
+        unsafe { GetForegroundWindow() == self.handle }
+    }
+
     /// Asks Windows for a `WM_PAINT` of `area`, or of the whole window.
     pub fn invalidate(&self, area: Option<Rect>) {
         let rect = area.map(|area| RECT {
@@ -273,6 +310,38 @@ impl Window {
         // the window, which DefWindowProcW handles without the handler, so
         // it can be called from the handler.
         unsafe { SetWindowTextW(self.handle, title.as_ptr()) };
+    }
+
+    /// Changes the pointer over the client area, from the next time that
+    /// the mouse moves.
+    pub fn set_pointer(&self, pointer: Pointer) {
+        self.pointer.set(match pointer {
+            Pointer::Arrow => self.arrow,
+            Pointer::Text => self.text,
+        });
+    }
+
+    /// Asks the user to confirm `text` in a message box with OK and Cancel,
+    /// in front of the window, with Cancel chosen. Returns whether the user
+    /// chose OK.
+    ///
+    /// While the box is open, the window keeps receiving messages, but its
+    /// events do not reach the handler, which is waiting for this call: a
+    /// [`Event::Wake`] is lost, for example.
+    pub fn confirm(&self, title: &str, text: &str) -> bool {
+        let title = wide(title);
+        let text = wide(text);
+        // SAFETY: the window is of this thread, and both strings are
+        // null-terminated and outlive the call.
+        let chosen = unsafe {
+            MessageBoxW(
+                self.handle,
+                text.as_ptr(),
+                title.as_ptr(),
+                MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2,
+            )
+        };
+        chosen == IDOK
     }
 
     /// What wakes this window up from another thread.
@@ -357,6 +426,19 @@ impl Window {
             return Err(Error::last("SetTimer"));
         }
         Ok(())
+    }
+
+    /// The point of the client area at `on_screen`, a point from the
+    /// top-left corner of the screen.
+    fn client_point(&self, on_screen: Point) -> Point {
+        let mut point = POINT {
+            x: on_screen.x,
+            y: on_screen.y,
+        };
+        // SAFETY: the window is of this thread, and `point` is a valid
+        // POINT for ScreenToClient to change. If it fails, the point stays.
+        unsafe { ScreenToClient(self.handle, &mut point) };
+        Point::new(point.x, point.y)
     }
 
     /// WM_PAINT: the handler paints the area that Windows asks for.
@@ -480,6 +562,54 @@ fn system_parameter(action: u32) -> Option<u32> {
     // value. 0: the user profile does not change.
     let read = unsafe { SystemParametersInfoW(action, 0, ptr::from_mut(&mut value).cast(), 0) };
     (read != 0).then_some(value)
+}
+
+/// What `SPI_GETWHEELSCROLLLINES` gives when a notch of the wheel scrolls
+/// a page (`WHEEL_PAGESCROLL`).
+const WHEEL_PAGE: u32 = u32::MAX;
+
+/// How the user wants the mouse. The settings can change while meiga
+/// runs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MouseSettings {
+    /// When two clicks are a double click.
+    pub clicks: ClickSettings,
+    /// The lines that a notch of the wheel scrolls, 3 by default, or
+    /// `None` if it scrolls a page.
+    pub wheel_lines: Option<u32>,
+    /// The characters that a notch of the wheel to a side scrolls, 3 by
+    /// default.
+    pub wheel_chars: u32,
+}
+
+/// The current settings of the mouse.
+pub fn mouse_settings() -> MouseSettings {
+    let defaults = ClickSettings::default();
+    // SAFETY: neither function has preconditions.
+    let (time, width, height) = unsafe {
+        (
+            GetDoubleClickTime(),
+            GetSystemMetrics(SM_CXDOUBLECLK),
+            GetSystemMetrics(SM_CYDOUBLECLK),
+        )
+    };
+    let clicks = ClickSettings {
+        time: Some(time)
+            .filter(|&ms| ms > 0)
+            .map_or(defaults.time, |ms| Duration::from_millis(u64::from(ms))),
+        width: u32::try_from(width).unwrap_or(defaults.width),
+        height: u32::try_from(height).unwrap_or(defaults.height),
+    };
+    let wheel_lines = match system_parameter(SPI_GETWHEELSCROLLLINES) {
+        Some(WHEEL_PAGE) => None,
+        Some(lines) => Some(lines),
+        None => Some(3),
+    };
+    MouseSettings {
+        clicks,
+        wheel_lines,
+        wheel_chars: system_parameter(SPI_GETWHEELSCROLLCHARS).unwrap_or(3),
+    }
 }
 
 /// Shows an error message and waits until the user closes it.
@@ -688,6 +818,12 @@ unsafe extern "system" fn window_proc(
         }
         WM_ENTERMENULOOP => this.enter_modal_loop(),
         WM_EXITMENULOOP => this.leave_modal_loop(),
+        // Over the client area, the pointer that the handler chose.
+        WM_SETCURSOR if (lparam & 0xffff) as u32 == HTCLIENT => {
+            // SAFETY: the cursor is a system one, loaded in Window::create.
+            unsafe { SetCursor(this.pointer.get()) };
+            return 1;
+        }
         _ if is_keyboard_message(message) => {
             let mut send = |key| state.dispatch(Event::Key(key));
             let destination = state
@@ -699,12 +835,30 @@ unsafe extern "system" fn window_proc(
                 return unsafe { DefWindowProcW(window, message, wparam, lparam) };
             }
         }
-        _ => match decode(message, wparam, lparam) {
-            Some(event) => state.dispatch(event),
-            // SAFETY: the arguments are the ones that Windows passed to this
-            // window procedure.
-            None => return unsafe { DefWindowProcW(window, message, wparam, lparam) },
-        },
+        _ => {
+            // The mouse messages do not say whether Alt is down. The high
+            // bit of the state of the key says it, as the thread got the
+            // message.
+            // SAFETY: GetKeyState has no preconditions.
+            let alt = || unsafe { GetKeyState(i32::from(VK_MENU)) } < 0;
+            match decode(message, wparam, lparam, alt) {
+                Some(Event::Wheel {
+                    at,
+                    delta,
+                    horizontal,
+                    modifiers,
+                }) => state.dispatch(Event::Wheel {
+                    at: this.client_point(at),
+                    delta,
+                    horizontal,
+                    modifiers,
+                }),
+                Some(event) => state.dispatch(event),
+                // SAFETY: the arguments are the ones that Windows passed to
+                // this window procedure.
+                None => return unsafe { DefWindowProcW(window, message, wparam, lparam) },
+            }
+        }
     }
     0
 }

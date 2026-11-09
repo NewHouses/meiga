@@ -8,6 +8,7 @@
 pub mod recording;
 mod scanner;
 mod screen;
+mod selection;
 
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -15,7 +16,8 @@ use std::time::Instant;
 
 use alacritty_terminal::event::{Event, EventListener};
 use alacritty_terminal::grid::{Dimensions, Grid};
-use alacritty_terminal::index::{Column, Point};
+use alacritty_terminal::index::{Column, Line, Point};
+use alacritty_terminal::selection::SelectionRange;
 use alacritty_terminal::term::cell::{Cell as TermCell, Flags};
 use alacritty_terminal::term::{
     self, ClipboardType, Config, LineDamageBounds, Osc52, Term, TermDamage, TermMode,
@@ -23,6 +25,7 @@ use alacritty_terminal::term::{
 use alacritty_terminal::vte::ansi::{self, CursorStyle, NamedColor, Processor};
 
 pub use screen::{Cell, CellFlags, Color, Columns, Cursor, CursorShape, Screen};
+pub use selection::{SelectionKind, Side};
 
 use crate::color::{Palette, Rgb};
 use crate::geometry::{GridSize, Size};
@@ -201,6 +204,10 @@ pub struct Terminal {
     cell: Size,
     /// The damaged rows, reused at every copy.
     damaged: Vec<LineDamageBounds>,
+    /// The selection that the screen shows, as the last copy left it:
+    /// `alacritty_terminal` does not damage the cells of the selection when
+    /// it changes.
+    shown_selection: Option<SelectionRange>,
 }
 
 // The reader thread of a tab feeds its terminal, and the window thread copies
@@ -221,6 +228,7 @@ impl Terminal {
             default_cursor_style: DEFAULT_CURSOR,
             osc52: Osc52::OnlyCopy,
             kitty_keyboard: false,
+            semantic_escape_chars: selection::WORD_DELIMITERS.to_owned(),
             ..Config::default()
         };
         Self {
@@ -233,6 +241,7 @@ impl Terminal {
             theme: Palette::MEIGA,
             cell: Size::new(0, 0),
             damaged: Vec::new(),
+            shown_selection: None,
         }
     }
 
@@ -343,7 +352,8 @@ impl Terminal {
     /// that are now different. When the cursor moves, or changes its shape,
     /// the changes also have its cells, where it was and where it is, if it
     /// is drawn: the renderer draws it over them. When the palette changes,
-    /// every cell changes.
+    /// every cell changes. The cells of the selection have
+    /// [`CellFlags::SELECTED`].
     pub fn copy_damage(&mut self, screen: &mut Screen) {
         let resized = screen.size() != self.size;
         if resized {
@@ -357,10 +367,11 @@ impl Terminal {
                 resized
             }
         };
+        let selection = self.selection_range();
         let grid = self.term.grid();
         if full {
             for row in 0..self.size.rows {
-                copy_row(grid, screen, row);
+                copy_row(grid, screen, row, selection.as_ref());
             }
         } else {
             // alacritty_terminal damages the cells that it writes, but not
@@ -368,11 +379,25 @@ impl Terminal {
             // other half of a wide character: the whole row is compared.
             for damage in &self.damaged {
                 match u16::try_from(damage.line) {
-                    Ok(row) if row < self.size.rows => copy_row(grid, screen, row),
+                    Ok(row) if row < self.size.rows => {
+                        copy_row(grid, screen, row, selection.as_ref());
+                    }
                     _ => {}
                 }
             }
+            // Nor does it damage the cells of the selection when the
+            // selection changes. When it moves with the text, everything is
+            // damaged.
+            if selection != self.shown_selection {
+                let display_offset = grid.display_offset();
+                for range in [&self.shown_selection, &selection].into_iter().flatten() {
+                    for row in selection::shown_rows(range, display_offset, self.size.rows) {
+                        copy_row(grid, screen, row, selection.as_ref());
+                    }
+                }
+            }
         }
+        self.shown_selection = selection;
         let cursor = self.cursor();
         if cursor != screen.cursor() {
             screen.mark_cursor_changed();
@@ -511,14 +536,22 @@ fn at_least_min_size(size: GridSize) -> GridSize {
 }
 
 /// Copies the shown `row`, and adds to the changes of `screen` the cells that
-/// are different.
-fn copy_row(grid: &Grid<TermCell>, screen: &mut Screen, row: u16) {
+/// are different. The cells of `selection` have [`CellFlags::SELECTED`].
+fn copy_row(
+    grid: &Grid<TermCell>,
+    screen: &mut Screen,
+    row: u16,
+    selection: Option<&SelectionRange>,
+) {
     let point = term::viewport_to_point(
         grid.display_offset(),
         Point::new(usize::from(row), Column(0)),
     );
     let sources = &grid[point.line][..];
     let columns = screen.size().columns;
+    let selected = selection.map_or(Columns::default(), |range| {
+        selected_cells(range, point.line, sources, columns)
+    });
     let mut changed = Columns::default();
     // The character of the cell before, if it is the left half of a wide one.
     let mut wide = None;
@@ -538,11 +571,15 @@ fn copy_row(grid: &Grid<TermCell>, screen: &mut Screen, row: u16) {
             CellChar::Narrow(source.c)
         };
         wide = source.flags.contains(Flags::WIDE_CHAR).then_some(source.c);
+        let mut flags = flags(source.flags);
+        if selected.contains(column) {
+            flags = flags | CellFlags::SELECTED;
+        }
         let new = Cell {
             char,
             fg: color(source.fg),
             bg: color(source.bg),
-            flags: flags(source.flags),
+            flags,
         };
         if *cell != new {
             *cell = new;
@@ -553,6 +590,33 @@ fn copy_row(grid: &Grid<TermCell>, screen: &mut Screen, row: u16) {
         }
     }
     screen.mark_changed(row, changed);
+}
+
+/// The columns of the row of the grid at `line`, with the cells `sources`,
+/// that `range` selects: a wide character is selected whole if one of its
+/// halves is.
+fn selected_cells(
+    range: &SelectionRange,
+    line: Line,
+    sources: &[TermCell],
+    columns: u16,
+) -> Columns {
+    let mut selected = selection::selected_columns(range, line, columns);
+    if selected.is_empty() {
+        return selected;
+    }
+    let flags_at = |column: u16| {
+        sources
+            .get(usize::from(column))
+            .map_or(Flags::empty(), |cell| cell.flags)
+    };
+    if selected.start > 0 && flags_at(selected.start).contains(Flags::WIDE_CHAR_SPACER) {
+        selected.start -= 1;
+    }
+    if selected.end < columns && flags_at(selected.end - 1).contains(Flags::WIDE_CHAR) {
+        selected.end += 1;
+    }
+    selected
 }
 
 fn color(color: ansi::Color) -> Color {

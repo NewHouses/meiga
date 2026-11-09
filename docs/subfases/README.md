@@ -26,3 +26,4 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 1.5 | Fachada do terminal | [PR #11](https://github.com/NewHouses/meiga/pull/11) | [1.5-fachada.md](1.5-fachada.md) |
 | 1.6 | Da saída á pantalla | [PR #12](https://github.com/NewHouses/meiga/pull/12) | [1.6-saida.md](1.6-saida.md) |
 | 1.7 | Teclado | [PR #13](https://github.com/NewHouses/meiga/pull/13) | [1.7-teclado.md](1.7-teclado.md) |
+| 1.8 | Rato, selección e portapapeis | [PR #14](https://github.com/NewHouses/meiga/pull/14) | [1.8-rato.md](1.8-rato.md) |

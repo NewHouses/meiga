@@ -54,6 +54,9 @@ impl CellFlags {
     pub const INVERSE: Self = Self(1 << 9);
     /// The text is not drawn, only the background.
     pub const HIDDEN: Self = Self(1 << 10);
+    /// The cell is in the selection: its background has the colour of the
+    /// selection.
+    pub const SELECTED: Self = Self(1 << 11);
 
     pub const fn empty() -> Self {
         Self(0)
@@ -126,6 +129,10 @@ impl Columns {
 
     pub const fn is_empty(self) -> bool {
         self.end <= self.start
+    }
+
+    pub const fn contains(self, column: u16) -> bool {
+        self.start <= column && column < self.end
     }
 
     /// The columns of both.
@@ -287,6 +294,7 @@ impl Screen {
         if self.palette.colors != palette.colors
             || self.palette.foreground != palette.foreground
             || self.palette.background != palette.background
+            || self.palette.selection != palette.selection
         {
             self.all_changed = true;
         } else if self.palette.cursor != palette.cursor {

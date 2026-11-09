@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 1.7.
+> Estado: subfase 1.8. Na 1.8 chegou `check-mouse.ps1`, que comproba o rato, a selección e o portapapeis de meiga; os outros scripts non cambiaron.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -12,6 +12,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`check-window.ps1`](#toolscheck-windowps1) | Comprobar que `meiga.exe` abre a súa xanela, executa o seu programa e se pecha ben, sen deixar procesos. |
 | [`check-present.ps1`](#toolscheck-presentps1) | Comprobar que `meiga.exe` presenta só o que cambia na saída dun programa e non debuxa en repouso nin minimizado. |
 | [`check-keyboard.ps1`](#toolscheck-keyboardps1) | Comprobar que as teclas que se teclean en `meiga.exe` chegan ao programa do terminal coma as le PowerShell, co teclado español e co estadounidense. |
+| [`check-mouse.ps1`](#toolscheck-mouseps1) | Comprobar que en `meiga.exe` o rato selecciona e copia texto, que as teclas e o botón dereito copian e pegan, e que o rato chega aos programas do terminal que o piden. |
 | [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
@@ -726,7 +727,7 @@ Comproba que `meiga.exe` fai o que prometen as subfases 1.2 e 1.6: presenta só 
 
 Necesita PowerShell 7 no `PATH`: meiga lanza o script do terminal con `pwsh`, polo nome.
 
-Ata a subfase 1.5, a comprobación enviáballe á demo eventos do rato, e un clic na xanela cambiaba o que debuxaba. Desde a 1.6 a demo xa non existe, e o que cambia a pantalla é o programa do terminal, así que o rato xa non lle afecta. Aínda así, mentres corre, non toques a xanela de meiga: a comprobación minimízaa, restáuraa e cambia o seu tamaño, e espera uns fotogramas concretos.
+Ata a subfase 1.5, a comprobación enviáballe á demo eventos do rato, e un clic na xanela cambiaba o que debuxaba. Desde a 1.6 a demo xa non existe, e o que cambia a pantalla é o programa do terminal; e, desde a 1.8, tamén o rato, que selecciona texto. Mentres corre, non toques a xanela de meiga: a comprobación minimízaa, restáuraa e cambia o seu tamaño, e espera uns fotogramas concretos.
 
 Saída esperada, cos píxeles que dependen da pantalla:
 
@@ -1211,6 +1212,1021 @@ finally {
 
 A CI executa este script en cada PR, co teclado español e co estadounidense, despois de `check-present.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
 
+## `tools/check-mouse.ps1`
+
+Desde a subfase 1.8. Comproba o rato de `meiga.exe` ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)): que selecciona texto cun dobre clic, cun triplo clic e arrastrando, e que o copia ao portapapeis; que as teclas e o botón dereito copian e pegan coma no Windows Terminal; e que os programas do terminal que piden o rato o reciben. Abre meiga tres veces, cada unha cun script de PowerShell no terminal, e publica na súa xanela as mensaxes do rato e das teclas, coma fai Windows coas de quen a usa; despois compara o que leu o script, e o que hai no portapapeis, co que esperaba. A xanela non necesita o foco. Leva uns segundos.
+
+```powershell
+.\tools\check-mouse.ps1                                  # comproba target\release\meiga.exe
+.\tools\check-mouse.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-mouse.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
+```
+
+Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script do terminal con `pwsh`.
+
+**Coidado:** mentres corre, non uses o rato nin o teclado: mesturaríanse coas mensaxes da comprobación. E a comprobación usa o portapapeis: se tiña texto, ao rematar volta deixalo nel, pero calquera outra cousa, coma unha imaxe, pérdese.
+
+Saída esperada, cos tamaños que dependen da pantalla:
+
+```text
+The grid has … x … cells of … x … pixels.
+OK: a program does not copy text to the clipboard (OSC 52) while the window is not in the foreground.
+OK: a double click selects a word, a whole path, or from a bracket to the other one, and copies it.
+OK: a triple click selects a whole line, with its accents and its wide characters, and copies it.
+OK: dragging selects from a cell to another one, across rows and with whole wide characters, and copies it.
+OK: Ctrl+C and Ctrl+Shift+C copy the selection and remove it; without one, Ctrl+C reaches the program.
+OK: Esc removes the selection; without one, it reaches the program.
+OK: a right click removes the selection and pastes the clipboard: a line without its control characters nor its blanks at the end.
+OK: Ctrl+V and Ctrl+Shift+V ask before pasting more than one line: Cancel pastes nothing, and OK pastes each line with Enter.
+OK: a key that meiga takes, and that goes up while a message box is open, reaches the program the next time.
+OK: it ends with exit code 0 when its window closes.
+OK: a program for Windows gets the moves, the clicks, the wheel and the drags as mouse events.
+OK: with Shift, dragging selects text and copies it, and the program does not get it.
+OK: it ends with exit code 0 when its window closes.
+OK: if the window loses the mouse while a button is down, to another window or to a message box, the program gets the release then, once.
+OK: a program that reads the input of a terminal gets the clicks in SGR, and in the format of the first xterm.
+OK: on the alternate screen, a program without the mouse gets 3 arrows for each notch of the wheel.
+OK: with bracketed paste, Ctrl+V pastes more than one line without asking, between its marks and without its control characters.
+OK: it ends with exit code 0 when its window closes.
+```
+
+- A primeira liña di o tamaño da grella, en celas, e o de cada cela, en píxeles: a comprobación necesítaos para saber onde premer.
+- **OSC 52.** A primeira liña `OK:` depende da xanela de meiga: se está en primeiro plano, coma no *runner* da CI, un programa pode copiar ao portapapeis, e a liña é `OK: a program copies text to the clipboard (OSC 52) while the window is in the foreground.`; se non, é a de enriba. A xanela que abre a comprobación pode non chegar a estar en primeiro plano, por exemplo se outra xanela colle o foco mentres tanto ([Tecnoloxías › O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
+- **As frechas** de cada parte da roda son as liñas que despraza a roda nas preferencias de Windows: 3 por defecto, ou as filas da grella, se a roda despraza unha pantalla de cada vez.
+- `OK: it ends with exit code 0 when its window closes.` sae tres veces, unha por cada meiga que abre.
+
+Se falla unha comprobación, o script remata cun erro que explica cal, co que leu o programa ou co que ten o portapapeis, e código de saída 1, e di onde gardou o que leu o programa: `What the program read is in …`. Pase o que pase, `meiga.exe` non queda aberto, o portapapeis volta ter o texto que tiña e o punteiro volta a onde estaba.
+
+**Comprobado** con oito copias de meiga cun erro feito a propósito cada unha, e cada unha falla na súa comprobación:
+
+- a que non lle deixa o rato a meiga con Maiús: o arrastre con Maiús chega ao programa coma eventos do rato;
+- a que pega varias liñas sen preguntar;
+- a que lle deixa Esc ao programa cunha selección;
+- a que, co botón dereito, copia outra vez a selección antes de pegar: pega a palabra seleccionada en vez do portapapeis;
+- a que non envía frechas coa roda na pantalla alternativa;
+- a que, cando outra xanela colle o rato, esquece o botón sen enviarlle ao programa a súa soltura;
+- a que, ao pecharse a caixa de mensaxe, non esquece os botóns: o programa non recibe a soltura;
+- e a que, ao pecharse a caixa, non esquece as teclas que colleu: o C seguinte non chega ao programa.
+
+Explicación por partes. O comezo (a axuda, a versión de PowerShell e a ruta de `meiga.exe`) é igual ca en [`check-window.ps1`](#toolscheck-windowps1), e os parámetros tamén:
+
+```powershell
+[CmdletBinding()]
+param(
+    [string]$Path,
+
+    [ValidateRange(1, 600)]
+    [int]$TimeoutSeconds = 10
+)
+```
+
+- `-Path`: o `meiga.exe` que se comproba. Por defecto, `target\release\meiga.exe`, que se calcula despois da comprobación da versión, coma en todos os scripts (ver [`check-powershell.ps1`](#toolscheck-powershellps1)).
+- `-TimeoutSeconds`: o tempo máximo de cada espera: que se abra a xanela, cada paso da comprobación e que remate o proceso. Coma en `check-window.ps1`, 10 s só se esgotan se algo vai mal.
+
+**Publicar as mensaxes.** Coma [`check-keyboard.ps1`](#toolscheck-keyboardps1), a comprobación non usa `SendInput`, que move o punteiro de verdade: os clics irían á xanela que estivese debaixo del, e Windows mesturaría os seus movementos do rato cos da comprobación. Publica as mensaxes directamente na xanela de meiga, con `PostMessageW`, coma as publicaría Windows ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows), *Simular o rato*). Para iso, e para o resto, declara en C# as funcións de Windows que usa, coma `check-window.ps1`:
+
+```powershell
+if (-not ('Meiga.Tools.MouseCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name MouseCheck -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)]
+public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wParam; public IntPtr lParam; public uint time; public int x, y; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT { public int Left, Top, Right, Bottom; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct POINT { public int X, Y; }
+
+[DllImport("user32.dll")]
+public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+…
+'@
+}
+$api = [Meiga.Tools.MouseCheck]
+```
+
+Para que serve cada unha:
+
+| Función | Para que |
+|---|---|
+| `GetWindowThreadProcessId` e `GetCurrentThreadId` | O fío da xanela de meiga, e o do script. |
+| `PeekMessageW`, `AttachThreadInput` e `SetKeyboardState` | Poñen abaixo as modificadoras das teclas, coma en `check-keyboard.ps1`. |
+| `PostMessageW` | Publica as mensaxes do rato e das teclas na xanela, e a dun botón na caixa de mensaxe. |
+| `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
+| `GetClientRect`, `ClientToScreen` e `ScreenToClient` | O tamaño da área cliente da xanela, e un punto dela na pantalla, ou ao revés. |
+| `GetCursorPos` e `SetCursorPos` | Len e moven o punteiro. |
+| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
+| `FindWindowW` e `GetWindow` | Atopan a caixa de mensaxe de meiga, e a xanela dona dela. |
+| `GetForegroundWindow` | A xanela de primeiro plano. |
+| `SystemParametersInfoW` | As liñas que despraza cada parte da roda. |
+| `OpenClipboard`, `EmptyClipboard` e `CloseClipboard` | Baleiran o portapapeis. |
+| `OpenThread`, `SuspendThread`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes. |
+
+- `MSG` é a mensaxe que enche `PeekMessageW`; `RECT`, os catro bordos dun rectángulo; e `POINT`, un punto. Desde PowerShell, un tipo de dentro da clase escríbese cun `+`: `[Meiga.Tools.MouseCheck+RECT]`.
+- `$api` garda a clase, para chamar ás súas funcións con `$api::`.
+- Ademais das declaracións, a clase ten dúas funcións propias, en C#: `PostAll` e `ClearClipboard`.
+
+```csharp
+// Posts messages to a window, each one as three numbers: the message, its
+// wParam and its lParam. The thread of the window is suspended meanwhile,
+// so it reads all of them before the input that Windows makes: a thread
+// reads the posted messages first.
+public static void PostAll(IntPtr window, uint thread, long[] messages)
+{
+    const uint THREAD_SUSPEND_RESUME = 0x0002;
+    IntPtr handle = OpenThread(THREAD_SUSPEND_RESUME, false, thread);
+    if (handle == IntPtr.Zero) throw new System.ComponentModel.Win32Exception();
+    try
+    {
+        if (SuspendThread(handle) == uint.MaxValue) throw new System.ComponentModel.Win32Exception();
+        try
+        {
+            for (int i = 0; i + 2 < messages.Length; i += 3)
+            {
+                if (!PostMessageW(window, (uint)messages[i], new UIntPtr((ulong)messages[i + 1]), new IntPtr(messages[i + 2])))
+                    throw new System.ComponentModel.Win32Exception();
+            }
+        }
+        finally { ResumeThread(handle); }
+    }
+    finally { CloseHandle(handle); }
+}
+```
+
+**Todo de vez: `PostAll`.** Windows tamén lle envía á xanela movementos do rato propios, `WM_MOUSEMOVE` no sitio do punteiro de verdade: por exemplo, cando a xanela colle o rato porque baixou un botón ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows), *A captura*). Un deles, entre as mensaxes dun clic ou dun arrastre, levaría a selección, ou o informe do programa, ao sitio do punteiro. Por iso a comprobación publica todas as mensaxes de cada acción de vez, co fío da xanela suspendido:
+
+- Un fío le primeiro as mensaxes publicadas, e despois as do rato e do teclado que fai Windows ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows), *Os caracteres*). Pero, se a xanela tratase o botón que baixa antes de que estivese publicado o que sobe, o movemento de Windows podería chegar entre os dous. Suspendido, o fío da xanela non trata nada ata que están todas na cola, e despois trátaas todas antes ca os movementos de Windows.
+- Así van todas as accións da comprobación: cada clic, arrastre, xiro da roda ou tecla.
+- `OpenThread` abre o fío co permiso de suspendelo e continualo (`THREAD_SUSPEND_RESUME`). Os dous `finally` continúan o fío e pechan o *handle* aínda que falle `PostMessageW`: meiga non queda suspendido.
+- `SuspendThread` devolve `uint.MaxValue` se falla. `Win32Exception` sen argumentos colle o último erro de Windows, que .NET garda porque as funcións que poden fallar están declaradas con `SetLastError = true`.
+
+```csharp
+// Empties the clipboard. Returns whether it could.
+public static bool ClearClipboard()
+{
+    if (!OpenClipboard(IntPtr.Zero)) return false;
+    try { return EmptyClipboard(); }
+    finally { CloseClipboard(); }
+}
+```
+
+`ClearClipboard` baleira o portapapeis ao rematar, se ao principio non tiña texto ([Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)). `OpenClipboard` falla se outro programa ten o portapapeis aberto: entón devolve `false`, e quen a chama téntao outra vez. Se o abriu, `finally` péchao sempre.
+
+```powershell
+$WM_KEYDOWN = 0x0100
+$WM_KEYUP = 0x0101
+$WM_COMMAND = 0x0111
+$WM_MOUSEMOVE = 0x0200
+$WM_LBUTTONDOWN = 0x0201
+$WM_LBUTTONUP = 0x0202
+$WM_RBUTTONDOWN = 0x0204
+$WM_RBUTTONUP = 0x0205
+$WM_MOUSEWHEEL = 0x020A
+$WM_CAPTURECHANGED = 0x0215
+$MK_LBUTTON = 0x0001
+$MK_RBUTTON = 0x0002
+$MK_SHIFT = 0x0004
+$WHEEL_DELTA = 120
+$WHEEL_PAGESCROLL = [uint32]::MaxValue
+$SPI_GETWHEELSCROLLLINES = 0x0068
+$MAPVK_VK_TO_VSC = 0
+$GW_OWNER = 4
+$IDOK = 1
+$IDCANCEL = 2
+
+# The keys that each modifier sets down: Shift and the left Shift, and Ctrl
+# and the left Ctrl.
+$modifierKeys = @{
+    Shift = 0x10, 0xA0
+    Ctrl = 0x11, 0xA2
+}
+```
+
+As constantes de Windows, cos seus nomes:
+
+- As mensaxes das teclas e do rato ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)), e `WM_COMMAND`, a que recibe a caixa de mensaxe cando se preme un dos seus botóns, `IDOK` ou `IDCANCEL`. `WM_CAPTURECHANGED` é a que recibe a xanela cando outra lle colle o rato.
+- `MK_…`: os botóns que están abaixo e Maiús, no `wParam` das mensaxes do rato. `WHEEL_DELTA` é o xiro dunha parte da roda, e `WHEEL_PAGESCROLL`, o que dá `SPI_GETWHEELSCROLLLINES` cando a roda despraza unha pantalla de cada vez.
+- `MAPVK_VK_TO_VSC` pídelle a `MapVirtualKeyExW` o código de exploración dunha tecla, e `GW_OWNER`, a `GetWindow`, a xanela dona doutra.
+- `$modifierKeys` son as teclas que pon abaixo cada modificadora, coma en `check-keyboard.ps1`: a xeral e a esquerda. Só Maiús e Ctrl: a comprobación non usa Alt.
+
+```powershell
+# The script that runs in the terminal, in one of the three phases. It
+# writes to the log the size of the terminal and what it reads, and sets the
+# title of the window when it is ready: the title goes after what it wrote
+# before, so, when the window shows it, meiga has read the rest.
+$program = @'
+param(
+    [Parameter(Mandatory)][string]$Log,
+    [Parameter(Mandatory)][ValidateSet('Text', 'Events', 'Terminal')][string]$Phase
+)
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+Add-Type -Namespace MeigaCheck -Name Console -MemberDefinition @"
+[DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int handle);
+[DllImport("kernel32.dll")] public static extern bool SetConsoleMode(System.IntPtr handle, uint mode);
+[DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
+"@
+function Write-Log([string]$Line) { [IO.File]::AppendAllText($Log, "$Line`n") }
+function Set-Title([string]$Title) { [Console]::Write("`e]0;$Title`a") }
+$in = [MeigaCheck.Console]::GetStdHandle(-10)
+# Up to 64 INPUT_RECORD of 20 bytes: the type of the event in the first two,
+# and the event from byte 4.
+$records = [byte[]]::new(20 * 64)
+# The offsets of the records that the console gives.
+function Read-Records {
+    $read = 0
+    $null = [MeigaCheck.Console]::ReadConsoleInputW($in, $records, 64, [ref]$read)
+    for ($at = 0; $at -lt 20 * $read; $at += 20) { $at }
+}
+Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)"
+switch ($Phase) {
+```
+
+**O script do terminal.** Un só script fai de tres programas, segundo o parámetro `-Phase`: `Text`, `Events` ou `Terminal`. Coma en `check-keyboard.ps1`, escribe no rexistro (`-Log`) unha liña por cada cousa que le, con `AppendAllText`, e a comprobación pode lelo mentres tanto.
+
+- **O título fai de aviso.** Cando está listo, e despois de cada cambio que lle pide a comprobación, o script pon un título coa secuencia *OSC 0*, `ESC ] 0 ; título BEL`. meiga le a saída en orde, así que, cando a xanela mostra o título, xa leu todo o que o script escribiu antes: o texto, os modos que pediu ou o que copia. A comprobación agarda cada título con `Wait-Title`.
+- **A primeira liña** do rexistro é o tamaño do terminal, `size <columnas> <filas>`: con ela calcula a comprobación as celas (`Measure-Cells`).
+- `OutputEncoding` en UTF-8, sen marca de bytes, coma en [`terminal-sample.ps1`](#toolsterminal-sampleps1), para que os caracteres que non son ASCII cheguen ben a meiga.
+- **A entrada da consola.** Os eventos do rato, e os caracteres tal como os envía un terminal, non se len con `ReadKey`: o script le a entrada da consola directamente, con `ReadConsoleInputW`. `GetStdHandle(-10)` dá a entrada estándar (`STD_INPUT_HANDLE`). Cada evento é un `INPUT_RECORD` de 20 bytes: o tipo nos dous primeiros, e o evento desde o byte 4. Van a unha lista de bytes, e o script le cada campo na súa posición, con `BitConverter`, en vez de declarar as estruturas en C#. `Read-Records` le ata 64 eventos e devolve a posición de cada un.
+- O `Add-Type` do script vai entre `@"` e `"@`: unha liña que empezase por `'@` remataría `$program`.
+
+```powershell
+    'Text' {
+        # Ctrl+C is a key, as in PSReadLine.
+        [Console]::TreatControlCAsInput = $true
+        [Console]::Write("ola mundo C:\x\f.rs:12:5 (ok, si)`r`n")
+        [Console]::Write("`u{E1}`u{E9}`u{ED}`u{F3}`u{FA} `u{F1} `u{20AC} `u{4E2D}`u{6587} fin`r`n")
+        Set-Title 'meiga-mouse-text'
+        while ($true) {
+            $key = [Console]::ReadKey($true)
+            Write-Log ('U+{0:X4} {1} {2}' -f [int]$key.KeyChar, $key.Key, [int]$key.Modifiers)
+            # Q: the program copies text to the clipboard (OSC 52).
+            if ($key.Key -eq 'Q') {
+                $text = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("OSC 52 `u{2713}"))
+                [Console]::Write("`e]52;c;$text`a")
+                Set-Title 'meiga-mouse-osc52'
+            }
+        }
+    }
+```
+
+**1. O texto** (`Text`): o texto que se selecciona, e un programa que le as teclas coma o PSReadLine.
+
+- Escribe dúas liñas: `ola mundo C:\x\f.rs:12:5 (ok, si)`, con palabras, unha ruta cunha posición e unhas parénteses; e `áéíóú ñ € 中文 fin`, con letras con acento, o euro e dous caracteres anchos, de dúas celas cada un. Os que non son ASCII van coa secuencia `` `u{…} ``, porque o arquivo só ten caracteres ASCII, coma `terminal-sample.ps1`.
+- Despois le as teclas e escríbeas no rexistro coma `check-keyboard.ps1`, co mesmo formato: o carácter, a tecla e as modificadoras, `U+0003 C 4` para Ctrl+C. O texto que se pega chega tamén coma teclas: o ConPTY convérteo así para os programas da consola de Windows ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)).
+- Coa Q, copia ao portapapeis `OSC 52 ✓`, que leva un carácter que non é ASCII: escribe a secuencia *OSC 52*, `ESC ] 52 ; c ; texto BEL`, co texto en UTF-8 e en Base64, e despois outro título.
+
+```powershell
+    'Events' {
+        [Console]::Write('meiga')
+        # The mouse, without the quick edit of the console:
+        # ENABLE_MOUSE_INPUT and ENABLE_EXTENDED_FLAGS.
+        $null = [MeigaCheck.Console]::SetConsoleMode($in, 0x90)
+        Set-Title 'meiga-mouse-events'
+        while ($true) {
+            foreach ($at in Read-Records) {
+                # MOUSE_EVENT: the cell, the buttons, the direction of the
+                # wheel and the flags.
+                if ([BitConverter]::ToUInt16($records, $at) -eq 2) {
+                    Write-Log ('mouse {0} {1} 0x{2:X} {3} 0x{4:X}' -f [BitConverter]::ToInt16($records, $at + 4),
+                        [BitConverter]::ToInt16($records, $at + 6), [BitConverter]::ToUInt16($records, $at + 8),
+                        [Math]::Sign([BitConverter]::ToInt16($records, $at + 10)), [BitConverter]::ToUInt32($records, $at + 16))
+                }
+            }
+        }
+    }
+```
+
+**2. Os eventos do rato** (`Events`): un programa para Windows que lle pide o rato á consola.
+
+- Escribe `meiga`, que a comprobación selecciona con Maiús.
+- `SetConsoleMode` con `0x90`: `ENABLE_MOUSE_INPUT` (`0x10`) e `ENABLE_EXTENDED_FLAGS` (`0x80`), que, sen `ENABLE_QUICK_EDIT_MODE` (`0x40`), desactiva a edición rápida. Entón o ConPTY pídelle a meiga todos os movementos do rato en SGR, e converte cada informe nun evento do rato da consola ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)).
+- De cada evento do rato (o tipo 2, `MOUSE_EVENT`), escribe unha liña: `mouse`; a columna e a fila, desde 0; os botóns, en hexadecimal; o sentido da roda, 1, -1 ou 0, que vai na metade alta dos botóns, nos bytes 10 e 11; e os *flags*, en hexadecimal.
+
+```powershell
+    'Terminal' {
+        # The input as a terminal sends it, the mouse too:
+        # ENABLE_VIRTUAL_TERMINAL_INPUT and ENABLE_EXTENDED_FLAGS. Then, the
+        # mouse in SGR.
+        $null = [MeigaCheck.Console]::SetConsoleMode($in, 0x280)
+        [Console]::Write("`e[?1000;1006h")
+        Set-Title 'meiga-mouse-sgr'
+        while ($true) {
+            # The characters of the keys that go down.
+            $units = @(foreach ($at in Read-Records) {
+                    if ([BitConverter]::ToUInt16($records, $at) -eq 1 -and [BitConverter]::ToInt32($records, $at + 4) -ne 0) {
+                        $unit = [BitConverter]::ToUInt16($records, $at + 14)
+                        if ($unit -ne 0) { $unit }
+                    }
+                })
+            if ($units.Count -eq 0) { continue }
+            Write-Log ('in ' + (($units | ForEach-Object { '{0:X2}' -f $_ }) -join ' '))
+            switch (-join [char[]]$units) {
+                # X: the mouse in the format of the first xterm.
+                'x' { [Console]::Write("`e[?1006l"); Set-Title 'meiga-mouse-x10' }
+                # A: the alternate screen, without the mouse.
+                'a' { [Console]::Write("`e[?1000l`e[?1049h"); Set-Title 'meiga-mouse-alternate' }
+                # B: bracketed paste.
+                'b' { [Console]::Write("`e[?2004h"); Set-Title 'meiga-mouse-bracketed' }
+            }
+        }
+    }
+}
+'@
+```
+
+**3. A entrada dun terminal** (`Terminal`): un programa que le a entrada coma a envía un terminal, coma os de WSL.
+
+- `SetConsoleMode` con `0x280`: `ENABLE_VIRTUAL_TERMINAL_INPUT` (`0x200`), co que o ConPTY lle pasa a entrada en VT, e os informes do rato tal cal; e `ENABLE_EXTENDED_FLAGS`, sen a edición rápida. Despois pide os clics e a roda en SGR: `ESC [ ? 1000 ; 1006 h`.
+- Cada carácter chega coma o evento dunha tecla (o tipo 1, `KEY_EVENT`). O script colle o carácter en UTF-16 (no byte 14) das teclas que baixan (`bKeyDown`, no byte 4), e escribe unha liña por lectura: `in` e cada carácter en hexadecimal, `in 1B 5B 3C …`.
+- Tres letras cambian os modos, e cada unha pon o seu título: a X volta ao formato do primeiro xterm (`ESC [ ? 1006 l`); a A desactiva o rato (`ESC [ ? 1000 l`) e activa a pantalla alternativa (`ESC [ ? 1049 h`); e a B activa o *bracketed paste* (`ESC [ ? 2004 h`).
+
+```powershell
+$name = "meiga-check-mouse-$PID"
+$log = Join-Path ([IO.Path]::GetTempPath()) "$name.txt"
+$script = Join-Path ([IO.Path]::GetTempPath()) "$name.ps1"
+Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+```
+
+O script do terminal e o rexistro van ao cartafol temporal, co número do proceso de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). O rexistro é un para as tres fases: `Start-Meiga` bórrao ao comezo de cada unha.
+
+```powershell
+# Waits until $Done gives true. If it does not in time, fails with the
+# message that $Failure gives then.
+function Wait-For([scriptblock]$Done, [scriptblock]$Failure) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (-not (& $Done)) {
+        if ($process -and $process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) during the check."
+        }
+        if ([DateTime]::UtcNow -gt $deadline) { throw (& $Failure) }
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+function Wait-Title([string]$Title) {
+    Wait-For { $process.Refresh(); $process.MainWindowTitle -eq $Title } `
+    { "The title of the window of $exe did not become '$Title': it is '$($process.MainWindowTitle)'." }
+}
+
+# Waits until the last thing that the script read is like $Pattern.
+function Wait-Last([string]$Pattern, [string]$What) {
+    Wait-For { $lines = @(Get-Lines); $lines.Count -gt 0 -and $lines[-1] -like $Pattern } `
+    { "$What`: the program read $(@(Get-Lines | Select-Object -Last 1)) last." }
+}
+```
+
+**As esperas.**
+
+- `Get-Lines`, igual ca en `check-keyboard.ps1`, le o rexistro aínda que o script estea escribindo nel (`ReadWrite`), e só colle as liñas enteiras.
+- **`Wait-For`** é a espera de todas as comprobacións: executa `$Done` cada 20 ms ata que dá `$true`. Se meiga remata mentres tanto, falla no momento, co seu código de saída; se pasa `TimeoutSeconds`, falla coa mensaxe que dá `$Failure`. As dúas son bloques de código (`{ … }`), e `&` execútaos: a mensaxe só se calcula ao fallar, así que di o que había entón, por exemplo o que tiña o portapapeis.
+- `Wait-Title` agarda un título da xanela, con `Refresh()` en cada volta, coma en `check-window.ps1`. `Wait-Last` agarda a que a última liña do rexistro sexa coma un patrón de `-like`, con `*`.
+- O acento grave ao final dunha liña continúa a chamada na seguinte: o segundo bloque é `$Failure`. En `` "$What`: …" ``, o acento grave fai que PowerShell non lea `$What:` coma o principio dunha variábel cun prefixo, coma `$env:PATH`.
+
+```powershell
+# The text of the clipboard: nothing if it has none, or if another program
+# keeps it open.
+function Get-Text {
+    try { Get-Clipboard -Raw } catch { $null }
+}
+
+# Puts $Text in the clipboard. Another program can keep it open for a moment,
+# such as the clipboard history of Windows: then, it tries again.
+function Set-Text([string]$Text) {
+    Wait-For { try { Set-Clipboard -Value $Text } catch { $null }; (Get-Text) -ceq $Text } `
+    { "Could not put '$(Show-Text $Text)' in the clipboard." }
+}
+
+function Wait-Clipboard([string]$Expected, [string]$What) {
+    Wait-For { (Get-Text) -ceq $Expected } `
+    { "$What`: the clipboard has '$(Show-Text (Get-Text))' instead of '$(Show-Text $Expected)'." }
+}
+
+# Text with its control characters in sight.
+function Show-Text([string]$Text) {
+    $Text -replace "`e", '\e' -replace "`r", '\r' -replace "`n", '\n'
+}
+```
+
+**O portapapeis.**
+
+- `Get-Text` le o texto do portapapeis enteiro, cos seus fins de liña (`-Raw`); se non ten texto, ou se outro programa o ten aberto, nada.
+- `Set-Text` pon un texto e compróbao, e téntao outra vez, con `Wait-For`, ata que está: outro programa, coma o historial do portapapeis (Win + V), pode telo aberto un intre despois de cada cambio, e entón `Set-Clipboard` falla ([Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)).
+- `Wait-Clipboard` agarda a que o portapapeis teña un texto, distinguindo maiúsculas e minúsculas (`-ceq`).
+- `Show-Text` fai visíbeis nas mensaxes de erro os caracteres de control: ESC, CR e LF, coma `\e`, `\r` e `\n`.
+
+```powershell
+# The size of the grid, which the script wrote first, and of its cells: the
+# grid fills the client area of the window but for less than a cell.
+function Measure-Cells {
+    $size = @(Get-Lines)[0] -split ' '
+    $rect = [Meiga.Tools.MouseCheck+RECT]::new()
+    if (-not $api::GetClientRect($window, [ref]$rect)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
+    $script:cell = [pscustomobject]@{
+        Width = [Math]::Floor($rect.Right / $grid.Columns)
+        Height = [Math]::Floor($rect.Bottom / $grid.Rows)
+    }
+}
+
+# A pixel of a cell: near its left edge, near its right edge, or in its
+# middle.
+function Get-X([int]$Column, [string]$Side = 'Middle') {
+    switch ($Side) {
+        'Left' { $Column * $cell.Width + 1 }
+        'Right' { ($Column + 1) * $cell.Width - 2 }
+        default { $Column * $cell.Width + [Math]::Floor($cell.Width / 2) }
+    }
+}
+function Get-Y([int]$Row) { $Row * $cell.Height + [Math]::Floor($cell.Height / 2) }
+```
+
+**As celas.** A comprobación preme en celas, e as mensaxes do rato levan píxeles.
+
+- `Measure-Cells` le o tamaño da grella na primeira liña do rexistro, e o da área cliente con `GetClientRect`. A grella enche a área cliente salvo menos dunha cela, así que o ancho dunha cela é o da área cliente entre as columnas, sen decimais, e o alto, o mesmo coas filas. `$script:` garda as variábeis no script, e non só dentro da función.
+- `Get-X` e `Get-Y` dan un píxel dunha cela, na área cliente, contando as columnas e as filas desde 0: no medio, ou xunto a un dos seus bordos. Un arrastre empeza xunto ao bordo esquerdo dunha cela e remata xunto ao dereito doutra, porque a selección colle unha cela cando se pasa da súa metade ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 1): así entran as dúas.
+
+```powershell
+# Posts messages to the window at once: see PostAll.
+function Send-Messages([long[]]$Messages) {
+    $api::PostAll($window, $thread, $Messages)
+}
+
+# A mouse message at a pixel: the message, its wParam and its lParam.
+function Get-Mouse([int]$Message, [int]$Keys, [int]$X, [int]$Y) {
+    $Message, $Keys, (($X -band 0xFFFF) -bor (($Y -band 0xFFFF) -shl 16))
+}
+
+function Send-Move([int]$Column, [int]$Row) {
+    Send-Messages (Get-Mouse $WM_MOUSEMOVE 0 (Get-X $Column) (Get-Y $Row))
+}
+
+# Clicks a cell $Times times, with the left or the right button and the
+# modifier keys of $Keys.
+function Send-Click([int]$Column, [int]$Row, [string]$Button = 'Left', [int]$Times = 1, [int]$Keys = 0) {
+    $down, $up, $flag = if ($Button -eq 'Left') {
+        $WM_LBUTTONDOWN, $WM_LBUTTONUP, $MK_LBUTTON
+    }
+    else {
+        $WM_RBUTTONDOWN, $WM_RBUTTONUP, $MK_RBUTTON
+    }
+    $x = Get-X $Column
+    $y = Get-Y $Row
+    Send-Messages @(for ($i = 0; $i -lt $Times; $i++) {
+            Get-Mouse $down ($Keys -bor $flag) $x $y
+            Get-Mouse $up $Keys $x $y
+        })
+}
+
+# Presses the left button near the left edge of a cell, moves near the right
+# edge of another one, and lets the button go.
+function Send-Drag([int]$FromColumn, [int]$FromRow, [int]$ToColumn, [int]$ToRow, [int]$Keys = 0) {
+    $x = Get-X $ToColumn 'Right'
+    $y = Get-Y $ToRow
+    Send-Messages @(
+        Get-Mouse $WM_LBUTTONDOWN ($Keys -bor $MK_LBUTTON) (Get-X $FromColumn 'Left') (Get-Y $FromRow)
+        Get-Mouse $WM_MOUSEMOVE ($Keys -bor $MK_LBUTTON) $x $y
+        Get-Mouse $WM_LBUTTONUP $Keys $x $y
+    )
+}
+
+# Turns the wheel over a cell, forward with a positive number of notches.
+# Its message gives the place on the screen.
+function Send-Wheel([int]$Column, [int]$Row, [int]$Notches) {
+    $point = [Meiga.Tools.MouseCheck+POINT]::new()
+    $point.X = Get-X $Column
+    $point.Y = Get-Y $Row
+    $null = $api::ClientToScreen($window, [ref]$point)
+    $turn = [long](($Notches * $WHEEL_DELTA) -band 0xFFFF) -shl 16
+    Send-Messages @($WM_MOUSEWHEEL, $turn, (($point.X -band 0xFFFF) -bor (($point.Y -band 0xFFFF) -shl 16)))
+}
+```
+
+**O rato.** Cada función publica as mensaxes dunha acción de vez, con `Send-Messages`, que chama a `PostAll`:
+
+- `Get-Mouse` dá os tres números dunha mensaxe do rato: a mensaxe; o `wParam`, cos botóns e as teclas (`MK_…`); e o `lParam`, co punto: a `x` na metade baixa e a `y` na alta, cada unha en 16 bits (`-band 0xFFFF`). Cada función devolve os seus números, e PowerShell xúntaos nunha soa lista: `@(…)` coas saídas de varias chamadas, e `+` entre dúas listas.
+- `Send-Move` move o rato ao medio dunha cela, sen botóns.
+- `Send-Click` preme e solta un botón no medio dunha cela, unha vez ou varias seguidas: `-Times 2` é un dobre clic, e `-Times 3`, un triplo. meiga conta os clics seguidos coas medidas do dobre clic de Windows ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)), e os da comprobación chegan seguidos e no mesmo punto. Mentres o botón está abaixo, o `wParam` lévao (`MK_LBUTTON` ou `MK_RBUTTON`), coma en Windows; ao soltalo, xa non. `$down, $up, $flag = if …` asigna os tres valores dunha vez.
+- `Send-Drag` preme o botón esquerdo, móveo co botón abaixo ata a outra cela e sóltao. `-Keys $MK_SHIFT` arrastra con Maiús.
+- `Send-Wheel` xira a roda: `$Notches` partes de 120 (`WHEEL_DELTA`), na metade alta do `wParam`, en 16 bits con signo, así que atrás é negativo. O punto vai en coordenadas da pantalla, coma nas mensaxes da roda de Windows: `ClientToScreen` pasa o da cela á pantalla.
+
+```powershell
+# Sets down the modifier keys of $Modifiers, such as "Ctrl" and "Shift", and
+# no other key. The key state is the one of the thread of the window, so a
+# key must reach it before the next one changes the state: see
+# Connect-Keyboard.
+function Set-Modifiers([string[]]$Modifiers) {
+    $state = [byte[]]::new(256)
+    foreach ($modifier in @($Modifiers)) {
+        foreach ($down in $modifierKeys[$modifier]) { $state[$down] = 0x80 }
+    }
+    if (-not $api::SetKeyboardState($state)) {
+        throw "SetKeyboardState failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+}
+
+# The message of a key, such as "V", going down, or up with -Up: the
+# message, its wParam and its lParam.
+function Get-Key([string]$Key, [switch]$Up) {
+    $code = [int][ConsoleKey]$Key
+    $scan = $api::MapVirtualKeyExW($code, $MAPVK_VK_TO_VSC, $api::GetKeyboardLayout($thread))
+    [long]$bits = 1 -bor ($scan -shl 16)
+    # Going up: the key was down (bit 30), and goes up (bit 31).
+    if ($Up) { $WM_KEYUP, $code, ($bits -bor 0xC0000000L) }
+    else { $WM_KEYDOWN, $code, $bits }
+}
+
+# Types a key, such as "Ctrl+Shift+V": sets its modifier keys down, and posts
+# the messages of the key going down and up. With -Keep, the modifier keys
+# stay as they are.
+function Send-Key([string]$Key, [switch]$Keep) {
+    $parts = $Key -split '\+'
+    if (-not $Keep) {
+        Set-Modifiers @($parts | Select-Object -SkipLast 1)
+    }
+    Send-Messages @((Get-Key $parts[-1]) + (Get-Key $parts[-1] -Up))
+}
+```
+
+**As teclas,** coma en [`check-keyboard.ps1`](#toolscheck-keyboardps1) (*Teclear unha tecla*), pero en tres funcións, para poder premer unha tecla e soltala despois, mentres a caixa de mensaxe está aberta:
+
+- `Set-Modifiers` pon abaixo as modificadoras que se lle din, e só esas, con `SetKeyboardState`: as mensaxes publicadas non cambian o estado das teclas ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows), *Simular teclas*).
+- `Get-Key` dá os tres números da mensaxe dunha tecla que baixa ou, con `-Up`, que sobe: `WM_KEYDOWN` ou `WM_KEYUP`; o código de tecla virtual, co nome de [`ConsoleKey`](https://learn.microsoft.com/dotnet/api/system.consolekey); e o `lParam`, cunha repetición e o código de exploración na distribución da xanela, e, ao subir, os bits 30 e 31. A comprobación non usa Alt nin teclas estendidas. `0xC0000000L`, co `L`, é un `long`: sen el, PowerShell lería un número negativo de 32 bits.
+- `Send-Key` teclea unha tecla coas súas modificadoras: as dúas mensaxes, a de baixar e a de subir, de vez. Con `-Keep`, non cambia as modificadoras.
+- **Unha tecla cada vez.** O estado das teclas é un só, e meiga leo cando trata a mensaxe, non cando se publica: unha tecla ten que chegar antes de que a seguinte cambie as modificadoras. Por iso, antes de cambialas, a comprobación agarda a que a tecla anterior faga algo que se vexa: que cambie o portapapeis, que se abra a caixa de mensaxe ou que o programa a lea.
+
+```powershell
+# Does $Action, which types or pastes in the script, and then types Z with
+# the modifier keys that are down: the keys reach the script in order, so,
+# when it reads the Z, it has read all that $Action sent. Returns the lines
+# that it wrote before the Z.
+function Read-Keys([scriptblock]$Action) {
+    $start = @(Get-Lines).Count
+    & $Action
+    Send-Key 'Z' -Keep
+    $z = '^U\+[0-9A-F]{4} Z \d+$'
+    Wait-For { @(Get-Lines | Select-Object -Skip $start) -match $z } `
+    { "The program did not read the Z that the check typed. It read: $(@(Get-Lines | Select-Object -Skip $start) -join ' | ')." }
+    $read = [Collections.Generic.List[string]]::new()
+    foreach ($line in @(Get-Lines | Select-Object -Skip $start)) {
+        if ($line -match $z) { break }
+        $read.Add($line)
+    }
+    $read.ToArray()
+}
+
+# The characters of the keys of these lines of the Text phase.
+function Get-Typed([string[]]$Lines) {
+    -join @(foreach ($line in @($Lines)) { [char][Convert]::ToInt32($line.Substring(2, 4), 16) })
+}
+```
+
+**O Z, a marca do final.** Moitas comprobacións teñen que demostrar que unha tecla non chegou ao programa, porque a colleu meiga: Ctrl+C cunha selección, ou Esc. Pero non se pode agardar a que algo non pase. `Read-Keys` fai unha acción e despois teclea un Z: as teclas e o texto pegado chegan ao script en orde, así que, cando le o Z, xa leu todo o que enviou a acción. Devolve as liñas de antes do Z, e a comprobación compáraas coas que espera, nin máis nin menos.
+
+- O Z vai coas modificadoras que están abaixo (`-Keep`): se as cambiase, a última tecla da acción podería chegar a meiga co estado novo.
+- O patrón recoñece o Z con calquera carácter e modificadoras: con Ctrl, por exemplo, o carácter é `U+001A`.
+- `Get-Typed` xunta nun texto os caracteres desas liñas: o que se pegou, por exemplo. `Substring(2, 4)` colle os catro díxitos hexadecimais de despois de `U+`.
+
+```powershell
+# What the script of the Terminal phase read from line $From, as text.
+function Get-Input([int]$From) {
+    -join @(foreach ($line in @(Get-Lines | Select-Object -Skip $From)) {
+            foreach ($unit in @($line -split ' ' | Select-Object -Skip 1)) { [char][Convert]::ToInt32($unit, 16) }
+        })
+}
+
+function Wait-Input([int]$From, [string]$Expected, [string]$What) {
+    Wait-For { (Get-Input $From) -ceq $Expected } `
+    { "$What`: the program read '$(Show-Text (Get-Input $From))' instead of '$(Show-Text $Expected)'." }
+}
+```
+
+**A entrada da fase `Terminal`.** `Get-Input` xunta nun texto todo o que leu o script desde unha liña do rexistro: os caracteres de cada liña, sen o `in` do principio. `Wait-Input` agarda a que ese texto sexa exactamente o que se espera.
+
+```powershell
+# The message box of meiga: a dialog with its title, owned by its window.
+function Get-Dialog {
+    $dialog = $api::FindWindowW('#32770', 'meiga')
+    if ($dialog -ne [IntPtr]::Zero -and $api::GetWindow($dialog, $GW_OWNER) -eq $window) { $dialog }
+    else { [IntPtr]::Zero }
+}
+
+# Waits for the message box that asks before pasting, posts $Messages to the
+# window while it is open, and presses $Button. The window does not get
+# those messages: meiga is busy with the message box.
+function Close-Dialog([int]$Button, [long[]]$Messages = @()) {
+    Wait-For { (Get-Dialog) -ne [IntPtr]::Zero } { "$exe did not ask before pasting more than one line." }
+    if ($Messages.Count -gt 0) {
+        Send-Messages $Messages
+    }
+    if (-not $api::PostMessageW((Get-Dialog), $WM_COMMAND, [UIntPtr]::new([uint64]$Button), [IntPtr]::Zero)) {
+        throw "PostMessageW failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    Wait-For { (Get-Dialog) -eq [IntPtr]::Zero } { 'The message box did not close.' }
+}
+```
+
+**A caixa de mensaxe** coa que meiga pregunta antes de pegar varias liñas ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)):
+
+- `Get-Dialog` búscaa pola súa clase, `#32770`, a das caixas de diálogo de Windows, e polo seu título, `meiga`. A súa dona (`GW_OWNER`) ten que ser a xanela de meiga: a caixa doutro meiga non conta.
+- `Close-Dialog` agarda a que se abra e preme un botón: publica na caixa `WM_COMMAND` co botón, `IDOK` ou `IDCANCEL`, coma cando se preme. Despois agarda a que se peche. Se a caixa non se abre, falla: meiga non preguntou.
+- **`-Messages`:** as mensaxes que se publican na xanela de meiga mentres a caixa está aberta, antes de premer o botón. A xanela recíbeas, porque o bucle de mensaxes da caixa reparte tamén as súas, pero os seus eventos non chegan a meiga, que agarda a resposta da caixa ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 13). Así se simula unha tecla ou un botón que sobe mentres a caixa está aberta: as súas mensaxes pérdense, coma as de verdade.
+
+```powershell
+# If the pointer is over the terminal, moves it to the title bar of the
+# window: the moves that Windows makes at its place would reach the program.
+function Move-Pointer {
+    $point = [Meiga.Tools.MouseCheck+POINT]::new()
+    if (-not $api::GetCursorPos([ref]$point)) { return }
+    $inside = [Meiga.Tools.MouseCheck+POINT]::new()
+    $inside.X = $point.X
+    $inside.Y = $point.Y
+    $rect = [Meiga.Tools.MouseCheck+RECT]::new()
+    if (-not $api::ScreenToClient($window, [ref]$inside) -or -not $api::GetClientRect($window, [ref]$rect) -or
+        $inside.X -lt 0 -or $inside.Y -lt 0 -or $inside.X -ge $rect.Right -or $inside.Y -ge $rect.Bottom) {
+        return
+    }
+    if ($null -eq $script:pointer) { $script:pointer = $point }
+    $title = [Meiga.Tools.MouseCheck+POINT]::new()
+    $title.X = [Math]::Floor($rect.Right / 2)
+    $title.Y = -8
+    $null = $api::ClientToScreen($window, [ref]$title)
+    if (-not $api::SetCursorPos($title.X, $title.Y)) {
+        throw "Could not move the pointer out of the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+}
+```
+
+**O punteiro.** `PostAll` evita que os movementos que fai Windows no sitio do punteiro caian no medio dunha acción, pero non que cheguen despois: se o punteiro está por riba do terminal, chegarían ao programa, que na fase `Events` pide todos os movementos. `Move-Pointer` mira se o punteiro está na área cliente e, se está, móveo á barra de título, ao medio e 8 píxeles por riba da área cliente: alí, os movementos de Windows non son do terminal.
+
+- `ScreenToClient` pasa o punto do punteiro á área cliente: está dentro se cae entre 0 e o ancho e o alto que dá `GetClientRect`.
+- A primeira vez que o move, garda onde estaba (`$script:pointer`), e ao rematar devólveo alí.
+- `[ref]` pásalle á función a variábel, e non unha copia, para que a encha ou a cambie.
+
+```powershell
+# Starts meiga.exe with the script of $Phase in its terminal, and waits until
+# the script sets the title $Title.
+function Start-Meiga([string]$Phase, [string]$Title) {
+    Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
+    $info = [Diagnostics.ProcessStartInfo]::new($Path)
+    $info.UseShellExecute = $false
+    foreach ($argument in 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', $script, '-Log', $log, '-Phase', $Phase) {
+        $info.ArgumentList.Add($argument)
+    }
+    $script:process = [Diagnostics.Process]::Start($info)
+    $idle = try { $process.WaitForInputIdle($TimeoutSeconds * 1000) } catch { $false }
+    if (-not $idle) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) before it opened its window."
+        }
+        throw "$exe did not open its window within $TimeoutSeconds s."
+    }
+    $process.Refresh()
+    $script:window = $process.MainWindowHandle
+    $processId = [uint32]0
+    $script:thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
+    Move-Pointer
+    Wait-Title $Title
+    Measure-Cells
+}
+
+# SetKeyboardState sets the key state of the thread that calls it: share it
+# with the thread of the window. This thread needs a message queue, which
+# PeekMessageW creates.
+function Connect-Keyboard {
+    $message = [Meiga.Tools.MouseCheck+MSG]::new()
+    $null = $api::PeekMessageW([ref]$message, [IntPtr]::Zero, 0, 0, 0)
+    $script:attached = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $true)
+    if (-not $attached) {
+        throw "AttachThreadInput failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+}
+
+# Closes the window, as its X button does, and checks how meiga.exe ends.
+function Stop-Meiga {
+    if ($attached) {
+        $null = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $false)
+        $script:attached = $false
+    }
+    if (-not $process.CloseMainWindow()) {
+        throw "Could not ask the window of $exe to close."
+    }
+    …
+    Write-Host 'OK: it ends with exit code 0 when its window closes.'
+    $process.Dispose()
+    $script:process = $null
+}
+```
+
+**Abrir e pechar meiga.**
+
+- `Start-Meiga` borra o rexistro da fase anterior e abre meiga co script do terminal, coas mesmas opcións de pwsh ca en `check-present.ps1`, e agarda a súa xanela con `WaitForInputIdle`, coma `check-window.ps1`. Despois colle a xanela e o fío que a trata, aparta o punteiro, agarda o título do script, que xa escribiu o tamaño da grella, e mide as celas.
+- **`Connect-Keyboard`**, coma en `check-keyboard.ps1`: `SetKeyboardState` cambia o estado das teclas do fío que a chama, así que o fío do script e o da xanela teñen que compartilo, con `AttachThreadInput`, para que as modificadoras que pon o script sexan as que ve meiga. `AttachThreadInput` necesita que o fío do script teña cola de mensaxes, e `PeekMessageW`, que non colle nada, créaa. Chámana as fases `Text` e `Terminal`, que teclean; a fase `Events` só usa o rato, que leva Maiús no `wParam`.
+- `Stop-Meiga` remata cada fase: o fío do script deixa de compartir o estado das teclas, e a xanela péchase coma co botón X (`CloseMainWindow`). Despois, coma en `check-window.ps1`, agarda a que meiga remate e comproba o código de saída, 0.
+
+```powershell
+# As per monitor (v2), as meiga, this thread sees the pixels of the window as
+# they are on the screen.
+$previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+$process = $null
+$window = [IntPtr]::Zero
+$thread = [uint32]0
+$attached = $false
+$pointer = $null
+$grid = $null
+$cell = $null
+$passed = $false
+$saved = Get-Text
+```
+
+**A escala do fío.** Windows dá os tamaños e os puntos da xanela (`GetClientRect`, `ClientToScreen`, `GetCursorPos`…) segundo a escala do fío que chama, coma en `check-present.ps1`. Por monitor (v2), coma meiga, o fío do script ve os píxeles da xanela tal como están na pantalla, os mesmos cos que meiga le as mensaxes do rato ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows), *Simular o rato*): nunha pantalla ao 150 %, sen iso, os píxeles das celas non serían os de meiga, e os clics caerían noutras celas.
+
+- As variábeis que usan as funcións créanse antes, porque `Set-StrictMode` non deixa ler unha variábel que non existe.
+- `$saved` garda o texto do portapapeis, para poñelo outra vez ao rematar: se non ten texto, `$null`.
+
+**A fase `Text`.** `Start-Meiga 'Text'`, e a liña do tamaño da grella. Despois, unha comprobación tras outra, cada unha coa súa liña `OK:`:
+
+| Comprobación | Que fai a comprobación | Que ten que pasar |
+|---|---|---|
+| OSC 52 | Pon `meiga-check` no portapapeis e teclea Q, coa que o programa copia `OSC 52 ✓`. | En primeiro plano, o portapapeis ten `OSC 52 ✓`; se non, segue con `meiga-check`. |
+| Dobre clic | Un dobre clic na ruta, outro en `mundo` e outro na primeira paréntese. | O portapapeis ten `C:\x\f.rs:12:5`, `mundo` e `(ok, si)`. |
+| Triplo clic | Un triplo clic na segunda liña. | A liña enteira: `áéíóú ñ € 中文 fin`. |
+| Arrastrar | Arrastra desde `mundo` ata o `ú` da segunda liña, e desde a metade dereita de 中 ata a esquerda de 文. | `mundo C:\x\f.rs:12:5 (ok, si)`, CR LF e `áéíóú`; e `中文`, enteiros. |
+| Ctrl+C e Ctrl+Maiús+C | Selecciona `ola` e preme Ctrl+C; selecciona `mundo` e preme Ctrl+Maiús+C; e, xa sen selección, Ctrl+C. | As dúas primeiras copian, e só a última chega ao programa. |
+| Esc | Selecciona `ola` e preme Esc dúas veces, e despois Ctrl+C. | O primeiro Esc só quita a selección: o programa le un Esc e Ctrl+C. |
+| O botón dereito | Selecciona `mundo`, pon outro texto no portapapeis e preme o botón dereito; despois, Ctrl+C. | O programa le o texto do portapapeis, filtrado, e Ctrl+C. |
+| Ctrl+V e Ctrl+Maiús+V | Pon dúas liñas no portapapeis; preme Ctrl+V e *Cancel*, e Ctrl+Maiús+V e *OK*. | As dúas preguntan; só *OK* pega, coas liñas separadas por un CR. |
+| Unha tecla que sobe na caixa | Ctrl+C con dúas liñas seleccionadas, e Ctrl+V co C aínda abaixo; o C sobe mentres a caixa está aberta. Despois, un C. | O C chega ao programa. |
+
+Despois, `Stop-Meiga`. As comprobacións que non se explican soas:
+
+```powershell
+    Set-Text 'meiga-check'
+    $foreground = $api::GetForegroundWindow() -eq $window
+    Connect-Keyboard
+    Send-Key 'Q'
+    Wait-Title 'meiga-mouse-osc52'
+    if ($foreground) {
+        Wait-Clipboard "OSC 52 `u{2713}" 'A program copied text to the clipboard (OSC 52)'
+        Write-Host 'OK: a program copies text to the clipboard (OSC 52) while the window is in the foreground.'
+    }
+    else {
+        # meiga read the text to copy before the title.
+        Start-Sleep -Milliseconds 300
+        if ((Get-Text) -cne 'meiga-check') {
+            throw "A program copied text to the clipboard (OSC 52) while the window was not in the foreground: '$(Get-Text)'."
+        }
+        Write-Host 'OK: a program does not copy text to the clipboard (OSC 52) while the window is not in the foreground.'
+    }
+```
+
+- **OSC 52.** meiga só deixa que un programa copie ao portapapeis se a súa xanela ten o foco e está en primeiro plano ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 11). A comprobación non escolle onde está a xanela: míraa e comproba o que corresponde. O título sae despois da secuencia, así que, cando chega, meiga xa leu o texto que copiar: en primeiro plano, a comprobación agarda o texto no portapapeis; se non, despois dunha pausa curta, o portapapeis ten que seguir con `meiga-check`. Así atopou esta comprobación que un programa podía copiar desde unha xanela que tiña o foco do seu fío sen estar en primeiro plano ([Subfases › 1.8](../subfases/1.8-rato.md)): agora meiga mira as dúas cousas.
+
+```powershell
+    Send-Drag 0 0 2 0
+    Wait-Clipboard 'ola' 'Dragging in a row'
+    Set-Text 'meiga-check'
+    $read = @(Read-Keys {
+            Send-Key 'Ctrl+C'
+            Wait-Clipboard 'ola' 'Ctrl+C with a selection'
+            Send-Drag 4 0 8 0
+            Wait-Clipboard 'mundo' 'Dragging in a row'
+            Set-Text 'meiga-check'
+            Send-Key 'Ctrl+Shift+C'
+            Wait-Clipboard 'mundo' 'Ctrl+Shift+C with a selection'
+            Send-Key 'Ctrl+C'
+        })
+    if (($read -join ' | ') -cne 'U+0003 C 4') {
+        throw "Ctrl+C and Ctrl+Shift+C with a selection, and Ctrl+C without one, reached the program as: $($read -join ' | ')."
+    }
+```
+
+- **Ctrl+C e Ctrl+Maiús+C** (decisión 4). Arrastrar xa copia a selección ao soltar o botón, así que, antes de cada tecla, a comprobación pon `meiga-check` no portapapeis: se despois ten a selección, copiouna a tecla. Cada `Wait-Clipboard` agarda tamén a que meiga trate a tecla antes de que a seguinte cambie as modificadoras. Ctrl+Maiús+C quita a selección, e o último Ctrl+C, xa sen ela, chega ao programa. Ata o Z, o programa só pode ler `U+0003 C 4`: se algunha das dúas primeiras chegase a el, habería máis liñas; e se non quitasen a selección, o último Ctrl+C copiaría en vez de chegar.
+- **Esc** igual: cunha selección, o primeiro Esc só a quita, e o segundo chega ao programa. `Wait-Last` agarda a que o programa o lea antes de que Ctrl+C poña Ctrl abaixo.
+
+```powershell
+    Send-Click 5 0 -Times 2
+    Wait-Clipboard 'mundo' 'A double click on a word'
+    Set-Text "eco `e[2J`u{E1}`u{20AC}  "
+    $typed = Get-Typed (Read-Keys {
+            Send-Click 20 3 -Button 'Right'
+            Send-Key 'Ctrl+C'
+        })
+    if ($typed -cne "eco [2J`u{E1}`u{20AC}`u{3}") {
+        throw "A right click with a selection, and then Ctrl+C, typed '$(Show-Text $typed)' instead of 'eco [2J$("`u{E1}`u{20AC}")' and U+0003."
+    }
+```
+
+- **O botón dereito** quita a selección e pega o portapapeis, que ten o último que se copiou, quizais noutro programa (decisión 7). A comprobación selecciona `mundo`, que se copia, e despois pon no portapapeis outro texto, coma se o copiase outro programa: `eco`, a secuencia `ESC [ 2 J`, que borraría a pantalla, `á€` e dous espazos. O programa ten que ler ese texto filtrado ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)): sen o ESC, que é un carácter de control, e sen os espazos do final, porque é unha liña e o programa non pediu o *bracketed paste*. Despois, Ctrl+C chega ao programa, `U+0003`: xa non hai selección. A copia de meiga que copiaba outra vez a selección pegaba `mundo`.
+
+```powershell
+    Set-Text "un`r`ndous"
+    $typed = Get-Typed (Read-Keys {
+            Send-Key 'Ctrl+V'
+            Close-Dialog $IDCANCEL
+            Send-Key 'Ctrl+Shift+V'
+            Close-Dialog $IDOK
+        })
+    if ($typed -cne "un`rdous") {
+        throw "Ctrl+V, cancelled, and Ctrl+Shift+V pasted '$(Show-Text $typed)' instead of 'un\rdous'."
+    }
+```
+
+- **Ctrl+V e Ctrl+Maiús+V** con dúas liñas, nun programa sen *bracketed paste*, preguntan antes de pegar (decisión 6). `Close-Dialog` agarda cada caixa, e preme *Cancel* na primeira e *OK* na segunda. Só pega a segunda: `un`, un CR, que é a tecla Intro, e `dous`. Se meiga non preguntase, `Close-Dialog` fallaría: `meiga.exe did not ask before pasting more than one line.`
+
+```powershell
+    # Ctrl+C copies two lines and meiga takes the C; then, with the C still
+    # down, Ctrl+V asks before pasting them, and the C goes up while the
+    # message box is open.
+    Send-Drag 4 0 4 1
+    Wait-Clipboard ("mundo C:\x\f.rs:12:5 (ok, si)`r`n" + $line.Substring(0, 5)) 'Dragging to the next row'
+    $read = @(Read-Keys {
+            Set-Modifiers 'Ctrl'
+            Send-Messages @((Get-Key 'C') + (Get-Key 'V'))
+            Close-Dialog $IDCANCEL -Messages @((Get-Key 'C' -Up) + (Get-Key 'V' -Up))
+            Send-Key 'C'
+        })
+    if (($read -join ' | ') -cne 'U+0063 C 0') {
+        throw "After Ctrl+C, and Ctrl+V with the C still down, a C reached the program as: $($read -join ' | ')."
+    }
+    Write-Host 'OK: a key that meiga takes, and that goes up while a message box is open, reaches the program the next time.'
+    Stop-Meiga
+```
+
+- **Unha tecla que sobe mentres a caixa está aberta.** Unha tecla que colle meiga, coma o C de Ctrl+C cunha selección, tampouco chega ao programa mentres se repite nin cando sobe (decisión 4): meiga lémbraa ata que sobe. Pero, mentres a caixa de mensaxe está aberta, os eventos da xanela non lle chegan, e a tecla pode subir alí. Se meiga seguise lembrándoa, tomaría a seguinte pulsación por unha repetición, e non a enviaría ao programa. Por iso, ao pecharse a caixa, meiga esquece as teclas que colleu ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
+  - Arrastrando, a comprobación selecciona dúas liñas. Con Ctrl abaixo, publica de vez o C e o V que baixan: Ctrl+C copia as dúas liñas e quita a selección, e meiga colle o C; Ctrl+V, co C aínda abaixo, pregunta antes de pegalas.
+  - Con `-Messages`, o C e o V soben mentres a caixa está aberta, e *Cancel* péchaa.
+  - Despois, un C sen modificadoras ten que chegar ao programa, e só el: `U+0063 C 0`, o c minúsculo, a tecla C e ningunha modificadora.
+
+```powershell
+    # 2. The mouse events of a program for Windows.
+    Start-Meiga 'Events' 'meiga-mouse-events'
+    Set-Text 'meiga-check'
+    $start = @(Get-Lines).Count
+    Send-Move 5 2
+    Send-Click 7 3
+    Send-Click 8 1 -Button 'Right'
+    Send-Wheel 2 2 1
+    Send-Wheel 2 2 -1
+    # With Shift, the mouse is for meiga: dragging selects text.
+    Send-Drag 0 0 4 0 -Keys $MK_SHIFT
+    Send-Drag 1 1 4 1
+    # mouse <column> <row> <buttons> <wheel> <flags>. The buttons: left 1 and
+    # right 2. The wheel: forward 1 and back -1. The flags: MOUSE_MOVED 1 and
+    # MOUSE_WHEELED 4.
+    $expected = @(
+        'mouse 5 2 0x0 0 0x1'
+        'mouse 7 3 0x1 0 0x0', 'mouse 7 3 0x0 0 0x0'
+        'mouse 8 1 0x2 0 0x0', 'mouse 8 1 0x0 0 0x0'
+        'mouse 2 2 0x0 1 0x4', 'mouse 2 2 0x0 -1 0x4'
+        'mouse 1 1 0x1 0 0x0', 'mouse 4 1 0x1 0 0x1', 'mouse 4 1 0x0 0 0x0'
+    )
+    Wait-For { @(Get-Lines).Count -ge $start + $expected.Count } `
+    { "The program read $(@(Get-Lines).Count - $start) mouse events instead of $($expected.Count): $(@(Get-Lines | Select-Object -Skip $start) -join ' | ')." }
+    $read = @(Get-Lines | Select-Object -Skip $start)
+    if (($read -join ' | ') -cne ($expected -join ' | ')) {
+        throw "The program read these mouse events: $($read -join ' | '). Expected: $($expected -join ' | ')."
+    }
+    Write-Host 'OK: a program for Windows gets the moves, the clicks, the wheel and the drags as mouse events.'
+    Wait-Clipboard 'meiga' 'Dragging with Shift'
+    Write-Host 'OK: with Shift, dragging selects text and copies it, and the program does not get it.'
+    Stop-Meiga
+```
+
+**A fase `Events`.** O programa pediu o rato, así que meiga lle envía os clics, os movementos e a roda en vez de seleccionar, e o ConPTY convérteos en eventos ([Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis)). A comprobación move o rato, fai un clic co botón esquerdo e outro co dereito, xira a roda adiante e atrás, e arrastra dúas veces: con Maiús, na primeira fila, onde está `meiga`, e sen Maiús, na segunda. O programa ten que ler exactamente os eventos de `$expected`, e na súa orde:
+
+- o movemento, co *flag* `MOUSE_MOVED`;
+- cada clic, coma dous eventos: co botón abaixo (`0x1`, o esquerdo, ou `0x2`, o dereito), e sen ningún;
+- cada parte da roda, co *flag* `MOUSE_WHEELED` e o seu sentido;
+- o arrastre sen Maiús: o botón que baixa, o movemento co botón abaixo e o botón que sobe.
+
+O arrastre con Maiús non está: con Maiús, o rato é para meiga, que selecciona `meiga` e cópiao (decisión 8). A comprobación agarda a que haxa tantas liñas coma eventos esperados, e despois compáraas: un evento do arrastre con Maiús iría antes ca os do outro, e as liñas xa non coincidirían.
+
+```powershell
+    # 3. The input of a terminal, as the programs of WSL read it.
+    Start-Meiga 'Terminal' 'meiga-mouse-sgr'
+    Connect-Keyboard
+    $start = @(Get-Lines).Count
+    Send-Click 4 2
+    Wait-Input $start "`e[<0;5;3M`e[<0;5;3m" 'A click in SGR'
+```
+
+**A fase `Terminal`.** O programa pediu os clics en SGR, e un clic na columna 4 e na fila 2, contando desde 0, chega tal cal: `ESC [ < 0 ; 5 ; 3 M`, o botón esquerdo que baixa, e `ESC [ < 0 ; 5 ; 3 m`, o mesmo botón que sobe. Os informes contan as columnas e as filas desde 1 ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)).
+
+```powershell
+    # The left button goes down, and another window takes the mouse before
+    # it goes up. Then, a message box does: the button goes up while it is
+    # open. The Z goes after what meiga sends.
+    $start = @(Get-Lines).Count
+    Send-Messages @(
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON (Get-X 4) (Get-Y 2)
+        $WM_CAPTURECHANGED, 0, 0
+        Get-Mouse $WM_LBUTTONUP 0 (Get-X 6) (Get-Y 2)
+    )
+    Send-Key 'Z'
+    Wait-Input $start "`e[<0;5;3M`e[<0;5;3mz" 'A press, and another window that takes the mouse before the button goes up'
+    Set-Text "un`r`ndous"
+    $start = @(Get-Lines).Count
+    Send-Messages (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON (Get-X 4) (Get-Y 2))
+    Send-Key 'Ctrl+V'
+    Close-Dialog $IDCANCEL -Messages (Get-Mouse $WM_LBUTTONUP 0 (Get-X 6) (Get-Y 2))
+    Send-Key 'Z'
+    Wait-Input $start "`e[<0;5;3M`e[<0;5;3mz" 'A press, and a message box that opens before the button goes up'
+    Write-Host 'OK: if the window loses the mouse while a button is down, to another window or to a message box, the program gets the release then, once.'
+```
+
+**Cando a xanela perde o rato cun botón abaixo.** Un programa que recibiu a pulsación dun botón espera a súa soltura. A xanela segue o botón porque captura o rato cando baixa ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows), *A captura*), pero pode perdelo antes de que suba: se outra xanela o colle, e entón recibe `WM_CAPTURECHANGED`; ou se se abre unha caixa de mensaxe, porque, mentres está aberta, os eventos da xanela non chegan a meiga. Nos dous casos, meiga envíalle ao programa a soltura no momento, na última cela que lle enviou, e esquece o botón: cando suba de verdade, xa non envía nada ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
+
+- **Outra xanela.** A comprobación publica de vez a pulsación na columna 4, `WM_CAPTURECHANGED`, coma se outra xanela collese o rato, e a soltura na columna 6. O programa ten que ler a pulsación e a soltura na columna 4 (5, desde 1), unha vez, e nada da columna 6.
+- **A caixa de mensaxe.** O mesmo cunha caixa: co botón abaixo, Ctrl+V pregunta antes de pegar dúas liñas, porque o programa aínda non pediu o *bracketed paste*, e o botón sobe mentres a caixa está aberta (`-Messages`). Ao pechala con *Cancel*, meiga envía a soltura.
+- **O Z.** Despois de cada caso, a comprobación teclea un Z, que o programa le coma `z`. Vai despois do que envía meiga polas mensaxes do rato, así que unha soltura de máis, ou na columna 6, aparecería antes do `z`, e o texto non sería o esperado.
+
+```powershell
+    Send-Key 'X'
+    Wait-Title 'meiga-mouse-x10'
+    $start = @(Get-Lines).Count
+    Send-Click 4 2 -Button 'Right'
+    Wait-Input $start "`e[M`"%#`e[M#%#" 'A right click in the format of the first xterm'
+    Write-Host 'OK: a program that reads the input of a terminal gets the clicks in SGR, and in the format of the first xterm.'
+```
+
+**O formato do primeiro xterm.** Coa X, o programa desactiva SGR, e un clic co botón dereito na mesma cela chega coma `ESC [ M " % #` e `ESC [ M # % #`: o botón dereito, 2, e a soltura, 3, a columna, 5, e a fila, 3, cada un con 32 máis, coma un carácter ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). Dentro das comiñas dobres de PowerShell, `` `" `` son unhas comiñas.
+
+```powershell
+    Send-Key 'A'
+    Wait-Title 'meiga-mouse-alternate'
+    $lines = [uint32]0
+    $null = $api::SystemParametersInfoW($SPI_GETWHEELSCROLLLINES, 0, [ref]$lines, 0)
+    # A notch that scrolls a page: the rows of the screen.
+    if ($lines -eq $WHEEL_PAGESCROLL) { $lines = [uint32]$grid.Rows }
+    $start = @(Get-Lines).Count
+    Send-Wheel 4 2 1
+    Wait-Input $start ("`e[A" * $lines) "A notch of the wheel, which scrolls $lines lines"
+    Write-Host "OK: on the alternate screen, a program without the mouse gets $lines arrows for each notch of the wheel."
+```
+
+**A roda na pantalla alternativa.** Coa A, o programa desactiva o rato e activa a pantalla alternativa, coma `less`. Unha parte da roda adiante ten que chegar coma tantas frechas arriba (`ESC [ A`) coma liñas despraza a roda nas preferencias de Windows, que a comprobación le con `SystemParametersInfoW`: se a roda despraza unha pantalla de cada vez, as filas da grella (decisión 10). `` "`e[A" * $lines `` repite o texto `$lines` veces.
+
+```powershell
+    Send-Key 'B'
+    Wait-Title 'meiga-mouse-bracketed'
+    Set-Text "un`r`n`e[31mdous"
+    $start = @(Get-Lines).Count
+    Send-Key 'Ctrl+V'
+    Wait-Input $start "`e[200~un`r[31mdous`e[201~" 'Ctrl+V with bracketed paste'
+    Write-Host 'OK: with bracketed paste, Ctrl+V pastes more than one line without asking, between its marks and without its control characters.'
+    Stop-Meiga
+    $passed = $true
+```
+
+**O *bracketed paste*.** Coa B, o programa actívao. Con dúas liñas e un ESC no portapapeis, Ctrl+V pega sen preguntar: o programa le o texto entre `ESC [ 200 ~` e `ESC [ 201 ~`, co fin de liña en CR e sen o ESC, que podería pechar as marcas antes de tempo ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). Se meiga preguntase, a caixa quedaría aberta e o programa non lería nada. Despois do último `Stop-Meiga`, `$passed` di que todo foi ben.
+
+```powershell
+finally {
+    if ($attached) {
+        $null = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $false)
+    }
+    if ($process) {
+        if (-not $process.HasExited) {
+            $process.Kill()
+        }
+        $process.Dispose()
+    }
+    if ($null -ne $pointer) {
+        $null = $api::SetCursorPos($pointer.X, $pointer.Y)
+    }
+    $null = $api::SetThreadDpiAwarenessContext($previousDpi)
+    # The text that the clipboard had, or nothing.
+    for ($try = 0; $try -lt 20; $try++) {
+        $restored = if ($null -ne $saved) {
+            try { Set-Clipboard -Value $saved; (Get-Text) -ceq $saved } catch { $false }
+        }
+        else {
+            $api::ClearClipboard()
+        }
+        if ($restored) { break }
+        Start-Sleep -Milliseconds 50
+    }
+    Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    if ($passed) {
+        Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
+    }
+    elseif (Test-Path -LiteralPath $log) {
+        Write-Host "What the program read is in $log"
+    }
+}
+```
+
+- Pase o que pase, o fío do script deixa de compartir o estado das teclas, e meiga non queda aberto: se a comprobación fallou no medio dunha fase, remátao (`Kill`).
+- **O punteiro** volta a onde estaba, se a comprobación o moveu. Vai antes de que o fío volte á súa escala: o punto gardouse en píxeles da pantalla, coa escala por monitor.
+- **O portapapeis** volta ter o texto que tiña ou, se non tiña texto, queda baleiro. Outro programa pode telo aberto un intre, coma o historial do portapapeis, así que a comprobación téntao ata 20 veces, cada 50 ms. O que non era texto, coma unha imaxe, non o puido gardar `Get-Text`, e pérdese.
+- O script do terminal bórrase sempre. O rexistro bórrase se todo foi ben; se non, gárdase, e o script di onde está.
+
+A CI executa este script en cada PR, despois de `check-keyboard.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a xanela de meiga está en primeiro plano, así que comproba que un programa pode copiar ao portapapeis (OSC 52).
+
 ## `tools/terminal-sample.ps1`
 
 Desde a subfase 1.6. Escribe unha mostra do que ten que saber mostrar un terminal, para comprobala a ollo: as cores, os estilos e os caracteres que non son ASCII. Ata a 1.5, a demo de meiga mostraba un texto fixo; desde a 1.6, meiga só mostra o que escribe o seu programa, e esta mostra é o programa que ensina de vez todo o que debuxa. Tamén se pode executar noutro terminal, para comparar. Non comproba nada soa: hai que mirala.
@@ -1483,10 +2499,10 @@ A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso 
    }
    ```
 
-`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.7, con [`check-keyboard.ps1`](#toolscheck-keyboardps1), son 20:
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.8, con [`check-mouse.ps1`](#toolscheck-mouseps1), son 21:
 
 ```text
-OK: the 20 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+OK: the 21 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
 ```
 
 | Comprobación | Como |

@@ -21,10 +21,13 @@ windows-sys = { workspace = true, features = [
     # The pseudoconsole functions of kernel32: CreatePseudoConsole and
     # ClosePseudoConsole.
     "Win32_System_Console",
+    # The clipboard, and the global memory of its data.
+    "Win32_System_DataExchange",
     "Win32_System_IO",
     # The job of the programs of each pseudoconsole.
     "Win32_System_JobObjects",
     "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
     "Win32_System_Pipes",
     "Win32_System_Threading",
     "Win32_UI_HiDpi",

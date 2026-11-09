@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 1.7. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola, mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite, e envíalle as teclas coma unha consola de Windows. O que falta, como as tabs, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 1.8. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola, mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite, envíalle as teclas coma unha consola de Windows, e o rato selecciona, copia e pega texto ou chega ao programa. O que falta, como as tabs, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -84,6 +84,7 @@ sequenceDiagram
 | Fachada do terminal (parser e grella) | 1.5 (feita) |
 | Da saída á pantalla | 1.6 (feita) |
 | Teclado | 1.7 (feita) |
+| Rato, selección e portapapeis | 1.8 (feita) |
 | Varias sesións, unha por tab | 2.2 |
 
 ### Sesións: a shell, o ConPTY e os dous fíos
@@ -102,7 +103,7 @@ flowchart LR
 ```
 
 1. `Conpty::spawn` crea as dúas tubaxes, a pseudoconsola e un *job*, lanza o programa nela e dentro do *job*, e arranca os dous fíos da sesión. Devolve un `Pty` ([Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winsrcconptyrs)).
-2. `Input::write` deixa os bytes na entrada pendente e esperta o escritor, que os escribe na tubaxe de entrada. Nunca espera. `Input` pódese clonar e usar desde calquera fío: o `Pty` dá unha copia (`Pty::input`), coa que a vista do terminal envía as teclas desde a 1.7, e o lector recibe outra con cada bloque, para responder ao programa.
+2. `Input::write` deixa os bytes na entrada pendente e esperta o escritor, que os escribe na tubaxe de entrada. Nunca espera. `Input` pódese clonar e usar desde calquera fío: o `Pty` dá unha copia (`Pty::input`), coa que a vista do terminal envía as teclas desde a 1.7, e os informes do rato e o texto pegado desde a 1.8, e o lector recibe outra con cada bloque, para responder ao programa.
 3. O lector le a saída en bloques de ata 64 KiB e pásaos a un `Output`: en `meiga.exe`, o lector da sesión, que llos dá ao terminal.
 4. O escritor espera á vez a entrada e o fin do programa. Cando o programa remata, ou cando se destrúe o `Pty`, pecha a pseudoconsola: o ConPTY remata, a tubaxe de saída péchase, e o lector avisa do fin co código de saída do programa. Se pasan 10 s sen que remate ningún dos programas que tiña a sesión ao pechala, está bloqueada, e o escritor remata todos os do *job*: o programa e os que arrancou ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
 5. meiga usa o ConPTY que leva ao lado de `meiga.exe` (`conpty.dll` e `OpenConsole.exe`) ou, se non está, o de Windows ([ADR 0004](adr/0004-conpty-empaquetado.md)).
@@ -138,10 +139,11 @@ Desde a subfase 1.6, as pezas anteriores xúntanse ([ADR 0013](adr/0013-da-saida
 
 ```mermaid
 flowchart LR
-    reader["Fío lector<br/>Reader::received"] -- "feed (lock)" --> shared["Shared<br/>o terminal e tres marcas"]
+    reader["Fío lector<br/>Reader::received"] -- "feed (lock)" --> shared["Shared<br/>o terminal e catro marcas"]
     reader -- "respostas (Input)" --> program["Programa"]
     reader -- "WM_WAKE, só se<br/>non había outro" --> wake["App::wake<br/>(fío da interface)"]
     wake -- "o título" --> title["SetWindowTextW"]
+    wake -- "o texto do OSC 52" --> clip["Portapapeis<br/>co foco e en primeiro plano"]
     wake -- "a pantalla" --> frames["Frames::changed"]
     frames --> pacer{"Pasou o<br/>intervalo?"}
     pacer -- "si" --> frame["Fotograma"]
@@ -151,13 +153,13 @@ flowchart LR
     update --> draw["Compoñer esas celas<br/>e presentalas"]
 ```
 
-1. O fío lector dálle cada bloque ao terminal, baixo o *lock*, e envía as respostas fóra del. Se a pantalla ou o título cambiaron e a súa marca non estaba posta, póna e envía `WM_WAKE` á xanela con `PostMessageW` ([Tecnoloxías › Avisar á xanela](tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage)). Faino tamén cando o programa deixa aberta unha actualización sincronizada, se a xanela aínda non sabe cando remata. Nunca hai máis dun aviso pendente de cada tipo.
-2. A interface atende o aviso: se cambiou o título, quita a súa marca e pono na xanela ([Tecnoloxías › O título](tecnoloxias.md#39-o-foco-e-o-título-da-xanela)); se cambiou a pantalla, pide un fotograma, que o *pacer* fai no momento ou ao final do intervalo.
-3. O fotograma empeza poñendo ao día a vista do terminal ([Código › meiga › `view.rs`](codigo/meiga.md#cratesmeigasrcviewrs)): baixo o *lock*, copia o que cambiou e quita a marca da pantalla. As zonas que cambiaron son as celas cambiadas de cada fila; se cambiou a paleta, a xanela enteira, marxes incluídas.
-4. Despois compón esas zonas: o fondo, os glifos de cada tramo de celas co mesmo estilo, coa fonte normal, negra, cursiva ou negra cursiva, as liñas do subliñado e do riscado, e o cursor. E preséntaas.
+1. O fío lector dálle cada bloque ao terminal, baixo o *lock*, e envía as respostas fóra del. Se a pantalla, o título ou o portapapeis cambiaron e a súa marca non estaba posta, póna e envía `WM_WAKE` á xanela con `PostMessageW` ([Tecnoloxías › Avisar á xanela](tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage)). Faino tamén cando o programa deixa aberta unha actualización sincronizada, se a xanela aínda non sabe cando remata. Nunca hai máis dun aviso pendente de cada tipo.
+2. A interface atende o aviso: se cambiou o título, quita a súa marca e pono na xanela ([Tecnoloxías › O título](tecnoloxias.md#39-o-foco-e-o-título-da-xanela)); se o programa copiou texto (OSC 52), pono no portapapeis, só se a xanela ten o foco e está en primeiro plano ([O rato, a selección e o portapapeis](#o-rato-a-selección-e-o-portapapeis)); e se cambiou a pantalla, pide un fotograma, que o *pacer* fai no momento ou ao final do intervalo.
+3. O fotograma empeza poñendo ao día a vista do terminal ([Código › meiga › `view.rs`](codigo/meiga.md#cratesmeigasrcviewrs)): baixo o *lock*, copia o que cambiou e quita a marca da pantalla. As zonas que cambiaron son as celas cambiadas de cada fila; se cambiou a paleta, a xanela enteira, marxes incluídas. Desde a 1.8, a copia marca as celas seleccionadas, e copia tamén as filas onde cambiou a selección.
+4. Despois compón esas zonas: o fondo, coa cor da selección nas celas seleccionadas, os glifos de cada tramo de celas co mesmo estilo, coa fonte normal, negra, cursiva ou negra cursiva, as liñas do subliñado e do riscado, e o cursor. E preséntaas.
 5. A vista di tamén cando necesita outro fotograma aínda que non chegue saída: ao final dunha actualización sincronizada ou no seguinte cambio do pestanexo do cursor. O temporizador dos fotogramas vence entón. O cursor só pestanexa se a xanela ten o foco e Windows o permite, e para despois duns segundos sen actividade ([Tecnoloxías › O cursor](tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)): en repouso, non hai ningún temporizador.
 6. Coa xanela minimizada, a interface non copia nada: a marca da pantalla segue posta e a saída non a esperta máis. Só remata á súa hora as actualizacións sincronizadas que o programa deixa abertas, sen copiar nin debuxar nada (`update_hidden`), e o temporizador dos fotogramas queda só para iso: mentres unha está aberta, o terminal garda tamén as preguntas do programa, que esperaría a resposta ata que se restaurase a xanela. Ao restaurala, compón todo coa pantalla ao día.
-7. Cando o programa remata, o lector dálle ao terminal unha liña co código de saída e oculta o cursor; a xanela queda aberta ata que se pecha.
+7. Cando o programa remata, o lector dálle ao terminal unha liña co código de saída, desactiva o rato do programa e o *bracketed paste*, para que o rato volte seleccionar, e oculta o cursor; a xanela queda aberta ata que se pecha.
 
 A grella ten o tamaño da xanela ao arrancar, e as marxes que sobran pintan a cor do fondo: cambiará coa xanela na subfase 1.9.
 
@@ -186,6 +188,37 @@ flowchart LR
 4. `Input::write` deixa os bytes na entrada da sesión e esperta o fío escritor, sen esperar: a xanela nunca queda bloqueada porque o programa non le ([Sesións](#sesións-a-shell-o-conpty-e-os-dous-fíos)). A tecla non pide ningún fotograma: o que escriba o programa en resposta chega coma calquera saída ([Da saída á pantalla](#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma)).
 5. Cando a xanela gaña ou perde o foco, o programa recibe `ESC [ I` ou `ESC [ O`, se o pediu.
 6. O texto dun IME, do panel de emoji e do ditado de Windows chega coma caracteres sen tecla, e vai ao programa igual ([Tecnoloxías › O IME](tecnoloxias.md#43-o-ime-e-o-panel-de-emoji)).
+
+Desde a 1.8, a vista colle antes algunhas teclas para a selección e o portapapeis: Ctrl+C e Ctrl+Maiús+C, se hai selección; Ctrl+V e Ctrl+Maiús+V; e Esc, se hai selección ([O rato, a selección e o portapapeis](#o-rato-a-selección-e-o-portapapeis)). O resto vai ao programa, e as que baixan quitan a selección, salvo as modificadoras.
+
+### O rato, a selección e o portapapeis
+
+Desde a subfase 1.8, o rato selecciona texto, que vai ao portapapeis, ou chega ao programa, se o pediu ([ADR 0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)):
+
+```mermaid
+flowchart LR
+    win["Windows<br/>as mensaxes do rato"] --> ev["Xanela<br/>MouseDown, MouseUp,<br/>MouseMoved, Wheel"]
+    ev --> mouse["Rato da vista<br/>Mouse::event"]
+    mouse --> tracked{"O programa pediu<br/>o rato, sen Maiús?"}
+    tracked -- "si" --> report["Informe<br/>SGR, X10 ou UTF-8"]
+    tracked -- "non" --> sel["Selección<br/>na grella do terminal"]
+    sel -- "ao soltar" --> clip["Portapapeis<br/>CF_UNICODETEXT"]
+    sel --> frame["Fotograma<br/>só as celas que cambian"]
+    paste["Ctrl+V, Ctrl+Maiús+V<br/>e o botón dereito"] --> filter["Pegar<br/>o filtro e as marcas"]
+    clip --> filter
+    report --> input["Input::write<br/>(sen esperar)"]
+    filter --> input
+    input --> conpty["ConPTY"]
+```
+
+1. A xanela converte as mensaxes do rato en eventos, cos botóns e as teclas modificadoras, tamén Alt, e co punto da roda na área cliente ([Tecnoloxías › O rato en Windows](tecnoloxias.md#44-o-rato-en-windows)). Cando baixa o botón que selecciona, ou un que vai ao programa, a vista captura o rato, e sóltao cando sobe o último: así segue unha selección que se arrastra fóra da xanela. Se outra xanela colle o rato antes, a selección remata onde estaba, e o programa recibe entón a soltura dos botóns que premeu para el.
+2. O rato da vista ([Código › meiga › `mouse.rs`](codigo/meiga.md#cratesmeigasrcmousers)) mira os modos do terminal. Se o programa pediu o rato e Maiús non está premido, o clic vai a el coma un informe, no formato que pediu ([Código › meiga-core › `mouse.rs`](codigo/meiga-core.md#cratesmeiga-coresrcmousers)), e o ConPTY pásallo tal cal ou convérteo nun evento do rato da consola ([Tecnoloxías › O rato nos programas](tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). A roda tamén; ou, na pantalla alternativa, a un programa sen o rato, frechas.
+3. Se non, o botón esquerdo selecciona: un clic, celas; dous, palabras; tres, liñas. A selección vive na grella de `alacritty_terminal`, que a move co texto ([Código › meiga-core › `term/selection.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermselectionrs)). Cada movemento pide un fotograma, e a copia da vista marca as celas seleccionadas, que se debuxan co fondo da selección: só se debuxan as celas onde cambiou ([Da saída á pantalla](#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma)).
+4. Ao soltar o botón, o texto vai ao portapapeis de Windows ([Código › meiga-win › `clipboard.rs`](codigo/meiga-win.md#cratesmeiga-winsrcclipboardrs), [Tecnoloxías › O portapapeis](tecnoloxias.md#46-o-portapapeis-de-windows)). Ctrl+C e Ctrl+Maiús+C tamén o copian, e quitan a selección; sen ela, Ctrl+C vai ao programa.
+5. Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan: o texto do portapapeis pasa polo filtro e, se o programa pediu o *bracketed paste*, vai entre as súas marcas; se non o pediu e o texto ten varias liñas, meiga pregunta antes, nunha caixa de mensaxe ([Código › meiga › `clipboard.rs`](codigo/meiga.md#cratesmeigasrcclipboardrs), [Tecnoloxías › Pegar no terminal](tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). O texto vai á entrada da sesión, coma as teclas. Mentres a caixa está aberta, os eventos da xanela pérdense: ao pechala, a vista esquece as teclas que colleu e os botóns do rato, coma no punto 1.
+6. Cando un programa copia texto (OSC 52), o fío lector esperta a xanela, que o pon no portapapeis só se ten o foco e está en primeiro plano ([Tecnoloxías › O foco](tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
+
+O rato non engade ningún fío nin temporizador: en repouso, a xanela segue sen espertar.
 
 ### Fotogramas: do cambio á pantalla
 
@@ -263,7 +296,7 @@ Ningún cambio chega a `main` sen pasar por un PR e pola CI:
 ```mermaid
 flowchart LR
     rama["Rama da subfase"] --> pr["Pull request"]
-    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · ConPTY · test · release<br/>zip · DLL · xanela · presentación · teclado · arranque · fotogramas"]
+    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · ConPTY · test · release<br/>zip · DLL · xanela · presentación · teclado · rato · arranque · fotogramas"]
     pr --> scen["Load scenarios (bash)<br/>ShellCheck · escenarios en bash"]
     pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
     win --> art["Artefacto<br/>meiga-…-msvc.zip"]
@@ -297,6 +330,7 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0012](adr/0012-fachada-do-terminal.md) | A fachada do terminal: tipos propios, a copia do que cambia cela a cela, as respostas e o escáner de `?9001`. |
 | [0013](adr/0013-da-saida-a-pantalla.md) | Da saída á pantalla: un aviso pendente como moito, as respostas desde o fío lector, a paleta, os estilos e un cursor que só pestanexa se Windows o permite e por pouco tempo. |
 | [0014](adr/0014-o-teclado.md) | O teclado: eventos de tecla enteiros coma os da consola, nos que a tecla espera polo seu carácter; Alt+F4 e Alt+Espazo para Windows; o win32-input-mode e VT de reserva; e o IME, que se mantén. |
+| [0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis: a selección na grella, copiar ao seleccionar, as teclas e o botón dereito do Windows Terminal, o filtro ao pegar e a pregunta antes de pegar varias liñas, os informes do rato e OSC 52 só desde a xanela que se usa. |
 
 ## 8. Medición do rendemento
 
@@ -351,18 +385,19 @@ O código explícase en [Código › escenarios de carga](codigo/escenarios.md).
 
 ## 9. Estado actual
 
-Despois da subfase 1.7:
+Despois da subfase 1.8:
 
-- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal, as comiñas da liña de comandos e as teclas, coma eventos e coma o que le o programa; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, o teclado da xanela, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor de Windows e as sesións de ConPTY.
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal, coa selección, as comiñas da liña de comandos, as teclas, coma eventos e coma o que le o programa, os informes do rato e o texto que se pega; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, tamén os do rato, o teclado da xanela, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor e do rato de Windows, o portapapeis, a caixa de mensaxe que pregunta e as sesións de ConPTY.
 - `meiga.exe` é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell 7 (`pwsh`) ou, se non está instalado, Windows PowerShell, e mostra a súa saída: as cores (16, 256 e *truecolor*), a negra, a cursiva, o texto tenue, inverso e oculto, cinco subliñados e o riscado, os caracteres anchos e un cursor en forma de barra, que só pestanexa se a xanela ten o foco e Windows o permite, e para despois duns segundos sen actividade. A xanela leva o título que pon o programa. Responde ao programa, tamén ás preguntas polas cores e polo tamaño en píxeles, e aplica os cambios da paleta. Cando o programa remata, mostra o seu código de saída, e a xanela queda aberta ata que se pecha. A grella ten o tamaño da xanela ao arrancar (1.9).
-- Pódese escribir nel coma nunha consola de Windows: as teclas chegan ao programa coma eventos enteiros, co teclado español e galego, AltGr e as teclas mortas, e o PSReadLine distingue Maiús+Intro de Intro. Alt+F4 pecha a xanela e Alt+Espazo abre o seu menú. O panel de emoji e o ditado de Windows tamén escriben nel. O rato aínda non chega ao programa (1.8).
+- Pódese escribir nel coma nunha consola de Windows: as teclas chegan ao programa coma eventos enteiros, co teclado español e galego, AltGr e as teclas mortas, e o PSReadLine distingue Maiús+Intro de Intro. Alt+F4 pecha a xanela e Alt+Espazo abre o seu menú. O panel de emoji e o ditado de Windows tamén escriben nel.
+- O rato selecciona texto, cun clic, dous ou tres, que vai ao portapapeis ao soltar o botón. Ctrl+C e Ctrl+Maiús+C copian; Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan, sen caracteres de control e, se o texto ten varias liñas e o programa non pediu o *bracketed paste*, despois de preguntar. Os programas que piden o rato reciben os seus informes, coma vim e htop en WSL, ou os seus eventos, coma os da consola de Windows; con Maiús, o rato selecciona igual. Un programa só pode copiar ao portapapeis (OSC 52) desde a xanela que se está a usar.
 - Cada fotograma presenta só as celas que cambian, que se poden ver cun bordo magenta (coa opción `--marks`). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e os seus tres fíos dormen, tamén coa xanela enfocada. Ao pechala, meiga remata co código 0, e o programa da sesión tamén.
 - Ten tres modos de medición, `--bench partial`, `--bench full` e `--bench text`, e un rexistro dos fotogramas, `--trace-frames`.
 - `meiga-win` usa o ConPTY do Windows Terminal que vai no paquete ou, se non está, o de Windows. As probas lanzan programas de verdade cos dous, e un exemplo de consola mostra o que escribe calquera programa e grávao. O terminal de `meiga-core` usa `alacritty_terminal` detrás dunha fachada; as súas probas usan saída gravada do ConPTY, e outro exemplo de consola mide a que velocidade le unha gravación.
-- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 475 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que as teclas chegan ao programa co teclado español e co estadounidense, que remata ben, e que o programa remata con ela.
+- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 509 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que as teclas chegan ao programa co teclado español e co estadounidense, que o rato selecciona, copia e pega e chega aos programas, que remata ben, e que o programa remata con ela.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). As dependencias externas son `windows-sys`, `windows` e `windows-core`, de Microsoft, `unicode-width`, `alacritty_terminal`, co seu parser, `vte`, e `memchr`.
 - Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe` e o ConPTY (`conpty.dll` e `OpenConsole.exe`). `tools/fetch-conpty.ps1` descarga o ConPTY do seu paquete NuGet, cunha versión e un SHA-256 fixados, e comproba que está asinado por Microsoft; cada luns, a CI avisa se hai unha versión nova.
-- As decisións de arquitectura están escritas en catorce ADR.
+- As decisións de arquitectura están escritas en quince ADR.
 - O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, coa súa sesión, e `measure-frames.ps1`, canto custan os seus fotogramas: parciais, completos e completos de texto.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis. Con `-Start`, arranca el mesmo meiga co escenario como programa.
 - Os scripts de `tools/` necesitan PowerShell 7. En Windows PowerShell 5.1 non se executan: só mostran o comando para facelo con `pwsh`.

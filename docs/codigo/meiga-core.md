@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 1.7. Contén as cores e a paleta, a xeometría (puntos, tamaños e rectángulos, e o tamaño da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas e a súa paleta, o escáner previo e as gravacións.
+> Estado: subfase 1.8. Contén as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta e a selección, o escáner previo e as gravacións.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -8,15 +8,18 @@
 |---|---|
 | [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr` e `unicode-width`. |
 | [`src/lib.rs`](#cratesmeiga-coresrclibrs) | A raíz do crate: os módulos. |
-| [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores, e `Palette`, as cores dun terminal: as 16 do esquema *Campbell* e as 256 do xterm. |
-| [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; e `GridSize`, o tamaño da grella en celas. |
+| [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores, e `Palette`, as cores dun terminal: as 16 do esquema *Campbell*, as 256 do xterm e a da selección. |
+| [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; `GridSize`, o tamaño da grella en celas; e `GridPoint`, unha cela da grella. |
 | [`src/damage.rs`](#cratesmeiga-coresrcdamagers) | `Damage`: as zonas da xanela que cambiaron desde o último fotograma. |
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
 | [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella. |
 | [`src/shell.rs`](#cratesmeiga-coresrcshellrs) | `command_line`: a liña de comandos dun programa cos seus argumentos, entre comiñas segundo as regras de Windows. |
 | [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
-| [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, e a copia do que cambia. |
+| [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
+| [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
+| [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, e a copia do que cambia, coas celas seleccionadas. |
 | [`src/term/screen.rs`](#cratesmeiga-coresrctermscreenrs) | `Screen`: o que mostra o terminal, en tipos de meiga, coa súa paleta, e as celas que cambiaron. |
+| [`src/term/selection.rs`](#cratesmeiga-coresrctermselectionrs) | A selección: creala, movela e quitala, o seu texto, e as súas celas, na grella de `alacritty_terminal`. |
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
@@ -75,7 +78,9 @@ pub mod color;
 pub mod damage;
 pub mod geometry;
 pub mod input;
+pub mod mouse;
 pub mod pacing;
+pub mod paste;
 pub mod shell;
 pub mod term;
 pub mod text;
@@ -84,12 +89,12 @@ pub mod text;
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, e `input`, na 1.7. `term`, desde a 1.5, ten submódulos, así que vai nun cartafol: o módulo está en `src/term/mod.rs`.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, e `mouse` e `paste`, na 1.8. `term`, desde a 1.5, ten submódulos, así que vai nun cartafol: o módulo está en `src/term/mod.rs`.
 - As dependencias, como `alacritty_terminal`, poden ter `unsafe` dentro: `forbid` só se aplica ao código deste crate.
 
 ## `crates/meiga-core/src/color.rs`
 
-As cores e, desde a subfase 1.6, a paleta dun terminal: a cor coa que se debuxa cada número das celas ([ADR 0013](../adr/0013-da-saida-a-pantalla.md), [Tecnoloxías › A paleta e os estilos](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)).
+As cores e, desde a subfase 1.6, a paleta dun terminal: a cor coa que se debuxa cada número das celas ([ADR 0013](../adr/0013-da-saida-a-pantalla.md), [Tecnoloxías › A paleta e os estilos](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)). Desde a 1.8, a paleta ten tamén a cor da selección ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
 
 ### `Rgb`
 
@@ -156,10 +161,12 @@ pub const CAMPBELL: [Rgb; 16] = [
 
 pub const FOREGROUND: Rgb = Rgb::new(0xd4, 0xd7, 0xdd);
 pub const BACKGROUND: Rgb = Rgb::new(0x16, 0x18, 0x1d);
+pub const SELECTION: Rgb = Rgb::new(0x26, 0x4f, 0x78);
 ```
 
 - **`CAMPBELL`**: as 16 cores do esquema *Campbell*, o que usan por defecto o Windows Terminal e a consola de Windows desde Windows 10: negro, vermello, verde, amarelo, azul, magenta, cian e branco, e as súas versións brillantes, na orde das secuencias de cor (`30`–`37` e `90`–`97`). Os valores, nunha táboa, en [Tecnoloxías › A paleta](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas).
 - **`FOREGROUND`** e **`BACKGROUND`**: o texto e o fondo de meiga, `#D4D7DD` e `#16181D`, en vez dos de *Campbell*. Antes estaban na demo de `meiga.exe`, que desaparece na subfase 1.6: agora viven xunto coa paleta, e os modos de medición (`--bench`) tamén as usan.
+- **`SELECTION`**, desde a subfase 1.8: o fondo das celas seleccionadas, `#264F78`, o do tema escuro do Visual Studio Code. O texto mantén a súa cor ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
 
 ```rust
 const CUBE_LEVELS: [u8; 6] = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff];
@@ -170,6 +177,7 @@ pub struct Palette {
     pub foreground: Rgb,
     pub background: Rgb,
     pub cursor: Rgb,
+    pub selection: Rgb,
 }
 ```
 
@@ -180,15 +188,23 @@ pub struct Palette {
 | `colors` | As 256 cores que os programas escollen polo seu número: 0–15 as que teñen nome, 16–231 un cubo de 6 × 6 × 6 e 232–255 grises, de escuro a claro. |
 | `foreground`, `background` | O texto e o fondo cando o programa non escolle ningunha cor (`Color::Default`). |
 | `cursor` | A cor do cursor. |
+| `selection` | Desde a subfase 1.8: o fondo das celas seleccionadas. Os programas non a poden cambiar: non ten número nas secuencias, e o terminal cóllea do tema tal cal ([A paleta](#a-paleta-o-tema-e-os-cambios-do-programa)). |
 
 - Os campos son públicos, como os de `Rgb`: calquera combinación é unha paleta válida.
-- Deriva `Clone`, `Debug`, `PartialEq` e `Eq`, pero non `Copy`, ao contrario ca `Rgb`: son 777 bytes, e así cada copia vese no código, cun `clone`.
+- Deriva `Clone`, `Debug`, `PartialEq` e `Eq`, pero non `Copy`, ao contrario ca `Rgb`: son 780 bytes, e así cada copia vese no código, cun `clone`.
 
 ```rust
 impl Palette {
-    pub const MEIGA: Palette = Palette::new(CAMPBELL, FOREGROUND, BACKGROUND, FOREGROUND);
+    pub const MEIGA: Palette =
+        Palette::new(CAMPBELL, FOREGROUND, BACKGROUND, FOREGROUND, SELECTION);
 
-    pub const fn new(named: [Rgb; 16], foreground: Rgb, background: Rgb, cursor: Rgb) -> Self {
+    pub const fn new(
+        named: [Rgb; 16],
+        foreground: Rgb,
+        background: Rgb,
+        cursor: Rgb,
+        selection: Rgb,
+    ) -> Self {
         let mut colors = [Rgb::new(0, 0, 0); 256];
         let mut index = 0;
         while index < 256 {
@@ -215,29 +231,30 @@ impl Palette {
             foreground,
             background,
             cursor,
+            selection,
         }
     }
 }
 ```
 
-**`new`** crea a paleta do xterm coas 16 cores `named`: as outras 240 son as mesmas en todos os terminais ([Tecnoloxías › A paleta](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)).
+**`new`** crea a paleta do xterm coas 16 cores `named`: as outras 240 son as mesmas en todos os terminais ([Tecnoloxías › A paleta](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)). O texto, o fondo, o cursor e, desde a subfase 1.8, a selección van tal cal.
 
 - **O cubo**, da 16 á 231: `cube = index − 16`, e os seus tres díxitos en base 6 son o vermello (`cube / 36`), o verde (`cube / 6 % 6`) e o azul (`cube % 6`), así que a cor `16 + 36 r + 6 g + b` ten as compoñentes `r`, `g` e `b`. Cada díxito escolle un nivel de `CUBE_LEVELS`: 0 e, desde `0x5f`, en pasos de `0x28` (40) ata `0xff`. Por exemplo, a 67 é 16 + 36 × 1 + 6 × 2 + 3: `(0x5f, 0x87, 0xaf)`.
 - **Os grises**, da 232 á 255: `8 + 10 i`, de 8 a 238. O negro e o branco xa están no cubo, na 16 e na 231. O comentario lembra por que o `as u8` non corta nada: o maior é 238.
 - **Por que `const fn`.** Así `MEIGA` é unha constante, que o compilador calcula mentres compila: as 256 cores van no programa como datos, e crear un terminal ou unha pantalla só as copia. `Screen::new`, que tamén é `const`, só pode usar unha paleta constante ([`screen.rs`](#cratesmeiga-coresrctermscreenrs)). Nunha `const fn` non se pode usar `for`, que chama os métodos do trait `Iterator`: por iso o bucle é un `while` cun índice.
-- **`MEIGA`** son as cores de meiga ata que haxa temas (subfase 8.3): as 16 de *Campbell*, o texto e o fondo de meiga, e o cursor da cor do texto ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+- **`MEIGA`** son as cores de meiga ata que haxa temas (subfase 8.3): as 16 de *Campbell*, o texto e o fondo de meiga, o cursor da cor do texto ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)) e, desde a 1.8, o fondo da selección, `SELECTION` ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
 - **`Default`** dá `MEIGA`: así os tipos que levan unha paleta, como `Screen`, poden derivar `Default`.
 
 **Probas.** Dúas:
 
 | Proba | Que comproba |
 |---|---|
-| `the_palette_has_the_256_colours_of_xterm` | As 16 primeiras cores son as de *Campbell*; as esquinas do cubo (a 16, negra, e a 231, branca) e unha cor de dentro (a 67); o primeiro e o último gris (8 e 238); o texto, o fondo e o cursor de `MEIGA`; e que `Default` é `MEIGA`. |
+| `the_palette_has_the_256_colours_of_xterm` | As 16 primeiras cores son as de *Campbell*; as esquinas do cubo (a 16, negra, e a 231, branca) e unha cor de dentro (a 67); o primeiro e o último gris (8 e 238); o texto, o fondo, o cursor e, desde a subfase 1.8, a selección de `MEIGA`; e que `Default` é `MEIGA`. |
 | `mixing_goes_from_one_colour_to_the_other` | Con 0 e con 255, as dúas cores; con 85, do negro ao branco, o gris 85, e do branco ao negro, o 170; e con 128, case a metade, redondea ao máis próximo: o verde, de 200 a 100, dá 150 (149,8), e non 149. |
 
 ## `crates/meiga-core/src/geometry.rs`
 
-Puntos, tamaños e rectángulos en píxeles: os tipos cos que todos os crates falan de posicións na xanela. Desde a subfase 1.4, tamén o tamaño da grella, en celas ([`GridSize`](#gridsize)).
+Puntos, tamaños e rectángulos en píxeles: os tipos cos que todos os crates falan de posicións na xanela. Desde a subfase 1.4, tamén o tamaño da grella, en celas ([`GridSize`](#gridsize)), e desde a 1.8, unha cela da grella ([`GridPoint`](#gridpoint)).
 
 ```rust
 pub struct Point {
@@ -317,6 +334,30 @@ Desde a subfase 1.4: o tamaño da grella do terminal, en celas, non en píxeles.
 
 - `u16`: ningunha grella chega a 65 535 columnas ou filas. Cada uso comproba o seu propio límite: o ConPTY, por exemplo, recibe as medidas nun `COORD`, de 16 bits con signo, así que acepta como moito 32 767, e polo menos 1.
 - Deriva o mesmo ca os outros tipos do módulo, e os campos son públicos: calquera par de números é un tamaño, e quen o usa decide se lle serve.
+
+### `GridPoint`
+
+```rust
+/// A cell of the terminal grid: its column and its row, from the top-left
+/// cell, which is (0, 0).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct GridPoint {
+    pub column: u16,
+    pub row: u16,
+}
+
+impl GridPoint {
+    pub const fn new(column: u16, row: u16) -> Self {
+        Self { column, row }
+    }
+}
+```
+
+Desde a subfase 1.8: unha cela da grella do terminal, en celas e non en píxeles, coma `GridSize`. É a cela debaixo do punteiro do rato ([`cell_at`](#cratesmeiga-coresrcmousers)), a que levan os informes para os programas que piden o rato, e onde empeza e remata unha selección ([`select`](#cratesmeiga-coresrctermselectionrs)).
+
+- A columna e a fila contan desde 0, na esquina superior esquerda. Os informes do rato contan desde 1: a conversión faise ao escribilos.
+- A columna vai primeiro, coma o `x` de `Point` e as columnas de `GridSize`.
+- `u16`, coma `GridSize`, e deriva o mesmo. Calquera par de números é unha cela: os métodos da selección aceptan tamén as de fóra da grella, e usan a máis próxima.
 
 ## `crates/meiga-core/src/damage.rs`
 
@@ -682,7 +723,7 @@ Unha tecla que baixou ou subiu, coma a describe Windows:
 | `controls` | As teclas modificadoras e de bloqueo. |
 | `repeat` | Cantas veces baixou: máis dunha se o teclado a repetiu máis rápido do que a xanela a colleu. |
 
-É `Copy`, de 12 bytes: vai por valor no evento da xanela, `Event::Key` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)).
+É `Copy`, de 12 bytes: vai por valor no evento da xanela, `Event::Key` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)). Desde a subfase 1.8, a roda do rato tamén crea eventos de tecla: as frechas, na pantalla alternativa ([`arrow_keys`](#cratesmeiga-coresrcmousers)).
 
 ### `KeyEncoder`
 
@@ -960,7 +1001,7 @@ fn control_code(key: u16) -> Option<u8> {
     })
 }
 
-fn push_decimal(out: &mut Vec<u8>, value: u16) {
+pub(crate) fn push_decimal(out: &mut Vec<u8>, value: u16) {
     let mut digits = [0; 5];
     let mut start = digits.len();
     let mut rest = value;
@@ -977,7 +1018,7 @@ fn push_decimal(out: &mut Vec<u8>, value: u16) {
 ```
 
 - **`control_code`** dá o código de control de Ctrl cunha tecla que non o ten en Windows: Ctrl+Espazo e Ctrl+2, `NUL`; Ctrl+3 a Ctrl+7, de `ESC` a `US` (son Ctrl+[, \, ], ^ e _ no teclado estadounidense); Ctrl+8, `DEL`; e Ctrl+A–Z, do 1 ao 26, para cando a distribución non dá ningún, coma con Ctrl+Alt.
-- **`push_decimal`** escribe as cifras de atrás cara a diante nun *array* de 5, as que ten como moito un `u16`, sen `format!`, que reservaría un texto.
+- **`push_decimal`** escribe as cifras de atrás cara a diante nun *array* de 5, as que ten como moito un `u16`, sen `format!`, que reservaría un texto. Desde a subfase 1.8 é `pub(crate)`, visíbel en todo o crate pero non fóra del: tamén escribe os números dos informes do rato en SGR ([`mouse.rs`](#cratesmeiga-coresrcmousers)).
 - O módulo **`vk`** ten os códigos de tecla virtual que a codificación VT trata á parte, e `F5_TO_F12`, os números das teclas de función, que saltan algúns por razóns históricas. `meiga-core` non depende de `windows-sys`, así que define os seus.
 
 ```rust
@@ -1019,20 +1060,475 @@ fn push_utf8(out: &mut Vec<u8>, character: char) {
 | `vt_repeats_the_keys_that_repeated` | Unha tecla repetida tres veces envía tres veces o seu, tamén unha frecha; con 0 repeticións, unha. |
 | `focus_events_only_go_if_the_program_asks_for_them` | `ESC [ I` e `ESC [ O` co modo, e nada sen el. |
 
+## `crates/meiga-core/src/mouse.rs`
+
+Desde a subfase 1.8: o rato, coma o conta meiga e coma o recibe un programa que o pide ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). A xanela dá os eventos do rato en píxeles, cos botóns e as teclas modificadoras ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)), e o rato da vista decide se seleccionan texto ou van ao programa ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)). Este módulo ten o que non depende de Windows: a cela debaixo do punteiro, os clics seguidos, as partes da roda e os informes, no formato que pediu o programa. Coma `input.rs`, só traballa con números e bytes: as súas probas non necesitan ningún rato.
+
+**Os informes e o ConPTY.** Un programa pide os clics (`?1000`), tamén os movementos cun botón premido (`?1002`) ou todos os movementos (`?1003`), e o formato dos informes: o do primeiro xterm, o mesmo en UTF-8 (`?1005`) ou SGR (`?1006`) ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). O ConPTY pásalles os informes tal cal aos programas que len a entrada coma un terminal, coma os de WSL: por iso meiga os escribe no formato que pediu o programa. Para os programas da consola de Windows, o ConPTY pide el mesmo SGR, e converte os informes en eventos do rato de Windows.
+
+```rust
+pub const WHEEL_DELTA: i32 = 120;
+
+const MAX_X10: u16 = 127 - 33;
+
+const MAX_UTF8: u16 = 0x7ff - 33;
+```
+
+- **`WHEEL_DELTA`**: o xiro que Windows conta coma unha parte enteira (*notch*) da roda: 120. As mensaxes da roda dan o xiro en 120 avos dunha parte. Úsao [`WheelTurns`](#a-roda-wheelturns-e-arrow_keys).
+- **`MAX_X10`** e **`MAX_UTF8`**: a columna e a fila máis grandes, desde 0, que caben nun informe no formato do primeiro xterm e no de UTF-8 ([`report`](#os-informes-report)).
+
+### `Button`, `Modifiers`, `Wheel` e `MouseAction`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Button {
+    Left,
+    Middle,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Modifiers {
+    pub shift: bool,
+    pub alt: bool,
+    pub ctrl: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Wheel {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MouseAction {
+    Press(Button),
+    Release(Button),
+    Move(Option<Button>),
+    Wheel(Wheel),
+}
+```
+
+| Tipo | Que é |
+|---|---|
+| `Button` | Un dos tres botóns: o esquerdo, o do medio e o dereito. |
+| `Modifiers` | As teclas modificadoras que estaban premidas co evento: Maiús, Alt e Ctrl, sen distinguir a esquerda da dereita, porque os informes non o fan. As mensaxes do rato de Windows levan Maiús e Ctrl, e a xanela engade Alt ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)). |
+| `Wheel` | Cara a onde vai unha parte da roda: adiante é `Up`, e a inclinación cara á dereita, `Right`. |
+| `MouseAction` | O que fixo o rato, coma o recibe un programa: premer ou soltar un botón, moverse a outra cela, cun botón premido ou sen ningún (`Move(None)`), ou xirar a roda unha parte. |
+
+- `Button` e `Modifiers` están en `meiga-core`, e non en `meiga-win`, porque tamén os levan os eventos da xanela (`Event::MouseDown`, `MouseUp`, `MouseMoved` e `Wheel`): a xanela e os informes falan dos mesmos botóns, sen conversións.
+- Todos son `Copy`: uns poucos bytes, que van por valor.
+
+### Que pediu o programa: `is_tracked` e `wants`
+
+```rust
+pub const fn is_tracked(modes: &Modes) -> bool {
+    modes.mouse_clicks || modes.mouse_drag || modes.mouse_motion
+}
+
+pub const fn wants(action: MouseAction, modes: &Modes) -> bool {
+    match action {
+        MouseAction::Press(_) | MouseAction::Release(_) | MouseAction::Wheel(_) => {
+            is_tracked(modes)
+        }
+        MouseAction::Move(Some(_)) => modes.mouse_drag || modes.mouse_motion,
+        MouseAction::Move(None) => modes.mouse_motion,
+    }
+}
+```
+
+- **`is_tracked`** di se o programa pediu o rato, con calquera dos tres modos de [`Modes`](#changes-e-modes): `mouse_clicks` (`?1000`), `mouse_drag` (`?1002`) ou `mouse_motion` (`?1003`). Mentres tanto, os clics van ao programa en vez de seleccionar texto, salvo con Maiús, e o punteiro é a frecha.
+- **`wants`** di se o programa pediu `action`: os clics, as solturas e a roda, con calquera dos tres; os movementos cun botón premido, con `?1002` ou `?1003`; e os movementos sen ningún, só con `?1003`. `alacritty_terminal` só deixa activo un dos tres, o último que se pediu: `?1003` non activa tamén `mouse_drag`, e por iso os movementos cun botón miran os dous.
+
+### Os informes: `report`
+
+```rust
+pub fn report(
+    action: MouseAction,
+    at: GridPoint,
+    modifiers: Modifiers,
+    modes: &Modes,
+    out: &mut Vec<u8>,
+) -> bool {
+    if !wants(action, modes) {
+        return false;
+    }
+    let button = |button: Button| match button {
+        Button::Left => 0,
+        Button::Middle => 1,
+        Button::Right => 2,
+    };
+    let mut code: u8 = match action {
+        MouseAction::Press(pressed) => button(pressed),
+        // Without SGR, a release does not say which button it was.
+        MouseAction::Release(released) if modes.sgr_mouse => button(released),
+        MouseAction::Release(_) => 3,
+        MouseAction::Move(down) => 32 + down.map_or(3, button),
+        MouseAction::Wheel(Wheel::Up) => 64,
+        MouseAction::Wheel(Wheel::Down) => 65,
+        MouseAction::Wheel(Wheel::Left) => 66,
+        MouseAction::Wheel(Wheel::Right) => 67,
+    };
+    for (down, value) in [
+        (modifiers.shift, 4),
+        (modifiers.alt, 8),
+        (modifiers.ctrl, 16),
+    ] {
+        if down {
+            code += value;
+        }
+    }
+    if modes.sgr_mouse {
+        out.extend_from_slice(b"\x1b[<");
+        push_decimal(out, u16::from(code));
+        out.push(b';');
+        push_decimal(out, at.column.saturating_add(1));
+        out.push(b';');
+        push_decimal(out, at.row.saturating_add(1));
+        out.push(if matches!(action, MouseAction::Release(_)) {
+            b'm'
+        } else {
+            b'M'
+        });
+        return true;
+    }
+    let max = if modes.utf8_mouse { MAX_UTF8 } else { MAX_X10 };
+    if at.column > max || at.row > max {
+        return false;
+    }
+    out.extend_from_slice(b"\x1b[M");
+    // At most 67 + 4 + 8 + 16 + 32 = 127: it is always one byte.
+    out.push(32 + code);
+    for value in [at.column, at.row] {
+        let value = u32::from(value) + 33;
+        match char::from_u32(value) {
+            Some(character) if value >= 0x80 => {
+                let mut utf8 = [0; 4];
+                out.extend_from_slice(character.encode_utf8(&mut utf8).as_bytes());
+            }
+            // Up to 127, the byte, in both formats.
+            _ => out.push(value as u8),
+        }
+    }
+    true
+}
+```
+
+**`report`** engade a `out` o informe de `action` na cela `at`, coas teclas `modifiers`, no formato que pediu o programa, e di se o engadiu: non o fai se o programa non pediu `action`, nin se a cela non cabe no formato.
+
+1. **O número** do que fixo o rato, o mesmo nos tres formatos ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)): premer o botón esquerdo, o do medio ou o dereito, 0, 1 e 2; soltalo, o botón en SGR, e 3 nos outros formatos, que non din cal; moverse, 32 máis o botón, ou 35 sen ningún (`map_or(3, button)`); e a roda, de 64 a 67. Maiús suma 4, Alt 8 e Ctrl 16.
+2. **En SGR**: `ESC [ < número ; columna ; fila M`, en decimal, coa columna e a fila desde 1, e `m` en vez de `M` ao soltar. Non ten límite: `saturating_add` só evita desbordar na columna ou na fila 65 535.
+3. **Nos outros dous formatos**: `ESC [ M` e tres valores, cada un con 32 máis, para que non sexan caracteres de control: o número, a columna e a fila. A columna e a fila contan desde 1, así que levan 33 máis ca a cela. Ata 127, cada valor é un byte; desde 128, só no formato de UTF-8, un carácter en UTF-8, de dous bytes.
+
+- **Os límites.** O primeiro xterm escribía cada valor nun byte, ata 255: a columna 223. Pero o ConPTY le a entrada coma UTF-8, e un byte solto desde 128 chegaría ao programa coma outro carácter. Así que, nese formato, meiga só escribe os valores ata 127: `MAX_X10`, 127 − 33 = 94, as 95 primeiras columnas e filas. No de UTF-8, os caracteres de ata dous bytes chegan ata `0x7FF`: `MAX_UTF8`, 0x7FF − 33 = 2 014, as 2 015 primeiras. Fóra delas, o informe non se envía ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+- **O número sempre é un byte**: como moito 67 da roda, máis 28 das tres modificadoras, máis 32, 127. Por iso `code` é un `u8`, e `32 + code` nunca desborda.
+- `Some(character) if value >= 0x80` é un brazo de `match` cunha garda: só os valores desde 128 van en UTF-8, e o resto, tal cal (`value as u8`, que xa cabe). Ningún valor chega ás metades de UTF-16 (`0xD800`–`0xDFFF`), que non son caracteres: `char::from_u32` sempre dá `Some`.
+- Os números de SGR escríbeos [`push_decimal`](#os-axudantes-das-secuencias), de `input.rs`, sen reservar memoria. Quen chama reutiliza `out`, e envía cada informe nunha escritura, porque o ConPTY le cada escritura enteira ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
+
+### A cela debaixo do punteiro: `cell_at`
+
+```rust
+pub fn cell_at(at: Point, cell: Size, grid: GridSize) -> (GridPoint, Side) {
+    let width = i64::from(cell.width.max(1));
+    let height = i64::from(cell.height.max(1));
+    let (x, y) = (i64::from(at.x), i64::from(at.y));
+    let column = (x.max(0) / width).min(i64::from(grid.columns.max(1)) - 1);
+    let row = (y.max(0) / height).min(i64::from(grid.rows.max(1)) - 1);
+    let side = if x >= width * i64::from(grid.columns) || x.max(0) % width > width / 2 {
+        Side::Right
+    } else {
+        Side::Left
+    };
+    // Both are below the columns and the rows of the grid.
+    (GridPoint::new(column as u16, row as u16), side)
+}
+```
+
+**`cell_at`** dá a cela dunha grella de `grid` celas de `cell` píxeles que está debaixo do punto `at`, en píxeles desde a esquina superior esquerda da grella, e o lado da cela onde está ([`Side`](#word_delimiters-selectionkind-e-side)).
+
+- **A cela**: a columna é `x` entre o ancho da cela, e a fila, `y` entre o alto. Un punto fóra da grella dá a cela máis próxima (`max(0)` e `min`): unha selección que se arrastra fóra da xanela chega ata o bordo.
+- **O lado**: a metade esquerda chega ata a metade da cela, incluída; cunha cela de 10 píxeles, do 0 ao 5. Á dereita da grella, o lado dereito da última columna: unha selección arrastrada alén do final da fila colle a súa última cela.
+- As contas fanse en `i64`, onde caben unha coordenada `i32`, un tamaño `u32` e o seu produto. `max(1)` evita dividir entre 0 mentres non se sabe o tamaño da cela, e que unha grella sen columnas ou sen filas dea −1. Despois de `min`, a columna e a fila caben nun `u16`: o `as u16` non corta nada.
+
+### Os clics seguidos: `ClickSettings` e `Clicks`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ClickSettings {
+    pub time: Duration,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Default for ClickSettings {
+    fn default() -> Self {
+        Self {
+            time: Duration::from_millis(500),
+            width: 4,
+            height: 4,
+        }
+    }
+}
+```
+
+**`ClickSettings`**: cando toma Windows dous clics por un dobre clic: o tempo do dobre clic (`GetDoubleClickTime`) e o tamaño do rectángulo arredor do primeiro clic onde ten que caer o segundo (`SM_CXDOUBLECLK` e `SM_CYDOUBLECLK`). Os valores por defecto son os de Windows: 500 ms e 4 × 4 píxeles. meiga le os de Windows ao arrancar, e outra vez cada vez que a xanela recupera o foco, porque poden cambiar mentres corre ([Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs), [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)).
+
+```rust
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Clicks {
+    last: Option<LastClick>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct LastClick {
+    button: Button,
+    at: Point,
+    when: Instant,
+    count: u8,
+}
+
+impl Clicks {
+    …
+    pub fn press(
+        &mut self,
+        button: Button,
+        at: Point,
+        now: Instant,
+        settings: &ClickSettings,
+    ) -> u8 {
+        let count = match self.last {
+            Some(last)
+                if last.button == button
+                    && now.saturating_duration_since(last.when) <= settings.time
+                    && at.x.abs_diff(last.at.x) <= settings.width / 2
+                    && at.y.abs_diff(last.at.y) <= settings.height / 2 =>
+            {
+                last.count % 3 + 1
+            }
+            _ => 1,
+        };
+        self.last = Some(LastClick {
+            button,
+            at,
+            when: now,
+            count,
+        });
+        count
+    }
+
+    pub fn reset(&mut self) {
+        self.last = None;
+    }
+}
+```
+
+**`Clicks`** conta os clics dun botón: o segundo seguido é un dobre clic, e o terceiro, un triplo clic. Windows só detecta os dobres, e só nas xanelas dunha clase con `CS_DBLCLKS`: meiga cóntaos todos, coas mesmas medidas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+
+- **`press`** conta un clic de `button` en `at`, no instante `now`: 1, ou un máis ca o anterior se foi do mesmo botón, dentro do tempo do dobre clic e preto del, como moito a metade do rectángulo cara a cada lado: 2 píxeles, co de Windows. Despois do 3 volta o 1 (`last.count % 3 + 1`): o cuarto clic seguido é outra vez un clic só. O rato da vista selecciona celas cun clic, palabras con dous e liñas con tres.
+- Cada clic compárase co anterior: o tempo e a distancia cóntanse desde el. `LastClick`, privado, lémbrao: o botón, onde e cando foi, e a súa conta.
+- `now` vén de fóra, coma en [`FramePacer`](#cratesmeiga-coresrcpacingrs): as probas usan instantes inventados. `saturating_duration_since` dá 0 se `now` fose anterior, en vez de fallar, e `abs_diff` dá a distancia entre dous `i32` coma un `u32`, sen desbordar.
+- **`reset`** esquece o último clic: o seguinte é un clic só.
+
+### A roda: `WheelTurns` e `arrow_keys`
+
+```rust
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WheelTurns {
+    vertical: i32,
+    horizontal: i32,
+}
+
+impl WheelTurns {
+    …
+    pub fn add(&mut self, delta: i16, horizontal: bool) -> i32 {
+        let total = if horizontal {
+            &mut self.horizontal
+        } else {
+            &mut self.vertical
+        };
+        let delta = i32::from(delta);
+        if (*total > 0 && delta < 0) || (*total < 0 && delta > 0) {
+            *total = 0;
+        }
+        *total += delta;
+        let notches = *total / WHEEL_DELTA;
+        *total -= notches * WHEEL_DELTA;
+        notches
+    }
+    …
+}
+```
+
+**`WheelTurns`** suma os xiros da roda ata facer partes enteiras: algúns ratos e *touchpads* xiran menos dunha parte cada vez ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)).
+
+- **`add`** suma un xiro de `delta`, en 120 avos dunha parte, positivo adiante ou cara á dereita, e devolve as partes enteiras que completa, con signo. O que sobra queda para o seguinte xiro: tres anacos de 50 dan 0, 0 e 1 parte, e quedan 30.
+- **Un xiro no outro sentido empeza de cero**: o que sobraba no sentido anterior esquécese.
+- A división de enteiros corta cara a 0, así que o que sobra ten o signo do total e nunca chega a unha parte.
+- A roda e a inclinación cara aos lados suman por separado (`vertical` e `horizontal`). `delta` é un `i16`, coma o trae a mensaxe de Windows, e o total, un `i32`. `reset` esquece o que sobraba.
+- Por cada parte, o rato da vista envíalle ao programa un informe, se pediu o rato, ou frechas, na pantalla alternativa. Na pantalla normal, a roda servirá para o historial (subfase 1.9).
+
+```rust
+pub const fn arrow_keys(wheel: Wheel) -> [KeyEvent; 2] {
+    let (key, scan) = match wheel {
+        Wheel::Up => (0x26, 0x48),
+        Wheel::Down => (0x28, 0x50),
+        Wheel::Left => (0x25, 0x4b),
+        Wheel::Right => (0x27, 0x4d),
+    };
+    let down = KeyEvent {
+        key,
+        scan,
+        character: 0,
+        down: true,
+        controls: ControlKeys::ENHANCED,
+        repeat: 1,
+    };
+    let mut up = down;
+    up.down = false;
+    [down, up]
+}
+```
+
+**`arrow_keys`** dá a frecha de `wheel`, ao baixar e ao subir, para os programas da pantalla alternativa que non pediron o rato, coma `less`: desprázanse coas frechas. É o modo `?1007` (`alternate_scroll` en `Modes`), activo ao principio, coma no xterm e no Windows Terminal ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)).
+
+- Son eventos de tecla coma os do teclado ([`KeyEvent`](#keyevent)): o código de tecla virtual de cada frecha (`VK_UP` é `0x26`…), o seu código de exploración, e `ENHANCED`, porque son as frechas de fóra do teclado numérico ([`ControlKeys`](#controlkeys)). O mesmo [`KeyEncoder`](#keyencoder) das teclas convérteos no que le o programa: co win32-input-mode, cada evento enteiro; en VT, a secuencia da frecha, `ESC [ A`…, ou `ESC O A`… no modo aplicación.
+- As frechas de cada parte son as liñas das preferencias de Windows, ou as filas da pantalla se a roda despraza unha pantalla; cara aos lados, os caracteres. Cóntaas o rato da vista ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
+- `let mut up = down;` copia o evento, que é `Copy`, e despois cambia un campo da copia: nunha `const fn` tamén se pode.
+
+**Probas.** Oito:
+
+| Proba | Que comproba |
+|---|---|
+| `the_program_gets_only_what_it_asked_for` | Sen modos, nada, e `is_tracked` é falso; con `?1000`, o clic (`ESC [ M` e tres bytes), pero non os movementos; con `?1002`, os movementos cun botón, pero non sen el; e con `?1003`, tamén sen botón. |
+| `sgr_reports_say_the_button_and_the_cell_from_1` | En SGR, na columna 120 e na fila 30 (119 e 29 desde 0): premer o botón esquerdo e o do medio, soltar o dereito (co botón e `m`), moverse con e sen botón, a roda adiante e cara á dereita, as tres modificadoras, que suman 28, e Ctrl coa roda cara atrás. E sen límite: a columna 1 000 e a fila 301. |
+| `the_first_format_does_not_say_which_button_went_up_and_has_a_limit` | No primeiro formato, soltar o botón dereito é 3, sen o botón; a columna 94 desde 0 é o byte 127; e a 95, de columna ou de fila, non se envía. |
+| `utf8_reports_reach_further` | En UTF-8, a columna 94 é o byte 127, coma no primeiro formato; a 95, o carácter 128, en dous bytes; a última que cabe, `MAX_UTF8`, o carácter `0x7FF`; e a seguinte non se envía. |
+| `the_cell_under_the_pointer_and_its_side` | Con celas de 10 × 20 píxeles nunha grella de 8 × 4: a metade esquerda chega ata a metade da cela, incluída; e fóra da grella, por riba, á esquerda, á dereita e por baixo, a cela máis próxima, co lado dereito á dereita da grella. |
+| `clicks_in_a_row_count_up_to_three` | Tres clics seguidos dan 1, 2 e 3, o segundo 2 píxeles máis aló, e o cuarto, 1; tarde, lonxe ou con outro botón, 1; e despois de `reset`, 1. |
+| `the_wheel_adds_up_whole_notches` | Unha parte enteira e tres cara atrás; un *touchpad* que dá unha parte en tres anacos de 50; o que sobra esquécese ao cambiar de sentido; a roda e a inclinación por separado; e `reset`. |
+| `the_wheel_on_the_alternate_screen_sends_arrows` | A frecha de arriba baixa e sobe, coma tecla estendida; e `KeyEncoder` converte a de abaixo en `ESC [ B`, e no modo aplicación, en `ESC O B`. |
+
+## `crates/meiga-core/src/paste.rs`
+
+Desde a subfase 1.8: o que le o programa cando se pega texto ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). Pegar é teclear: o texto vai á entrada do programa, e un carácter de control sería unha tecla, coma Esc ou Ctrl+C, e cada fin de liña, un Intro. O texto chega do portapapeis de Windows ([Código › meiga-win › `clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs)), e o módulo que copia e pega ([Código › meiga › `clipboard.rs`](meiga.md#cratesmeigasrcclipboardrs)) pásao por eiquí, cos modos do terminal, antes de envialo. Coma no Windows Terminal:
+
+- o texto perde os caracteres de control, salvo o tabulador e os fins de liña, para que non poida enviar unha tecla coma Esc nin rematar o *bracketed paste* antes de tempo;
+- cada fin de liña pasa a ser un CR, a tecla Intro;
+- e, se o programa non pediu o *bracketed paste* (`?2004`), un texto dunha soa liña perde os brancos do final, para que un comando copiado co seu fin de liña non se execute só.
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Paste {
+    pub text: String,
+    pub bracketed: bool,
+}
+
+impl Paste {
+    pub fn new(clipboard: &str, modes: &Modes) -> Self {
+        let bracketed = modes.bracketed_paste;
+        let clipboard = if bracketed {
+            clipboard
+        } else {
+            trim(clipboard)
+        };
+        let mut text = String::with_capacity(clipboard.len());
+        let mut after_cr = false;
+        for character in clipboard.chars() {
+            match character {
+                // CR and LF, CRLF and LF CR... each line ends with one CR.
+                '\n' if after_cr => {}
+                '\r' | '\n' => text.push('\r'),
+                '\t' => text.push('\t'),
+                // C0, DEL and C1.
+                '\0'..='\x1f' | '\x7f'..='\u{9f}' => {}
+                _ => text.push(character),
+            }
+            after_cr = character == '\r';
+        }
+        Self { text, bracketed }
+    }
+    …
+}
+```
+
+**`Paste`** é o texto listo para pegar (`text`), e se vai marcado coma texto pegado (`bracketed`): se o programa pediu o *bracketed paste*. **`new`** faino desde o texto do portapapeis (`clipboard`), co filtro do Windows Terminal (`FilterStringForPaste`):
+
+| Carácter | Que pasa |
+|---|---|
+| CR, LF e CR LF | Un CR, o que envía a tecla Intro: un LF só chegaría ao PSReadLine coma Ctrl+Intro. `after_cr` lembra se o anterior foi un CR, para que o LF de CR LF non engada outro. LF e CR, nesa orde, son dous fins de liña. |
+| O tabulador | Queda. |
+| Os outros de control: C0 (`0x00`–`0x1F`), DEL (`0x7F`) e C1 (`U+0080`–`U+009F`) | Desaparecen. Un `ESC [ 201 ~` dentro do texto perde o ESC, e o resto é texto: non remata o pegado antes de tempo. E algúns programas len os C1 coma secuencias: `U+009B` é CSI, coma `ESC [`. |
+| O resto | Queda: letras, acentos, emoji… |
+
+- Sen *bracketed paste*, o texto pasa antes por `trim`, que quita os brancos do final dunha soa liña (máis abaixo). Co *bracketed paste*, queda enteiro: decide o programa.
+- `'\0'..='\x1f' | '\x7f'..='\u{9f}'` son dous rangos de caracteres nun patrón. Os brazos compróbanse en orde: o CR, o LF e o tabulador, que tamén están no primeiro rango, xa se trataron antes.
+- `String::with_capacity(clipboard.len())`: o texto nunca medra, porque cada carácter queda, desaparece ou, un LF, pasa a ser un CR do mesmo tamaño. Unha reserva chega.
+
+```rust
+pub fn is_multiline(&self) -> bool {
+    self.text.contains('\r')
+}
+
+pub fn is_empty(&self) -> bool {
+    self.text.is_empty() && !self.bracketed
+}
+
+pub fn write_to(&self, out: &mut Vec<u8>) {
+    if self.bracketed {
+        out.extend_from_slice(b"\x1b[200~");
+    }
+    out.extend_from_slice(self.text.as_bytes());
+    if self.bracketed {
+        out.extend_from_slice(b"\x1b[201~");
+    }
+}
+```
+
+- **`is_multiline`**: se ten máis dunha liña, é dicir, algún CR. Sen *bracketed paste*, unha shell executa cada liña ao lela: entón meiga pregunta antes de pegar, nunha caixa de mensaxe coas primeiras liñas (`!paste.bracketed && paste.is_multiline()`, en [Código › meiga › `clipboard.rs`](meiga.md#cratesmeigasrcclipboardrs)). Unha soa liña co seu fin de liña non pregunta: sen *bracketed paste*, `trim` xa lle quitou o fin de liña.
+- **`is_empty`**: se non hai nada que enviar. Co *bracketed paste*, un texto baleiro vai igual, só coas marcas: algúns programas, ao recibilo, len unha imaxe do portapapeis. Sen el, un texto baleiro, ou só con brancos, non envía nada.
+- **`write_to`** engade a `out` o que le o programa: o texto, entre `ESC [ 200 ~` e `ESC [ 201 ~` co *bracketed paste*. O ConPTY pásalles as marcas tal cal aos programas que len a entrada coma un terminal, coma bash en WSL, e quítallas aos da consola de Windows, coma o PSReadLine, que reciben o texto coma teclas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+
+```rust
+fn trim(text: &str) -> &str {
+    let trimmed = text.trim_end_matches(['\t', '\n', '\x0b', '\x0c', '\r', ' ']);
+    if trimmed.contains(['\n', '\r']) {
+        text
+    } else {
+        trimmed
+    }
+}
+```
+
+- **`trim`** quita os brancos do final (o tabulador, LF, VT, FF, CR e o espazo) só se o texto ten unha liña: se despois de quitalos queda algún fin de liña, ten varias, e devólveo como estaba. Os brancos do principio quedan.
+- Devolve un anaco do mesmo texto (`&str`), sen copialo. `trim_end_matches` e `contains` aceptan coma patrón un *array* de caracteres, coma en [`shell.rs`](#cratesmeiga-coresrcshellrs).
+
+**Probas.** Catro:
+
+| Proba | Que comproba |
+|---|---|
+| `each_end_of_line_becomes_a_cr` | CR LF, LF e CR dan un CR cada un, e LF CR, dous; un texto con CR ten varias liñas, e un sen el, unha. |
+| `control_characters_go_away_but_tabs_and_text_stay` | Co *bracketed paste*, un `ESC [ 201 ~` dentro do texto perde o ESC e non remata o pegado; BEL, DEL e os C1 `U+0085` e `U+009B` desaparecen; o tabulador, ñ, € e 😀 quedan. |
+| `without_bracketed_paste_a_single_line_loses_the_blanks_at_its_end` | Sen *bracketed paste*, `  ls -l \t\r\n` queda en `  ls -l`, cos espazos do principio; unha liña só de brancos non envía nada; varias liñas quedan coma están, cun CR ao final de cada unha; e co *bracketed paste*, unha liña conserva os seus brancos e o seu fin de liña. |
+| `an_empty_clipboard_only_goes_with_bracketed_paste` | Un portapapeis baleiro non envía nada sen *bracketed paste*, e só as marcas con el. |
+
 ## `crates/meiga-core/src/term/mod.rs`
 
-O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra) e [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma).
+O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a 1.8 ten a selección, que vive na grella de `alacritty_terminal` e que a copia do que cambia marca nas celas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma) e [› O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis).
 
 ```rust
 pub mod recording;
 mod scanner;
 mod screen;
+mod selection;
 
 pub use screen::{Cell, CellFlags, Color, Columns, Cursor, CursorShape, Screen};
+pub use selection::{SelectionKind, Side};
 ```
 
 - Os outros arquivos do cartafol `src/term/` son os submódulos de `term`.
-- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner` e `screen` son privados, pero os tipos de `screen` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen`, sen saber en que arquivo están.
+- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner`, `screen` e, desde a subfase 1.8, `selection` son privados, pero os tipos de `screen` e de `selection` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen` ou `meiga_core::term::SelectionKind`, sen saber en que arquivo están.
 
 ### Constantes
 
@@ -1064,7 +1560,7 @@ pub struct Changes {
 ```
 
 - **`Changes`**: o que pasou ao ler a saída, ademais dos cambios na pantalla: hai respostas para o programa (`take_responses`), cambiou o título (`title`), soou a campá ou hai texto para o portapapeis (`take_clipboard`). Devólveno `feed` e `end_sync`, e quen chama só ten que facer algo máis cando un campo é `true`.
-- **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). `win32_input` dío o escáner, porque `alacritty_terminal` non coñece ese modo; o resto, `alacritty_terminal`.
+- **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). `win32_input` dío o escáner, porque `alacritty_terminal` non coñece ese modo; o resto, `alacritty_terminal`. Desde a subfase 1.8, os modos do rato deciden se os clics seleccionan texto ou van ao programa, e en que formato ([`mouse.rs`](#cratesmeiga-coresrcmousers)), e o *bracketed paste*, como se pega o texto ([`paste.rs`](#cratesmeiga-coresrcpasters)).
 
 ### Os eventos: `Pending` e `Listener`
 
@@ -1128,6 +1624,7 @@ pub struct Terminal {
     theme: Palette,
     cell: Size,
     damaged: Vec<LineDamageBounds>,
+    shown_selection: Option<SelectionRange>,
 }
 ```
 
@@ -1142,6 +1639,7 @@ pub struct Terminal {
 | `theme` | Desde a subfase 1.6: as cores do tema, `Palette::MEIGA` ata que haxa temas. As que cambia o programa non van eiquí: gárdaas `alacritty_terminal` ([A paleta](#a-paleta-o-tema-e-os-cambios-do-programa)). |
 | `cell` | Desde a 1.6: o tamaño dunha cela en píxeles, para responder a `CSI 14 t`; 0 × 0 mentres non se sabe. |
 | `damaged` | As filas danadas, nun `Vec` que se reutiliza en cada copia para non reservar memoria. |
+| `shown_selection` | Desde a subfase 1.8: a selección que mostra a pantalla, como a deixou a última copia, coas súas celas na grella (`SelectionRange`). `alacritty_terminal` non dana as celas da selección cando esta cambia: a copia compáraa coa nova ([`copy_damage`](#copy_damage-copiar-o-que-cambiou)). |
 
 ```rust
 const _: () = {
@@ -1161,6 +1659,7 @@ pub fn new(size: GridSize) -> Self {
         default_cursor_style: DEFAULT_CURSOR,
         osc52: Osc52::OnlyCopy,
         kitty_keyboard: false,
+        semantic_escape_chars: selection::WORD_DELIMITERS.to_owned(),
         ..Config::default()
     };
     Self {
@@ -1170,6 +1669,7 @@ pub fn new(size: GridSize) -> Self {
         theme: Palette::MEIGA,
         cell: Size::new(0, 0),
         damaged: Vec::new(),
+        shown_selection: None,
     }
 }
 
@@ -1185,9 +1685,10 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
   - desde a subfase 1.6, o cursor por defecto, `DEFAULT_CURSOR`;
   - `Osc52::OnlyCopy`: os programas poden escribir no portapapeis, pero non lelo;
   - sen o protocolo de teclado de kitty: meiga usa o win32-input-mode, que é o que pide o ConPTY ([`input.rs`](#cratesmeiga-coresrcinputrs));
+  - desde a subfase 1.8, os caracteres que rematan unha palabra nun dobre clic (`semantic_escape_chars`), os de meiga, [`WORD_DELIMITERS`](#word_delimiters-selectionkind-e-side): `alacritty_terminal` úsaos para estender as seleccións de palabras. `to_owned` copia o texto nun `String`, que é o que garda a configuración;
   - o resto, cos valores por defecto (`..Config::default()`).
 
-  Ten as cores de meiga (`Palette::MEIGA`) e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
+  Ten as cores de meiga (`Palette::MEIGA`) e ningunha selección, e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
 - **`feed`** le o que escribiu o programa: primeiro o escáner e despois o parser, cos mesmos bytes, sen copialos nin cambialos. Devolve os `Changes`.
 
 | Método | Que fai |
@@ -1197,12 +1698,14 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
 | `set_cell_size(cell)` | Desde a 1.6: o tamaño dunha cela en píxeles, para responder a `CSI 14 t`. Mentres non o ten, non responde. `meiga.exe` dállo ao crear o terminal, co tamaño da cela da fonte. |
 | `palette` | Desde a 1.6: as cores coas que se debuxan as celas ([A paleta](#a-paleta-o-tema-e-os-cambios-do-programa)). |
 | `take_responses(into)` | Move as respostas ao final de `into`, para envialas ao programa. `Vec::append` deixa a cola baleira pero coa súa memoria: a seguinte resposta non reserva nada. |
-| `take_clipboard` | O último texto que o programa copiou ao portapapeis; despois, ningún. Se copiou varios antes de recollelos, só queda o último, como no portapapeis. |
+| `take_clipboard` | O último texto que o programa copiou ao portapapeis; despois, ningún. Se copiou varios antes de recollelos, só queda o último, como no portapapeis. Desde a subfase 1.8, a xanela recólleo e pono no portapapeis de Windows, só se ten o foco e está en primeiro plano ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Código › meiga › `app.rs`](meiga.md#cratesmeigasrcapprs)). |
 | `title` | O título que deu o programa, se deu algún. |
 | `modes` | Os modos, traducidos de `TermMode` (uns *bitflags*) aos campos de `Modes`. `win32_input` pregúntallo ao escáner. |
-| `resize(size)` | Cambia o tamaño da grella, con polo menos `MIN_SIZE`. `alacritty_terminal` reorganiza as liñas longas da pantalla principal (*reflow*), e todo queda danado. |
+| `resize(size)` | Cambia o tamaño da grella, con polo menos `MIN_SIZE`. `alacritty_terminal` reorganiza as liñas longas da pantalla principal (*reflow*), e todo queda danado. Se cambia o número de columnas, quita tamén a selección; se só cambian as filas, móvea co texto. |
 | `sync_deadline` | Cando hai que mostrar a actualización sincronizada (`?2026`) que empezou o programa, aínda que non a remate: `vte` gárdaa como moito 150 ms desde o último `?2026h`, ou ata encher o búfer. Mentres tanto, a saída non chega á pantalla. |
 | `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador. Desde a subfase 1.6, remátaa a xanela: antes de cada fotograma consulta `sync_deadline`, e o temporizador dos fotogramas vence a esa hora, tamén coa xanela minimizada, que non debuxa ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). |
+
+Desde a subfase 1.8, `Terminal` ten tamén os métodos da selección, noutro arquivo do módulo: `select`, `select_to`, `clear_selection`, `has_selection` e `selection_text` ([`term/selection.rs`](#cratesmeiga-coresrctermselectionrs)).
 
 ### A paleta: o tema e os cambios do programa
 
@@ -1230,10 +1733,10 @@ pub fn palette(&self) -> Palette {
 
 Desde a subfase 1.6. Un programa pode cambiar calquera cor da paleta (OSC 4), a do texto (OSC 10), a do fondo (OSC 11) e a do cursor (OSC 12), e voltar á orixinal (OSC 104, 110, 111 e 112) ([Tecnoloxías › A paleta](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)). `alacritty_terminal` garda eses cambios en `term.colors()`, unha táboa cun `Option` para cada unha das 256 cores e para as que teñen nome (o texto, o fondo, o cursor…): `None` mentres o programa non a cambia, e outra vez `None` cando volta á orixinal.
 
-- **`palette`** dá a paleta coa que se debuxa: a do tema, coas cores que cambiou o programa por riba. A táboa de `alacritty_terminal` admite como índice un número ou un `NamedColor`, e os nomes van despois das 256 cores.
+- **`palette`** dá a paleta coa que se debuxa: a do tema, coas cores que cambiou o programa por riba. A táboa de `alacritty_terminal` admite como índice un número ou un `NamedColor`, e os nomes van despois das 256 cores. Desde a subfase 1.8, a cor da selección é sempre a do tema: non ten nome nesa táboa, e ningunha secuencia a cambia.
 - **Por que o tema vai aparte.** Se os cambios do programa se escribisen no tema, voltar á cor orixinal non sabería cal era, e cambiar de tema borraría o que cambiou o programa. Así, `set_theme` só cambia o tema, e as cores do programa seguen por riba.
 - `for (name, color) in [(…, &mut palette.foreground), …]` percorre un *array* de pares, cada un cunha referencia mutábel a un campo distinto da mesma paleta: o compilador permíteo porque non se solapan.
-- Devolve unha paleta nova en cada chamada, sen reservar memoria: son 777 bytes na pila. `copy_damage` chámaa en cada copia, e `take_changes`, se hai preguntas.
+- Devolve unha paleta nova en cada chamada, sen reservar memoria: son 780 bytes na pila. `copy_damage` chámaa en cada copia, e `take_changes`, se hai preguntas.
 - `rgb` converte cada cor de `alacritty_terminal` nun `Rgb` de meiga ([Os axudantes](#os-axudantes)).
 
 ### As preguntas polas cores e polo tamaño
@@ -1317,19 +1820,31 @@ pub fn copy_damage(&mut self, screen: &mut Screen) {
             resized
         }
     };
+    let selection = self.selection_range();
     let grid = self.term.grid();
     if full {
         for row in 0..self.size.rows {
-            copy_row(grid, screen, row);
+            copy_row(grid, screen, row, selection.as_ref());
         }
     } else {
         for damage in &self.damaged {
             match u16::try_from(damage.line) {
-                Ok(row) if row < self.size.rows => copy_row(grid, screen, row),
+                Ok(row) if row < self.size.rows => {
+                    copy_row(grid, screen, row, selection.as_ref());
+                }
                 _ => {}
             }
         }
+        if selection != self.shown_selection {
+            let display_offset = grid.display_offset();
+            for range in [&self.shown_selection, &selection].into_iter().flatten() {
+                for row in selection::shown_rows(range, display_offset, self.size.rows) {
+                    copy_row(grid, screen, row, selection.as_ref());
+                }
+            }
+        }
     }
+    self.shown_selection = selection;
     let cursor = self.cursor();
     if cursor != screen.cursor() {
         screen.mark_cursor_changed();
@@ -1341,16 +1856,19 @@ pub fn copy_damage(&mut self, screen: &mut Screen) {
 }
 ```
 
-Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-fachada-do-terminal.md)) e, desde a subfase 1.6, a paleta ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)):
+Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-fachada-do-terminal.md)), desde a subfase 1.6 a paleta ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), e desde a 1.8 a selección ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)):
 
 1. Se a `Screen` ten outro tamaño, cámbiao: todas as súas celas quedan en branco e cambiadas, e cópianse todas as filas.
 2. `term.damage()` dá as filas danadas desde a última copia: `Full`, todas, ou `Partial`, a lista das filas danadas. `alacritty_terminal` dá `Full` cando cambia moito: ao borrar a pantalla, ao desprazala (cada salto de liña na última fila), ao cambiar á pantalla alternativa ou de tamaño, nun reinicio…
 3. Cada fila danada cópiase **enteira** con `copy_row`, que compara cela a cela e só marca as que cambiaron. **Por que enteira:** `alacritty_terminal` dana as celas que escribe, pero non sempre outras da mesma fila que cambian con elas. Ao escribir sobre a metade dereita dun carácter ancho, por exemplo, borra tamén a esquerda, e esa non queda danada. Atopouno a proba aleatoria do terminal. Copiar e comparar unha fila custa pouco, e marcar só as celas distintas evita debuxar o que non cambiou, tamén co dano `Full`: despois de borrar a pantalla, as filas que xa estaban en branco non se marcan.
-4. **O cursor.** Se cambiou (a posición, a forma ou o pestanexo), márcanse as súas celas onde estaba, antes de cambialo, e onde está, despois, con [`mark_cursor_changed`](#cratesmeiga-coresrctermscreenrs): dúas celas, por se está sobre un carácter ancho, e só unha na última columna, e só se se debuxa. A vista do terminal debuxa o cursor por riba delas. Oculto (`Hidden`), non marca nada: un *spinner* que oculta o cursor só redebuxa os seus caracteres, e unha copia sen saída nova non marca nada.
-5. **A paleta.** `set_palette` compara a paleta do terminal coa da `Screen`: se cambiou unha das 256 cores, a do texto ou a do fondo, cambian todas as celas; se só cambiou a do cursor, só as do cursor. **Por que aparte:** cando o programa cambia unha cor, `alacritty_terminal` dana a pantalla enteira e as filas cópianse, pero as celas gardan o número da súa cor, que é o mesmo: comparadas, ningunha cambiou. E cando só cambia a do cursor, non dana nada. Compróbao a proba `a_change_of_the_palette_changes_every_cell`.
-6. `reset_damage` esquece o dano, para a seguinte copia.
+4. **A selección**, desde a subfase 1.8. `selection_range` dá as súas celas na grella, e `copy_row` marca as que están nela con `CellFlags::SELECTED` ([Os axudantes](#os-axudantes)). Pero `alacritty_terminal` tampouco dana as celas da selección cando esta cambia: se non é a que mostra a pantalla (`shown_selection`), cópianse outra vez as filas das dúas, a vella e a nova ([`shown_rows`](#cratesmeiga-coresrctermselectionrs)), e `copy_row` só marca as celas que entran ou saen dela. Así, arrastrar o rato só debuxa as celas onde cambia a selección. Cando a selección se move co texto, porque a pantalla se desprazou, `alacritty_terminal` xa dá `Full`. Ao final, `shown_selection` garda a nova, tamén despois dunha copia enteira.
+5. **O cursor.** Se cambiou (a posición, a forma ou o pestanexo), márcanse as súas celas onde estaba, antes de cambialo, e onde está, despois, con [`mark_cursor_changed`](#cratesmeiga-coresrctermscreenrs): dúas celas, por se está sobre un carácter ancho, e só unha na última columna, e só se se debuxa. A vista do terminal debuxa o cursor por riba delas. Oculto (`Hidden`), non marca nada: un *spinner* que oculta o cursor só redebuxa os seus caracteres, e unha copia sen saída nova non marca nada.
+6. **A paleta.** `set_palette` compara a paleta do terminal coa da `Screen`: se cambiou unha das 256 cores, a do texto, a do fondo ou a da selección, cambian todas as celas; se só cambiou a do cursor, só as do cursor. **Por que aparte:** cando o programa cambia unha cor, `alacritty_terminal` dana a pantalla enteira e as filas cópianse, pero as celas gardan o número da súa cor, que é o mesmo: comparadas, ningunha cambiou. E cando só cambia a do cursor, non dana nada. Compróbao a proba `a_change_of_the_palette_changes_every_cell`.
+7. `reset_damage` esquece o dano, para a seguinte copia.
 
 - `Ok(row) if row < self.size.rows => …` é un brazo de `match` cunha garda (`if`): só se copian as filas que existen.
+- `[&self.shown_selection, &selection].into_iter().flatten()` percorre as dúas seleccións, a vella e a nova, e salta as que son `None`: unha referencia a un `Option` percórrese coma unha lista de cero ou un elementos. Unha fila que está nas dúas cópiase dúas veces, pero a segunda xa non cambia nada.
+- `selection.as_ref()` dá un `Option<&SelectionRange>`, o que recibe `copy_row`: unha referencia, sen copiar a selección. Ao final, a selección pasa a ser `shown_selection`. A comparación `!=` mira as celas, non os puntos onde se fixo a selección: arrastrar unha selección de palabras dentro da mesma palabra, por exemplo, non copia nada.
 
 ### `cursor` e `take_changes`
 
@@ -1367,9 +1885,13 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
 - **`rgb`**, desde a subfase 1.6, converte unha cor de `alacritty_terminal` nun `Rgb` de meiga. Úsana `palette` e `color`.
 - **`lock`** bloquea a cola. Se un fío fallase (*panic*) mentres a tiña bloqueada, o `Mutex` quedaría «envelenado» (*poisoned*), e `lock()` daría un erro desde entón. Ningún cambio da cola pode quedar a medias, así que `unwrap_or_else(PoisonError::into_inner)` cóllea igual.
 - **`at_least_min_size`**: o tamaño, con polo menos 2 columnas e 1 fila.
-- **`copy_row`** copia unha fila que se ve e marca as celas que cambiaron:
+- **`copy_row`** copia unha fila que se ve e marca as celas que cambiaron. Desde a subfase 1.8 recibe tamén a selección (`selection`), e as celas que están nela levan `CellFlags::SELECTED`:
 
   ```rust
+  let selected = selection.map_or(Columns::default(), |range| {
+      selected_cells(range, point.line, sources, columns)
+  });
+  …
   for ((cell, source), column) in cells.iter_mut().zip(sources).zip(0..columns) {
       let char = if source.flags.contains(Flags::WIDE_CHAR) {
           CellChar::WideLeft(source.c)
@@ -1383,6 +1905,10 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
           CellChar::Narrow(source.c)
       };
       wide = source.flags.contains(Flags::WIDE_CHAR).then_some(source.c);
+      let mut flags = flags(source.flags);
+      if selected.contains(column) {
+          flags = flags | CellFlags::SELECTED;
+      }
       …
   }
   ```
@@ -1401,14 +1927,45 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
   - **`LEADING_WIDE_CHAR_SPACER`**: cando un carácter ancho non cabe ao final dunha fila, vai á seguinte, e a última cela queda baleira con este *flag*.
   - **O tabulador**: `alacritty_terminal` garda `\t` na cela onde empezou, para poder copiar o texto con tabuladores; vese como unha cela en branco.
   - Cada cela nova compárase coa que había, e só se cambia se é distinta. `changed` acumula as columnas, da primeira á última que cambiaron, e `mark_changed` engádeas aos cambios da fila.
+  - **A selección.** `selected` son as columnas desta fila que están na selección, ningunha se non hai selección (`map_or`). `SELECTED` engádese aos estilos da cela, así que unha cela que entra ou sae da selección é distinta da que había, e márcase coma calquera outro cambio. `let mut flags = flags(source.flags);` chama á función `flags` e garda o resultado nunha variábel co mesmo nome, que oculta a función ata o final da volta do bucle.
+- **`selected_cells`**, desde a subfase 1.8, dá esas columnas: as que colle a selección na liña da grella `line` ([`selected_columns`](#cratesmeiga-coresrctermselectionrs)), e un carácter ancho enteiro se a selección colle só unha das súas metades:
+
+  ```rust
+  fn selected_cells(
+      range: &SelectionRange,
+      line: Line,
+      sources: &[TermCell],
+      columns: u16,
+  ) -> Columns {
+      let mut selected = selection::selected_columns(range, line, columns);
+      if selected.is_empty() {
+          return selected;
+      }
+      let flags_at = |column: u16| {
+          sources
+              .get(usize::from(column))
+              .map_or(Flags::empty(), |cell| cell.flags)
+      };
+      if selected.start > 0 && flags_at(selected.start).contains(Flags::WIDE_CHAR_SPACER) {
+          selected.start -= 1;
+      }
+      if selected.end < columns && flags_at(selected.end - 1).contains(Flags::WIDE_CHAR) {
+          selected.end += 1;
+      }
+      selected
+  }
+  ```
+
+  - Se a selección empeza na metade dereita dun carácter ancho (`WIDE_CHAR_SPACER`), empeza unha columna antes; e se remata na metade esquerda (`WIDE_CHAR`), unha columna despois. O texto da selección xa leva o carácter enteiro: así a pantalla mostra o mesmo que se copia ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+  - `flags_at` le os *flags* dunha cela, ou ningún se a columna non existe: `get` nunca falla.
 - **`color`**: as 16 cores con nome (`Named`) son as 16 primeiras da paleta, de `Indexed(0)` a `Indexed(15)`. Os outros nomes son as cores por defecto do texto e do fondo, e outras que só usa o renderizador do Alacritty (a do cursor, as atenuadas…), que ningunha secuencia lle dá a unha cela: `Default`. `Indexed` pasa igual, e `Spec` (*truecolor*), con `rgb`. `Ok(index @ 0..16)` é un patrón: o valor ten que estar entre 0 e 15, e `@` gárdao en `index`.
-- **`flags`** traduce os estilos cunha táboa (`MAP`) de 11 pares, só os que debuxa meiga: os *flags* internos de `alacritty_terminal`, como os das metades dos caracteres anchos, non pasan. `fold` xúntaos con `|`.
+- **`flags`** traduce os estilos cunha táboa (`MAP`) de 11 pares, só os que debuxa meiga: os *flags* internos de `alacritty_terminal`, como os das metades dos caracteres anchos, non pasan. `fold` xúntaos con `|`. `SELECTED` non está na táboa: non é un estilo de `alacritty_terminal`, e pono `copy_row`.
 
 As probas están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs).
 
 ## `crates/meiga-core/src/term/screen.rs`
 
-O que mostra o terminal, en tipos de meiga: as celas, as súas cores e estilos, o cursor, a paleta e as celas que cambiaron. Desde a subfase 1.6, a vista do terminal de `meiga.exe` debuxa desde eiquí, sen coñecer `alacritty_terminal` ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
+O que mostra o terminal, en tipos de meiga: as celas, as súas cores e estilos, o cursor, a paleta e as celas que cambiaron. Desde a subfase 1.6, a vista do terminal de `meiga.exe` debuxa desde eiquí, sen coñecer `alacritty_terminal` ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). Desde a 1.8, as celas din tamén se están na selección.
 
 ```rust
 pub enum Color {
@@ -1432,10 +1989,11 @@ impl Color {
   - Desde a subfase 1.6, **`rgb`** convértea na cor que se debuxa, coa paleta da pantalla. A cor por defecto depende de onde está, a do texto ou a do fondo, así que a dá quen chama (`default`). `usize::from(index)`: un `u8` sempre está entre as 256 cores, así que o índice nunca falla.
   - **Por que o número, e non a cor.** Se o programa cambia a paleta, o texto que xa está na pantalla cambia de cor, coma no xterm; e as celas son máis pequenas ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
 - **`CellFlags`**: os estilos dunha cela, un bit cada un nun `u16`: negra, atenuada, cursiva, cinco subliñados (simple, dobre, ondulado, de puntos e de trazos), riscada, inversa (o texto e o fondo intercambian as cores) e oculta (só se debuxa o fondo). `contains`, `is_empty` e o operador `|` (o trait `BitOr`) chegan para combinalos e preguntar por eles.
+  - Desde a subfase 1.8, **`SELECTED`**, o bit 11: a cela está na selección, e o seu fondo ten a cor da selección da paleta, co texto na súa cor ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Non o pon ningún programa: márcao a fachada ao copiar as celas ([`copy_row`](#os-axudantes)). Ir nos estilos fai que unha cela que entra ou sae da selección sexa unha cela que cambiou, sen outro mecanismo.
 - **`Cell`**: unha cela: o carácter (`CellChar`, de [`text.rs`](#cratesmeiga-coresrctextrs)), a cor do texto, a do fondo e os estilos. A cela por defecto (`Default`) é unha cela en branco, coas cores por defecto e sen estilos.
 - **`CursorShape`**: bloque, subliñado, barra vertical, o contorno dun bloque, ou oculto.
 - **`Cursor`**: a fila, a columna, a forma e se pestanexa: por defecto si, salvo que o programa pida un cursor fixo. meiga só o fai pestanexar se Windows o permite ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)).
-- **`Columns`**: as columnas dunha fila, de `start` (incluída) a `end` (excluída); ningunha se `end` non está despois de `start`. `union` dá as que cobren as dúas.
+- **`Columns`**: as columnas dunha fila, de `start` (incluída) a `end` (excluída); ningunha se `end` non está despois de `start`. `union` dá as que cobren as dúas. Desde a subfase 1.8, `contains` di se unha columna está entre elas: `copy_row` pregúntao, cela a cela, coas columnas seleccionadas.
 
 ```rust
 pub struct Screen {
@@ -1494,6 +2052,7 @@ pub(super) fn set_palette(&mut self, palette: &Palette) {
     if self.palette.colors != palette.colors
         || self.palette.foreground != palette.foreground
         || self.palette.background != palette.background
+        || self.palette.selection != palette.selection
     {
         self.all_changed = true;
     } else if self.palette.cursor != palette.cursor {
@@ -1507,7 +2066,7 @@ pub(super) fn set_palette(&mut self, palette: &Palette) {
 
 - **`mark_cursor_changed`** marca as celas do cursor: dúas, por se está sobre un carácter ancho, e só unha na última columna (`min`); ningunha se está oculto. Ata a subfase 1.5, `copy_damage` marcaba el mesmo estas celas. Na 1.6 o código pasou eiquí, e é público, porque a vista do terminal tamén o necesita cando o cursor cambia de aspecto sen moverse: ao pestanexar, e ao gañar ou perder o foco a xanela, cando pasa a ser un rectángulo baleiro ou volta á súa forma ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). `let Cursor { row, column, shape, .. } = self.cursor;` desestrutura o cursor en tres variábeis; `..` ignora o resto dos campos.
 - **`set_palette`** colle a paleta do terminal, en cada copia:
-  - se cambiaron as 256 cores, a do texto ou a do fondo, cambian todas as celas: calquera pode ter unha cor que cambiou. Tamén cambian as marxes da xanela, que teñen a cor do fondo: con `all_changed`, a vista do terminal redebuxa a xanela enteira;
+  - se cambiaron as 256 cores, a do texto, a do fondo ou, desde a subfase 1.8, a da selección, cambian todas as celas: calquera pode ter unha cor que cambiou. Tamén cambian as marxes da xanela, que teñen a cor do fondo: con `all_changed`, a vista do terminal redebuxa a xanela enteira. A da selección só cambia co tema (`set_theme`), que polo de agora só cambian as probas;
   - se só cambiou a do cursor, só cambian as celas do cursor: ningunha outra a usa;
   - se non cambiou nada, o caso de case todas as copias, non copia nada.
 
@@ -1522,6 +2081,204 @@ pub(super) fn set_palette(&mut self, palette: &Palette) {
 | `changes_add_up_until_they_are_cleared` | Dous cambios na mesma fila xúntanse nun intervalo (2–4 e 6–7 dan 2–7), e unha fila que non existe ignórase. |
 | `the_text_of_a_row_shows_each_character_once` | `row_text` mostra os caracteres anchos unha vez, e as celas en branco como espazos, sen os do final. |
 | `flags_combine` | Os estilos combínanse con `\|`, e `contains` comproba todos os que se piden. |
+
+## `crates/meiga-core/src/term/selection.rs`
+
+Desde a subfase 1.8: a selección, o texto que se marca co rato, que mostra a pantalla e que copia o portapapeis ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). É outro submódulo de `term`, cos métodos de `Terminal` que a crean, a moven, a quitan e a len: os tipos da selección de `alacritty_terminal` quedan dentro da fachada, coma os demais ([ADR 0012](../adr/0012-fachada-do-terminal.md)). Quen a move é o rato da vista ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)), e quen leva o seu texto ao portapapeis, o módulo que copia e pega ([Código › meiga › `clipboard.rs`](meiga.md#cratesmeigasrcclipboardrs)).
+
+**A selección vive na grella.** `alacritty_terminal` garda a selección no seu `Term` (`term.selection`), cos puntos da súa grella, que contan tamén o historial. Así segue o texto: cando a pantalla se despraza, sobe con el; e desaparece cando o programa borra a parte da pantalla onde está, cambia á pantalla alternativa ou reinicia o terminal. Escribir enriba das súas celas non a quita. Gardala fóra da grella obrigaría a facer todo isto outra vez ([ADR 0015 › Alternativas consideradas](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md#alternativas-consideradas)).
+
+### `WORD_DELIMITERS`, `SelectionKind` e `Side`
+
+```rust
+pub(super) const WORD_DELIMITERS: &str = " \t\"'`()[]{}<>,;|│";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SelectionKind {
+    Cells,
+    Words,
+    Lines,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Side {
+    Left,
+    Right,
+}
+```
+
+- **`WORD_DELIMITERS`**: os caracteres que rematan unha palabra nun dobre clic: o espazo e o tabulador, as comiñas (`"`, `'` e `` ` ``), as parénteses, os corchetes, as chaves e os ángulos, e `,`, `;`, `|` e `│`, a liña vertical das táboas debuxadas con liñas de caixa. Unha ruta, un URL ou unha posición nun arquivo, coma `C:\x\f.rs:12:5`, son unha soa palabra. Os de `alacritty_terminal` (`SEMANTIC_ESCAPE_CHARS`) teñen tamén `:`, que partiría esa posición, e non teñen `;`. É `pub(super)`: `Terminal::new` dállos a `alacritty_terminal` na súa configuración.
+- **`SelectionKind`**: como medra unha selección desde onde empeza, segundo os clics que a empezan:
+
+  | Variante | Clics | Que selecciona |
+  |---|---|---|
+  | `Cells` | Un | Desde un lado dunha cela ata un lado doutra. |
+  | `Words` | Dous | Palabras enteiras, que rematan nos caracteres de `WORD_DELIMITERS`. Nunha paréntese, un corchete, unha chave ou un ángulo, ata o que o pecha ou o abre; nos outros caracteres de `WORD_DELIMITERS`, ou nun destes sen parella, só a súa cela. |
+  | `Lines` | Tres | Liñas enteiras, con todas as filas dunha liña que non colleu nunha. |
+
+- **`Side`**: unha metade dunha cela. Unha selección de celas empeza e remata nun lado dunha cela: unha cela entra nela cando se pasa da súa metade. Dáo [`cell_at`](#a-cela-debaixo-do-punteiro-cell_at), de `mouse.rs`.
+- `alacritty_terminal` ten os seus propios tipos para isto, `SelectionType` e o seu `Side`, que é o seu `Direction`. meiga ten os seus para que eses non saian da fachada, e o `From<Side> for Direction` do final do arquivo converte o lado.
+
+### Crear, mover e quitar a selección
+
+```rust
+impl Terminal {
+    pub fn select(&mut self, kind: SelectionKind, point: GridPoint, side: Side) {
+        let point = self.grid_point(point);
+        let selection = match kind {
+            SelectionKind::Words => self.word_at(point),
+            SelectionKind::Cells => Selection::new(SelectionType::Simple, point, side.into()),
+            SelectionKind::Lines => Selection::new(SelectionType::Lines, point, side.into()),
+        };
+        self.term.selection = Some(selection);
+    }
+
+    pub fn select_to(&mut self, point: GridPoint, side: Side) {
+        let point = self.grid_point(point);
+        if let Some(selection) = &mut self.term.selection {
+            selection.update(point, side.into());
+        }
+    }
+
+    pub fn clear_selection(&mut self) -> bool {
+        let had = self.has_selection();
+        self.term.selection = None;
+        had
+    }
+
+    pub fn has_selection(&self) -> bool {
+        self.selection_range().is_some()
+    }
+    …
+}
+```
+
+| Método | Que fai |
+|---|---|
+| `select(kind, point, side)` | Empeza unha selección de `kind` no lado `side` da cela `point` da pantalla, en vez da que había. Unha de celas está baleira ata que remata noutro lado; unha de palabras ou de liñas xa ten a palabra ou a liña de `point`. |
+| `select_to(point, side)` | Move o final da selección ao lado `side` da cela `point`: a selección vai desde onde empezou ata alí, tamén cara atrás, con palabras ou liñas enteiras se é diso. Sen selección, non fai nada. |
+| `clear_selection` | Quita a selección, e di se había unha con celas: así quen chama sabe se ten que debuxar outra vez. |
+| `has_selection` | Se hai unha selección con celas: un clic que non se moveu non ten ningunha. |
+
+- **As clases de `alacritty_terminal`** (`SelectionType`): `Simple` para as celas, `Semantic` para as palabras e `Lines` para as liñas. A selección rectangular, `Block`, aínda non se usa.
+- `alacritty_terminal` garda a selección coma dous puntos da grella, o do comezo e o do final, cada un co seu lado, e calcula as súas celas cada vez que se piden. Unha selección de celas que empeza e remata no mesmo lado da mesma cela, ou que vai do lado dereito dunha ao esquerdo da seguinte, non ten ningunha.
+- `side.into()` converte o `Side` de meiga no de `alacritty_terminal`. `if let Some(selection) = &mut self.term.selection` toma prestada a selección para cambiala no seu sitio.
+- O rato da vista chama a `select` cando baixa o botón esquerdo, coa clase dos clics que contou ([`Clicks`](#os-clics-seguidos-clicksettings-e-clicks)), e a `select_to` cando o rato pasa a outra cela ou a outro lado.
+
+```rust
+pub fn selection_text(&self) -> Option<String> {
+    let mut text = self.term.selection_to_string()?;
+    // alacritty_terminal ends a selection of lines with LF; pasted
+    // into a shell, it would run the line.
+    if text.ends_with('\n') {
+        text.pop();
+    }
+    Some(text).filter(|text| !text.is_empty())
+}
+
+pub(super) fn selection_range(&self) -> Option<SelectionRange> {
+    self.term
+        .selection
+        .as_ref()
+        .and_then(|selection| selection.to_range(&self.term))
+}
+```
+
+- **`selection_text`**: o texto da selección, de `selection_to_string` de `alacritty_terminal`: as súas filas rematan con LF, salvo a última e as dunha liña que non colleu nunha fila, e sen os brancos do final; un carácter ancho vai unha vez. `alacritty_terminal` remata con LF a selección de liñas: pegada nunha shell, executaría a liña, así que se quita. Unha selección sen texto, coma unha cela baleira despois do final da liña, dá `None`. O portapapeis recíbeo con CR LF, que pon `write_text` ([Código › meiga-win › `clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs)).
+- O `?` despois de `selection_to_string()` devolve `None` se non hai selección, ou se non ten celas; e `filter` converte un texto baleiro en `None`.
+- **`selection_range`**, só para a fachada (`pub(super)`): as celas da selección na grella, se ten algunha. `to_range` calcúlaas cada vez: estende as palabras e as liñas, e axústaas á grella. É un `SelectionRange` de `alacritty_terminal`, coa primeira e a última cela, incluídas. Úsano `has_selection` e [`copy_damage`](#copy_damage-copiar-o-que-cambiou).
+
+### O dobre clic: `word_at`
+
+```rust
+fn word_at(&self, point: Point) -> Selection {
+    // As alacritty_terminal does, but only once: it would search for
+    // the other bracket at every frame, maybe through all the history.
+    if let Some(other) = self.term.bracket_search(point) {
+        return cells(point.min(other), point.max(other));
+    }
+    // alacritty_terminal would also take the words on both sides.
+    let cell = &self.term.grid()[point];
+    if !cell
+        .flags
+        .intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER)
+        && WORD_DELIMITERS.contains(cell.c)
+    {
+        return cells(point, point);
+    }
+    Selection::new(SelectionType::Semantic, point, Direction::Left)
+}
+```
+
+**`word_at`** dá a selección dun dobre clic en `point`:
+
+1. **Nunha paréntese, un corchete, unha chave ou un ángulo**, `bracket_search` busca o que o pecha ou o abre, saltando as parellas que hai dentro, e a selección vai dun ao outro, os dous incluídos. `alacritty_terminal` fai o mesmo nas súas seleccións de palabras, pero buscándoo outra vez cada vez que calcula as celas, en cada fotograma, quizais por todo o historial: meiga búscao unha vez, e garda unha selección de celas.
+2. **Nun dos caracteres de `WORD_DELIMITERS`**, coma un espazo ou unha coma, ou nunha paréntese sen parella, só a súa cela: `alacritty_terminal` collería tamén as palabras dos dous lados. A metade dereita dun carácter ancho (`WIDE_CHAR_SPACER`) e a cela baleira que deixa ao final dunha fila un carácter ancho que non colleu (`LEADING_WIDE_CHAR_SPACER`) gardan un espazo, pero non son espazos: nelas, o dobre clic selecciona a palabra.
+3. **No resto**, unha selección de palabras de `alacritty_terminal` (`Semantic`), que vai cara aos dous lados ata os caracteres de `WORD_DELIMITERS`, dentro da mesma liña aínda que ocupe varias filas, e que, ao arrastrar, segue collendo palabras enteiras.
+
+```rust
+fn cells(start: Point, end: Point) -> Selection {
+    let mut selection = Selection::new(SelectionType::Simple, start, Direction::Left);
+    selection.update(end, Direction::Right);
+    selection
+}
+```
+
+- **`cells`** fai unha selección de celas desde o lado esquerdo de `start` ata o dereito de `end`: as dúas incluídas.
+- `point.min(other)` e `point.max(other)`: os puntos de `alacritty_terminal` compáranse pola liña e despois pola columna, así que o primeiro é o que vai antes no texto.
+
+### As celas da pantalla e as da grella
+
+```rust
+fn grid_point(&self, point: GridPoint) -> Point {
+    let row = point.row.min(self.size.rows - 1);
+    let column = point.column.min(self.size.columns - 1);
+    term::viewport_to_point(
+        self.term.grid().display_offset(),
+        Point::new(usize::from(row), Column(usize::from(column))),
+    )
+}
+```
+
+**`grid_point`** converte a cela da pantalla no punto da grella de `alacritty_terminal`, coma `copy_row`: a fila que se ve, contando o historial que hai por riba (`display_offset`, que deixará de ser 0 cando se poida mirar o historial, na subfase 1.9). Unha cela fóra da pantalla pasa a ser a máis próxima: a resta nunca baixa de 0, porque a grella ten polo menos `MIN_SIZE`.
+
+```rust
+pub(super) fn selected_columns(range: &SelectionRange, line: Line, columns: u16) -> Columns {
+    if line < range.start.line || line > range.end.line {
+        return Columns::default();
+    }
+    // The columns of the grid are the ones of the screen, so they fit in a
+    // u16.
+    let column = |column: Column| column.0.min(usize::from(columns)) as u16;
+    let start = if line == range.start.line {
+        column(range.start.column)
+    } else {
+        0
+    };
+    let end = if line == range.end.line {
+        column(range.end.column).saturating_add(1)
+    } else {
+        columns
+    };
+    Columns::new(start, end.min(columns))
+}
+
+pub(super) fn shown_rows(
+    range: &SelectionRange,
+    display_offset: usize,
+    rows: u16,
+) -> std::ops::Range<u16> {
+    let offset = i32::try_from(display_offset).unwrap_or(i32::MAX);
+    let row = |line: i32| line.saturating_add(offset).clamp(0, i32::from(rows)) as u16;
+    row(range.start.line.0)..row(range.end.line.0.saturating_add(1))
+}
+```
+
+- **`selected_columns`**: as columnas que a selección colle na fila da grella `line`, dunha fila de `columns` columnas: ningunha fóra das súas filas; desde a súa primeira columna na primeira fila, e desde 0 nas outras; e ata a súa última columna, incluída, na última fila, e ata o final nas outras. Úsaa `copy_row`, a través de [`selected_cells`](#os-axudantes), que engade as outras metades dos caracteres anchos.
+- **`shown_rows`**: as filas da pantalla, de `rows`, nas que está a selección, cando a pantalla mostra a grella desde `display_offset` liñas por riba do seu final. As liñas do historial son negativas, e a fila da pantalla é a liña máis `display_offset`; as que quedan fóra da pantalla córtanse (`clamp`). Úsaa `copy_damage`, para copiar outra vez as filas da selección vella e da nova.
+- Os `as u16` despois de `min` e de `clamp` non cortan nada: o valor xa cabe. `saturating_add` e `unwrap_or(i32::MAX)` evitan desbordar cos números máis grandes.
+
+As probas da selección están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs), coas do terminal.
 
 ## `crates/meiga-core/src/term/scanner.rs`
 
@@ -1641,7 +2398,7 @@ E despois, para cada bloque:
 
 ## `crates/meiga-core/src/term/tests.rs`
 
-As dezaoito probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Tres axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; e `narrow` crea unha cela cun carácter, sen cores nin estilos.
+As vinte e tres probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Catro axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; e, desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén.
 
 | Proba | Que comproba |
 |---|---|
@@ -1662,7 +2419,12 @@ As dezaoito probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis 
 | `a_synchronized_update_waits_for_its_end` | A saída dunha actualización sincronizada non chega á pantalla ata que remata ou vence (como moito, 150 ms); `end_sync` móstraa e entrega as súas respostas. |
 | `after_a_resize_everything_is_copied_again` | Despois de cambiar o tamaño, a copia ten o tamaño novo e todas as celas cambiadas, co texto no seu sitio. |
 | `the_grid_is_never_smaller_than_two_columns_and_one_row` | Un terminal de 0 × 0 ou de 1 × 0 mide 2 × 1, e escribir caracteres anchos e inserir celas e liñas nel non falla. |
-| `copying_only_the_damage_gives_the_same_screen_as_copying_everything` | **A invariante da copia.** 300 casos aleatorios, de ata 79 anacos dunha lista de 70: texto, caracteres anchos e combinados, movementos do cursor, borrados, inserir e borrar caracteres e liñas, desprazamentos e rexións, a pantalla alternativa, estilos, reinicios… Cada caso lese en anacos de ata 16 bytes, por veces cambiando o tamaño, con grellas de 2 × 1 a 80 × 24. Despois de cada anaco, a pantalla copiada só co dano ten que ser igual, cela a cela e no cursor, á dun segundo terminal copiado enteiro. Esta proba atopou o oco do dano de `alacritty_terminal` cos caracteres anchos. |
+| `a_selection_of_cells_marks_them_and_gives_their_text` | Un clic que non se move non selecciona nada, e a copia non cambia nada. Arrastrando desde o lado esquerdo da segunda cela ata o dereito da sexta, o texto é `la mu`, e só esas celas quedan marcadas e cambiadas; ata o lado esquerdo da terceira cela da fila seguinte, `la mundo`, un LF e `ad`, e só cambian as celas que entran; e cara atrás, ata o lado esquerdo da primeira, `o`. `clear_selection` di se había selección, e despois só cambia a cela que estaba seleccionada, co texto no seu sitio. |
+| `a_double_click_selects_a_word_a_path_or_up_to_the_other_bracket` | Un dobre clic selecciona unha palabra (`cat`, e `ok` e `si`, dentro dunhas parénteses e dunhas comiñas); unha ruta enteira, coas súas barras invertidas e os seus `:` (`C:\x\f.rs:12:5`); nunha paréntese, ata a outra, desde as dúas; nun espazo ou nunha coma, só iso; despois do final do texto, ningún texto; e en calquera das metades dun carácter ancho, a palabra (`中文`). |
+| `a_triple_click_selects_the_rows_of_a_line` | Un triplo clic nunha liña que non colle nunha fila marca as súas dúas filas, e o seu texto vai sen LF ao final; arrastrar ata a liña seguinte engádea, despois dun LF. |
+| `a_wide_character_is_selected_whole` | Unha selección que empeza na metade dereita dun carácter ancho, ou que remata na esquerda, marca o carácter enteiro, e o texto lévao unha vez. |
+| `the_selection_moves_with_the_text_and_goes_away_with_it` | Cando a pantalla se despraza, a selección sobe co seu texto. Cando o programa borra unha das súas filas, desaparece, tamén da outra fila, que non cambiou. Escribir enriba dela non a quita, pero borrar a pantalla si. |
+| `copying_only_the_damage_gives_the_same_screen_as_copying_everything` | **A invariante da copia.** 300 casos aleatorios, de ata 79 anacos dunha lista de 70: texto, caracteres anchos e combinados, movementos do cursor, borrados, inserir e borrar caracteres e liñas, desprazamentos e rexións, a pantalla alternativa, estilos, reinicios… Cada caso lese en anacos de ata 16 bytes, por veces cambiando o tamaño, con grellas de 2 × 1 a 80 × 24. Despois de cada anaco, a pantalla copiada só co dano ten que ser igual, cela a cela e no cursor, á dun segundo terminal copiado enteiro. Esta proba atopou o oco do dano de `alacritty_terminal` cos caracteres anchos. Desde a subfase 1.8, antes de cada anaco cambia tamén a selección, igual nos dous terminais: un de cada oito empeza unha, de calquera clase; dous de cada oito móvena; e un quítaa, ás veces con celas fóra da grella. Así comproba tamén que a copia marca as celas onde cambia a selección. |
 
 ## `crates/meiga-core/tests/recordings.rs`
 

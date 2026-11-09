@@ -398,7 +398,7 @@ fn control_code(key: u16) -> Option<u8> {
 }
 
 /// Adds `value` in decimal, without allocating.
-fn push_decimal(out: &mut Vec<u8>, value: u16) {
+pub(crate) fn push_decimal(out: &mut Vec<u8>, value: u16) {
     let mut digits = [0; 5];
     let mut start = digits.len();
     let mut rest = value;

@@ -32,6 +32,9 @@ pub struct Shared {
     pub screen_changed: bool,
     /// The title changed since the window last took it.
     pub title_changed: bool,
+    /// The program copied text to the clipboard (OSC 52) since the window
+    /// last took it.
+    pub clipboard_changed: bool,
     /// The window knows when the synchronized update that the program has
     /// open ends, and ends it then, even while it is minimized.
     sync_noted: bool,
@@ -43,6 +46,7 @@ impl Shared {
             terminal,
             screen_changed: false,
             title_changed: false,
+            clipboard_changed: false,
             sync_noted: false,
         }
     }
@@ -51,26 +55,34 @@ impl Shared {
     /// the window has to be woken up for it.
     pub fn note(&mut self, changes: Changes) -> bool {
         let screen = !mem::replace(&mut self.screen_changed, true);
-        let title = changes.title && !mem::replace(&mut self.title_changed, true);
+        let others = self.note_others(changes);
         // Until the update ends, the terminal keeps what the program writes,
         // its questions too: the window has to end it in time, even if it
         // does not copy the screen.
         let sync =
             self.terminal.sync_deadline().is_some() && !mem::replace(&mut self.sync_noted, true);
-        screen || title || sync
+        screen || others || sync
+    }
+
+    /// Notes the changes of the title and of the clipboard, and says
+    /// whether the window has to be woken up for them.
+    fn note_others(&mut self, changes: Changes) -> bool {
+        let title = changes.title && !mem::replace(&mut self.title_changed, true);
+        let clipboard = changes.clipboard && !mem::replace(&mut self.clipboard_changed, true);
+        title || clipboard
     }
 
     /// Ends the synchronized update that the program has open if its time is
     /// up at `now`: what it wrote meanwhile is shown as it is, and its
     /// answers go to `answers`. Returns when the update that is still open
     /// ends, which the window knows from now on, and whether the window has
-    /// to be woken up for the title.
+    /// to be woken up for the title or the clipboard.
     pub fn end_late_sync(
         &mut self,
         now: Instant,
         answers: &mut Vec<u8>,
     ) -> (Option<Instant>, bool) {
-        let mut title = false;
+        let mut wake = false;
         if self
             .terminal
             .sync_deadline()
@@ -80,11 +92,11 @@ impl Shared {
             if changes.responses {
                 self.terminal.take_responses(answers);
             }
-            title = changes.title && !mem::replace(&mut self.title_changed, true);
+            wake = self.note_others(changes);
         }
         let deadline = self.terminal.sync_deadline();
         self.sync_noted = deadline.is_some();
-        (deadline, title)
+        (deadline, wake)
     }
 }
 
@@ -185,13 +197,17 @@ impl Output for Reader {
 /// What the terminal shows when the program ends, as Windows Terminal: a
 /// line with its exit code, in a row of its own if `new_line`, with the
 /// default colours. The cursor is hidden: nothing can be typed any more.
+/// The ConPTY does not turn off the mouse nor the bracketed paste of a
+/// program that ends: they are turned off, so that the mouse selects text
+/// again.
 fn end(exit_code: Option<u32>, new_line: bool) -> String {
+    const RESET: &str = "\x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l";
     let new_line = if new_line { "\r\n" } else { "" };
     match exit_code {
         Some(code) => {
-            format!("\x1b[0m{new_line}[process exited with code {code} (0x{code:08x})]\x1b[?25l")
+            format!("\x1b[0m{new_line}[process exited with code {code} (0x{code:08x})]{RESET}")
         }
-        None => format!("\x1b[0m{new_line}[process exited]\x1b[?25l"),
+        None => format!("\x1b[0m{new_line}[process exited]{RESET}"),
     }
 }
 
@@ -256,7 +272,7 @@ mod tests {
     #[test]
     fn the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor() {
         let mut terminal = Terminal::new(GridSize::new(50, 3));
-        terminal.feed(b"\x1b[31mola");
+        terminal.feed(b"\x1b[31mola\x1b[?1002;1006;2004h");
         terminal.feed(end(Some(0xC000_013A), true).as_bytes());
         let mut screen = Screen::new();
         terminal.copy_damage(&mut screen);
@@ -267,11 +283,30 @@ mod tests {
         );
         assert_eq!(screen.row(1)[0].fg, meiga_core::term::Color::Default);
         assert_eq!(screen.cursor().shape, CursorShape::Hidden);
+        // The mouse selects text again.
+        let modes = terminal.modes();
+        assert!(!modes.mouse_drag && !modes.sgr_mouse && !modes.bracketed_paste);
 
         assert_eq!(
             end(Some(0), false),
-            "\x1b[0m[process exited with code 0 (0x00000000)]\x1b[?25l"
+            "\x1b[0m[process exited with code 0 (0x00000000)]\
+             \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
-        assert_eq!(end(None, false), "\x1b[0m[process exited]\x1b[?25l");
+        assert_eq!(
+            end(None, false),
+            "\x1b[0m[process exited]\x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
+        );
+    }
+
+    #[test]
+    fn the_clipboard_of_the_program_wakes_the_window_once() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(10, 2)));
+        shared.screen_changed = true;
+        let changes = shared.terminal.feed(b"\x1b]52;c;b2xh\x07");
+        assert!(changes.clipboard);
+        assert!(shared.note(changes));
+        assert!(!shared.note(changes));
+        assert!(shared.clipboard_changed);
+        assert_eq!(shared.terminal.take_clipboard().as_deref(), Some("ola"));
     }
 }
