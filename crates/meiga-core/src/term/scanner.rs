@@ -4,7 +4,7 @@
 //!
 //! For now it follows one: win32-input-mode (`CSI ? 9001 h` and `l`), which
 //! ConPTY turns on when it starts, so that meiga sends it whole key events
-//! (subphase 1.7). It reads the control sequences as `vte` does, so that it
+//! ([`crate::input`]). It reads the control sequences as `vte` does, so that it
 //! sees a change of mode only when `vte` would see one, also when the
 //! sequence comes split between two reads. It only follows byte by byte the
 //! sequences that start with `ESC [ ?`, the private modes: it skips the
