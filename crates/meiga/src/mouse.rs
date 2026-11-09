@@ -148,12 +148,19 @@ impl Mouse {
                     dialog: false,
                 }
             }
-            // As in Windows Terminal when it copies what is selected: the
-            // selection, if there is one, goes to the clipboard and away,
-            // and then the clipboard is pasted.
+            // As in Windows Terminal with `copyOnSelect`: the selection
+            // went to the clipboard when the left button went up, or goes
+            // now if it is still growing. It goes away, and the clipboard
+            // is pasted: what the user copied last, maybe in another
+            // program.
             Button::Right => {
                 drop(shared);
-                let redraw = clipboard::copy(context.window, context.shared, true);
+                let redraw = if self.selecting.take().is_some() {
+                    self.release(context);
+                    clipboard::copy(context.window, context.shared, true)
+                } else {
+                    lock(context.shared).terminal.clear_selection()
+                };
                 let dialog = context
                     .input
                     .is_some_and(|input| clipboard::paste(context.window, context.shared, input));

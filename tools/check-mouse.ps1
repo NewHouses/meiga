@@ -723,17 +723,15 @@ try {
 
     Send-Click 5 0 -Times 2
     Wait-Clipboard 'mundo' 'A double click on a word'
-    Set-Text 'meiga-check'
-    $typed = Get-Typed (Read-Keys { Send-Click 20 3 -Button 'Right' })
-    if ($typed -cne 'mundo') {
-        throw "A right click with a selection pasted '$(Show-Text $typed)' instead of 'mundo'."
-    }
     Set-Text "eco `e[2J`u{E1}`u{20AC}  "
-    $typed = Get-Typed (Read-Keys { Send-Click 20 3 -Button 'Right' })
-    if ($typed -cne "eco [2J`u{E1}`u{20AC}") {
-        throw "A right click without a selection pasted '$(Show-Text $typed)' instead of 'eco [2J$("`u{E1}`u{20AC}")'."
+    $typed = Get-Typed (Read-Keys {
+            Send-Click 20 3 -Button 'Right'
+            Send-Key 'Ctrl+C'
+        })
+    if ($typed -cne "eco [2J`u{E1}`u{20AC}`u{3}") {
+        throw "A right click with a selection, and then Ctrl+C, typed '$(Show-Text $typed)' instead of 'eco [2J$("`u{E1}`u{20AC}")' and U+0003."
     }
-    Write-Host 'OK: a right click copies the selection, if there is one, and pastes: a line without its control characters nor its blanks at the end.'
+    Write-Host 'OK: a right click removes the selection and pastes the clipboard: a line without its control characters nor its blanks at the end.'
 
     Set-Text "un`r`ndous"
     $typed = Get-Typed (Read-Keys {
