@@ -18,8 +18,8 @@ windows-sys = { workspace = true, features = [
     "Win32_Security",
     # ReadFile and WriteFile, which take an OVERLAPPED of Win32_System_IO.
     "Win32_Storage_FileSystem",
-    # The pseudoconsole functions of kernel32: CreatePseudoConsole and
-    # ClosePseudoConsole.
+    # The pseudoconsole functions of kernel32: CreatePseudoConsole,
+    # ResizePseudoConsole and ClosePseudoConsole.
     "Win32_System_Console",
     # The clipboard, and the global memory of its data.
     "Win32_System_DataExchange",

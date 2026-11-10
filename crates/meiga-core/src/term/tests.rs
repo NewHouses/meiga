@@ -517,6 +517,307 @@ fn the_grid_is_never_smaller_than_two_columns_and_one_row() {
     assert_eq!(screen.row_text(0), "中");
 }
 
+/// The text of each row of the screen.
+fn texts(terminal: &mut Terminal) -> Vec<String> {
+    let screen = copy(terminal);
+    (0..screen.size().rows)
+        .map(|row| screen.row_text(row))
+        .collect()
+}
+
+/// The row and the column of the cursor.
+fn cursor_at(terminal: &Terminal) -> (u16, u16) {
+    let cursor = terminal.cursor();
+    (cursor.row, cursor.column)
+}
+
+#[test]
+fn a_taller_screen_adds_blank_rows_and_leaves_the_history_alone() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"a\r\nb\r\nc\r\nd\r\ne");
+    terminal.resize(GridSize::new(10, 5));
+    assert_eq!(texts(&mut terminal), ["c", "d", "e", "", ""]);
+    assert_eq!(cursor_at(&terminal), (2, 1));
+    assert_eq!(terminal.history().rows, 2);
+}
+
+#[test]
+fn a_shorter_screen_keeps_the_cursor_and_the_rows_above_it() {
+    // Only blank rows go when the text fits.
+    let mut terminal = Terminal::new(GridSize::new(10, 5));
+    terminal.feed(b"a\r\nb");
+    terminal.resize(GridSize::new(10, 3));
+    assert_eq!(texts(&mut terminal), ["a", "b", ""]);
+    assert_eq!(cursor_at(&terminal), (1, 1));
+    assert_eq!(terminal.history().rows, 0);
+
+    // When it does not, the first rows go into the history, and they stay
+    // there when the screen grows again.
+    let mut terminal = Terminal::new(GridSize::new(10, 5));
+    terminal.feed(b"a\r\nb\r\nc");
+    terminal.resize(GridSize::new(10, 2));
+    assert_eq!(texts(&mut terminal), ["b", "c"]);
+    assert_eq!(cursor_at(&terminal), (1, 1));
+    terminal.resize(GridSize::new(10, 5));
+    assert_eq!(texts(&mut terminal), ["b", "c", "", "", ""]);
+    assert_eq!(cursor_at(&terminal), (1, 1));
+    assert_eq!(terminal.history().rows, 1);
+}
+
+#[test]
+fn narrower_lines_wrap_downwards_and_join_again_when_wider() {
+    let mut terminal = Terminal::new(GridSize::new(8, 3));
+    terminal.feed(b"abcdef\r\nxy");
+    terminal.resize(GridSize::new(4, 3));
+    assert_eq!(texts(&mut terminal), ["abcd", "ef", "xy"]);
+    assert_eq!(cursor_at(&terminal), (2, 2));
+    assert_eq!(terminal.history().rows, 0);
+    terminal.resize(GridSize::new(8, 3));
+    assert_eq!(texts(&mut terminal), ["abcdef", "xy", ""]);
+    assert_eq!(cursor_at(&terminal), (1, 2));
+    terminal.feed(b"z");
+    assert_eq!(texts(&mut terminal), ["abcdef", "xyz", ""]);
+}
+
+#[test]
+fn the_cursor_keeps_its_row_when_many_rows_below_it_wrap() {
+    // As in ConPTY: the screen starts at the row of the cursor, and the rows
+    // that do not fit below it go away.
+    let mut terminal = Terminal::new(GridSize::new(4, 4));
+    terminal.feed(b"x\r\na\r\nbbbb\r\ncccc\x1b[2;1H");
+    terminal.resize(GridSize::new(2, 4));
+    assert_eq!(texts(&mut terminal), ["a", "bb", "bb", "cc"]);
+    assert_eq!(cursor_at(&terminal), (0, 0));
+    terminal.feed(b"A");
+    assert_eq!(texts(&mut terminal)[0], "A");
+}
+
+#[test]
+fn the_cursor_keeps_its_place_after_the_last_character_of_a_full_row() {
+    let mut terminal = Terminal::new(GridSize::new(4, 2));
+    terminal.feed(b"abcd");
+    terminal.resize(GridSize::new(6, 2));
+    terminal.feed(b"e");
+    assert_eq!(texts(&mut terminal), ["abcde", ""]);
+
+    let mut terminal = Terminal::new(GridSize::new(4, 2));
+    terminal.feed(b"abcd");
+    terminal.resize(GridSize::new(2, 2));
+    terminal.feed(b"e");
+    assert_eq!(texts(&mut terminal), ["cd", "e"]);
+}
+
+#[test]
+fn on_the_alternate_screen_the_primary_one_gets_the_last_size_when_the_program_leaves() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"a\r\nb\r\nc\r\nd\r\ne\x1b[?1049h\x1b[HALT");
+    terminal.resize(GridSize::new(10, 5));
+    assert_eq!(texts(&mut terminal), ["ALT", "", "", "", ""]);
+    terminal.resize(GridSize::new(4, 2));
+    assert_eq!(texts(&mut terminal), ["ALT", ""]);
+    // Back to the size that the primary screen had: it does not change.
+    terminal.resize(GridSize::new(10, 3));
+    terminal.feed(b"\x1b[?1049l");
+    assert_eq!(texts(&mut terminal), ["c", "d", "e"]);
+    assert_eq!(cursor_at(&terminal), (2, 1));
+    assert_eq!(terminal.history().rows, 2);
+
+    // Taller: blank rows at the bottom, as on the primary screen, and the
+    // history stays where it is.
+    terminal.feed(b"\x1b[?1049h");
+    terminal.resize(GridSize::new(10, 5));
+    terminal.feed(b"\x1b[?1049l");
+    assert_eq!(texts(&mut terminal), ["c", "d", "e", "", ""]);
+    assert_eq!(cursor_at(&terminal), (2, 1));
+    assert_eq!(terminal.history().rows, 2);
+}
+
+#[test]
+fn the_output_after_leaving_the_alternate_screen_reaches_the_primary_one() {
+    // In the same read, inside a synchronized update, and in one that ends at
+    // its deadline.
+    for (output, end) in [
+        (&b"\x1b[?1049lX"[..], false),
+        (b"\x1b[?2026h\x1b[?1049lX\x1b[?2026l", false),
+        (b"\x1b[?2026h\x1b[?1049lX", true),
+    ] {
+        let mut terminal = Terminal::new(GridSize::new(10, 3));
+        terminal.feed(b"a\r\nb\x1b[?1049h");
+        terminal.resize(GridSize::new(10, 4));
+        terminal.feed(output);
+        if end {
+            terminal.end_sync();
+        }
+        assert_eq!(texts(&mut terminal), ["a", "bX", "", ""], "{output:?}");
+    }
+}
+
+#[test]
+fn a_reset_on_the_alternate_screen_leaves_an_empty_primary_screen_with_history() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"a\r\nb\r\nc\r\nd\x1b[?1049h");
+    terminal.resize(GridSize::new(10, 4));
+    terminal.feed(b"\x1bc");
+    assert!(!terminal.modes().alt_screen);
+    assert_eq!(texts(&mut terminal), ["", "", "", ""]);
+    assert_eq!(terminal.history().rows, 0);
+    terminal.feed(b"1\r\n2\r\n3\r\n4\r\n5\r\n6");
+    assert_eq!(texts(&mut terminal), ["3", "4", "5", "6"]);
+    assert_eq!(terminal.history().rows, 2);
+}
+
+/// A terminal of 10 × 3 with the lines 1 to 10: 7 of them in the history.
+fn ten_lines() -> Terminal {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    let lines: Vec<String> = (1..=10).map(|line| line.to_string()).collect();
+    terminal.feed(lines.join("\r\n").as_bytes());
+    terminal
+}
+
+#[test]
+fn the_view_moves_through_the_history() {
+    let mut terminal = ten_lines();
+    assert_eq!(terminal.history(), History { rows: 7, offset: 0 });
+    assert!(terminal.scroll(Scroll::Rows(2)));
+    assert_eq!(texts(&mut terminal), ["6", "7", "8"]);
+    // The cursor is in a row that the view does not show.
+    assert_eq!(terminal.cursor().shape, CursorShape::Hidden);
+    assert!(terminal.scroll(Scroll::PageUp));
+    assert_eq!(texts(&mut terminal), ["3", "4", "5"]);
+    assert!(terminal.scroll(Scroll::Top));
+    assert_eq!(texts(&mut terminal), ["1", "2", "3"]);
+    assert!(!terminal.scroll(Scroll::Rows(1)));
+    assert!(terminal.scroll(Scroll::PageDown));
+    assert_eq!(texts(&mut terminal), ["4", "5", "6"]);
+    assert!(terminal.scroll_to(1));
+    assert_eq!(texts(&mut terminal), ["7", "8", "9"]);
+    assert!(terminal.scroll_to(100));
+    assert_eq!(terminal.history(), History { rows: 7, offset: 7 });
+    assert!(terminal.scroll(Scroll::Bottom));
+    assert_eq!(texts(&mut terminal), ["8", "9", "10"]);
+    assert_eq!(terminal.cursor().shape, CursorShape::Beam);
+    assert!(!terminal.scroll(Scroll::Rows(-1)));
+}
+
+#[test]
+fn the_output_does_not_move_the_view_of_the_history() {
+    let mut terminal = ten_lines();
+    terminal.scroll(Scroll::Rows(2));
+    terminal.feed(b"\r\n11\r\n12");
+    assert_eq!(texts(&mut terminal), ["6", "7", "8"]);
+    assert_eq!(terminal.history(), History { rows: 9, offset: 4 });
+}
+
+#[test]
+fn the_rows_that_leave_a_region_below_the_top_do_not_move_the_view() {
+    // They do not go into the history. The region scrolls with line feeds at
+    // its bottom, with `CSI S`, and with characters and a tab that wrap
+    // there; `CSI M` moves the rows below the cursor, which is not on the
+    // first row; and a region that is not valid changes nothing.
+    for output in [
+        &b"\x1b[2;3r\x1b[3;1H\n\n\n\n\n\n\n\n\n\n"[..],
+        b"\x1b[2;3r\x1b[S\x1b[S\x1b[S",
+        b"\x1b[2;3r\x1b[3;1Habcdefghijklmnopqrstuvwxy",
+        b"\x1b[2;3r\x1b[3;10Hx\t",
+        b"\x1b[2;3r\x1b[1;1r\x1b[3;1H\n\n",
+        b"\x1b[2;1H\x1b[M\x1b[M",
+    ] {
+        let mut terminal = ten_lines();
+        terminal.scroll(Scroll::Rows(2));
+        terminal.feed(output);
+        assert_eq!(
+            terminal.history(),
+            History { rows: 7, offset: 2 },
+            "{output:?}"
+        );
+        assert_eq!(texts(&mut terminal), ["6", "7", "8"], "{output:?}");
+    }
+
+    // From the first row of the history, it does not go beyond it.
+    let mut terminal = ten_lines();
+    terminal.scroll(Scroll::Top);
+    terminal.feed(b"\x1b[2;3r\x1b[3;1H\n\n\n\n\n\n\n\n\n\n");
+    assert_eq!(terminal.history(), History { rows: 7, offset: 7 });
+    assert_eq!(texts(&mut terminal), ["1", "2", "3"]);
+
+    // A region that starts at the top sends its rows to the history, and the
+    // view moves with them.
+    let mut terminal = ten_lines();
+    terminal.scroll(Scroll::Rows(2));
+    terminal.feed(b"\x1b[1;2r\x1b[2;1H\n\n");
+    assert_eq!(terminal.history(), History { rows: 9, offset: 4 });
+    assert_eq!(texts(&mut terminal), ["6", "7", "8"]);
+}
+
+/// With the view two rows above the screen of `terminal`, two line feeds at
+/// the bottom of the screen: the rows go into the history, and the view
+/// keeps showing the same ones.
+fn assert_the_rows_go_into_the_history(terminal: &mut Terminal) {
+    terminal.scroll(Scroll::Bottom);
+    terminal.scroll(Scroll::Rows(2));
+    let shown = texts(terminal);
+    let rows = terminal.history().rows;
+    let bottom = terminal.size().rows;
+    terminal.feed(format!("\x1b[{bottom};1H\n\n").as_bytes());
+    assert_eq!(texts(terminal), shown);
+    assert_eq!(
+        terminal.history(),
+        History {
+            rows: rows + 2,
+            offset: 4
+        }
+    );
+}
+
+#[test]
+fn a_new_size_a_reset_or_deccolm_make_the_region_the_whole_screen_again() {
+    let mut terminal = ten_lines();
+    terminal.feed(b"\x1b[2;3r");
+    terminal.resize(GridSize::new(10, 4));
+    assert_the_rows_go_into_the_history(&mut terminal);
+
+    // A region of the alternate screen, which the primary one gets back
+    // with another size.
+    let mut terminal = ten_lines();
+    terminal.feed(b"\x1b[?1049h");
+    terminal.resize(GridSize::new(10, 4));
+    terminal.feed(b"\x1b[2;3r\x1b[?1049l");
+    assert_the_rows_go_into_the_history(&mut terminal);
+
+    let mut terminal = ten_lines();
+    terminal.feed(b"\x1b[2;3r\x1bc1\r\n2\r\n3\r\n4\r\n5\r\n6");
+    assert_the_rows_go_into_the_history(&mut terminal);
+
+    // DECCOLM, set or reset: alacritty_terminal keeps the columns, but it
+    // clears the screen and the region.
+    for column_mode in [&b"\x1b[?3h"[..], b"\x1b[?3l"] {
+        let mut terminal = ten_lines();
+        terminal.feed(b"\x1b[2;3r");
+        terminal.feed(column_mode);
+        assert_the_rows_go_into_the_history(&mut terminal);
+    }
+}
+
+#[test]
+fn a_resize_keeps_the_view_inside_the_history() {
+    let mut terminal = ten_lines();
+    terminal.scroll(Scroll::Top);
+    for size in [
+        GridSize::new(10, 8),
+        GridSize::new(2, 2),
+        GridSize::new(10, 3),
+    ] {
+        terminal.resize(size);
+        let history = terminal.history();
+        assert!(history.offset <= history.rows, "{size:?}: {history:?}");
+        copy(&mut terminal);
+    }
+    // At the bottom, it stays at the bottom.
+    terminal.scroll(Scroll::Bottom);
+    terminal.resize(GridSize::new(10, 2));
+    assert_eq!(terminal.history().offset, 0);
+}
+
 /// The selected cells of `row`: `#` for each one, and `.` for the others.
 fn marks(screen: &Screen, row: u16) -> String {
     screen
@@ -842,6 +1143,17 @@ fn copying_only_the_damage_gives_the_same_screen_as_copying_everything() {
                 3 => {
                     damaged.clear_selection();
                     whole.clear_selection();
+                }
+                4 => {
+                    let scroll = [
+                        Scroll::Rows(random(5) as i32 - 2),
+                        Scroll::PageUp,
+                        Scroll::PageDown,
+                        Scroll::Top,
+                        Scroll::Bottom,
+                    ][random(5)];
+                    damaged.scroll(scroll);
+                    whole.scroll(scroll);
                 }
                 _ => {}
             }

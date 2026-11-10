@@ -4,11 +4,13 @@
 use std::sync::Mutex;
 
 use meiga_core::paste::Paste;
+use meiga_core::term::Scroll;
 use meiga_win::clipboard;
 use meiga_win::conpty::Input;
 use meiga_win::window::Window;
 
 use crate::app::TITLE;
+use crate::mouse::Response;
 use crate::session::{Shared, lock};
 
 /// The most characters of the text that the question before pasting shows,
@@ -42,8 +44,10 @@ pub fn copy(window: &Window, shared: &Mutex<Shared>, clear: bool) -> bool {
 /// Pastes the text of the clipboard into the program of `input`, as the
 /// modes of the terminal of `shared` say. If the text has more than one
 /// line and the program did not ask for bracketed paste, it asks the user
-/// first, in a message box. Returns whether it showed one.
-pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> bool {
+/// first, in a message box. The view goes back to the screen, where the
+/// program writes. Returns whether a frame has to show it, and whether it
+/// showed a message box.
+pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> Response {
     // A clipboard that another program keeps open, or without text.
     let text = clipboard::read_text(window)
         .ok()
@@ -52,16 +56,24 @@ pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> bool {
     let modes = lock(shared).terminal.modes();
     let paste = Paste::new(&text, &modes);
     if paste.is_empty() {
-        return false;
+        return Response::default();
     }
-    let asked = !paste.bracketed && paste.is_multiline();
-    if asked && !window.confirm(TITLE, &question(&paste.text)) {
-        return true;
+    let dialog = !paste.bracketed && paste.is_multiline();
+    if dialog && !window.confirm(TITLE, &question(&paste.text)) {
+        return Response {
+            dialog,
+            ..Response::default()
+        };
     }
+    let redraw = lock(shared).terminal.scroll(Scroll::Bottom);
     let mut bytes = Vec::with_capacity(paste.text.len() + 12);
     paste.write_to(&mut bytes);
     input.write(&bytes);
-    asked
+    Response {
+        redraw,
+        dialog,
+        zoom: 0,
+    }
 }
 
 /// The question before pasting `text`, which has more than one line, each

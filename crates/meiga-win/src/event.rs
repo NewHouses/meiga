@@ -30,6 +30,10 @@ const MK_SHIFT: WPARAM = 0x0004;
 const MK_CONTROL: WPARAM = 0x0008;
 const MK_MBUTTON: WPARAM = 0x0010;
 
+/// The message of [`Window::track_mouse_leave`]. It is in the
+/// `Win32_UI_Controls` feature, for the same reason.
+const WM_MOUSELEAVE: u32 = 0x02a3;
+
 /// An error from the code that handles the events. It ends the message loop.
 pub type HandlerError = Box<dyn StdError>;
 
@@ -56,6 +60,10 @@ pub enum Event {
     /// The client area changed size, or the window was minimized or
     /// restored. A minimized window has size 0 × 0.
     Resized { size: Size, minimized: bool },
+    /// The window moved to a monitor with another scale, or the scale of
+    /// its monitor changed: it has `dpi` dots per inch now. Its new size, if
+    /// it changes, comes right after, with [`Event::Resized`].
+    DpiChanged { dpi: u32 },
     /// The user started to move or resize the window with the mouse or the
     /// keyboard. Until [`Event::SizeMoveEnded`], Windows runs its own message
     /// loop.
@@ -94,6 +102,9 @@ pub enum Event {
     /// ([`Window::capture_mouse`]), for example because another window took
     /// it.
     CaptureLost,
+    /// The pointer left the client area, once after each
+    /// [`Window::track_mouse_leave`].
+    MouseLeft,
     /// A key went down or up, with the character that it writes, if any.
     /// Alt+F4 and Alt+Space never come as events: Windows handles them, to
     /// close the window and to open its menu.
@@ -167,6 +178,7 @@ pub(crate) fn decode(
             modifiers: modifiers(alt()),
         },
         WM_CAPTURECHANGED => Event::CaptureLost,
+        WM_MOUSELEAVE => Event::MouseLeft,
         WM_SETFOCUS => Event::Focus { focused: true },
         WM_KILLFOCUS => Event::Focus { focused: false },
         WM_WAKE => Event::Wake,

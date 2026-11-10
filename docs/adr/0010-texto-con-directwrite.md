@@ -1,6 +1,6 @@
 # ADR 0010 · Texto con DirectWrite e unha caché de glifos do tamaño da cela
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md)
 - **Data:** 2026-11-08
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0003](0003-nucleo-vt-alacritty-terminal.md), [ADR 0006](0006-licenzas-e-dependencias.md)
 

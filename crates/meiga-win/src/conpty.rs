@@ -30,7 +30,9 @@ use std::thread;
 use meiga_core::geometry::GridSize;
 use windows_sys::Win32::Foundation::{FALSE, HANDLE, TRUE, WAIT_OBJECT_0, WAIT_TIMEOUT};
 use windows_sys::Win32::Storage::FileSystem::{ReadFile, WriteFile};
-use windows_sys::Win32::System::Console::{COORD, ClosePseudoConsole, CreatePseudoConsole, HPCON};
+use windows_sys::Win32::System::Console::{
+    COORD, ClosePseudoConsole, CreatePseudoConsole, HPCON, ResizePseudoConsole,
+};
 use windows_sys::Win32::System::JobObjects::{
     CreateJobObjectW, JOB_OBJECT_LIMIT_BREAKAWAY_OK, JOBOBJECT_BASIC_PROCESS_ID_LIST,
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectBasicProcessIdList,
@@ -94,6 +96,9 @@ type CreateFn = unsafe extern "system" fn(COORD, HANDLE, HANDLE, u32, *mut HPCON
 /// `ConptyClosePseudoConsole` and `ClosePseudoConsole`.
 type CloseFn = unsafe extern "system" fn(HPCON);
 
+/// `ConptyResizePseudoConsole` and `ResizePseudoConsole`.
+type ResizeFn = unsafe extern "system" fn(HPCON, COORD) -> HRESULT;
+
 /// What a function found by `GetProcAddress` looks like before it is cast to
 /// its real signature.
 type AnyFn = unsafe extern "system" fn() -> isize;
@@ -109,7 +114,7 @@ pub enum Source {
     System,
 }
 
-/// A ConPTY: the functions that create and close pseudoconsoles.
+/// A ConPTY: the functions that create, resize and close pseudoconsoles.
 ///
 /// It is cheap to clone. The library of a bundled ConPTY stays loaded until
 /// the process ends.
@@ -118,6 +123,7 @@ pub struct Conpty {
     source: Source,
     create: CreateFn,
     close: CloseFn,
+    resize: ResizeFn,
     flags: u32,
 }
 
@@ -172,29 +178,33 @@ impl Conpty {
         };
         let create = function(c"ConptyCreatePseudoConsole")?;
         let close = function(c"ConptyClosePseudoConsole")?;
-        // SAFETY: conpty.h, in the NuGet package, declares both functions
-        // with these signatures.
-        let (create, close) = unsafe {
+        let resize = function(c"ConptyResizePseudoConsole")?;
+        // SAFETY: conpty.h, in the NuGet package, declares the three
+        // functions with these signatures.
+        let (create, close, resize) = unsafe {
             (
                 mem::transmute::<AnyFn, CreateFn>(create),
                 mem::transmute::<AnyFn, CloseFn>(close),
+                mem::transmute::<AnyFn, ResizeFn>(resize),
             )
         };
         Ok(Self {
             source: Source::Bundled(folder),
             create,
             close,
+            resize,
             flags: GLYPH_WIDTH_WCSWIDTH,
         })
     }
 
-    /// The ConPTY of Windows: `CreatePseudoConsole` and
-    /// `ClosePseudoConsole`, in `kernel32.dll`.
+    /// The ConPTY of Windows: `CreatePseudoConsole`, `ResizePseudoConsole`
+    /// and `ClosePseudoConsole`, in `kernel32.dll`.
     pub fn system() -> Self {
         Self {
             source: Source::System,
             create: CreatePseudoConsole,
             close: ClosePseudoConsole,
+            resize: ResizePseudoConsole,
             flags: 0,
         }
     }
@@ -222,7 +232,7 @@ impl Conpty {
         size: GridSize,
         output: O,
     ) -> Result<Pty, Error> {
-        let size = coord(size)?;
+        let size = coord(size, "CreatePseudoConsole")?;
         let mut command_line = command_line_of(command_line)?;
         let wake = event(false)?;
         let output_closed = event(true)?;
@@ -328,6 +338,7 @@ impl Conpty {
         Ok(PseudoConsole {
             handle,
             close: self.close,
+            resize: self.resize,
         })
     }
 }
@@ -381,6 +392,11 @@ impl Pty {
     pub fn process_id(&self) -> u32 {
         self.process_id
     }
+
+    /// Changes the size of the pseudoconsole: see [`Input::resize`].
+    pub fn resize(&self, size: GridSize) -> Result<(), Error> {
+        self.input.resize(size)
+    }
 }
 
 impl Drop for Pty {
@@ -390,8 +406,8 @@ impl Drop for Pty {
     }
 }
 
-/// Sends input to the program of a session, from any thread. It is cheap to
-/// clone.
+/// Sends input to the program of a session, and changes the size of its
+/// pseudoconsole, from any thread. It is cheap to clone.
 #[derive(Clone)]
 pub struct Input {
     shared: Arc<Shared>,
@@ -415,6 +431,29 @@ impl Input {
         if wake {
             self.shared.wake();
         }
+    }
+
+    /// Changes the size of the pseudoconsole. ConPTY reflows its buffer, and
+    /// tells the program, which may show itself again for the new size; to
+    /// the terminal it writes nothing, but it asks for the position of its
+    /// cursor (`CSI 6n`) when the program asks for its own. It does not
+    /// wait for ConPTY. Once the session has been closed or has ended, it
+    /// does nothing.
+    pub fn resize(&self, size: GridSize) -> Result<(), Error> {
+        let size = coord(size, "ResizePseudoConsole")?;
+        let state = self.shared.lock();
+        let Some(console) = state.console.as_ref().filter(|_| !state.closing) else {
+            return Ok(());
+        };
+        // SAFETY: the handle comes from the create function of the same
+        // ConPTY, and it stays open while the lock is held: the writer
+        // takes it under the lock to close it. The function only writes a
+        // message to ConPTY, without waiting for it.
+        let result = unsafe { (console.resize)(console.handle, size) };
+        if result < 0 {
+            return Err(Error::hresult("ResizePseudoConsole", result));
+        }
+        Ok(())
     }
 }
 
@@ -550,6 +589,7 @@ struct State {
 struct PseudoConsole {
     handle: HPCON,
     close: CloseFn,
+    resize: ResizeFn,
 }
 
 impl Drop for PseudoConsole {
@@ -820,8 +860,8 @@ impl Drop for Attributes<'_> {
 }
 
 /// The size of a pseudoconsole as a `COORD`, whose coordinates are 16-bit
-/// signed numbers. ConPTY needs at least one cell.
-fn coord(size: GridSize) -> Result<COORD, Error> {
+/// signed numbers, for `function`. ConPTY needs at least one cell.
+fn coord(size: GridSize, function: &'static str) -> Result<COORD, Error> {
     match (i16::try_from(size.columns), i16::try_from(size.rows)) {
         (Ok(columns @ 1..), Ok(rows @ 1..)) => Ok(COORD {
             X: columns,
@@ -830,7 +870,7 @@ fn coord(size: GridSize) -> Result<COORD, Error> {
         _ => {
             let message = format!("{} x {} cells is not a valid size", size.columns, size.rows);
             Err(Error::new(
-                "CreatePseudoConsole",
+                function,
                 io::Error::new(io::ErrorKind::InvalidInput, message),
             ))
         }
@@ -922,11 +962,17 @@ mod tests {
 
     #[test]
     fn sizes_must_fit_in_a_coord() {
-        let size = coord(GridSize::new(80, 25)).unwrap();
+        let size = coord(GridSize::new(80, 25), "CreatePseudoConsole").unwrap();
         assert_eq!((size.X, size.Y), (80, 25));
-        assert!(coord(GridSize::new(32_767, 1)).is_ok());
-        assert!(coord(GridSize::new(32_768, 25)).is_err());
-        assert!(coord(GridSize::new(80, 0)).is_err());
+        assert!(coord(GridSize::new(32_767, 1), "CreatePseudoConsole").is_ok());
+        assert!(coord(GridSize::new(32_768, 25), "CreatePseudoConsole").is_err());
+        let Err(error) = coord(GridSize::new(80, 0), "ResizePseudoConsole") else {
+            panic!("80 x 0 is not a valid size");
+        };
+        assert!(
+            error.to_string().starts_with("ResizePseudoConsole"),
+            "{error}"
+        );
     }
 
     #[test]

@@ -24,12 +24,13 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0007](0007-integracion-coa-shell.md) | Integración coa shell | Aceptado |
 | [0008](0008-temporizador-dos-fotogramas.md) | Temporizador dos fotogramas | Aceptado |
 | [0009](0009-xanela-que-non-se-ve.md) | Que se debuxa cando a xanela non se ve | Aceptado |
-| [0010](0010-texto-con-directwrite.md) | Texto con DirectWrite e unha caché de glifos | Aceptado |
+| [0010](0010-texto-con-directwrite.md) | Texto con DirectWrite e unha caché de glifos | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
 | [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado |
-| [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md) e [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) |
-| [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado |
+| [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) e [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
+| [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
 | [0014](0014-o-teclado.md) | O teclado | Aceptado |
-| [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado |
+| [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
+| [0016](0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom | Aceptado |
 
 ## Como se relacionan
 
@@ -66,6 +67,12 @@ graph TD
     A12 --> A15
     A13 --> A15
     A14 --> A15
+    A4 --> A16["0016 O historial, o tamaño e o zoom"]
+    A5 --> A16
+    A10 --> A16
+    A12 --> A16
+    A13 --> A16
+    A15 --> A16
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.

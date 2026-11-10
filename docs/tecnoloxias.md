@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 1.8. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 1.9. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -498,7 +498,7 @@ Na subfase 1.1, a brocha da clase pintaba toda a xanela. Desde a 1.2, meiga pint
 | *Per monitor* (v1) | O programa escala en cada monitor e recibe `WM_DPICHANGED`. Windows non escala nada, nin a barra de título. | Nítido, pero o programa ten que escalar ata a barra de título. |
 | *Per monitor* v2 | Como a v1 e, ademais, Windows escala a barra de título, os bordos e as caixas de diálogo. | Nítido e co mínimo traballo. É o que recomenda Microsoft. |
 
-meiga usa ***per monitor* v2**: o texto ten que verse nítido a calquera escala, tamén por Escritorio remoto, e os glifos debúxanse ao seu tamaño real. A fonte créase co DPI do monitor da xanela, que dá [`GetDpiForWindow`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdpiforwindow): 96 ao 100 %, 120 ao 125 % e 144 ao 150 %. Del sae o tamaño da cela ([§27](#27-directwrite-fontes-e-glifos)). Cando a xanela pasa a un monitor con outra escala, chega `WM_DPICHANGED`, e meiga aplica o tamaño que suxire Windows (ver [Código › meiga-win](codigo/meiga-win.md#window_proc)); cambiar tamén a fonte chegará coa subfase 1.9.
+meiga usa ***per monitor* v2**: o texto ten que verse nítido a calquera escala, tamén por Escritorio remoto, e os glifos debúxanse ao seu tamaño real. A fonte créase co DPI do monitor da xanela, que dá [`GetDpiForWindow`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdpiforwindow): 96 ao 100 %, 120 ao 125 % e 144 ao 150 %. Del sae o tamaño da cela ([§27](#27-directwrite-fontes-e-glifos)). Cando a xanela pasa a un monitor con outra escala, chega `WM_DPICHANGED`, e meiga aplica o tamaño que suxire Windows (ver [Código › meiga-win](codigo/meiga-win.md#window_proc)); desde a subfase 1.9, crea antes a fonte para a escala nova ([§50](#50-a-escala-cambia-wm_dpichanged)).
 
 **Como se comproba.** `tools/check-window.ps1` pídelle a Windows o contexto de escala da xanela de meiga (`GetWindowDpiAwarenessContext`). Tamén se ve no Xestor de tarefas, na lapela *Detalles*, engadindo a columna *DPI Awareness*: para `meiga.exe`, *Per-Monitor (v2)*.
 
@@ -1091,7 +1091,7 @@ Un clic co botón dereito na columna 5 e na fila 3 é `ESC [ M " % #` no primeir
 
 **A roda sen o rato** (`?1007`). Na pantalla alternativa, un programa que non pediu o rato, coma `less`, recibe a roda coma frechas: por cada parte, as liñas das preferencias de Windows ([§44](#44-o-rato-en-windows)). Está activo ao principio, coma no xterm e no Windows Terminal.
 
-**Maiús.** Con Maiús, os clics seleccionan texto aínda que o programa teña o rato, coma no xterm e no Windows Terminal.
+**Maiús.** Con Maiús, os clics seleccionan texto aínda que o programa teña o rato, coma no xterm e no Windows Terminal. Desde a subfase 1.9, a roda con Maiús, ou co punteiro sobre a barra de desprazamento, tamén é de meiga: despraza o historial ([§52](#52-a-barra-de-desprazamento-e-o-zoom)).
 
 ## 46. O portapapeis de Windows
 
@@ -1116,6 +1116,90 @@ Un clic co botón dereito na columna 5 e na fila 3 é `ESC [ M " % #` no primeir
 
 **Na consola de Windows non hai *bracketed paste*.** O ConPTY non o coñece: aos programas que len a entrada coma un terminal pásalles as marcas tal cal, pero aos da consola de Windows quítallas, e o texto chega coma teclas. PSReadLine, por exemplo, executa cada liña cando lle chega o seu Intro. Por iso, se o programa non pediu o *bracketed paste*, meiga pregunta antes de pegar varias liñas ([ADR 0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
 
-**A caixa de mensaxe.** [`MessageBoxW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-messageboxw) mostra unha caixa de Windows cun texto e uns botóns, coma *OK* e *Cancel*, cun deles escollido, e espera a resposta. Mentres está aberta, o seu propio bucle de mensaxes reparte tamén as da xanela de meiga, pero o código que a abriu segue esperando: as mensaxes da xanela non chegan a el. Ao pechala, meiga redebuxa a xanela e le o que cambiou mentres tanto.
+**A caixa de mensaxe.** [`MessageBoxW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-messageboxw) mostra unha caixa de Windows cun texto e uns botóns, coma *OK* e *Cancel*, cun deles escollido, e espera a resposta. Mentres está aberta, o seu propio bucle de mensaxes reparte tamén as da xanela de meiga, pero o código que a abriu segue esperando: as mensaxes da xanela non chegan a el. Ao pechala, meiga redebuxa a xanela e le o que cambiou mentres tanto, e, desde a subfase 1.9, colle o tamaño e a escala que ten entón a xanela.
 
 **OSC 52.** Un programa pode copiar texto ao portapapeis ([§35](#35-as-secuencias-de-control)). meiga só o permite desde a xanela que se está a usar, a que ten o foco e está en primeiro plano ([§39](#39-o-foco-e-o-título-da-xanela)).
+
+## 48. Cambiar o tamaño do ConPTY: o seu *reflow* e a pregunta polo cursor
+
+**`ResizePseudoConsole`.** O tamaño dunha pseudoconsola cámbiase con [`ResizePseudoConsole`](https://learn.microsoft.com/windows/console/resizepseudoconsole), co tamaño novo en celas nun `COORD`, coma ao creala ([§31](#31-conpty-a-pseudoconsola-de-windows)); no ConPTY empaquetado, `ConptyResizePseudoConsole`, coa mesma firma. Escribe o tamaño na tubaxe de sinais que a une co anfitrión, e volta sen esperar: o anfitrión aplícao cando le a mensaxe.
+
+**O búfer do anfitrión.** Nunha pseudoconsola, o búfer da consola ten o tamaño da pseudoconsola: non ten historial, e as filas que saen por arriba pérdense para o anfitrión. O historial gárdao o terminal. Ao cambiar o tamaño, o anfitrión volta repartir as liñas longas ao ancho novo (*reflow*), co texto arriba:
+
+| Cambio | Que fai o anfitrión |
+|---|---|
+| Máis estreito | As liñas longas pártense en máis filas, que baixan cara ás baleiras de abaixo. As de arriba só se perden cando o texto e o cursor xa non caben. |
+| Máis ancho | As filas dunha liña partida xúntanse, e quedan filas baleiras abaixo. |
+| Máis baixo | Quítanse primeiro as filas baleiras de abaixo, e despois as de arriba, pero nunca a do cursor. |
+| Máis alto | Engádense filas baleiras abaixo. |
+
+As filas que se perden non voltan. Para o anfitrión, unha fila só de espazos está baleira, aínda que teñan cor, e os espazos do final dunha liña quítanse ao repartila. Comprobouse co ConPTY 1.25, comparando despois de cada cambio o búfer da consola coa pantalla do terminal.
+
+**Non lle escribe nada ao terminal.** Ao cambiar o tamaño, o anfitrión non redebuxa a pantalla nin move o cursor do terminal: supón que o terminal repartiu o texto coma el. Só apunta que a posición do cursor pode estar mal ([`screenInfo.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/host/screenInfo.cpp#L1380-L1392)).
+
+**A pregunta polo cursor.** Coa posición apuntada coma dubidosa, a seguinte vez que un programa pide os datos do búfer ([`GetConsoleScreenBufferInfo`](https://learn.microsoft.com/windows/console/getconsolescreenbufferinfo)), o anfitrión pregúntalle ao terminal onde ten o cursor, con `ESC [ 6 n` ([`VtIo.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/host/VtIo.cpp#L740-L750)), espera ata 500 ms a resposta, `ESC [ fila ; columna R`, e colle esa posición ([`screenInfo.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/host/screenInfo.cpp#L1456-L1516)). Así, o cursor do anfitrión segue o do terminal, pero o resto do texto non: se o terminal colocou as filas noutro sitio, o que escribe despois o programa cae onde non debe. Por iso meiga coloca a pantalla e o cursor coma o anfitrión, e responde a pregunta coma as outras, desde o fío lector ([ADR 0013](adr/0013-da-saida-a-pantalla.md) e [ADR 0016](adr/0016-o-historial-o-tamano-e-o-zoom.md)).
+
+**A pantalla alternativa.** Mentres un programa mostra a pantalla alternativa (`?1049h`, [§35](#35-as-secuencias-de-control)), o anfitrión non reparte a principal: garda o último tamaño ([`screenInfo.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/host/screenInfo.cpp#L612-L619)) e dállo unha vez, cando o programa volta a ela ([`screenInfo.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/host/screenInfo.cpp#L1855-L1891)). A alternativa nunca se reparte: córtase ou énchese pola dereita e por abaixo.
+
+**Os programas.** Con cada cambio, o anfitrión pon na entrada da consola un evento [`WINDOW_BUFFER_SIZE_EVENT`](https://learn.microsoft.com/windows/console/window-buffer-size-record-str) co tamaño novo ([`output.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/host/output.cpp#L260-L272)), para os programas que o pediron (`ENABLE_WINDOW_INPUT`), que poden mostrarse de novo para el. Os programas a pantalla completa, coma Copilot CLI, redebuxan todo. O tamaño tamén se pode preguntar en calquera momento: en cmd, `mode con` móstrao.
+
+**O Windows Terminal** coloca a súa pantalla coma o anfitrión: a primeira fila é a que era a primeira, salvo que o texto e o cursor non caiban, e mentres se ve a pantalla alternativa deixa a principal para cando o programa volta a ela ([`Terminal.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/cascadia/TerminalCore/Terminal.cpp#L293-L477)). Cambia primeiro o seu búfer e despois o ConPTY ([`ControlCore.cpp`](https://github.com/microsoft/terminal/blob/v1.25.2733.0/src/cascadia/TerminalControl/ControlCore.cpp#L1230-L1260)). meiga fai o mesmo ([§49](#49-o-historial-de-alacritty_terminal-a-vista-e-o-reflow)).
+
+## 49. O historial de `alacritty_terminal`: a vista e o *reflow*
+
+**O historial.** A grella de `alacritty_terminal` ([§34](#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)) garda as filas da pantalla e, enriba delas, as que saíron por arriba, ata un límite: en meiga, 10 000. As filas cóntanse cun `Line`: desde 0, as da pantalla, e con números negativos, as do historial, desde −1, a máis recente. Só a pantalla principal ten historial. A memoria resérvase a medida que se enche, polo menos 1 000 filas de cada vez, e cada cela ocupa 24 bytes, aínda que estea baleira: un historial cheo de 100 columnas son uns 24 MB.
+
+**A vista.** O que se mostra pode empezar máis arriba ca a pantalla: `display_offset` di cantas filas, e con 0 vese a pantalla, onde escribe o programa. `scroll_display` móvea unhas filas (`Delta`, cara arriba se son positivas), unha pantalla (`PageUp` e `PageDown`), ao principio do historial (`Top`) ou á pantalla (`Bottom`), sen pasar dos extremos. Mentres a vista está arriba, as filas que entran no historial súbena tamén, e segue mostrando as mesmas filas. Cunha rexión de desprazamento que non empeza na primeira fila (`ESC [ superior ; inferior r`), as filas que saen dela non entran no historial, pero `alacritty_terminal` sube igual a vista: con cada fila, a vista mostraría a de enriba, e podería pasar do principio do historial. meiga déixaa onde estaba: segue onde empeza a rexión, que `alacritty_terminal` garda nun campo privado, e devolve a vista despois de cada orde que a despraza ([Código › meiga-core](codigo/meiga-core.md#manter-a-vista-view_to_keep-e-keep_view)). meiga move a vista coa roda, coas teclas e coa barra de desprazamento ([§52](#52-a-barra-de-desprazamento-e-o-zoom)).
+
+**O *reflow*.** `Term::resize` cambia primeiro as columnas e despois as filas. A última cela dunha fila que continúa na seguinte leva o *flag* `WRAPLINE`: ao estreitar, as liñas longas pártense en máis filas, e ao ensanchar, xúntanse. Reparte a pantalla e o historial enteiros, así que canto máis longo é o historial, máis leva. Pero coloca a pantalla doutra maneira ca o ConPTY ([§48](#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)): mantén abaixo a fila do cursor. Cando a pantalla medra, trae filas do historial; cando as liñas se parten, empurra as de arriba ao historial, aínda que haxa filas baleiras debaixo do cursor; e reparte tamén a pantalla principal mentres se ve a alternativa. Se moitas filas debaixo do cursor se parten, o cursor sae da pantalla por arriba, e `alacritty_terminal` déixao na primeira fila, que xa non é a súa.
+
+**Como segue meiga as filas** ([ADR 0016](adr/0016-o-historial-o-tamano-e-o-zoom.md)). Antes de repartir, marca dúas celas: a primeira da pantalla e a do cursor. Para iso usa un *flag* que `alacritty_terminal` non usa, o último dos 16 bits de `Flags` (`0x8000`); e na cela do cursor pon, ademais, U+FFFF, un carácter que Unicode reserva para usos internos (*noncharacter*) e que os programas non escriben: así a cela está ocupada, e o *reflow* consérvaa coma texto, cos brancos de antes dela, coma o ConPTY. Despois de repartir, busca as marcas, de abaixo arriba, e move a pantalla: `Grid::scroll_up` sobe filas ao historial, e `Grid::resize` sen *reflow* trae filas del. Ao final, quita as marcas e devólvelle á cela do cursor o seu carácter.
+
+**A pantalla principal, á parte.** Mentres se ve a pantalla alternativa, meiga garda a principal á parte, sen repartila, e deixa no seu sitio unha grella baleira sen historial. `alacritty_terminal` só a dá a través de `swap_alt`, o cambio entre as dúas pantallas. Cando o programa volta á principal (`?1049l`), ou reinicia o terminal (`ESC c`), meiga ten que devolvela nese momento, porque a saída que vén despois xa é para ela. Por iso pon o seu propio `Handler` ([§34](#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)) entre o parser e o `Term`: pásalle todas as ordes e, despois desas dúas, devolve a principal ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrctermhandlerrs)).
+
+**A selección.** `alacritty_terminal` move a selección co texto ao cambiar o tamaño, pero meiga quítaa, coma o Windows Terminal.
+
+## 50. A escala cambia: `WM_DPICHANGED`
+
+**Cando chega.** Unha xanela *per monitor* v2 ([§23](#23-manifesto-da-aplicación-e-dpi)) recibe [`WM_DPICHANGED`](https://learn.microsoft.com/windows/win32/hidpi/wm-dpichanged) cando pasa a un monitor con outra escala, ou cando cambia a escala do seu monitor, por exemplo en *Configuración › Sistema › Pantalla › Escala*. Nunha sesión de Escritorio remoto, a escala vén do cliente, e tamén pode cambiar ao reconectarse desde outra pantalla.
+
+**O que leva.** No `wParam`, o DPI novo dúas veces, o horizontal e o vertical, que son iguais; no `lParam`, un punteiro a un `RECT` co tamaño e a posición que suxire Windows para que a xanela manteña o seu tamaño físico. O programa aplícao con `SetWindowPos`, e `WM_SIZE` chega dentro desa chamada, antes de que volte.
+
+**En meiga, primeiro a escala.** A xanela pásalle o DPI novo á vista antes de aplicar o tamaño suxerido (`Event::DpiChanged`), e a vista crea a fonte, a barra de desprazamento e o cursor para el; despois, o cambio de tamaño (`Event::Resized`) calcula a grella coas celas novas. Ao revés, a grella cambiaría dúas veces, a primeira coas celas vellas, e o terminal e o programa repartirían o texto para un tamaño que non dura. Polo mesmo, entre os dous non se debuxa: un fotograma no medio daríalles a grella das celas novas na xanela vella. meiga pídelle o fotograma ao temporizador, que vence despois do tamaño novo; se o tamaño da xanela non cambia, ese fotograma dálles a grella das celas novas na mesma xanela.
+
+**O que depende do DPI:** o tamaño da fonte e da cela ([§27](#27-directwrite-fontes-e-glifos)), o grosor do cursor ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)), as medidas da barra de desprazamento e a velocidade da selección que se despraza soa ([§52](#52-a-barra-de-desprazamento-e-o-zoom)), que se dan en píxeles ao 100 %.
+
+**Como se comproba.** `WM_DPICHANGED` leva un punteiro, e non se pode publicar desde outro programa: unha proba de `meiga-win` envíalla á xanela desde o seu propio fío, e comproba a orde dos eventos ([Código › meiga-win](codigo/meiga-win.md#window_proc)). Na revisión do código da 1.9, unha copia temporal de meiga envioulla á súa xanela desde outro fío, coma Windows, cun programa no terminal que apuntaba os tamaños que recibía ([Subfase 1.9](subfases/1.9-historial.md)). O resto compróbase a man, cambiando a escala.
+
+## 51. O punteiro sae da xanela: `TrackMouseEvent`
+
+**Sen aviso.** Windows envía `WM_MOUSEMOVE` mentres o punteiro se move por riba da área cliente ([§44](#44-o-rato-en-windows)), pero nada cando sae dela: salvo que teña o rato capturado, a xanela non sabe que o punteiro xa non está.
+
+**`TrackMouseEvent`.** Unha xanela pode pedir un aviso con [`TrackMouseEvent`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-trackmouseevent) e `TME_LEAVE`: cando o punteiro sae da área cliente, Windows envíalle unha vez [`WM_MOUSELEAVE`](https://learn.microsoft.com/windows/win32/inputdev/wm-mouseleave), e o seguimento remata; para a seguinte, hai que pedilo outra vez. A captura do rato tamén pode rematalo: meiga pídeo outra vez ao soltar o botón sobre a franxa da barra.
+
+**A constante.** `TrackMouseEvent` e `TME_LEAVE` están na *feature* de `windows-sys` que meiga xa usa para o teclado e o rato, pero `WM_MOUSELEAVE` (`0x02A3`) está en `Win32_UI_Controls`, que traería miles de declaracións por ela: meiga defínea no seu código, coma `CF_UNICODETEXT` ([§46](#46-o-portapapeis-de-windows)).
+
+**En meiga.** Só o usa a barra de desprazamento: o polgar ensánchase cando o punteiro entra na franxa e estréitase cando sae, tamén cando sae da xanela directamente desde ela, cando non chega ningún outro `WM_MOUSEMOVE`. meiga só pide o aviso ao entrar na franxa: fóra dela, nin mensaxes nin temporizadores.
+
+## 52. A barra de desprazamento e o zoom
+
+**A barra de Windows.** Unha xanela co estilo `WS_VSCROLL` ten unha barra de desprazamento de Windows, fóra da área cliente, que se move con `SetScrollInfo` e avisa con `WM_VSCROLL`. Windows debúxaa co seu tema, clara e con frechas, tan ancha coma `SM_CXVSCROLL`. O Windows Terminal debuxa a súa, fina, e meiga tamén ([ADR 0016](adr/0016-o-historial-o-tamano-e-o-zoom.md)).
+
+**A de meiga.** Unha franxa á dereita da área cliente, sempre reservada: a grella non a usa. As súas medidas danse en píxeles ao 100 % e escálanse co DPI, redondeando, polo menos a un píxel:
+
+| Medida | Ao 100 % | Ao 150 % |
+|---|---|---|
+| A franxa | 12 | 18 |
+| O polgar, fino e ancho | 3 e 8 | 5 e 12 |
+| A marxe por riba e por debaixo do polgar | 2 | 3 |
+| O polgar máis curto | 24 | 36 |
+
+**O polgar** mide o que se ve: da franxa sen as marxes, a parte que son as filas da pantalla entre todas, as do historial e as da pantalla, polo menos o polgar máis curto. Está abaixo de todo cando a vista mostra a pantalla, e arriba de todo no principio do historial. É fino (`#4E535C`), ancho mentres o punteiro está sobre a franxa (`#6E747F`), e máis claro mentres se arrastra (`#8E949F`). Arrastralo leva a vista á fila máis próxima.
+
+**As páxinas.** Un clic na franxa, fóra do polgar, despraza unha pantalla cara ao punteiro; mentres o botón segue premido, repítese aos 250 ms e despois cada 50 ms, co temporizador dos fotogramas ([§26](#26-temporizadores-e-a-espera-do-fío-da-interface)), ata que o polgar chega ao punteiro, coma nas barras de Windows.
+
+**Debuxala.** meiga debuxa a franxa no seu *framebuffer*, despois da grella, e só cando o polgar se move, cambia de tamaño ou de aspecto: entón, o fotograma presenta o rectángulo que xunta o polgar de antes e o novo ([§24](#24-dib-sections-e-gdi-o-framebuffer-e-a-súa-presentación)).
+
+**O zoom.** O tamaño da fonte cámbiase en puntos, e o em mide `puntos × DPI / 72` píxeles ([§27](#27-directwrite-fontes-e-glifos)). meiga crea a fonte outra vez, e coa cela nova cambia a grella que enche a xanela, que mantén o seu tamaño. A fonte nova ten a súa caché de glifos, baleira: os glifos rasterízanse de novo a medida que se debuxan. Se DirectWrite non pode crear a fonte, queda a de antes.
+
+**As teclas do zoom.** Os atallos usan os códigos de tecla virtual, non os caracteres ([§41](#41-o-teclado-en-windows)): `VK_OEM_PLUS` (`0xBB`) é a tecla de `+` no teclado español e a de `=` no estadounidense; `VK_OEM_MINUS` (`0xBD`), a de `-` nos dous; `VK_ADD` e `VK_SUBTRACT`, as do teclado numérico; e `VK_0` e `VK_NUMPAD0`, os dous ceros. Así, o zoom usa as mesmas teclas en calquera distribución, teñan o carácter que teñan.

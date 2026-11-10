@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 1.8. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola, mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite, envíalle as teclas coma unha consola de Windows, e o rato selecciona, copia e pega texto ou chega ao programa. O que falta, como as tabs, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 1.9. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola, mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite, envíalle as teclas coma unha consola de Windows, e o rato selecciona, copia e pega texto ou chega ao programa. A grella segue o tamaño e a escala da xanela, o historial vese coa roda, coas teclas e cunha barra de desprazamento, e o texto ten zoom. O que falta, como as tabs, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -85,6 +85,7 @@ sequenceDiagram
 | Da saída á pantalla | 1.6 (feita) |
 | Teclado | 1.7 (feita) |
 | Rato, selección e portapapeis | 1.8 (feita) |
+| Historial, tamaño e zoom | 1.9 (feita) |
 | Varias sesións, unha por tab | 2.2 |
 
 ### Sesións: a shell, o ConPTY e os dous fíos
@@ -161,7 +162,7 @@ flowchart LR
 6. Coa xanela minimizada, a interface non copia nada: a marca da pantalla segue posta e a saída non a esperta máis. Só remata á súa hora as actualizacións sincronizadas que o programa deixa abertas, sen copiar nin debuxar nada (`update_hidden`), e o temporizador dos fotogramas queda só para iso: mentres unha está aberta, o terminal garda tamén as preguntas do programa, que esperaría a resposta ata que se restaurase a xanela. Ao restaurala, compón todo coa pantalla ao día.
 7. Cando o programa remata, o lector dálle ao terminal unha liña co código de saída, desactiva o rato do programa e o *bracketed paste*, para que o rato volte seleccionar, e oculta o cursor; a xanela queda aberta ata que se pecha.
 
-A grella ten o tamaño da xanela ao arrancar, e as marxes que sobran pintan a cor do fondo: cambiará coa xanela na subfase 1.9.
+A grella enche a xanela, menos a franxa da barra de desprazamento, e o que sobra, menos dunha cela, pinta a cor do fondo. Desde a 1.9, cambia coa xanela ([O historial, o tamaño e o zoom](#o-historial-o-tamaño-e-o-zoom)).
 
 ### O teclado: da tecla ao programa
 
@@ -189,7 +190,7 @@ flowchart LR
 5. Cando a xanela gaña ou perde o foco, o programa recibe `ESC [ I` ou `ESC [ O`, se o pediu.
 6. O texto dun IME, do panel de emoji e do ditado de Windows chega coma caracteres sen tecla, e vai ao programa igual ([Tecnoloxías › O IME](tecnoloxias.md#43-o-ime-e-o-panel-de-emoji)).
 
-Desde a 1.8, a vista colle antes algunhas teclas para a selección e o portapapeis: Ctrl+C e Ctrl+Maiús+C, se hai selección; Ctrl+V e Ctrl+Maiús+V; e Esc, se hai selección ([O rato, a selección e o portapapeis](#o-rato-a-selección-e-o-portapapeis)). O resto vai ao programa, e as que baixan quitan a selección, salvo as modificadoras.
+Desde a 1.8, a vista colle antes algunhas teclas para a selección e o portapapeis: Ctrl+C e Ctrl+Maiús+C, se hai selección; Ctrl+V e Ctrl+Maiús+V; e Esc, se hai selección ([O rato, a selección e o portapapeis](#o-rato-a-selección-e-o-portapapeis)). Desde a 1.9, colle tamén as do historial, na pantalla principal, e as do zoom ([O historial, o tamaño e o zoom](#o-historial-o-tamaño-e-o-zoom)). O resto vai ao programa, e as que baixan quitan a selección e levan a vista á pantalla, salvo as modificadoras.
 
 ### O rato, a selección e o portapapeis
 
@@ -212,13 +213,43 @@ flowchart LR
 ```
 
 1. A xanela converte as mensaxes do rato en eventos, cos botóns e as teclas modificadoras, tamén Alt, e co punto da roda na área cliente ([Tecnoloxías › O rato en Windows](tecnoloxias.md#44-o-rato-en-windows)). Cando baixa o botón que selecciona, ou un que vai ao programa, a vista captura o rato, e sóltao cando sobe o último: así segue unha selección que se arrastra fóra da xanela. Se outra xanela colle o rato antes, a selección remata onde estaba, e o programa recibe entón a soltura dos botóns que premeu para el.
-2. O rato da vista ([Código › meiga › `mouse.rs`](codigo/meiga.md#cratesmeigasrcmousers)) mira os modos do terminal. Se o programa pediu o rato e Maiús non está premido, o clic vai a el coma un informe, no formato que pediu ([Código › meiga-core › `mouse.rs`](codigo/meiga-core.md#cratesmeiga-coresrcmousers)), e o ConPTY pásallo tal cal ou convérteo nun evento do rato da consola ([Tecnoloxías › O rato nos programas](tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). A roda tamén; ou, na pantalla alternativa, a un programa sen o rato, frechas.
+2. O rato da vista ([Código › meiga › `mouse.rs`](codigo/meiga.md#cratesmeigasrcmousers)) mira os modos do terminal. Se o programa pediu o rato e Maiús non está premido, o clic vai a el coma un informe, no formato que pediu ([Código › meiga-core › `mouse.rs`](codigo/meiga-core.md#cratesmeiga-coresrcmousers)), e o ConPTY pásallo tal cal ou convérteo nun evento do rato da consola ([Tecnoloxías › O rato nos programas](tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). A roda tamén; ou, na pantalla alternativa, a un programa sen o rato, frechas; e, desde a 1.9, na principal, despraza o historial.
 3. Se non, o botón esquerdo selecciona: un clic, celas; dous, palabras; tres, liñas. A selección vive na grella de `alacritty_terminal`, que a move co texto ([Código › meiga-core › `term/selection.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermselectionrs)). Cada movemento pide un fotograma, e a copia da vista marca as celas seleccionadas, que se debuxan co fondo da selección: só se debuxan as celas onde cambiou ([Da saída á pantalla](#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma)).
 4. Ao soltar o botón, o texto vai ao portapapeis de Windows ([Código › meiga-win › `clipboard.rs`](codigo/meiga-win.md#cratesmeiga-winsrcclipboardrs), [Tecnoloxías › O portapapeis](tecnoloxias.md#46-o-portapapeis-de-windows)). Ctrl+C e Ctrl+Maiús+C tamén o copian, e quitan a selección; sen ela, Ctrl+C vai ao programa.
-5. Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan: o texto do portapapeis pasa polo filtro e, se o programa pediu o *bracketed paste*, vai entre as súas marcas; se non o pediu e o texto ten varias liñas, meiga pregunta antes, nunha caixa de mensaxe ([Código › meiga › `clipboard.rs`](codigo/meiga.md#cratesmeigasrcclipboardrs), [Tecnoloxías › Pegar no terminal](tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). O texto vai á entrada da sesión, coma as teclas. Mentres a caixa está aberta, os eventos da xanela pérdense: ao pechala, a vista esquece as teclas que colleu e os botóns do rato, coma no punto 1.
+5. Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan: o texto do portapapeis pasa polo filtro e, se o programa pediu o *bracketed paste*, vai entre as súas marcas; se non o pediu e o texto ten varias liñas, meiga pregunta antes, nunha caixa de mensaxe ([Código › meiga › `clipboard.rs`](codigo/meiga.md#cratesmeigasrcclipboardrs), [Tecnoloxías › Pegar no terminal](tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). O texto vai á entrada da sesión, coma as teclas. Mentres a caixa está aberta, os eventos da xanela pérdense: ao pechala, a vista esquece as teclas que colleu e os botóns do rato, coma no punto 1, e, desde a subfase 1.9, colle a escala e o tamaño que ten entón a xanela ([O historial, o tamaño e o zoom](#o-historial-o-tamaño-e-o-zoom)).
 6. Cando un programa copia texto (OSC 52), o fío lector esperta a xanela, que o pon no portapapeis só se ten o foco e está en primeiro plano ([Tecnoloxías › O foco](tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
 
 O rato non engade ningún fío nin temporizador: en repouso, a xanela segue sen espertar.
+
+### O historial, o tamaño e o zoom
+
+Desde a subfase 1.9, a grella segue o tamaño e a escala da xanela sen deixar lixo, o historial vese coa roda, coas teclas e cunha barra de desprazamento, e o texto ten zoom ([ADR 0016](adr/0016-o-historial-o-tamano-e-o-zoom.md)):
+
+```mermaid
+flowchart LR
+    size["WM_SIZE<br/>Event::Resized"] --> grid["A grella que enche a xanela<br/>sen a franxa da barra"]
+    dpi["WM_DPICHANGED<br/>Event::DpiChanged"] --> font["Fonte nova<br/>a cela, a barra e o cursor"]
+    zoom["Ctrl e +, - ou 0<br/>Ctrl e a roda"] --> font
+    font --> grid
+    grid --> pace{"Fotograma: pasou un<br/>intervalo desde o último?"}
+    pace -- "non" --> timer["Temporizador<br/>dos fotogramas"]
+    timer --> pace
+    pace -- "si" --> resize["Terminal::resize (lock)<br/>reparte e coloca a pantalla"]
+    resize --> conpty["Input::resize<br/>ResizePseudoConsole"]
+    conpty --> host["ConPTY<br/>reparte o seu búfer"]
+    host -- "ESC [ 6 n" --> reader["Fío lector<br/>responde co cursor"]
+```
+
+1. Cando a xanela cambia de tamaño, a vista calcula a grella que a enche: tantas columnas e filas enteiras como caben, sen a franxa da barra de desprazamento, polo menos 2 × 1 ([Código › meiga › `view.rs`](codigo/meiga.md#cratesmeigasrcviewrs)). Coa xanela minimizada, a grella non cambia.
+2. A vista dálle a grella nova ao terminal e ao programa no seguinte fotograma, como moito unha vez por intervalo: mentres se arrastra o bordo da xanela, cada fotograma leva o último tamaño, e o temporizador dos fotogramas leva o último de todos ([Fotogramas](#fotogramas-do-cambio-á-pantalla)).
+3. Baixo o *lock* do terminal, `Terminal::resize` reparte o texto e coloca a pantalla onde a pon o ConPTY ([Código › meiga-core › `term/resize.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermresizers)), e despois `Input::resize` cambia o tamaño da pseudoconsola, sen esperar ([Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winsrcconptyrs)): ningunha saída do programa chega entre os dous. O ConPTY reparte o seu búfer, avisa ao programa e, cando este pide a posición do cursor, pregúntalla ao terminal; o fío lector respóndelle coa que deixou `Terminal::resize` ([Tecnoloxías › Cambiar o tamaño do ConPTY](tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)).
+4. Mentres se ve a pantalla alternativa, o terminal garda a principal á parte, sen repartila, e cando o programa volta a ela, dálle o tamaño do terminal, coma o ConPTY ([Tecnoloxías › O historial](tecnoloxias.md#49-o-historial-de-alacritty_terminal-a-vista-e-o-reflow)).
+5. A vista do historial móvese coa roda, coas teclas e coa barra (`Terminal::scroll`). A saída non a move, tampouco cando o programa despraza unha rexión que non empeza na primeira fila ([Código › meiga-core › Manter a vista](codigo/meiga-core.md#manter-a-vista-view_to_keep-e-keep_view)); as teclas que van ao programa, e pegar, levana á pantalla. O fotograma copia as filas que se ven, e debuxa só as celas que cambian ([Da saída á pantalla](#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma)).
+6. A barra de desprazamento é do rato da vista ([Código › meiga › `scrollbar.rs`](codigo/meiga.md#cratesmeigasrcscrollbarrs)): o fotograma pon o seu polgar ao día coa vista, e só o debuxa cando cambia ([Tecnoloxías › A barra de desprazamento](tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)). Mentres un clic na franxa pasa páxinas, ou mentres unha selección arrastrada por riba ou por debaixo da grella despraza a vista, o fotograma di cando ten que seguir, co temporizador dos fotogramas.
+7. O zoom cambia o tamaño da fonte, de 6 a 72 puntos, e `WM_DPICHANGED`, a escala: a xanela dálle o DPI novo á vista antes ca o seu tamaño novo ([Tecnoloxías › A escala cambia](tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)). Nos dous casos, a vista crea a fonte nova e calcula a grella coas súas celas, e o fotograma debuxa a xanela enteira. Cun cambio de escala, ese fotograma non chega ata o tamaño novo, para que a grella non cambie dúas veces.
+8. Mentres está aberta a caixa de mensaxe que pregunta antes de pegar, os eventos da xanela non chegan á vista; ao pecharse, a vista colle a escala e o tamaño que ten entón a xanela, por se cambiaron ([Código › meiga › `respond`](codigo/meiga.md#respond-o-que-pide-a-vista)).
+
+Nada disto engade fíos nin temporizadores: os fotogramas fan todo o traballo, e en repouso a xanela segue sen espertar.
 
 ### Fotogramas: do cambio á pantalla
 
@@ -264,7 +295,7 @@ flowchart LR
 3. Cada glifo búscase na caché. A primeira vez, DirectWrite rasterízao con antialiasing en grises e gárdase nun *slot* do tamaño dunha cela. Se a fonte non ten o carácter, o *fallback* do sistema escolle outra que o teña ([Tecnoloxías › DirectWrite](tecnoloxias.md#27-directwrite-fontes-e-glifos)).
 4. A tinta do glifo, os píxeles con cobertura, convértese en cor cunha táboa cos 256 tons entre o fondo e o texto ([Tecnoloxías › Mesturar o texto co fondo](tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste)).
 
-O tamaño da cela sae das métricas da fonte e do DPI da xanela: meiga usa Cascadia Mono a 12 puntos ou, se non está, Consolas. A negra, a cursiva e a negra cursiva son outras fontes da mesma familia, que se crean a primeira vez que se usan, coa cela e a liña base da normal, e comparten a súa caché de glifos ([Tecnoloxías › DirectWrite](tecnoloxias.md#27-directwrite-fontes-e-glifos)).
+O tamaño da cela sae das métricas da fonte e do DPI da xanela: meiga usa Cascadia Mono a 12 puntos ou, se non está, Consolas. Desde a 1.9, o zoom cambia o seu tamaño, de 6 a 72 puntos, e un cambio de escala crea a fonte de novo ([O historial, o tamaño e o zoom](#o-historial-o-tamaño-e-o-zoom)). A negra, a cursiva e a negra cursiva son outras fontes da mesma familia, que se crean a primeira vez que se usan, coa cela e a liña base da normal, e comparten a súa caché de glifos ([Tecnoloxías › DirectWrite](tecnoloxias.md#27-directwrite-fontes-e-glifos)).
 
 ## 4. Fíos
 
@@ -296,7 +327,7 @@ Ningún cambio chega a `main` sen pasar por un PR e pola CI:
 ```mermaid
 flowchart LR
     rama["Rama da subfase"] --> pr["Pull request"]
-    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · ConPTY · test · release<br/>zip · DLL · xanela · presentación · teclado · rato · arranque · fotogramas"]
+    pr --> win["Build and test (Windows)<br/>ligazóns · PowerShell 7 · arnés de medición · escenarios<br/>fmt · clippy · ConPTY · test · release<br/>zip · DLL · xanela · presentación · teclado · rato · tamaño · arranque · fotogramas"]
     pr --> scen["Load scenarios (bash)<br/>ShellCheck · escenarios en bash"]
     pr --> deny["Dependency policy (cargo-deny)<br/>licenzas · vulnerabilidades · orixes"]
     win --> art["Artefacto<br/>meiga-…-msvc.zip"]
@@ -331,6 +362,7 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0013](adr/0013-da-saida-a-pantalla.md) | Da saída á pantalla: un aviso pendente como moito, as respostas desde o fío lector, a paleta, os estilos e un cursor que só pestanexa se Windows o permite e por pouco tempo. |
 | [0014](adr/0014-o-teclado.md) | O teclado: eventos de tecla enteiros coma os da consola, nos que a tecla espera polo seu carácter; Alt+F4 e Alt+Espazo para Windows; o win32-input-mode e VT de reserva; e o IME, que se mantén. |
 | [0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis: a selección na grella, copiar ao seleccionar, as teclas e o botón dereito do Windows Terminal, o filtro ao pegar e a pregunta antes de pegar varias liñas, os informes do rato e OSC 52 só desde a xanela que se usa. |
+| [0016](adr/0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom: 10 000 liñas, a grella que enche a xanela ao ritmo dos fotogramas, a pantalla onde a pon o ConPTY, a principal á parte mentres se ve a alternativa, as teclas e a barra fina do Windows Terminal, e o zoom de 6 a 72 puntos. |
 
 ## 8. Medición do rendemento
 
@@ -385,19 +417,20 @@ O código explícase en [Código › escenarios de carga](codigo/escenarios.md).
 
 ## 9. Estado actual
 
-Despois da subfase 1.8:
+Despois da subfase 1.9:
 
-- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal, coa selección, as comiñas da liña de comandos, as teclas, coma eventos e coma o que le o programa, os informes do rato e o texto que se pega; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, tamén os do rato, o teclado da xanela, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor e do rato de Windows, o portapapeis, a caixa de mensaxe que pregunta e as sesións de ConPTY.
-- `meiga.exe` é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell 7 (`pwsh`) ou, se non está instalado, Windows PowerShell, e mostra a súa saída: as cores (16, 256 e *truecolor*), a negra, a cursiva, o texto tenue, inverso e oculto, cinco subliñados e o riscado, os caracteres anchos e un cursor en forma de barra, que só pestanexa se a xanela ten o foco e Windows o permite, e para despois duns segundos sen actividade. A xanela leva o título que pon o programa. Responde ao programa, tamén ás preguntas polas cores e polo tamaño en píxeles, e aplica os cambios da paleta. Cando o programa remata, mostra o seu código de saída, e a xanela queda aberta ata que se pecha. A grella ten o tamaño da xanela ao arrancar (1.9).
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal, coa selección, o historial e o cambio de tamaño, as comiñas da liña de comandos, as teclas, coma eventos e coma o que le o programa, os informes do rato e a roda, e o texto que se pega; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, tamén os do rato, os da escala e a saída do punteiro, o teclado da xanela, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor e do rato de Windows, o portapapeis, a caixa de mensaxe que pregunta e as sesións de ConPTY, que tamén cambian de tamaño.
+- `meiga.exe` é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell 7 (`pwsh`) ou, se non está instalado, Windows PowerShell, e mostra a súa saída: as cores (16, 256 e *truecolor*), a negra, a cursiva, o texto tenue, inverso e oculto, cinco subliñados e o riscado, os caracteres anchos e un cursor en forma de barra, que só pestanexa se a xanela ten o foco e Windows o permite, e para despois duns segundos sen actividade. A xanela leva o título que pon o programa. Responde ao programa, tamén ás preguntas polas cores e polo tamaño en píxeles, e aplica os cambios da paleta. Cando o programa remata, mostra o seu código de saída, e a xanela queda aberta ata que se pecha.
+- A grella enche a xanela e segue o seu tamaño e a súa escala, ao ritmo dos fotogramas, sen deixar lixo: a pantalla queda onde a pon o ConPTY, e mentres se ve a pantalla alternativa, a principal non se reparte. O historial garda 10 000 liñas, e vese coa roda, con Maiús+RePáx e Maiús+AvPáx, con Ctrl+Maiús e as frechas, Inicio e Fin, e cunha barra de desprazamento fina, que se ensancha baixo o punteiro; unha selección arrastrada fóra da grella despraza a vista soa. Ctrl e `+`, `-` e `0`, e Ctrl e a roda, fan o zoom, de 6 a 72 puntos.
 - Pódese escribir nel coma nunha consola de Windows: as teclas chegan ao programa coma eventos enteiros, co teclado español e galego, AltGr e as teclas mortas, e o PSReadLine distingue Maiús+Intro de Intro. Alt+F4 pecha a xanela e Alt+Espazo abre o seu menú. O panel de emoji e o ditado de Windows tamén escriben nel.
 - O rato selecciona texto, cun clic, dous ou tres, que vai ao portapapeis ao soltar o botón. Ctrl+C e Ctrl+Maiús+C copian; Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan, sen caracteres de control e, se o texto ten varias liñas e o programa non pediu o *bracketed paste*, despois de preguntar. Os programas que piden o rato reciben os seus informes, coma vim e htop en WSL, ou os seus eventos, coma os da consola de Windows; con Maiús, o rato selecciona igual. Un programa só pode copiar ao portapapeis (OSC 52) desde a xanela que se está a usar.
 - Cada fotograma presenta só as celas que cambian, que se poden ver cun bordo magenta (coa opción `--marks`). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto e 60 en local. En repouso e coa xanela minimizada non debuxa nada, e os seus tres fíos dormen, tamén coa xanela enfocada. Ao pechala, meiga remata co código 0, e o programa da sesión tamén.
 - Ten tres modos de medición, `--bench partial`, `--bench full` e `--bench text`, e un rexistro dos fotogramas, `--trace-frames`.
 - `meiga-win` usa o ConPTY do Windows Terminal que vai no paquete ou, se non está, o de Windows. As probas lanzan programas de verdade cos dous, e un exemplo de consola mostra o que escribe calquera programa e grávao. O terminal de `meiga-core` usa `alacritty_terminal` detrás dunha fachada; as súas probas usan saída gravada do ConPTY, e outro exemplo de consola mide a que velocidade le unha gravación.
-- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 509 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que as teclas chegan ao programa co teclado español e co estadounidense, que o rato selecciona, copia e pega e chega aos programas, que remata ben, e que o programa remata con ela.
+- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 545 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que as teclas chegan ao programa co teclado español e co estadounidense, que o rato selecciona, copia e pega e chega aos programas, que ao cambiar de tamaño a pantalla de meiga é a do ConPTY, co historial, a barra e o zoom, que remata ben, e que o programa remata con ela.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). As dependencias externas son `windows-sys`, `windows` e `windows-core`, de Microsoft, `unicode-width`, `alacritty_terminal`, co seu parser, `vte`, e `memchr`.
 - Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe` e o ConPTY (`conpty.dll` e `OpenConsole.exe`). `tools/fetch-conpty.ps1` descarga o ConPTY do seu paquete NuGet, cunha versión e un SHA-256 fixados, e comproba que está asinado por Microsoft; cada luns, a CI avisa se hai unha versión nova.
-- As decisións de arquitectura están escritas en quince ADR.
+- As decisións de arquitectura están escritas en dezaseis ADR.
 - O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, coa súa sesión, e `measure-frames.ps1`, canto custan os seus fotogramas: parciais, completos e completos de texto.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis. Con `-Start`, arranca el mesmo meiga co escenario como programa.
 - Os scripts de `tools/` necesitan PowerShell 7. En Windows PowerShell 5.1 non se executan: só mostran o comando para facelo con `pwsh`.

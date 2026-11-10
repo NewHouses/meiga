@@ -19,21 +19,23 @@ use windows_sys::Win32::System::Threading::{
 };
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-    GetCapture, GetDoubleClickTime, GetKeyState, ReleaseCapture, SetCapture, VK_MENU,
+    GetCapture, GetDoubleClickTime, GetKeyState, ReleaseCapture, SetCapture, TME_LEAVE,
+    TRACKMOUSEEVENT, TrackMouseEvent, VK_MENU,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA,
     GetCaretBlinkTime, GetClientRect, GetForegroundWindow, GetSystemMetrics, GetWindowLongPtrW,
-    HCURSOR, HTCLIENT, IDC_ARROW, IDC_IBEAM, IDOK, IsWindow, KillTimer, LoadCursorW, MB_DEFBUTTON2,
-    MB_ICONERROR, MB_ICONWARNING, MB_OK, MB_OKCANCEL, MSG, MWMO_INPUTAVAILABLE, MessageBoxW,
-    MsgWaitForMultipleObjectsEx, PM_REMOVE, PeekMessageW, PostMessageW, PostQuitMessage,
-    QS_ALLINPUT, RegisterClassExW, SM_CARETBLINKINGENABLED, SM_CXDOUBLECLK, SM_CYDOUBLECLK,
-    SM_REMOTESESSION, SPI_GETCARETTIMEOUT, SPI_GETCARETWIDTH, SPI_GETWHEELSCROLLCHARS,
-    SPI_GETWHEELSCROLLLINES, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER, SetCursor, SetTimer,
-    SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow, SystemParametersInfoW,
-    TranslateMessage, USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_DESTROY,
-    WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP,
-    WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_SETCURSOR, WM_TIMER, WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
+    HCURSOR, HTCLIENT, IDC_ARROW, IDC_IBEAM, IDOK, IsIconic, IsWindow, KillTimer, LoadCursorW,
+    MB_DEFBUTTON2, MB_ICONERROR, MB_ICONWARNING, MB_OK, MB_OKCANCEL, MSG, MWMO_INPUTAVAILABLE,
+    MessageBoxW, MsgWaitForMultipleObjectsEx, PM_REMOVE, PeekMessageW, PostMessageW,
+    PostQuitMessage, QS_ALLINPUT, RegisterClassExW, SM_CARETBLINKINGENABLED, SM_CXDOUBLECLK,
+    SM_CYDOUBLECLK, SM_REMOTESESSION, SPI_GETCARETTIMEOUT, SPI_GETCARETWIDTH,
+    SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER,
+    SetCursor, SetTimer, SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow,
+    SystemParametersInfoW, TranslateMessage, USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM,
+    USER_TIMER_MINIMUM, WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE,
+    WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_SETCURSOR, WM_TIMER,
+    WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
 };
 
 use crate::event::{Event, Handler, HandlerError, WM_WAKE, decode};
@@ -192,6 +194,12 @@ impl Window {
         }
     }
 
+    /// Whether the window is minimized.
+    pub fn is_minimized(&self) -> bool {
+        // SAFETY: IsIconic accepts any handle.
+        unsafe { IsIconic(self.handle) != 0 }
+    }
+
     /// Shows the window, paints it, and delivers its events to `handler`
     /// until the window closes.
     ///
@@ -280,6 +288,21 @@ impl Window {
         }
     }
 
+    /// Asks for [`Event::MouseLeft`] when the pointer leaves the client
+    /// area, once.
+    pub fn track_mouse_leave(&self) {
+        let mut track = TRACKMOUSEEVENT {
+            cbSize: size_of::<TRACKMOUSEEVENT>() as u32,
+            dwFlags: TME_LEAVE,
+            hwndTrack: self.handle,
+            dwHoverTime: 0,
+        };
+        // SAFETY: `track` is a valid TRACKMOUSEEVENT for a window of this
+        // thread. If it fails, the event does not come, and the pointer
+        // only looks over the window for longer.
+        unsafe { TrackMouseEvent(&mut track) };
+    }
+
     /// Whether the window is the one that the user is using: the
     /// foreground window. A window that a program starts in the background
     /// can have the focus of its thread without being it.
@@ -327,7 +350,8 @@ impl Window {
     ///
     /// While the box is open, the window keeps receiving messages, but its
     /// events do not reach the handler, which is waiting for this call: a
-    /// [`Event::Wake`] is lost, for example.
+    /// [`Event::Wake`] is lost, for example, or a new size or scale of the
+    /// window.
     pub fn confirm(&self, title: &str, text: &str) -> bool {
         let title = wide(title);
         let text = wide(text);
@@ -763,10 +787,22 @@ unsafe extern "system" fn window_proc(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
+    // SAFETY: GWLP_USERDATA holds 0 or a pointer to the State of the running
+    // `Window::run`, which removes it before the State is dropped. The State
+    // is only used through shared references.
+    let state = unsafe { (GetWindowLongPtrW(window, GWLP_USERDATA) as *const State<'_>).as_ref() };
     match message {
-        // The window moved to a monitor with another scale: use the size and
+        // The window moved to a monitor with another scale, or the scale of
+        // its monitor changed. The handler learns it first, to have its font
+        // ready for the size that comes next. The window takes the size and
         // position that Windows suggests, so it keeps its physical size.
         WM_DPICHANGED => {
+            if let Some(state) = state {
+                // Both words of wParam have the new DPI: horizontal and
+                // vertical, which are the same.
+                let dpi = u32::from(wparam as u16);
+                state.dispatch(Event::DpiChanged { dpi });
+            }
             // SAFETY: for WM_DPICHANGED, `lparam` points to a RECT that is
             // valid while the message is handled.
             let suggested = unsafe { &*(lparam as *const RECT) };
@@ -795,10 +831,6 @@ unsafe extern "system" fn window_proc(
         _ => {}
     }
 
-    // SAFETY: GWLP_USERDATA holds 0 or a pointer to the State of the running
-    // `Window::run`, which removes it before the State is dropped. The State
-    // is only used through shared references.
-    let state = unsafe { (GetWindowLongPtrW(window, GWLP_USERDATA) as *const State<'_>).as_ref() };
     let Some(state) = state else {
         // SAFETY: the arguments are the ones that Windows passed to this
         // window procedure.
@@ -881,7 +913,72 @@ fn timer_millis(delay: Duration) -> u32 {
 
 #[cfg(test)]
 mod tests {
+    use windows_sys::Win32::Graphics::Gdi::HDC;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowRect, SendMessageW};
+
     use super::*;
+
+    /// Keeps the events that reach it.
+    #[derive(Default)]
+    struct Recorder(Vec<Event>);
+
+    impl Handler for Recorder {
+        fn event(&mut self, _window: &Window, event: Event) -> Result<(), HandlerError> {
+            self.0.push(event);
+            Ok(())
+        }
+
+        fn paint(&mut self, _window: &Window, _dc: HDC, _area: Rect) -> Result<(), HandlerError> {
+            Ok(())
+        }
+    }
+
+    // The only test that creates a window: a process registers the window
+    // class once.
+    #[test]
+    fn a_new_scale_reaches_the_handler_before_the_new_size() {
+        let window = Window::create(&WindowOptions { title: "meiga" }).unwrap();
+        let mut recorder = Recorder::default();
+        {
+            let state = State {
+                window: &window,
+                handler: RefCell::new(&mut recorder),
+                failure: RefCell::new(None),
+                keyboard: Keyboard::default(),
+            };
+            let _installed = Installed::new(window.handle(), &state);
+            let suggested = RECT {
+                left: 40,
+                top: 30,
+                right: 817,
+                bottom: 585,
+            };
+            // SAFETY: the window is of this thread, and the rectangle
+            // outlives the call, which handles the message.
+            unsafe {
+                SendMessageW(
+                    window.handle(),
+                    WM_DPICHANGED,
+                    144 | (144 << 16),
+                    ptr::from_ref(&suggested) as LPARAM,
+                )
+            };
+        }
+        let mut rect = RECT::default();
+        // SAFETY: `rect` is a valid RECT for GetWindowRect to fill in.
+        unsafe { GetWindowRect(window.handle(), &mut rect) };
+        assert_eq!(
+            (rect.left, rect.top, rect.right, rect.bottom),
+            (40, 30, 817, 585)
+        );
+        let resized = Event::Resized {
+            size: window.client_size().unwrap(),
+            minimized: false,
+        };
+        let events = &recorder.0;
+        assert_eq!(events.first(), Some(&Event::DpiChanged { dpi: 144 }));
+        assert!(events.contains(&resized), "{events:?}");
+    }
 
     #[test]
     fn waitable_timers_count_in_hundreds_of_nanoseconds_from_now() {

@@ -159,7 +159,13 @@ mod tests {
 
     #[test]
     fn text_frames_fill_the_whole_window_and_change_every_cell() {
-        let font = Font::new(&FontSystem::new().unwrap(), &FONT_FAMILIES, FONT_POINTS, 96).unwrap();
+        let font = Font::new(
+            &FontSystem::new().unwrap(),
+            &FONT_FAMILIES,
+            f32::from(FONT_POINTS),
+            96,
+        )
+        .unwrap();
         let mut bench = Bench::new(BenchMode::Text, Some(font));
         assert_eq!(bench.step(SIZE), [Rect::from_size(SIZE), Rect::EMPTY]);
         let mut pixels = vec![0; SIZE.area() as usize];

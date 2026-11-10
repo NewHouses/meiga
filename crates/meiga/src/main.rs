@@ -11,6 +11,7 @@ mod clipboard;
 mod frames;
 mod mouse;
 mod options;
+mod scrollbar;
 mod session;
 mod trace;
 mod view;

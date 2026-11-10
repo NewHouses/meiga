@@ -5,7 +5,9 @@
 //! Only this module uses the types of `alacritty_terminal`: replacing it, or
 //! updating it to a version with another API, only changes this module.
 
+mod handler;
 pub mod recording;
+mod resize;
 mod scanner;
 mod screen;
 mod selection;
@@ -15,7 +17,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use alacritty_terminal::event::{Event, EventListener};
-use alacritty_terminal::grid::{Dimensions, Grid};
+use alacritty_terminal::grid::{self, Dimensions, Grid};
 use alacritty_terminal::index::{Column, Line, Point};
 use alacritty_terminal::selection::SelectionRange;
 use alacritty_terminal::term::cell::{Cell as TermCell, Flags};
@@ -30,10 +32,10 @@ pub use selection::{SelectionKind, Side};
 use crate::color::{Palette, Rgb};
 use crate::geometry::{GridSize, Size};
 use crate::text::CellChar;
+use handler::Hooked;
 use scanner::Scanner;
 
-/// Lines of history kept above the screen, which the scrollback will show
-/// (subphase 1.9).
+/// Lines of history kept above the screen, which the view can show.
 pub const SCROLLBACK_LINES: usize = 10_000;
 
 /// The smallest grid that `alacritty_terminal` supports: a wide character
@@ -61,6 +63,31 @@ pub struct Changes {
     /// The program copied text to the clipboard (OSC 52):
     /// [`Terminal::take_clipboard`].
     pub clipboard: bool,
+}
+
+/// How far to move the view of the history.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Scroll {
+    /// Up, towards older rows, or down, with a negative number, by rows.
+    Rows(i32),
+    /// Up by a screen.
+    PageUp,
+    /// Down by a screen.
+    PageDown,
+    /// To the first row of the history.
+    Top,
+    /// To the screen, where the program writes.
+    Bottom,
+}
+
+/// The history and the part of it that the view shows.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct History {
+    /// Rows of history above the screen.
+    pub rows: usize,
+    /// How many rows above the screen the view starts: 0 when it shows the
+    /// screen.
+    pub offset: usize,
 }
 
 /// The modes that the program turned on, which change what meiga sends it.
@@ -193,6 +220,12 @@ impl Dimensions for TermSize {
 /// changes with control sequences.
 pub struct Terminal {
     term: Term<Listener>,
+    /// The primary screen, set aside while the alternate one is shown if the
+    /// size changed: it gets the new size when the program goes back to it.
+    primary: Option<Grid<TermCell>>,
+    /// The scrolling region starts below the first row of the screen
+    /// ([`Hooked`]).
+    region_below_top: bool,
     parser: Processor,
     scanner: Scanner,
     pending: Arc<Mutex<Pending>>,
@@ -233,6 +266,8 @@ impl Terminal {
         };
         Self {
             term: Term::new(config, &TermSize(size), Listener(Arc::clone(&pending))),
+            primary: None,
+            region_below_top: false,
             parser: Processor::new(),
             scanner: Scanner::new(),
             pending,
@@ -287,7 +322,12 @@ impl Terminal {
     /// Reads what the program wrote.
     pub fn feed(&mut self, bytes: &[u8]) -> Changes {
         self.scanner.scan(bytes);
-        self.parser.advance(&mut self.term, bytes);
+        let mut hooked = Hooked {
+            term: &mut self.term,
+            primary: &mut self.primary,
+            region_below_top: &mut self.region_below_top,
+        };
+        self.parser.advance(&mut hooked, bytes);
         self.take_changes()
     }
 
@@ -327,10 +367,62 @@ impl Terminal {
         }
     }
 
-    /// Changes the size of the grid, with at least [`MIN_SIZE`].
+    /// Changes the size of the grid, with at least [`MIN_SIZE`]. On the
+    /// primary screen, the text moves where ConPTY moves it, so that the
+    /// program writes on the right rows. On the alternate one, the primary
+    /// screen gets the new size when the program goes back to it, as in
+    /// ConPTY. The selection goes away, and the scrolling region is the whole
+    /// screen again.
     pub fn resize(&mut self, size: GridSize) {
-        self.size = at_least_min_size(size);
-        self.term.resize(TermSize(self.size));
+        let size = at_least_min_size(size);
+        if size == self.size {
+            return;
+        }
+        self.size = size;
+        self.region_below_top = false;
+        if self.term.mode().contains(TermMode::ALT_SCREEN) {
+            if self.primary.is_none() {
+                self.primary = Some(resize::set_aside_primary(&mut self.term));
+            }
+            // Neither ConPTY nor alacritty_terminal reflow the alternate
+            // screen.
+            self.term.resize(TermSize(size));
+            self.term.selection = None;
+        } else {
+            resize::resize(&mut self.term, size);
+        }
+    }
+
+    /// Moves the view of the history, at most to its first row, or to the
+    /// screen. Returns whether it moved.
+    pub fn scroll(&mut self, scroll: Scroll) -> bool {
+        let before = self.term.grid().display_offset();
+        self.term.scroll_display(match scroll {
+            Scroll::Rows(rows) => grid::Scroll::Delta(rows),
+            Scroll::PageUp => grid::Scroll::PageUp,
+            Scroll::PageDown => grid::Scroll::PageDown,
+            Scroll::Top => grid::Scroll::Top,
+            Scroll::Bottom => grid::Scroll::Bottom,
+        });
+        self.term.grid().display_offset() != before
+    }
+
+    /// Moves the view to `offset` rows above the screen, at most to the first
+    /// row of the history. Returns whether it moved.
+    pub fn scroll_to(&mut self, offset: usize) -> bool {
+        let before = self.term.grid().display_offset();
+        let offset = offset.min(self.term.grid().history_size());
+        // Both fit in an i32: the history has at most SCROLLBACK_LINES rows.
+        self.scroll(Scroll::Rows(offset as i32 - before as i32))
+    }
+
+    /// The history, and where the view is.
+    pub fn history(&self) -> History {
+        let grid = self.term.grid();
+        History {
+            rows: grid.history_size(),
+            offset: grid.display_offset(),
+        }
     }
 
     /// When the synchronized update that the program started (`?2026`) has
@@ -343,7 +435,12 @@ impl Terminal {
     /// Shows the output of the synchronized update that is waiting. It is
     /// for when its deadline passes: the terminal does not have a timer.
     pub fn end_sync(&mut self) -> Changes {
-        self.parser.stop_sync(&mut self.term);
+        let mut hooked = Hooked {
+            term: &mut self.term,
+            primary: &mut self.primary,
+            region_below_top: &mut self.region_below_top,
+        };
+        self.parser.stop_sync(&mut hooked);
         self.take_changes()
     }
 
