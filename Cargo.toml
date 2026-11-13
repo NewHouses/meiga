@@ -20,7 +20,7 @@ meiga-win = { path = "crates/meiga-win" }
 memchr = "2.8.3"
 unicode-width = { version = "0.2.3", default-features = false }
 windows = "0.62.2"
-windows-core = "0.62.2"
+windows-core = "0.100.0"
 windows-sys = "0.61.2"
 
 [workspace.lints.rust]
