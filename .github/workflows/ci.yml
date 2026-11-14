@@ -100,6 +100,9 @@ jobs:
       - name: Check the resizing, the history and the zoom
         run: ./tools/check-resize.ps1
 
+      - name: Check the tabs
+        run: ./tools/check-tabs.ps1
+
       - name: Check the start-up measurement
         run: ./tools/perf/measure-startup.ps1 -Runs 3 -Warmup 1
 

@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 2.1. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 2.2. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -891,7 +891,7 @@ Cada xanela pertence ao fío que a creou: só ese fío recibe as súas mensaxes,
 
 **Cando chega.** A mensaxe espera na cola ata que o fío da interface a colle: se chega antes de que empece o bucle de mensaxes, por exemplo porque o programa escribiu moi rápido, atende cando empeza. `MsgWaitForMultipleObjectsEx` esperta cunha mensaxe publicada ([§26](#26-temporizadores-e-a-espera-do-fío-da-interface)). Se a xanela xa non existe, `PostMessageW` falla sen máis.
 
-**Un aviso, non unha cola de traballo.** O aviso non leva datos: só di «mira o terminal». O fío lector só o envía se non había outro pendente, cunha marca que comparte coa interface baixo o mesmo *lock* ca o terminal, e a interface quítaa cando o le. Así, por moita saída que chegue, nunca hai máis dun aviso de cada tipo na cola ([ADR 0013](adr/0013-da-saida-a-pantalla.md)).
+**Un aviso, non unha cola de traballo.** O aviso só leva un dato, no `wParam`, que ten 64 bits: desde a 2.2, o número da tab do fío lector. Só di «mira o terminal desta tab». O fío lector só o envía se non había outro pendente, cunha marca que comparte coa interface baixo o mesmo *lock* ca o terminal, e a interface quítaa cando o le. Así, por moita saída que chegue, nunca hai máis dun aviso de cada tipo e de cada tab na cola ([ADR 0013](adr/0013-da-saida-a-pantalla.md)). Mentres unha tab está oculta, a interface non quita as marcas da súa pantalla, do seu título nin do seu portapapeis, e a saída do seu programa non a volta espertar por elas ([ADR 0019](adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)).
 
 ## 37. A paleta e os estilos das celas
 
@@ -1212,10 +1212,32 @@ As filas que se perden non voltan. Para o anfitrión, unha fila só de espazos e
 
 ## 53. Xenéricos e contadores atómicos
 
-**Os xenéricos.** Un tipo xenérico ten un parámetro que é outro tipo: `Window<T>` é unha xanela cun contido de tipo `T` en cada tab, e quen a usa escolle `T`. Nas probas, `T` é un texto (`Window<&str>`) ou un número; no exemplo `tabs`, un `String`; e desde a subfase 2.2 será a sesión e a vista de cada tab. O compilador xera unha copia do código para cada tipo que se usa (*monomorfización*), así que ao executar non hai ningún custo: nin punteiros a funcións nin conversións, coma se o código se escribise á man para ese tipo. O custo está na compilación, que compila unha copia por tipo.
+**Os xenéricos.** Un tipo xenérico ten un parámetro que é outro tipo: `Window<T>` é unha xanela cun contido de tipo `T` en cada tab, e quen a usa escolle `T`. Nas probas, `T` é un texto (`Window<&str>`) ou un número; no exemplo `tabs`, un `String`; e no programa, desde a subfase 2.2, o terminal e a sesión de cada tab. O compilador xera unha copia do código para cada tipo que se usa (*monomorfización*), así que ao executar non hai ningún custo: nin punteiros a funcións nin conversións, coma se o código se escribise á man para ese tipo. O custo está na compilación, que compila unha copia por tipo.
 
 **Os contadores atómicos.** Unha variábel `static` existe unha soa vez en todo o programa. Para que calquera fío poida cambiala, sen `unsafe` e sen un `Mutex`, ten que ser atómica: `AtomicU64::fetch_add(1, …)` súmalle 1 e devolve o valor de antes nunha soa instrución do procesador (`lock xadd` en x86-64), así que dous fíos nunca reciben o mesmo número. O segundo argumento, a orde da memoria (`Ordering`), di que outras escrituras teñen que verse antes ou despois desta noutros fíos. Un contador que só ten que dar números distintos non necesita ningunha, e chega `Relaxed`, a máis barata. Rust numera así os seus fíos (`std::thread::ThreadId`): os números nunca se repiten, aínda que o fío remate.
 
 **As funcións coma parámetro.** Unha función pode recibir outra, normalmente unha *closure* (`|id| …`, unha función sen nome que pode levar dentro valores do sitio onde se escribe). `impl FnOnce(TabId) -> Result<T, E>` acepta calquera que reciba un `TabId` e devolva un `T` ou un erro. Tamén é un xenérico: cada *closure* ten o seu propio tipo, e o compilador xera unha copia para cada unha, así que a chamada pode ir en liña, sen punteiro a función. `FnOnce` di que se chama unha vez como moito, así que a *closure* pode mover ao seu resultado o que leva dentro; `FnMut` e `Fn` deixarían chamala varias veces, pero non mover o que leva.
 
 **En meiga.** O modelo das tabs (`meiga_core::model`, desde a 2.1) é xenérico no contido de cada tab, e os identificadores das tabs e das xanelas saen de dous contadores atómicos ([ADR 0018](adr/0018-o-modelo-das-tabs.md)). Con 64 bits, a un millón de tabs por segundo, o contador duraría máis de 500 000 anos. `Window::try_open_with` recibe a *closure* que fai o contido dunha tab nova co seu identificador. Explícase en [Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrcmodelmodrs).
+
+## 54. A prioridade dos fíos: `SetThreadPriority`
+
+**Como escolle Windows.** Cada fío ten unha prioridade, de 0 a 31. Windows dálles o procesador, por quendas, aos fíos de máis prioridade que están listos para correr, e só cando ningún deles o está, aos da seguinte. Se un fío de máis prioridade queda listo, colle o procesador no momento, sen esperar a que remate a quenda do que corría ([*Scheduling Priorities*](https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities)). Un fío bloqueado, coma un lector que espera en `ReadFile`, non está listo: non compite con ninguén.
+
+**A prioridade base** sae de dúas cousas: a clase de prioridade do proceso, que case sempre é `NORMAL_PRIORITY_CLASS`, e o nivel do fío dentro dela, que cambia [`SetThreadPriority`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority). Todos os fíos nacen co nivel normal. Nun proceso normal:
+
+| Nivel do fío | Valor | Prioridade base |
+|---|---|---|
+| `THREAD_PRIORITY_IDLE` | -15 | 1 |
+| `THREAD_PRIORITY_LOWEST` | -2 | 6 |
+| `THREAD_PRIORITY_BELOW_NORMAL` | -1 | 7 |
+| `THREAD_PRIORITY_NORMAL` | 0 | 8 |
+| `THREAD_PRIORITY_ABOVE_NORMAL` | 1 | 9 |
+| `THREAD_PRIORITY_HIGHEST` | 2 | 10 |
+| `THREAD_PRIORITY_TIME_CRITICAL` | 15 | 15 |
+
+**As subidas.** Windows escolle coa prioridade dinámica, que empeza na base. Sóbea un momento para que o sistema responda e para que ningún fío quede sen procesador ([*Priority Boosts*](https://learn.microsoft.com/en-us/windows/win32/procthread/priority-boosts)): a do proceso da xanela en primeiro plano, a do fío dunha xanela que recibe unha tecla, o rato ou un temporizador, e a dun fío cuxa espera remata, coma a dunha lectura do disco ou do teclado. Despois, baixa un nivel con cada quenda que corre o fío, ata a súa base, nunca por debaixo.
+
+**A inversión de prioridades** ([*Priority Inversion*](https://learn.microsoft.com/en-us/windows/win32/procthread/priority-inversion)). Un fío de prioridade alta espera por un recurso, coma un *lock*, que ten un fío de prioridade baixa; e un terceiro, de prioridade media e sen nada que ver, non deixa correr o de baixa, que non pode soltar o recurso: o de alta queda esperando por el. Windows aténuao co *AutoBoost*: mentres un fío de máis prioridade espera por un recurso, coma unha sección crítica, o que o ten sobe á prioridade do que espera, ata que o solta.
+
+**En meiga.** Os fíos lectores das tabs ocultas corren con `THREAD_PRIORITY_BELOW_NORMAL`, e o da tab que se ve, co nivel normal, coma a interface ([ADR 0019](adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). A prioridade non aforra CPU: o lector le e analiza a mesma saída, e se hai procesadores libres corre igual. Só fai que, coa máquina ocupada, vaian primeiro a interface e o lector da tab que se ve. Coa máis baixa, `THREAD_PRIORITY_IDLE`, un lector oculto podería quedar moito tempo sen correr, e o seu programa pararía coa tubaxe chea. Antes de coller o *lock* do terminal dunha tab, a interface sobe o seu lector ao nivel normal: ao mostrar a tab, e tamén cando atende unha oculta, para rematar a súa actualización sincronizada, e entón o lector volta baixar en canto a interface solta o *lock*. Así, a interface nunca espera por un fío de menos prioridade ca ela. Non pode contar co *AutoBoost*: en Windows, o `Mutex` da biblioteca estándar de Rust ([§32](#32-procesos-tubaxes-e-eventos)) é un byte co seu estado, sen o fío que o ten, e espera con [`WaitOnAddress`](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitonaddress), que dorme o fío mentres o byte teña o mesmo valor, ata que outro o esperte con `WakeByAddressSingle`. Windows só ve un enderezo da memoria, e non sabe a quen subir. `Pty::set_reader_priority` cambia a prioridade desde a interface, co *handle* do fío que garda o seu `JoinHandle`: vale no momento, tamén mentres o lector traballa, e se o lector xa rematou non fai nada. Explícase en [Código › meiga-win](codigo/meiga-win.md#cratesmeiga-winsrcconptyrs).

@@ -1,6 +1,9 @@
-//! The terminal in the window: its copy of the screen, brought up to date
-//! from the terminal of the session before each frame, and the drawing of
-//! the cells, their lines and the cursor.
+//! The terminal of the tab that the window shows: its copy of the screen,
+//! brought up to date from the terminal of the session before each frame,
+//! and the drawing of the cells, their lines and the cursor. The view is
+//! the same for all the tabs of the window, with its font, its zoom and its
+//! scroll bar: when the window shows another tab, it shows its terminal
+//! (ADR 0019).
 
 use std::mem;
 use std::ops::Range;
@@ -10,6 +13,7 @@ use std::time::Instant;
 use meiga_core::color::{Palette, Rgb};
 use meiga_core::geometry::{GridSize, Point, Rect, Size};
 use meiga_core::input::{KeyEncoder, KeyEvent, focus_sequence};
+use meiga_core::model::TabId;
 use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, MIN_SIZE, Screen, Scroll};
 use meiga_core::text::CellChar;
 use meiga_render::{Canvas, Decorations, Font, FontStyle, FontSystem};
@@ -17,10 +21,12 @@ use meiga_win::conpty::Input;
 use meiga_win::event::Event;
 use meiga_win::window::{self, CaretSettings, Waker, Window};
 
+use crate::app::TITLE;
 use crate::clipboard;
 use crate::frames::{self, Scene};
 use crate::mouse::{Context, Mouse, Response};
 use crate::session::{Shared, lock};
+use crate::tabs::TabAction;
 
 /// The font: the first of these families that is installed, at 12 points,
 /// as in Windows Terminal. The zoom changes its size a point at a time,
@@ -41,6 +47,10 @@ const BASE_DPI: u32 = 96;
 const VK_C: u16 = 0x43;
 const VK_V: u16 = 0x56;
 const VK_ESCAPE: u16 = 0x1b;
+/// T, W and Tab, of the shortcuts of the tabs.
+const VK_T: u16 = 0x54;
+const VK_W: u16 = 0x57;
+const VK_TAB: u16 = 0x09;
 /// Page Up, Page Down, End, Home, and the up and down arrows.
 const VK_PRIOR: u16 = 0x21;
 const VK_NEXT: u16 = 0x22;
@@ -58,8 +68,11 @@ const VK_SUBTRACT: u16 = 0x6d;
 const VK_OEM_PLUS: u16 = 0xbb;
 const VK_OEM_MINUS: u16 = 0xbd;
 
-/// The terminal of the session, as the window shows it.
+/// The terminal of the tab that the window shows, as the window shows it.
 pub struct TerminalView {
+    /// The tab that the view shows. Its reader thread wakes the window up
+    /// with its identifier, and so does the view, for its title.
+    tab: TabId,
     shared: Arc<Mutex<Shared>>,
     /// Sends to the program the keys, and the answers that the window finds
     /// when it ends a synchronized update, and tells it the size of the
@@ -103,20 +116,30 @@ pub struct TerminalView {
     keys: Vec<u8>,
 }
 
+/// The terminal of a tab, as the view needs it to show it.
+pub struct TabTerminal {
+    pub id: TabId,
+    pub shared: Arc<Mutex<Shared>>,
+    /// What sends input to its program, or `None` if the program did not
+    /// start.
+    pub input: Option<Input>,
+}
+
 impl TerminalView {
-    /// The view of the terminal of `shared`, drawn with `font`, of `fonts`,
-    /// in a window of `client` pixels at `dpi`.
+    /// The view of the terminal of a tab, drawn with `font`, of `fonts`, in
+    /// a window of `client` pixels at `dpi`.
     pub fn new(
-        shared: Arc<Mutex<Shared>>,
-        input: Option<Input>,
+        terminal: TabTerminal,
         waker: Waker,
         fonts: FontSystem,
         font: Font,
         dpi: u32,
         client: Size,
     ) -> Self {
+        let TabTerminal { id, shared, input } = terminal;
         let grid = lock(&shared).terminal.size();
         Self {
+            tab: id,
             shared,
             input,
             waker,
@@ -141,10 +164,6 @@ impl TerminalView {
         }
     }
 
-    pub const fn shared(&self) -> &Arc<Mutex<Shared>> {
-        &self.shared
-    }
-
     pub const fn is_focused(&self) -> bool {
         self.caret.focused
     }
@@ -154,17 +173,115 @@ impl TerminalView {
         self.dpi
     }
 
+    /// The size of the cells, in pixels.
+    pub const fn cell(&self) -> Size {
+        self.cell
+    }
+
+    /// The grid that fills the window: the one of a new tab.
+    pub fn window_grid(&self) -> GridSize {
+        grid_size(self.client, self.cell, self.mouse.bar().width())
+    }
+
+    /// The reader thread of the tab that the view shows woke the window up:
+    /// its title, its screen, the clipboard, or more than one, changed, or
+    /// its program left a synchronized update open. The window takes the
+    /// title, and the text for the clipboard if it can. Returns whether the
+    /// screen changed, which a frame has to show: the next update also
+    /// learns when the synchronized update ends, even with the window
+    /// minimized.
+    pub fn wake(&self, window: &Window) -> bool {
+        let (title, clipboard, screen) = {
+            let mut shared = lock(&self.shared);
+            let title = mem::take(&mut shared.title_changed)
+                .then(|| shared.terminal.title().map(str::to_owned));
+            let clipboard = mem::take(&mut shared.clipboard_changed)
+                .then(|| shared.terminal.take_clipboard())
+                .flatten();
+            (title, clipboard, shared.screen_changed)
+        };
+        if let Some(title) = title {
+            window.set_title(title.as_deref().unwrap_or(TITLE));
+        }
+        // A program cannot change the clipboard from a window that the user
+        // is not using: the window needs the focus, and to be the foreground
+        // window. If another program keeps the clipboard open, the text is
+        // lost, as in Windows Terminal.
+        if let Some(text) = clipboard
+            && self.is_focused()
+            && window.is_foreground()
+        {
+            let _ = meiga_win::clipboard::write_text(window, &text);
+        }
+        screen
+    }
+
+    /// Shows the terminal of another tab, from `now`. What the mouse was
+    /// doing with the old one ends, and both programs learn that the focus
+    /// moved, if the window has it and they asked. The next update copies
+    /// all the screen of the new one, once, and gives it the grid that
+    /// fills the window, if it changed while the tab was hidden. The window
+    /// takes its title; what its program copied to the clipboard while it
+    /// was hidden is dropped (ADR 0019).
+    pub fn show(&mut self, window: &Window, terminal: TabTerminal, now: Instant) {
+        let context = Context {
+            window,
+            shared: &self.shared,
+            input: self.input.as_ref(),
+            cell: self.cell,
+        };
+        self.mouse.switched(&context);
+        let focused = self.caret.focused;
+        if focused {
+            self.tell_focus(false);
+        }
+        let TabTerminal { id, shared, input } = terminal;
+        self.tab = id;
+        self.shared = shared;
+        self.input = input;
+        if focused {
+            self.tell_focus(true);
+        }
+        let (title, grid) = {
+            let mut shared = lock(&self.shared);
+            // The zoom, or the scale of the window, may have changed the
+            // cells while the tab was hidden.
+            shared.terminal.set_cell_size(self.cell);
+            shared.title_changed = false;
+            shared.clipboard_changed = false;
+            let _ = shared.terminal.take_clipboard();
+            (
+                shared.terminal.title().map(str::to_owned),
+                shared.terminal.size(),
+            )
+        };
+        window.set_title(title.as_deref().unwrap_or(TITLE));
+        // The next copy takes the whole screen, in the same memory, and the
+        // frame draws the whole window, its margins too.
+        self.screen.forget();
+        self.redraw = true;
+        // A new screen is activity: the cursor blinks again from the start.
+        self.caret.since = now;
+        // The terminal of a hidden tab keeps its grid. The one that fills
+        // the window now goes to it at the next update, without waiting for
+        // the frame interval since the last one.
+        self.grid = grid;
+        self.resized_at = None;
+        self.resized(self.client);
+    }
+
     /// A key went down or up. Ctrl+C copies the selection, if there is
     /// one; Ctrl+V pastes; Esc removes the selection, if there is one; on
-    /// the primary screen, the keys of the history move its view; and
-    /// Ctrl and +, - or 0 zoom. The rest go to the program, as the modes
-    /// that it turned on say, and a key that goes down removes the
+    /// the primary screen, the keys of the history move its view; Ctrl and
+    /// +, - or 0 zoom; and Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab and
+    /// Ctrl+Shift+Tab are for the tabs. The rest go to the program, as the
+    /// modes that it turned on say, and a key that goes down removes the
     /// selection and brings the view back to the screen, where the program
     /// writes, unless it is a modifier key.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         // A key that meiga took does not reach the program while it repeats,
-        // nor when it goes up. The ones that move the view or zoom do it
-        // again while they repeat.
+        // nor when it goes up. The ones that move the view, zoom or go to
+        // the next tab do it again while they repeat.
         if let Some(taken) = self.taken.iter().position(|&key| key == event.key) {
             if !event.down {
                 self.taken.swap_remove(taken);
@@ -203,7 +320,19 @@ impl TerminalView {
     fn shortcut(&mut self, window: &Window, event: &KeyEvent) -> Option<Response> {
         let controls = event.controls;
         let (ctrl, alt, shift) = (controls.ctrl(), controls.alt(), controls.shift());
+        let tab = |action| {
+            Some(Response {
+                tab: Some(action),
+                ..Response::default()
+            })
+        };
         match event.key {
+            // The tabs, with fixed shortcuts until subphase 2.6, as in
+            // Windows Terminal. Ctrl+T and Ctrl+W go to the program.
+            VK_T if ctrl && shift && !alt => tab(TabAction::New),
+            VK_W if ctrl && shift && !alt => tab(TabAction::Close),
+            VK_TAB if ctrl && !alt && shift => tab(TabAction::Previous),
+            VK_TAB if ctrl && !alt => tab(TabAction::Next),
             // Ctrl, and Shift or not, but not Alt, nor AltGr.
             VK_C if ctrl && !alt => {
                 clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW)
@@ -310,7 +439,7 @@ impl TerminalView {
     pub fn resized(&mut self, client: Size) {
         self.client = client;
         self.mouse.bar_mut().set_client(client);
-        let grid = grid_size(client, self.cell, self.mouse.bar().width());
+        let grid = self.window_grid();
         self.wanted = (grid != self.grid).then_some(grid);
     }
 
@@ -391,6 +520,11 @@ impl TerminalView {
         }
         self.caret.focused = focused;
         self.screen.mark_cursor_changed();
+        self.tell_focus(focused);
+    }
+
+    /// Tells the program whether the window has the focus, if it asked.
+    fn tell_focus(&self, focused: bool) {
         if let Some(input) = &self.input {
             let modes = lock(&self.shared).terminal.modes();
             input.write(focus_sequence(focused, &modes));
@@ -408,7 +542,7 @@ impl TerminalView {
         }
         if title {
             // The window takes the title when it wakes up.
-            self.waker.wake();
+            self.waker.wake(self.tab.get());
         }
     }
 
@@ -542,8 +676,8 @@ pub fn grid_size(client: Size, cell: Size, bar: u32) -> GridSize {
 }
 
 /// Whether the action of `key`, when meiga takes it, goes on while it
-/// repeats: the keys that move the view of the history, and the ones that
-/// zoom.
+/// repeats: the keys that move the view of the history, the ones that
+/// zoom, and Tab, which goes from tab to tab.
 const fn repeats(key: u16) -> bool {
     matches!(
         key,
@@ -557,6 +691,7 @@ const fn repeats(key: u16) -> bool {
             | VK_OEM_MINUS
             | VK_ADD
             | VK_SUBTRACT
+            | VK_TAB
     )
 }
 

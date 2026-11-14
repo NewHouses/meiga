@@ -114,8 +114,8 @@ pub enum Event {
     /// The frame timer ([`Window::start_frame_timer`]) is due.
     FrameTimer,
     /// Another thread woke the window up with its
-    /// [`Waker`](crate::window::Waker).
-    Wake,
+    /// [`Waker`](crate::window::Waker), with this number.
+    Wake(u64),
 }
 
 /// The event of a window message, or `None` if it is not one of them. The
@@ -181,7 +181,7 @@ pub(crate) fn decode(
         WM_MOUSELEAVE => Event::MouseLeft,
         WM_SETFOCUS => Event::Focus { focused: true },
         WM_KILLFOCUS => Event::Focus { focused: false },
-        WM_WAKE => Event::Wake,
+        WM_WAKE => Event::Wake(wparam as u64),
         _ => return None,
     })
 }
@@ -333,7 +333,13 @@ mod tests {
             decode(WM_KILLFOCUS, 0, 0),
             Some(Event::Focus { focused: false })
         );
-        assert_eq!(decode(WM_WAKE, 0, 0), Some(Event::Wake));
+        assert_eq!(decode(WM_WAKE, 0, 0), Some(Event::Wake(0)));
+        // The number of the waker, in all its 64 bits.
+        let number = 0x0123_4567_89ab_cdef_u64;
+        assert_eq!(
+            decode(WM_WAKE, number as WPARAM, 0),
+            Some(Event::Wake(number))
+        );
     }
 
     #[test]

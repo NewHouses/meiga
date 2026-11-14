@@ -26,6 +26,7 @@ use crate::clipboard;
 use crate::frames;
 use crate::scrollbar::ScrollBar;
 use crate::session::{Shared, lock};
+use crate::tabs::TabAction;
 
 /// The dots per inch at a scale of 100 %.
 const BASE_DPI: u32 = 96;
@@ -51,6 +52,8 @@ pub struct Response {
     /// The wheel turned with Ctrl these notches, which zoom: in when they
     /// are positive.
     pub zoom: i32,
+    /// A shortcut of the tabs.
+    pub tab: Option<TabAction>,
 }
 
 impl Response {
@@ -59,6 +62,7 @@ impl Response {
         redraw: true,
         dialog: false,
         zoom: 0,
+        tab: None,
     };
 }
 
@@ -565,6 +569,19 @@ impl Mouse {
         }
         self.bar.release();
         self.release(context);
+    }
+
+    /// The window shows another terminal now, instead of the one of
+    /// `context`: what the mouse was doing with that one ends, as when
+    /// another window takes the mouse, and what it counted for it does not
+    /// go on in the other one, such as the clicks or the last cell that went
+    /// to its program.
+    pub fn switched(&mut self, context: &Context<'_>) {
+        self.forget_buttons(context);
+        self.clicks = Clicks::new();
+        self.reported_at = None;
+        self.wheel = WheelTurns::new();
+        self.wheel_rows = WheelRows::new();
     }
 
     /// Sends the report of `action` on `cell` to the program, if it asked

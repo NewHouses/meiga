@@ -72,7 +72,7 @@ pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> Response
     Response {
         redraw,
         dialog,
-        zoom: 0,
+        ..Response::default()
     }
 }
 

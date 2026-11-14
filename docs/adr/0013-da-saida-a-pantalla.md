@@ -1,6 +1,6 @@
 # ADR 0013 · Da saída á pantalla
 
-- **Estado:** Aceptado; concretado polo [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md)
+- **Estado:** Aceptado; concretado polos [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md) e [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md)
 - **Data:** 2026-11-08
 - **Relacionados:** [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0008](0008-temporizador-dos-fotogramas.md), [ADR 0010](0010-texto-con-directwrite.md), [ADR 0011](0011-fin-e-peche-das-sesions.md), [ADR 0012](0012-fachada-do-terminal.md)
 

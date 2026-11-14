@@ -243,6 +243,13 @@ impl Screen {
         text
     }
 
+    /// Forgets what it shows: the next copy of a terminal copies all of it,
+    /// as for a screen of another size, in the same memory. For when it
+    /// starts to show another terminal.
+    pub fn forget(&mut self) {
+        self.size = GridSize::new(0, 0);
+    }
+
     /// Takes `size`, with every cell blank and changed.
     pub(super) fn resize(&mut self, size: GridSize) {
         self.size = size;

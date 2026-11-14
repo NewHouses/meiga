@@ -11,7 +11,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use meiga_core::geometry::GridSize;
-use meiga_win::conpty::{Conpty, Input, Output, Pty, Source};
+use meiga_win::conpty::{Conpty, Input, Output, Priority, Pty, Source};
+use windows_sys::Win32::System::Threading::{
+    GetCurrentThread, GetThreadPriority, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL,
+};
 
 /// How long a test waits for a session at most. A session that gets stuck
 /// while it closes ends after 10 or 20 s.
@@ -232,6 +235,64 @@ fn the_program_gets_the_new_size() {
     assert_eq!(transcript.wait_for_end(), Some(3));
     // Once the session ends, it does nothing.
     pty.resize(GridSize::new(80, 25)).unwrap();
+}
+
+/// Sends with each block of output the priority of the reader thread, which
+/// it reads on that thread, as it gives the block.
+struct Priorities(Sender<(i32, Vec<u8>)>);
+
+impl Output for Priorities {
+    fn received(&mut self, bytes: &[u8], _input: &Input) {
+        // SAFETY: GetCurrentThread returns a pseudo handle of this thread,
+        // which GetThreadPriority can read.
+        let priority = unsafe { GetThreadPriority(GetCurrentThread()) };
+        let _ = self.0.send((priority, bytes.to_vec()));
+    }
+
+    fn ended(&mut self, _exit_code: Option<u32>) {}
+}
+
+#[test]
+fn the_priority_of_the_reader_changes_while_the_session_runs() {
+    let (sender, blocks) = mpsc::channel();
+    let pty = bundled()
+        .spawn("cmd /k", GridSize::new(80, 25), Priorities(sender))
+        .unwrap();
+    // The priority of the block that brings `text`, which the program writes
+    // after the line that is typed now. The words are not in the folder
+    // that the prompt shows, which comes before.
+    let typed = |line: &[u8], text: &str| {
+        pty.write(line);
+        let mut output = Vec::new();
+        loop {
+            let (priority, block) = blocks.recv_timeout(TIMEOUT).unwrap();
+            output.extend(block);
+            if String::from_utf8_lossy(&output).contains(text) {
+                return priority;
+            }
+        }
+    };
+    assert_eq!(
+        typed(b"echo priority-1\r", "priority-1"),
+        THREAD_PRIORITY_NORMAL
+    );
+    pty.set_reader_priority(Priority::BelowNormal).unwrap();
+    assert_eq!(
+        typed(b"echo priority-2\r", "priority-2"),
+        THREAD_PRIORITY_BELOW_NORMAL
+    );
+    pty.set_reader_priority(Priority::Normal).unwrap();
+    assert_eq!(
+        typed(b"echo priority-3\r", "priority-3"),
+        THREAD_PRIORITY_NORMAL
+    );
+    drop(pty);
+    // Once the session has ended, it does nothing: the reader thread, whose
+    // last step tells that the session ended, is ending or has ended, and
+    // SetThreadPriority does nothing on a thread that has ended.
+    let (pty, mut transcript) = spawn(&bundled(), "cmd /c exit 4");
+    assert_eq!(transcript.wait_for_end(), Some(4));
+    pty.set_reader_priority(Priority::BelowNormal).unwrap();
 }
 
 #[test]

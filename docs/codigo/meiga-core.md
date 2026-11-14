@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.1. Contén o modelo das xanelas e as súas tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man.
+> Estado: subfase 2.2. Contén o modelo das xanelas e as súas tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -1675,14 +1675,15 @@ pub struct Window<T> {
 | `tab_count()` | Cantas tabs ten: polo menos unha. Chámase así, e non `len`, porque Clippy pide un `is_empty` xunto a cada `len`, e unha xanela nunca está baleira. |
 | `index_of(id)` | A posición dunha tab, desde 0, ou `None` se non está. |
 | `get(id)` e `get_mut(id)` | O contido dunha tab, para lelo ou para cambialo. |
+| `contents_mut()` | Desde a 2.2: o contido de todas as tabs, cos seus identificadores, na orde da barra, para cambialo. As tabs e a súa orde non cambian. O programa úsao coas tabs que non se ven ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). |
 | `active()` e `active_index()` | A tab activa, e a súa posición. |
 | `focused()` e `focused_mut()` | A tab enfocada, a que recibe o teclado, e o seu contido, para cambialo. Hoxe, a activa. |
 | `is_visible(id)` | Se unha tab se debuxa. Hoxe, só a activa. |
 
 - Buscar polo identificador (`index_of`, `get` e `get_mut`) percorre o vector ata atopala, con `position` e `find`: con decenas de tabs, uns nanosegundos.
 - `active()` le o vector na posición gardada (`&self.tabs[self.active]`), que as invariantes manteñen dentro del.
-- `focused` e `is_visible` respóndense coa activa: o modelo non garda nada máis ata a vista dividida (decisión 9). Desde a 2.2, o programa usará `focused` para o teclado e `is_visible` para saber que debuxar, aínda que hoxe dean o mesmo ca `active`.
-- Non hai un `tabs_mut`: cunha *slice* mutábel, o programa podería cambiar a orde das tabs sen que a xanela o soubese, e a posición da activa apuntaría a outra tab. O contido cámbiase con `get_mut` e `focused_mut`, que só dan o contido.
+- `focused` e `is_visible` respóndense coa activa: o modelo non garda nada máis ata a vista dividida (decisión 9). Na 2.2, o programa só mostra unha tab, e usa `active` para todo; `focused` e `is_visible` quedan para cando a enfocada e as visíbeis poidan ser outras.
+- Non hai un `tabs_mut`: cunha *slice* mutábel, o programa podería cambiar a orde das tabs sen que a xanela o soubese, e a posición da activa apuntaría a outra tab. O contido cámbiase con `get_mut`, `focused_mut` e, desde a 2.2, `contents_mut`, que só dan o contido: `contents_mut` dá pares `(TabId, &mut T)`, cun iterador sobre o vector (`iter_mut().map(…)`), sen reservar memoria.
 
 ### Abrir e pechar
 
@@ -3071,6 +3072,7 @@ pub struct Screen {
 | `clear_changes` | Esquece os cambios, despois de debuxalos. |
 | `row_text(row)` | O texto dunha fila sen os espazos do final: cada carácter unha vez, tamén os anchos, e as celas en branco como espazos. Úsano as probas e o exemplo `replay`. |
 | `mark_cursor_changed` | Desde a 1.6: engade aos cambios as celas do cursor, se se debuxa (máis abaixo). |
+| `forget` | Desde a 2.2: esquece o que mostra, e a seguinte copia dun terminal cópiao enteiro (máis abaixo). |
 
 Estes cinco só os usa a fachada: son `pub(super)`, visíbeis no módulo pai, `term`, e non fóra del.
 
@@ -3118,6 +3120,14 @@ pub(super) fn set_palette(&mut self, palette: &Palette) {
   - se non cambiou nada, o caso de case todas as copias, non copia nada.
 
   `clone_from` copia a paleta nova sobre a que xa había, sen crear outra.
+
+```rust
+pub fn forget(&mut self) {
+    self.size = GridSize::new(0, 0);
+}
+```
+
+- **`forget`**, desde a subfase 2.2, deixa o tamaño en 0 × 0 sen tocar as celas: na seguinte copia, `copy_damage` ve outro tamaño e copia todo, coma despois dun cambio de tamaño ([`copy_damage`](#copy_damage-copiar-o-que-cambiou), paso 1). `resize` borra as celas do `Vec` sen soltar a súa memoria, así que se a grella do outro terminal cabe nela, non reserva nada; e marca todas as celas como cambiadas. A vista do terminal chámao cando pasa a mostrar outra tab ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)): sen el, `copy_damage` só copiaría as filas que o outro terminal marcou desde a súa última copia, e quedarían as da tab de antes.
 
 **Probas.** Cinco:
 
@@ -3445,7 +3455,7 @@ E despois, para cada bloque:
 
 ## `crates/meiga-core/src/term/tests.rs`
 
-As trinta e seis probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Oito axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras; desde a 1.9, `texts` dá o texto de cada fila que se ve, `cursor_at`, a fila e a columna do cursor, e `ten_lines`, un terminal de 10 × 3 coas liñas do 1 ao 10, 7 delas no historial; e, desde a revisión do código da 1.9, `assert_the_rows_go_into_the_history`, que, coa vista dúas filas arriba, comproba que dúas liñas novas ao final da pantalla meten dúas filas no historial e que a vista segue mostrando as mesmas. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén. Desde a 1.9, trece comproban o cambio de tamaño, a pantalla principal á parte e a vista do historial, e a proba aleatoria move tamén a vista.
+As trinta e sete probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Oito axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras; desde a 1.9, `texts` dá o texto de cada fila que se ve, `cursor_at`, a fila e a columna do cursor, e `ten_lines`, un terminal de 10 × 3 coas liñas do 1 ao 10, 7 delas no historial; e, desde a revisión do código da 1.9, `assert_the_rows_go_into_the_history`, que, coa vista dúas filas arriba, comproba que dúas liñas novas ao final da pantalla meten dúas filas no historial e que a vista segue mostrando as mesmas. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén. Desde a 1.9, trece comproban o cambio de tamaño, a pantalla principal á parte e a vista do historial, e a proba aleatoria move tamén a vista.
 
 | Proba | Que comproba |
 |---|---|
@@ -3465,6 +3475,7 @@ As trinta e seis probas do terminal, nun arquivo aparte para que `mod.rs` sexa m
 | `the_cells_of_the_cursor_are_changes_when_it_is_drawn` | As celas do cursor márcanse só se cambia e se se debuxa: ao ocultalo, só onde estaba; mentres está oculto, nada; e na última columna, unha soa cela. |
 | `a_synchronized_update_waits_for_its_end` | A saída dunha actualización sincronizada non chega á pantalla ata que remata ou vence (como moito, 150 ms); `end_sync` móstraa e entrega as súas respostas. |
 | `after_a_resize_everything_is_copied_again` | Despois de cambiar o tamaño, a copia ten o tamaño novo e todas as celas cambiadas, co texto no seu sitio. |
+| `a_forgotten_screen_takes_all_of_another_terminal` | Desde a subfase 2.2. Unha pantalla copiada dun terminal con `uno` e `dous` recibe a copia doutro, con `tres`, que xa se copiara noutra pantalla e non cambiou desde entón, coma unha tab que xa se mostrou: sen `forget`, segue co `dous` do primeiro; despois de `forget`, ten todas as celas cambiadas, o mesmo tamaño, `tres` na primeira fila, a segunda baleira e o cursor despois de `tres`. |
 | `the_grid_is_never_smaller_than_two_columns_and_one_row` | Un terminal de 0 × 0 ou de 1 × 0 mide 2 × 1, e escribir caracteres anchos e inserir celas e liñas nel non falla. |
 | `a_taller_screen_adds_blank_rows_and_leaves_the_history_alone` | Desde a subfase 1.9: un terminal de 10 × 3 con `a` a `e`, dúas no historial, pasa a ter 5 filas: `c`, `d` e `e` seguen arriba, con dúas filas baleiras abaixo, o cursor segue despois do `e`, e o historial segue con dúas filas. `alacritty_terminal` traería del `a` e `b`. |
 | `a_shorter_screen_keeps_the_cursor_and_the_rows_above_it` | De 5 filas a 3, se o texto cabe, só se van as filas baleiras de abaixo: `a` e `b` seguen arriba, co cursor, e nada vai ao historial. Se non cabe, de `a`, `b` e `c` a 2 filas, a primeira vai ao historial; e alí segue cando a pantalla volta a 5 filas, con `b` e `c` arriba e as baleiras abaixo. |
