@@ -205,7 +205,7 @@ Na máquina da liña base (subfase 0.8), coa compilación da 1.10 (Rust 1.99.1 e
 | A saída masiva | Igual: o tempo de imprimir e a CPU de meiga e do seu OpenConsole, cada un dentro dun 4 % entre as dúas versións. A máquina estaba ocupada, e tres das catro medicións saíron «non estábeis». |
 | O *spinner* | Igual: meiga e o seu OpenConsole espertan as mesmas veces, e os seus ciclos por segundo cambian menos dun 4 %. |
 | O arranque | Non empeora: nas dúas roldas, a mediana do M1 saíu un 8–10 % máis baixa ca a da 1.10. Non se investigou se vén do compilador ou do ConPTY. |
-| Revisión do código | Unha revisión independente comprobou a regra de Dependabot, o SHA-256 e o tamaño do paquete, as versións, os tamaños, o número de probas, os pasos da CI e os desprazamentos do paso 7, cos dous ConPTY. Atopou dous erros na sección «O que trae o ConPTY novo», xa corrixidos: o arranxo do borrado da pantalla só cambia a consola cando non hai ConPTY, e entre os outros arranxos hai tres máis na consola, que a primeira versión desta sección atribuía á interface do Windows Terminal. |
+| Revisión do código | Unha revisión independente comprobou a regra de Dependabot, o SHA-256 e o tamaño do paquete, as versións, os tamaños, o número de probas e os pasos da CI e, no código dos dous ConPTY, o resultado esperado do paso 7. Atopou dous erros na sección «O que trae o ConPTY novo», xa corrixidos: o arranxo do borrado da pantalla só cambia a consola cando non hai ConPTY, e entre os outros arranxos hai tres máis na consola, que a primeira versión desta sección atribuía á interface do Windows Terminal. A revisión das correccións non atopou máis erros. |
 | CI | PENDENTE |
 
 ## Pendente
