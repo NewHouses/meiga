@@ -124,7 +124,7 @@ Na máquina da liña base (subfase 0.8), coa compilación da 1.10 (Rust 1.99.1 e
 
    - `cargo test` mostra as mesmas nove liñas `test result: ok.` ca na 1.10: 207 probas.
    - `check-imports.ps1`, as mesmas DLL ca na 1.10, e `OK: no dependencies on the Visual C++ runtime.`
-   - `check-docs.ps1`: `OK: 2149 relative links checked in 51 files.`, con máis ligazóns ca na 1.10, as deste documento.
+   - `check-docs.ps1`: `OK: 2150 relative links checked in 51 files.`, con máis ligazóns ca na 1.10, as deste documento.
    - `check-powershell.ps1`: `OK: the 22 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.`
    - O tamaño de `meiga.exe`, `566272` (na 1.10, `557568`): o compilador novo.
 
@@ -206,7 +206,7 @@ Na máquina da liña base (subfase 0.8), coa compilación da 1.10 (Rust 1.99.1 e
 | O *spinner* | Igual: meiga e o seu OpenConsole espertan as mesmas veces, e os seus ciclos por segundo cambian menos dun 4 %. |
 | O arranque | Non empeora: nas dúas roldas, a mediana do M1 saíu un 8–10 % máis baixa ca a da 1.10. Non se investigou se vén do compilador ou do ConPTY. |
 | Revisión do código | Unha revisión independente comprobou a regra de Dependabot, o SHA-256 e o tamaño do paquete, as versións, os tamaños, o número de probas e os pasos da CI e, no código dos dous ConPTY, o resultado esperado do paso 7. Atopou dous erros na sección «O que trae o ConPTY novo», xa corrixidos: o arranxo do borrado da pantalla só cambia a consola cando non hai ConPTY, e entre os outros arranxos hai tres máis na consola, que a primeira versión desta sección atribuía á interface do Windows Terminal. A revisión das correccións non atopou máis erros. |
-| CI | PENDENTE |
+| CI | Antes de abrir o PR, unha execución manual na rama pasou enteira nos catro jobs, tamén no opcional *ConPTY version*, que na 1.10 fallara por esta versión: `OK: 1.25.261109001 is the latest stable version of Microsoft.Windows.Console.ConPTY on nuget.org.` A do PR pasou á primeira. As probas, as DLL, as ligazóns e os scripts, os mesmos ca en local. As probas de integración de `meiga-win` levaron 10,2 s na manual e 20,2 s na do PR, coma ás veces desde a 1.4: a última pecha sesións mentres arrancan, e algunha bloquéase ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). No *runner*, a selección de `check-resize.ps1` chegou a `h016|` nas dúas execucións; o arranque, 35 ms de mediana; e `measure-frames`, en 1024 × 697 a 58,7–58,9 fps: `full` compón en 44–56 µs e `text` en 236–357 µs, e presentar leva 204–258 µs. |
 
 ## Pendente
 
