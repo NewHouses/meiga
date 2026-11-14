@@ -73,6 +73,33 @@ fn only_what_changed_is_copied_again() {
 }
 
 #[test]
+fn a_forgotten_screen_takes_all_of_another_terminal() {
+    let mut first = Terminal::new(GridSize::new(10, 3));
+    let mut second = Terminal::new(GridSize::new(10, 3));
+    first.feed(b"uno\r\ndous");
+    second.feed(b"tres");
+    let mut screen = Screen::new();
+    first.copy_damage(&mut screen);
+    // The second terminal was already copied elsewhere, as a tab that was
+    // shown before: nothing changed in it since then.
+    second.copy_damage(&mut Screen::new());
+    screen.clear_changes();
+
+    // Without forgetting it, the screen keeps the rows of the first one.
+    second.copy_damage(&mut screen);
+    assert_eq!(screen.row_text(1), "dous");
+    screen.clear_changes();
+
+    screen.forget();
+    second.copy_damage(&mut screen);
+    assert!(screen.all_changed());
+    assert_eq!(screen.size(), GridSize::new(10, 3));
+    assert_eq!(screen.row_text(0), "tres");
+    assert_eq!(screen.row_text(1), "");
+    assert_eq!((screen.cursor().row, screen.cursor().column), (0, 4));
+}
+
+#[test]
 fn the_program_gets_its_answers() {
     let mut terminal = Terminal::new(GridSize::new(10, 3));
     let answers = Changes {

@@ -30,6 +30,7 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 1.9 | Scrollback, redimensionado e zoom | [PR #15](https://github.com/NewHouses/meiga/pull/15) | [1.9-historial.md](1.9-historial.md) |
 | 1.10 | Porta do MVP | [PR #18](https://github.com/NewHouses/meiga/pull/18) | [1.10-porta.md](1.10-porta.md) |
 | 2.1 | Modelo de tabs | [PR #20](https://github.com/NewHouses/meiga/pull/20) | [2.1-modelo.md](2.1-modelo.md) |
+| 2.2 | Varias sesións e tabs en segundo plano | [PR #21](https://github.com/NewHouses/meiga/pull/21) | [2.2-sesions.md](2.2-sesions.md) |
 
 ## Mantemento
 

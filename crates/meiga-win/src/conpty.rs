@@ -25,7 +25,7 @@ use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 use std::path::{Path, PathBuf};
 use std::ptr;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::thread;
+use std::thread::{self, JoinHandle};
 
 use meiga_core::geometry::GridSize;
 use windows_sys::Win32::Foundation::{FALSE, HANDLE, TRUE, WAIT_OBJECT_0, WAIT_TIMEOUT};
@@ -48,7 +48,8 @@ use windows_sys::Win32::System::Threading::{
     GetExitCodeProcess, INFINITE, InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST,
     OpenProcess, PROC_THREAD_ATTRIBUTE_JOB_LIST, PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
     PROCESS_INFORMATION, PROCESS_SYNCHRONIZE, STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW,
-    SetEvent, UpdateProcThreadAttribute, WaitForMultipleObjects, WaitForSingleObject,
+    SetEvent, SetThreadPriority, THREAD_PRIORITY, THREAD_PRIORITY_BELOW_NORMAL,
+    THREAD_PRIORITY_NORMAL, UpdateProcThreadAttribute, WaitForMultipleObjects, WaitForSingleObject,
 };
 use windows_sys::core::HRESULT;
 
@@ -284,24 +285,26 @@ impl Conpty {
             drop(console);
             return Err(Error::new("CreateThread", error));
         }
-        let pty = Pty {
-            input: Input { shared },
-            process_id,
-        };
+        let input = Input { shared };
         let reader = {
-            let shared = Arc::clone(&pty.input.shared);
+            let shared = Arc::clone(&input.shared);
             thread::Builder::new()
                 .name(format!("conpty reader {process_id}"))
                 .spawn(move || read_output(output_read, shared, output))
         };
         match reader {
-            Ok(_) => Ok(pty),
+            Ok(reader) => Ok(Pty {
+                input,
+                process_id,
+                reader,
+            }),
             Err(error) => {
-                // Nobody reads the output: end the programs, and tell the
-                // writer, which closes the session when `pty` drops, not to
-                // wait for the output. `output` is never called.
-                pty.input.shared.terminate();
-                pty.input.shared.close_output();
+                // Nobody reads the output: end the programs, tell the writer
+                // not to wait for the output, and close the session, as
+                // dropping a `Pty` does. `output` is never called.
+                input.shared.terminate();
+                input.shared.close_output();
+                input.close();
                 Err(Error::new("CreateThread", error))
             }
         }
@@ -364,6 +367,19 @@ pub trait Output: Send + 'static {
     fn ended(&mut self, exit_code: Option<u32>);
 }
 
+/// The priority of the reader thread of a session, which gives the output of
+/// the program to its [`Output`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Priority {
+    /// The one of the threads of a program, such as the one of its windows:
+    /// the one with which the thread starts.
+    Normal,
+    /// One step below (`THREAD_PRIORITY_BELOW_NORMAL`): when the processor
+    /// is busy, the threads with the normal priority run first, but Windows
+    /// still lets it run from time to time, so it never stops for good.
+    BelowNormal,
+}
+
 /// A program running in a pseudoconsole.
 ///
 /// Dropping it closes the session without waiting. Its writer thread closes
@@ -373,6 +389,9 @@ pub trait Output: Send + 'static {
 pub struct Pty {
     input: Input,
     process_id: u32,
+    /// The reader thread, whose priority can change. Dropping it does not
+    /// wait for the thread: it goes on until the output ends.
+    reader: JoinHandle<()>,
 }
 
 impl Pty {
@@ -397,12 +416,28 @@ impl Pty {
     pub fn resize(&self, size: GridSize) -> Result<(), Error> {
         self.input.resize(size)
     }
+
+    /// Changes the priority of the reader thread, from any thread. It takes
+    /// effect at once, also while the reader is giving output to its
+    /// [`Output`]. Once the reader has ended, it does nothing.
+    pub fn set_reader_priority(&self, priority: Priority) -> Result<(), Error> {
+        let value: THREAD_PRIORITY = match priority {
+            Priority::Normal => THREAD_PRIORITY_NORMAL,
+            Priority::BelowNormal => THREAD_PRIORITY_BELOW_NORMAL,
+        };
+        // SAFETY: the handle is the one of the reader thread, which the
+        // JoinHandle keeps open, also after the thread ends; it has every
+        // access right, THREAD_SET_INFORMATION among them.
+        if unsafe { SetThreadPriority(self.reader.as_raw_handle(), value) } == FALSE {
+            return Err(Error::last("SetThreadPriority"));
+        }
+        Ok(())
+    }
 }
 
 impl Drop for Pty {
     fn drop(&mut self) {
-        self.input.shared.lock().closing = true;
-        self.input.shared.wake();
+        self.input.close();
     }
 }
 
@@ -454,6 +489,13 @@ impl Input {
             return Err(Error::hresult("ResizePseudoConsole", result));
         }
         Ok(())
+    }
+
+    /// Closes the session without waiting: the writer closes the
+    /// pseudoconsole.
+    fn close(&self) {
+        self.shared.lock().closing = true;
+        self.shared.wake();
     }
 }
 

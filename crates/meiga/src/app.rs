@@ -1,55 +1,50 @@
 //! The handler of the window: it takes the events to the content and to the
 //! frames.
 
-use std::mem;
-use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use meiga_core::geometry::Rect;
-use meiga_core::term::Terminal;
+use meiga_core::model::TabId;
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::HDC;
-use meiga_win::clipboard;
-use meiga_win::conpty::Pty;
 use meiga_win::event::{Event, Handler, HandlerError};
-use meiga_win::window::{Pointer, Window};
+use meiga_win::window::Window;
 
 use crate::bench::Bench;
 use crate::frames::{Frames, Scene};
 use crate::mouse::Response;
 use crate::options::{BenchMode, Options};
-use crate::scrollbar::ScrollBar;
-use crate::session::{self, Shared, lock};
+use crate::tabs::Tabs;
 use crate::trace::Trace;
-use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TerminalView};
+use crate::view::{FONT_FAMILIES, FONT_POINTS};
 
 /// The title of the window while the program does not give one.
 pub const TITLE: &str = "meiga";
 
 /// What the window shows. Both hold a whole font, so they go in boxes.
 enum Content {
-    Terminal(Box<TerminalView>),
+    Terminal(Box<Tabs>),
     Bench(Box<Bench>),
 }
 
 impl Scene for Content {
     fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
         match self {
-            Content::Terminal(view) => view.update(now, damage),
+            Content::Terminal(tabs) => tabs.update(now, damage),
             Content::Bench(_) => None,
         }
     }
 
     fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
         match self {
-            Content::Terminal(view) => view.update_hidden(now),
+            Content::Terminal(tabs) => tabs.update_hidden(now),
             Content::Bench(_) => None,
         }
     }
 
     fn draw(&mut self, canvas: &mut Canvas<'_>) {
         match self {
-            Content::Terminal(view) => view.draw(canvas),
+            Content::Terminal(tabs) => tabs.draw(canvas),
             Content::Bench(bench) => bench.draw(canvas),
         }
     }
@@ -57,23 +52,21 @@ impl Scene for Content {
 
 pub struct App {
     frames: Frames,
+    /// The tabs own their sessions, which close when they are dropped.
     content: Content,
-    /// The session of the terminal, which closes when it is dropped. `None`
-    /// for the benchmarks, and if the program could not start.
-    _session: Option<Pty>,
 }
 
 impl App {
     /// The content of `window`, with the first frame composed: the terminal
-    /// with the program of `options` running, or a benchmark, which starts
-    /// its frames as soon as the window runs.
+    /// with the program of `options` running in its first tab, or a
+    /// benchmark, which starts its frames as soon as the window runs.
     pub fn new(
         window: &Window,
         options: &Options,
         trace: Option<Trace>,
     ) -> Result<Self, HandlerError> {
         // Only the content with text reads the fonts of the system.
-        let (mut content, session) = match options.bench {
+        let mut content = match options.bench {
             Some(BenchMode::Text) => {
                 let system = FontSystem::new()?;
                 let font = Font::new(
@@ -82,56 +75,30 @@ impl App {
                     f32::from(FONT_POINTS),
                     window.dpi(),
                 )?;
-                let bench = Bench::new(BenchMode::Text, Some(font));
-                (Content::Bench(Box::new(bench)), None)
+                Content::Bench(Box::new(Bench::new(BenchMode::Text, Some(font))))
             }
-            Some(mode) => (Content::Bench(Box::new(Bench::new(mode, None))), None),
-            None => terminal(window, options.command.as_deref())?,
+            Some(mode) => Content::Bench(Box::new(Bench::new(mode, None))),
+            None => Content::Terminal(Box::new(Tabs::new(window, options.command.as_deref())?)),
         };
         let mut frames = Frames::new(window, &mut content, trace, options.marks)?;
         if options.bench.is_some() {
             frames.schedule(window)?;
         }
-        Ok(Self {
-            frames,
-            content,
-            _session: session,
-        })
+        Ok(Self { frames, content })
     }
 
     const fn is_bench(&self) -> bool {
         matches!(self.content, Content::Bench(_))
     }
 
-    /// The reader thread of the session woke the window up: the title, the
-    /// screen, the clipboard, or more than one, changed.
-    fn wake(&mut self, window: &Window) -> Result<(), HandlerError> {
-        let Content::Terminal(view) = &self.content else {
+    /// The reader thread of the session of a tab, whose identifier is
+    /// `tab`, woke the window up: its title, its screen, the clipboard, a
+    /// synchronized update, or more than one, changed.
+    fn wake(&mut self, window: &Window, tab: u64) -> Result<(), HandlerError> {
+        let Content::Terminal(tabs) = &mut self.content else {
             return Ok(());
         };
-        let (title, clipboard, screen) = {
-            let mut shared = lock(view.shared());
-            let title = mem::take(&mut shared.title_changed)
-                .then(|| shared.terminal.title().map(str::to_owned));
-            let clipboard = mem::take(&mut shared.clipboard_changed)
-                .then(|| shared.terminal.take_clipboard())
-                .flatten();
-            (title, clipboard, shared.screen_changed)
-        };
-        if let Some(title) = title {
-            window.set_title(title.as_deref().unwrap_or(TITLE));
-        }
-        // A program cannot change the clipboard from a window that the user
-        // is not using: the window needs the focus, and to be the foreground
-        // window. If another program keeps the clipboard open, the text is
-        // lost, as in Windows Terminal.
-        if let Some(text) = clipboard
-            && view.is_focused()
-            && window.is_foreground()
-        {
-            let _ = clipboard::write_text(window, &text);
-        }
-        if screen {
+        if tabs.wake(window, TabId::from_raw(tab), Instant::now()) {
             self.frames.changed(window, &mut self.content)?;
         }
         Ok(())
@@ -139,17 +106,25 @@ impl App {
 
     /// Does what the view asks after a key or a mouse event.
     fn respond(&mut self, window: &Window, response: Response) -> Result<(), HandlerError> {
+        let mut changed = response.redraw;
         if response.dialog {
-            if let Content::Terminal(view) = &mut self.content {
-                view.dialog_closed(window);
+            if let Content::Terminal(tabs) = &mut self.content {
+                tabs.view_mut().dialog_closed(window);
             }
             self.catch_up(window)?;
-            // While the message box was open, the window lost its wakes, and
-            // maybe some paint: what changed meanwhile is shown now.
+            // While the message box was open, the window lost its wake-ups,
+            // and maybe some paint: what changed meanwhile is shown now.
             window.invalidate(None);
-            self.wake(window)?;
+            if let Content::Terminal(tabs) = &mut self.content {
+                changed |= tabs.catch_up_wakes(window, Instant::now());
+            }
         }
-        if response.redraw {
+        if let Some(action) = response.tab
+            && let Content::Terminal(tabs) = &mut self.content
+        {
+            changed |= tabs.act(window, action, Instant::now());
+        }
+        if changed {
             self.frames.changed(window, &mut self.content)?;
         }
         Ok(())
@@ -159,11 +134,11 @@ impl App {
     /// did not reach the view: the window may have another scale or size
     /// now. They are taken as if they had just changed.
     fn catch_up(&mut self, window: &Window) -> Result<(), HandlerError> {
-        let Content::Terminal(view) = &self.content else {
+        let Content::Terminal(tabs) = &self.content else {
             return Ok(());
         };
         let dpi = window.dpi();
-        if dpi != view.dpi() {
+        if dpi != tabs.view().dpi() {
             self.event(window, Event::DpiChanged { dpi })?;
         }
         let size = window.client_size()?;
@@ -172,46 +147,15 @@ impl App {
     }
 }
 
-/// The terminal, with the grid that fills `window`, and its session, which
-/// runs `command`, or the default shell. If the program cannot start, the
-/// terminal shows why.
-fn terminal(
-    window: &Window,
-    command: Option<&str>,
-) -> Result<(Content, Option<Pty>), HandlerError> {
-    let fonts = FontSystem::new()?;
-    let dpi = window.dpi();
-    let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
-    let cell = font.cell();
-    let client = window.client_size()?;
-    let mut terminal = Terminal::new(view::grid_size(client, cell, ScrollBar::width_at(dpi)));
-    terminal.set_cell_size(cell);
-    let size = terminal.size();
-    let shared = Arc::new(Mutex::new(Shared::new(terminal)));
-    let waker = window.waker();
-    let session = match session::start(command, size, &shared, &waker) {
-        Ok(pty) => Some(pty),
-        Err(message) => {
-            lock(&shared).terminal.feed(message.as_bytes());
-            None
-        }
-    };
-    let input = session.as_ref().map(Pty::input);
-    let view = TerminalView::new(shared, input, waker, fonts, font, dpi, client);
-    // The clicks select text until the program asks for the mouse.
-    window.set_pointer(Pointer::Text);
-    Ok((Content::Terminal(Box::new(view)), session))
-}
-
 impl Handler for App {
     fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
         match event {
             Event::Resized { size, minimized } => {
                 // A minimized window keeps its grid.
-                if let Content::Terminal(view) = &mut self.content
+                if let Content::Terminal(tabs) = &mut self.content
                     && !minimized
                 {
-                    view.resized(size);
+                    tabs.view_mut().resized(size);
                 }
                 self.frames
                     .resized(window, size, minimized, &mut self.content)?;
@@ -220,8 +164,8 @@ impl Handler for App {
                 }
             }
             Event::DpiChanged { dpi } => {
-                if let Content::Terminal(view) = &mut self.content {
-                    view.dpi_changed(dpi);
+                if let Content::Terminal(tabs) = &mut self.content {
+                    tabs.view_mut().dpi_changed(dpi);
                     // The new size of the window, if it changes, comes right
                     // after this event. A frame now would give the terminal
                     // and the program the grid of the new cells in the old
@@ -242,16 +186,16 @@ impl Handler for App {
                     self.frames.schedule(window)?;
                 }
             }
-            Event::Wake => self.wake(window)?,
+            Event::Wake(tab) => self.wake(window, tab)?,
             Event::Focus { focused } => {
-                if let Content::Terminal(view) = &mut self.content {
-                    view.focus(focused, Instant::now());
+                if let Content::Terminal(tabs) = &mut self.content {
+                    tabs.view_mut().focus(focused, Instant::now());
                     self.frames.changed(window, &mut self.content)?;
                 }
             }
             Event::Key(key) => {
-                if let Content::Terminal(view) = &mut self.content {
-                    let response = view.key(window, &key);
+                if let Content::Terminal(tabs) = &mut self.content {
+                    let response = tabs.view_mut().key(window, &key);
                     self.respond(window, response)?;
                 }
             }
@@ -261,8 +205,8 @@ impl Handler for App {
             | Event::Wheel { .. }
             | Event::CaptureLost
             | Event::MouseLeft => {
-                if let Content::Terminal(view) = &mut self.content {
-                    let response = view.mouse(window, &event);
+                if let Content::Terminal(tabs) = &mut self.content {
+                    let response = tabs.view_mut().mouse(window, &event);
                     self.respond(window, response)?;
                 }
             }

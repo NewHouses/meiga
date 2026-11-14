@@ -1,6 +1,6 @@
 # ADR 0015 · O rato, a selección e o portapapeis
 
-- **Estado:** Aceptado; concretado polo [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md)
+- **Estado:** Aceptado; concretado polos [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md) e [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md)
 - **Data:** 2026-11-09
 - **Relacionados:** [ADR 0004](0004-conpty-empaquetado.md), [ADR 0012](0012-fachada-do-terminal.md), [ADR 0013](0013-da-saida-a-pantalla.md), [ADR 0014](0014-o-teclado.md)
 

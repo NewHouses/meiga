@@ -1,6 +1,6 @@
-//! The session of the terminal: the program that runs in a pseudoconsole,
-//! the reader thread that gives its output to the terminal, and what that
-//! thread shares with the window.
+//! The session of a tab: the program that runs in a pseudoconsole, the
+//! reader thread that gives its output to the terminal of the tab, and what
+//! that thread shares with the window.
 
 use std::io;
 use std::mem;
@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use meiga_core::geometry::GridSize;
+use meiga_core::model::TabId;
 use meiga_core::term::{Changes, Terminal};
 use meiga_win::Error;
 use meiga_win::conpty::{Conpty, Input, Output, Pty};
@@ -22,10 +23,13 @@ const DEFAULT_SHELLS: [&str; 2] = ["pwsh", "powershell"];
 ///
 /// The reader wakes the window up only if it was not already woken up for
 /// the same thing (ADR 0005): for the screen, until the window copies it;
-/// for the title, until the window takes it; and for a synchronized update,
-/// until the window knows when it ends. While the window is minimized it
-/// does not copy the screen, so the output does not wake it up, except to
-/// end a synchronized update in time.
+/// for the title and for the clipboard, until the window takes them; and
+/// for a synchronized update, until the window knows when it ends. While
+/// the window is minimized, or the tab is hidden, the window does not copy
+/// the screen, so the output does not wake it up again, except to end a
+/// synchronized update in time. The title of a hidden tab waits until the
+/// tab is shown, and what it copied to the clipboard meanwhile is dropped
+/// then (ADR 0019).
 pub struct Shared {
     pub terminal: Terminal,
     /// The screen may have changed since the window last copied it.
@@ -107,7 +111,8 @@ pub fn lock(shared: &Mutex<Shared>) -> MutexGuard<'_, Shared> {
 }
 
 /// Runs `command`, or else the default shell, in a session of `size`, whose
-/// output goes to the terminal of `shared`, which wakes `waker` up.
+/// output goes to the terminal of `shared`. Its reader thread wakes `waker`
+/// up with the identifier of the tab of the session, `tab`.
 ///
 /// If the program cannot start, the error is what the terminal shows: which
 /// program, and why.
@@ -116,11 +121,13 @@ pub fn start(
     size: GridSize,
     shared: &Arc<Mutex<Shared>>,
     waker: &Waker,
+    tab: TabId,
 ) -> Result<Pty, String> {
     let conpty = Conpty::load();
     let reader = || Reader {
         shared: Arc::clone(shared),
         waker: waker.clone(),
+        tab,
         answers: Vec::new(),
     };
     let (program, started) = match command {
@@ -157,6 +164,8 @@ fn start_error(command: &str, error: &Error) -> String {
 struct Reader {
     shared: Arc<Mutex<Shared>>,
     waker: Waker,
+    /// The tab of the session, which the window learns with each wake-up.
+    tab: TabId,
     /// The answers for the program, kept to avoid an allocation each time.
     answers: Vec<u8>,
 }
@@ -177,7 +186,7 @@ impl Output for Reader {
             self.answers.clear();
         }
         if wake {
-            self.waker.wake();
+            self.waker.wake(self.tab.get());
         }
     }
 
@@ -189,7 +198,7 @@ impl Output for Reader {
             shared.note(changes)
         };
         if wake {
-            self.waker.wake();
+            self.waker.wake(self.tab.get());
         }
     }
 }

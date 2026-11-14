@@ -13,6 +13,7 @@ mod mouse;
 mod options;
 mod scrollbar;
 mod session;
+mod tabs;
 mod trace;
 mod view;
 
