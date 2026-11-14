@@ -32,6 +32,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
 | [0016](0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom | Aceptado |
 | [0017](0017-os-fotogramas-por-escritorio-remoto.md) | 30 fotogramas por segundo por Escritorio remoto e 60 en local | Aceptado |
+| [0018](0018-o-modelo-das-tabs.md) | O modelo das tabs | Aceptado |
 
 ## Como se relacionan
 
@@ -77,6 +78,8 @@ graph TD
     A2 --> A17["0017 Os fotogramas por Escritorio remoto"]
     A5 --> A17
     A8 --> A17
+    A5 --> A18["0018 O modelo das tabs"]
+    A11 --> A18
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.

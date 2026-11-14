@@ -1,6 +1,6 @@
 # Arquitectura
 
-> Estado: subfase 1.10. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola, mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite, envíalle as teclas coma unha consola de Windows, e o rato selecciona, copia e pega texto ou chega ao programa. A grella segue o tamaño e a escala da xanela, o historial vese coa roda, coas teclas e cunha barra de desprazamento, e o texto ten zoom. Con isto, o MVP pasou a súa porta de rendemento. O que falta, como as tabs, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
+> Estado: subfase 2.1. Existen o esqueleto, a integración continua, as ferramentas de medición e os escenarios de carga, e `meiga.exe` xa é un terminal: lanza un programa nunha pseudoconsola, mostra a súa saída nunha xanela que presenta só o que cambia, cun *framebuffer* propio e texto con DirectWrite, envíalle as teclas coma unha consola de Windows, e o rato selecciona, copia e pega texto ou chega ao programa. A grella segue o tamaño e a escala da xanela, o historial vese coa roda, coas teclas e cunha barra de desprazamento, e o texto ten zoom. Con isto, o MVP pasou a súa porta de rendemento, e desde a 2.1 existe o modelo das tabs, que o programa aínda non usa. O que falta, como as sesións das tabs e a súa barra, descríbese co deseño acordado e a subfase na que chega. O porqué de cada decisión importante está nos [ADR](adr/README.md).
 
 ## 1. Obxectivo e restricións
 
@@ -86,6 +86,7 @@ sequenceDiagram
 | Teclado | 1.7 (feita) |
 | Rato, selección e portapapeis | 1.8 (feita) |
 | Historial, tamaño e zoom | 1.9 (feita) |
+| Modelo das tabs | 2.1 (feita) |
 | Varias sesións, unha por tab | 2.2 |
 
 ### Sesións: a shell, o ConPTY e os dous fíos
@@ -297,6 +298,28 @@ flowchart LR
 
 O tamaño da cela sae das métricas da fonte e do DPI da xanela: meiga usa Cascadia Mono a 12 puntos ou, se non está, Consolas. Desde a 1.9, o zoom cambia o seu tamaño, de 6 a 72 puntos, e un cambio de escala crea a fonte de novo ([O historial, o tamaño e o zoom](#o-historial-o-tamaño-e-o-zoom)). A negra, a cursiva e a negra cursiva son outras fontes da mesma familia, que se crean a primeira vez que se usan, coa cela e a liña base da normal, e comparten a súa caché de glifos ([Tecnoloxías › DirectWrite](tecnoloxias.md#27-directwrite-fontes-e-glifos)).
 
+### As tabs: o modelo
+
+Desde a subfase 2.1, `meiga-core` ten o modelo das xanelas e as súas tabs: que tabs ten cada xanela, en que orde, cal está activa, e que pasa ao abrir, pechar, mover ou activar unha ([ADR 0018](adr/0018-o-modelo-das-tabs.md)). É lóxica pura, sen interface, e o programa aínda non o usa: `meiga.exe` segue cunha sesión. Desde a 2.2 (*previsto*), cada tab terá a súa sesión e a súa vista.
+
+```mermaid
+flowchart LR
+    win["Window: a xanela<br/>as tabs, na orde da barra,<br/>e a posición da activa"] --> a["Tab a"]
+    win --> b["Tab b<br/>activa, enfocada e visíbel"]
+    win --> c["Tab c"]
+    bar["Barra de tabs (2.3)"] -. "tabs e active" .-> win
+    keys["Teclado"] -. "focused" .-> win
+    frame["Fotograma"] -. "is_visible" .-> win
+    reader["Fío lector dunha tab (2.2)"] -. "aviso co seu TabId" .-> win
+```
+
+- **Cada tab leva o seu contido:** o modelo é xenérico, `Window<T>`, e o programa escolle que gardar en cada tab ([Tecnoloxías › Xenéricos e contadores atómicos](tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Así, a orde das tabs vive nun só sitio.
+- **Identificadores que nunca se repiten:** cada tab ten un `TabId`, e cada xanela un `WindowId`, que saen de contadores atómicos. O aviso do fío lector dunha tab levará o seu identificador (2.2): aínda que as tabs se movan ou se pechen, nunca chegará a outra.
+- **Sempre unha tab activa:** a xanela nunca queda sen tabs, e pechar a única pide pechar a xanela. Ao pechar a activa, actívase a da dereita ou, se era a última, a da esquerda, coma en Chrome; e as tabs novas ábrense ao final.
+- **A activa, a enfocada e as visíbeis:** a barra marcará a activa, o teclado irá á enfocada, e o fotograma debuxará as visíbeis. Hoxe son a mesma tab, pero o programa preguntará cada unha polo seu nome: coa vista dividida (F1), só cambiará o modelo.
+
+O código explícase en [Código › meiga-core › `model`](codigo/meiga-core.md#cratesmeiga-coresrcmodelmodrs).
+
 ## 4. Fíos
 
 | Fío | Cantos | Que fai | Cando esperta |
@@ -364,6 +387,7 @@ Os detalles están en [Tecnoloxías › GitHub Actions](tecnoloxias.md#15-github
 | [0015](adr/0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis: a selección na grella, copiar ao seleccionar, as teclas e o botón dereito do Windows Terminal, o filtro ao pegar e a pregunta antes de pegar varias liñas, os informes do rato e OSC 52 só desde a xanela que se usa. |
 | [0016](adr/0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom: 10 000 liñas, a grella que enche a xanela ao ritmo dos fotogramas, a pantalla onde a pon o ConPTY, a principal á parte mentres se ve a alternativa, as teclas e a barra fina do Windows Terminal, e o zoom de 6 a 72 puntos. |
 | [0017](adr/0017-os-fotogramas-por-escritorio-remoto.md) | Os fotogramas por Escritorio remoto: 30 por segundo, aínda que a sesión permita 60, e 60 en local. |
+| [0018](adr/0018-o-modelo-das-tabs.md) | O modelo das tabs: lóxica pura, co contido de cada tab dentro, identificadores que nunca se repiten e sempre unha tab activa; ao pechar a activa, a da dereita; as novas, ao final; e a activa, a enfocada e as visíbeis por separado. |
 
 ## 8. Medición do rendemento
 
@@ -418,20 +442,20 @@ O código explícase en [Código › escenarios de carga](codigo/escenarios.md).
 
 ## 9. Estado actual
 
-Despois da subfase 1.10:
+Despois da subfase 2.1:
 
-- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal, coa selección, o historial e o cambio de tamaño, as comiñas da liña de comandos, as teclas, coma eventos e coma o que le o programa, os informes do rato e a roda, e o texto que se pega; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, tamén os do rato, os da escala e a saída do punteiro, o teclado da xanela, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor e do rato de Windows, o portapapeis, a caixa de mensaxe que pregunta e as sesións de ConPTY, que tamén cambian de tamaño.
+- Existen os catro crates, coa regra de dependencias xa declarada. `meiga-core` ten o modelo das xanelas e as súas tabs, as cores e a paleta, os rectángulos, o tamaño da grella, as zonas que cambian (*damage*), o *pacer* dos fotogramas, as celas do texto, o terminal, coa selección, o historial e o cambio de tamaño, as comiñas da liña de comandos, as teclas, coma eventos e coma o que le o programa, os informes do rato e a roda, e o texto que se pega; `meiga-render`, o lenzo, o *framebuffer* e a súa presentación con GDI, e o texto: as fontes con DirectWrite, coa negra, a cursiva e as liñas do subliñado e do riscado, a caché de glifos e a mestura co fondo; e `meiga-win`, a xanela, os seus eventos, tamén os do rato, os da escala e a saída do punteiro, o teclado da xanela, o bucle de mensaxes, o temporizador dos fotogramas, os avisos desde outros fíos, os axustes do cursor e do rato de Windows, o portapapeis, a caixa de mensaxe que pregunta e as sesións de ConPTY, que tamén cambian de tamaño.
 - `meiga.exe` é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell 7 (`pwsh`) ou, se non está instalado, Windows PowerShell, e mostra a súa saída: as cores (16, 256 e *truecolor*), a negra, a cursiva, o texto tenue, inverso e oculto, cinco subliñados e o riscado, os caracteres anchos e un cursor en forma de barra, que só pestanexa se a xanela ten o foco e Windows o permite, e para despois duns segundos sen actividade. A xanela leva o título que pon o programa. Responde ao programa, tamén ás preguntas polas cores e polo tamaño en píxeles, e aplica os cambios da paleta. Cando o programa remata, mostra o seu código de saída, e a xanela queda aberta ata que se pecha.
 - A grella enche a xanela e segue o seu tamaño e a súa escala, ao ritmo dos fotogramas, sen deixar lixo: a pantalla queda onde a pon o ConPTY, e mentres se ve a pantalla alternativa, a principal non se reparte. O historial garda 10 000 liñas, e vese coa roda, con Maiús+RePáx e Maiús+AvPáx, con Ctrl+Maiús e as frechas, Inicio e Fin, e cunha barra de desprazamento fina, que se ensancha baixo o punteiro; unha selección arrastrada fóra da grella despraza a vista soa. Ctrl e `+`, `-` e `0`, e Ctrl e a roda, fan o zoom, de 6 a 72 puntos.
 - Pódese escribir nel coma nunha consola de Windows: as teclas chegan ao programa coma eventos enteiros, co teclado español e galego, AltGr e as teclas mortas, e o PSReadLine distingue Maiús+Intro de Intro. Alt+F4 pecha a xanela e Alt+Espazo abre o seu menú. O panel de emoji e o ditado de Windows tamén escriben nel.
 - O rato selecciona texto, cun clic, dous ou tres, que vai ao portapapeis ao soltar o botón. Ctrl+C e Ctrl+Maiús+C copian; Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan, sen caracteres de control e, se o texto ten varias liñas e o programa non pediu o *bracketed paste*, despois de preguntar. Os programas que piden o rato reciben os seus informes, coma vim e htop en WSL, ou os seus eventos, coma os da consola de Windows; con Maiús, o rato selecciona igual. Un programa só pode copiar ao portapapeis (OSC 52) desde a xanela que se está a usar.
 - Cada fotograma presenta só as celas que cambian, que se poden ver cun bordo magenta (coa opción `--marks`). Como moito hai un fotograma por intervalo: 30 por segundo por Escritorio remoto, aínda que a sesión permita 60, e 60 en local ([ADR 0017](adr/0017-os-fotogramas-por-escritorio-remoto.md)). En repouso e coa xanela minimizada non debuxa nada, e os seus tres fíos dormen, tamén coa xanela enfocada. Ao pechala, meiga remata co código 0, e o programa da sesión tamén.
 - Ten tres modos de medición, `--bench partial`, `--bench full` e `--bench text`, e un rexistro dos fotogramas, `--trace-frames`.
-- `meiga-win` usa o ConPTY do Windows Terminal que vai no paquete ou, se non está, o de Windows. As probas lanzan programas de verdade cos dous, e un exemplo de consola mostra o que escribe calquera programa e grávao. O terminal de `meiga-core` usa `alacritty_terminal` detrás dunha fachada; as súas probas usan saída gravada do ConPTY, e outro exemplo de consola mide a que velocidade le unha gravación.
-- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 545 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que as teclas chegan ao programa co teclado español e co estadounidense, que o rato selecciona, copia e pega e chega aos programas, que ao cambiar de tamaño a pantalla de meiga é a do ConPTY, co historial, a barra e o zoom, que remata ben, e que o programa remata con ela.
+- `meiga-win` usa o ConPTY do Windows Terminal que vai no paquete ou, se non está, o de Windows. As probas lanzan programas de verdade cos dous, e un exemplo de consola mostra o que escribe calquera programa e grávao. O terminal de `meiga-core` usa `alacritty_terminal` detrás dunha fachada; as súas probas usan saída gravada do ConPTY, e outro exemplo de consola mide a que velocidade le unha gravación. Un terceiro exemplo proba o modelo das tabs a man: abre, pecha, move e activa tabs, e mostra a barra en texto.
+- `meiga.exe` leva dentro o manifesto da aplicación, ocupa uns 553 KB e só depende de DLL do sistema, entre elas a de DirectWrite. A CI compróbao en cada cambio: as DLL, que abre a xanela e lanza o programa, a escala por monitor, que o título é o que pon o programa, que presenta só o que cambia, que as teclas chegan ao programa co teclado español e co estadounidense, que o rato selecciona, copia e pega e chega aos programas, que ao cambiar de tamaño a pantalla de meiga é a do ConPTY, co historial, a barra e o zoom, que remata ben, e que o programa remata con ela.
 - Están activas as regras de calidade (*lints*), o formato automático, a política de licenzas (`cargo-deny`) e a xeración dos avisos de terceiros (`cargo-about`). As dependencias externas son `windows-sys`, `windows` e `windows-core`, de Microsoft, `unicode-width`, `alacritty_terminal`, co seu parser, `vte`, e `memchr`.
 - Cada PR valídase automaticamente en GitHub Actions, tamén as ligazóns da documentación, os scripts de PowerShell, o arnés de medición e os escenarios de carga, e produce un `.zip` descargábel con `meiga.exe` e o ConPTY (`conpty.dll` e `OpenConsole.exe`). `tools/fetch-conpty.ps1` descarga o ConPTY do seu paquete NuGet, cunha versión e un SHA-256 fixados, e comproba que está asinado por Microsoft; cada luns, a CI avisa se hai unha versión nova.
-- As decisións de arquitectura están escritas en dezasete ADR.
+- As decisións de arquitectura están escritas en dezaoito ADR.
 - O arnés de medición mide calquera terminal e as partes de Windows que o poñen na pantalla. `measure-startup.ps1` mide canto tarda meiga en abrir a súa xanela, coa súa sesión, e `measure-frames.ps1`, canto custan os seus fotogramas: parciais, completos e completos de texto.
 - Os escenarios de carga imitan o uso diario dun terminal, en PowerShell e en bash, e `run-scenario.ps1` mide un terminal mentres corren e di se os resultados son estábeis. Con `-Start`, arranca el mesmo meiga co escenario como programa, e con `-Maximized`, maximizado.
 - A porta do MVP, na subfase 1.10, mediu meiga maximizado cos escenarios: en repouso non gasta nada, e co *spinner*, coa IA, coa saída masiva e ao arrancar cumpre os orzamentos da fase 1, cunha fracción da CPU do Windows Terminal. Coa saída masiva, o DWM traballa máis ca co Windows Terminal, porque cada fotograma presenta a xanela enteira: unha desviación aceptada, que arranxa a subfase 9.2.

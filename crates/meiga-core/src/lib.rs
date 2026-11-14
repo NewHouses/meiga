@@ -11,6 +11,7 @@ pub mod color;
 pub mod damage;
 pub mod geometry;
 pub mod input;
+pub mod model;
 pub mod mouse;
 pub mod pacing;
 pub mod paste;

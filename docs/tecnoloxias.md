@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: mantemento M1, despois da subfase 1.10. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 2.1. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -1209,3 +1209,11 @@ As filas que se perden non voltan. Para o anfitrión, unha fila só de espazos e
 **O zoom.** O tamaño da fonte cámbiase en puntos, e o em mide `puntos × DPI / 72` píxeles ([§27](#27-directwrite-fontes-e-glifos)). meiga crea a fonte outra vez, e coa cela nova cambia a grella que enche a xanela, que mantén o seu tamaño. A fonte nova ten a súa caché de glifos, baleira: os glifos rasterízanse de novo a medida que se debuxan. Se DirectWrite non pode crear a fonte, queda a de antes.
 
 **As teclas do zoom.** Os atallos usan os códigos de tecla virtual, non os caracteres ([§41](#41-o-teclado-en-windows)): `VK_OEM_PLUS` (`0xBB`) é a tecla de `+` no teclado español e a de `=` no estadounidense; `VK_OEM_MINUS` (`0xBD`), a de `-` nos dous; `VK_ADD` e `VK_SUBTRACT`, as do teclado numérico; e `VK_0` e `VK_NUMPAD0`, os dous ceros. Así, o zoom usa as mesmas teclas en calquera distribución, teñan o carácter que teñan.
+
+## 53. Xenéricos e contadores atómicos
+
+**Os xenéricos.** Un tipo xenérico ten un parámetro que é outro tipo: `Window<T>` é unha xanela cun contido de tipo `T` en cada tab, e quen a usa escolle `T`. Nas probas, `T` é un texto (`Window<&str>`) ou un número; no exemplo `tabs`, un `String`; e desde a subfase 2.2 será a sesión e a vista de cada tab. O compilador xera unha copia do código para cada tipo que se usa (*monomorfización*), así que ao executar non hai ningún custo: nin punteiros a funcións nin conversións, coma se o código se escribise á man para ese tipo. O custo está na compilación, que compila unha copia por tipo.
+
+**Os contadores atómicos.** Unha variábel `static` existe unha soa vez en todo o programa. Para que calquera fío poida cambiala, sen `unsafe` e sen un `Mutex`, ten que ser atómica: `AtomicU64::fetch_add(1, …)` súmalle 1 e devolve o valor de antes nunha soa instrución do procesador (`lock xadd` en x86-64), así que dous fíos nunca reciben o mesmo número. O segundo argumento, a orde da memoria (`Ordering`), di que outras escrituras teñen que verse antes ou despois desta noutros fíos. Un contador que só ten que dar números distintos non necesita ningunha, e chega `Relaxed`, a máis barata. Rust numera así os seus fíos (`std::thread::ThreadId`): os números nunca se repiten, aínda que o fío remate.
+
+**En meiga.** O modelo das tabs (`meiga_core::model`, desde a 2.1) é xenérico no contido de cada tab, e os identificadores das tabs e das xanelas saen de dous contadores atómicos ([ADR 0018](adr/0018-o-modelo-das-tabs.md)). Con 64 bits, a un millón de tabs por segundo, o contador duraría máis de 500 000 anos. Explícase en [Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrcmodelmodrs).

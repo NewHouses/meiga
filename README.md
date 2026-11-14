@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` is already a terminal: it runs a program in a pseudoconsole (ConPTY), by default PowerShell 7, shows its output with colours, bold and italic text, underlines, wide characters, a cursor and the title that the program sets, and sends it the keys that you type as the Windows console does, also the dead keys and AltGr of layouts such as the Spanish one. The mouse selects text, which goes to the clipboard, and pastes it, and programs that ask for the mouse, such as vim or htop, get it. The grid follows the size and the scale of the window, with no garbage left on the screen, the scrollback keeps 10 000 lines, with a thin scroll bar, and the text can be zoomed. Each frame presents only the cells that changed, and it uses no CPU while idle or minimized. This first milestone, a terminal for a single shell, has passed its performance gate. Tabs come next.
+> **Status:** early development. `meiga.exe` is already a terminal: it runs a program in a pseudoconsole (ConPTY), by default PowerShell 7, shows its output with colours, bold and italic text, underlines, wide characters, a cursor and the title that the program sets, and sends it the keys that you type as the Windows console does, also the dead keys and AltGr of layouts such as the Spanish one. The mouse selects text, which goes to the clipboard, and pastes it, and programs that ask for the mouse, such as vim or htop, get it. The grid follows the size and the scale of the window, with no garbage left on the screen, the scrollback keeps 10 000 lines, with a thin scroll bar, and the text can be zoomed. Each frame presents only the cells that changed, and it uses no CPU while idle or minimized. This first milestone, a terminal for a single shell, has passed its performance gate. Tabs come next: their logic is in place, and a console example tries it.
 
 ## Goals
 
@@ -72,6 +72,12 @@ With `--record <file>`, it also records the output, block by block, and with `--
 ```powershell
 cargo run --release -p meiga-win --example conpty -- --record ola.mrec cmd /c echo ola
 cargo run --release -p meiga-core --example replay -- ola.mrec --screen
+```
+
+Another console example of `meiga-core` tries the logic of the tabs, which `meiga.exe` does not use yet. Type commands such as `new`, `close b`, `move a 3`, `activate a` or `next`, and it prints the tab bar as text, with the active tab between brackets; `help` lists the commands:
+
+```powershell
+cargo run -p meiga-core --example tabs
 ```
 
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
