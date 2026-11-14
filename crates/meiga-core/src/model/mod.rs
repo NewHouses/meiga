@@ -15,7 +15,9 @@
 //! - the visible tabs, the ones on the screen: [`Window::is_visible`].
 //!
 //! With the split view (F1), a window will show several tabs at once and the
-//! focus will be on one of them. Only this module will have to change.
+//! focus will be on one of them: the model will keep the layout, and the
+//! program will draw each visible tab in its own place. What the program
+//! already asks by name keeps its meaning.
 
 mod window;
 
@@ -43,6 +45,15 @@ impl TabId {
     /// another thread.
     pub const fn get(self) -> u64 {
         self.0
+    }
+
+    /// The identifier with this number, for example the one that came in a
+    /// message from another thread. It only serves to look a tab up: the
+    /// model gives each new tab a number from its counter, so it cannot make
+    /// two tabs share one. A number that is not of a tab of the window finds
+    /// nothing.
+    pub const fn from_raw(number: u64) -> Self {
+        Self(number)
     }
 }
 

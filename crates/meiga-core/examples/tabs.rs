@@ -36,7 +36,7 @@ enum Outcome {
     Message(String),
     /// Nothing.
     Nothing,
-    /// A last message, and the example ends.
+    /// A last message, if any, and the example ends.
     End(String),
 }
 
@@ -66,7 +66,9 @@ fn main() -> io::Result<()> {
             Outcome::Message(message) => writeln!(out, "{message}")?,
             Outcome::Nothing => {}
             Outcome::End(message) => {
-                writeln!(out, "{message}")?;
+                if !message.is_empty() {
+                    writeln!(out, "{message}")?;
+                }
                 break;
             }
         }

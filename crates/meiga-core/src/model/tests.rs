@@ -6,9 +6,11 @@ use super::{Close, Error, Switch, Tab, TabId, Window};
 /// identifiers of its tabs.
 fn window(names: &[&'static str]) -> (Window<&'static str>, Vec<TabId>) {
     let mut window = Window::new(names[0]);
+    check(&window);
     let mut ids = vec![window.active().id()];
     for name in &names[1..] {
         ids.push(window.open(*name));
+        check(&window);
     }
     (window, ids)
 }
@@ -34,6 +36,16 @@ fn check<T>(window: &Window<T>) {
     }
 }
 
+/// The answer to closing a tab that leaves the window.
+fn removed<T>(content: T, activated: Option<TabId>) -> Result<Close<T>, Error> {
+    Ok(Close::Removed { content, activated })
+}
+
+/// The answer to a change of the active tab.
+const fn switched(from: TabId, to: TabId) -> Option<Switch> {
+    Some(Switch { from, to })
+}
+
 #[test]
 fn a_new_window_has_one_tab_and_it_is_active() {
     let window = Window::new("a");
@@ -55,6 +67,47 @@ fn a_tab_opens_at_the_end_without_becoming_active() {
 }
 
 #[test]
+fn a_content_can_know_the_identifier_of_its_tab() {
+    let mut window = Window::try_new_with(Ok::<_, ()>).unwrap();
+    check(&window);
+    let first = window.active().id();
+    let second = window.try_open_with(Ok::<_, ()>).unwrap();
+    check(&window);
+    assert_eq!(names(&window), [first, second]);
+    assert_eq!(window.get(second), Some(&second));
+    assert_eq!(window.active().id(), first);
+}
+
+#[test]
+fn a_content_that_cannot_be_made_opens_nothing() {
+    let failed = Window::<&str>::try_new_with(|_| Err("no session"));
+    assert_eq!(failed.map(|window| window.tab_count()), Err("no session"));
+    let (mut window, ids) = window(&["a", "b"]);
+    assert_eq!(
+        window.try_open_with(|_| Err("no session")),
+        Err("no session")
+    );
+    check(&window);
+    assert_eq!(names(&window), ["a", "b"]);
+    assert_eq!(window.active().id(), ids[0]);
+}
+
+#[test]
+fn an_identifier_comes_back_from_its_number() {
+    let (mut window, ids) = window(&["a", "b"]);
+    let id = TabId::from_raw(ids[1].get());
+    assert_eq!(id, ids[1]);
+    assert_eq!(window.index_of(id), Some(1));
+    assert_eq!(window.activate(id), Ok(switched(ids[0], ids[1])));
+    check(&window);
+    // The counter starts at 1, so no tab has the number 0.
+    let none = TabId::from_raw(0);
+    assert_eq!(window.get(none), None);
+    assert_eq!(window.close(none), Err(Error::NoSuchTab(none)));
+    check(&window);
+}
+
+#[test]
 fn identifiers_never_repeat_not_even_in_another_window_or_after_closing() {
     let (mut first, ids) = window(&["a", "b", "c"]);
     let (second, _) = window(&["d", "e"]);
@@ -66,33 +119,18 @@ fn identifiers_never_repeat_not_even_in_another_window_or_after_closing() {
         .collect();
     assert_eq!(seen.len(), 5);
     assert_ne!(first.id(), second.id());
-    assert_eq!(
-        first.close(ids[2]),
-        Ok(Close::Removed {
-            content: "c",
-            activated: None
-        })
-    );
+    assert_eq!(first.close(ids[2]), removed("c", None));
+    check(&first);
     assert!(seen.insert(first.open("f")));
+    check(&first);
 }
 
 #[test]
 fn closing_the_active_tab_activates_the_one_on_its_right() {
     let (mut window, ids) = window(&["a", "b", "c"]);
-    assert_eq!(
-        window.activate(ids[1]),
-        Ok(Some(Switch {
-            from: ids[0],
-            to: ids[1]
-        }))
-    );
-    assert_eq!(
-        window.close(ids[1]),
-        Ok(Close::Removed {
-            content: "b",
-            activated: Some(ids[2])
-        })
-    );
+    assert_eq!(window.activate(ids[1]), Ok(switched(ids[0], ids[1])));
+    check(&window);
+    assert_eq!(window.close(ids[1]), removed("b", Some(ids[2])));
     check(&window);
     assert_eq!(names(&window), ["a", "c"]);
     assert_eq!(window.active().id(), ids[2]);
@@ -101,20 +139,9 @@ fn closing_the_active_tab_activates_the_one_on_its_right() {
 #[test]
 fn closing_the_last_tab_when_it_is_active_activates_the_one_on_its_left() {
     let (mut window, ids) = window(&["a", "b", "c"]);
-    assert_eq!(
-        window.activate(ids[2]),
-        Ok(Some(Switch {
-            from: ids[0],
-            to: ids[2]
-        }))
-    );
-    assert_eq!(
-        window.close(ids[2]),
-        Ok(Close::Removed {
-            content: "c",
-            activated: Some(ids[1])
-        })
-    );
+    assert_eq!(window.activate(ids[2]), Ok(switched(ids[0], ids[2])));
+    check(&window);
+    assert_eq!(window.close(ids[2]), removed("c", Some(ids[1])));
     check(&window);
     assert_eq!(names(&window), ["a", "b"]);
     assert_eq!(window.active().id(), ids[1]);
@@ -123,32 +150,15 @@ fn closing_the_last_tab_when_it_is_active_activates_the_one_on_its_left() {
 #[test]
 fn closing_another_tab_keeps_the_active_one() {
     let (mut window, ids) = window(&["a", "b", "c", "d"]);
-    assert_eq!(
-        window.activate(ids[2]),
-        Ok(Some(Switch {
-            from: ids[0],
-            to: ids[2]
-        }))
-    );
+    assert_eq!(window.activate(ids[2]), Ok(switched(ids[0], ids[2])));
+    check(&window);
     // A tab on its left: the active tab moves one place to the left.
-    assert_eq!(
-        window.close(ids[0]),
-        Ok(Close::Removed {
-            content: "a",
-            activated: None
-        })
-    );
+    assert_eq!(window.close(ids[0]), removed("a", None));
     check(&window);
     assert_eq!(names(&window), ["b", "c", "d"]);
     assert_eq!(window.active_index(), 1);
     // A tab on its right: the active tab does not move.
-    assert_eq!(
-        window.close(ids[3]),
-        Ok(Close::Removed {
-            content: "d",
-            activated: None
-        })
-    );
+    assert_eq!(window.close(ids[3]), removed("d", None));
     check(&window);
     assert_eq!(names(&window), ["b", "c"]);
     assert_eq!(window.active().id(), ids[2]);
@@ -157,13 +167,8 @@ fn closing_another_tab_keeps_the_active_one() {
 #[test]
 fn the_only_tab_stays_and_the_window_closes_with_it() {
     let (mut window, ids) = window(&["a", "b"]);
-    assert_eq!(
-        window.close(ids[0]),
-        Ok(Close::Removed {
-            content: "a",
-            activated: Some(ids[1])
-        })
-    );
+    assert_eq!(window.close(ids[0]), removed("a", Some(ids[1])));
+    check(&window);
     assert_eq!(window.close(ids[1]), Ok(Close::LastTab));
     check(&window);
     assert_eq!(names(&window), ["b"]);
@@ -172,25 +177,24 @@ fn the_only_tab_stays_and_the_window_closes_with_it() {
 #[test]
 fn moving_a_tab_shifts_the_ones_in_between() {
     let (mut window, ids) = window(&["a", "b", "c", "d", "e"]);
-    assert_eq!(window.move_tab(ids[1], 3), Ok(()));
-    assert_eq!(names(&window), ["a", "c", "d", "b", "e"]);
-    assert_eq!(window.move_tab(ids[4], 0), Ok(()));
-    assert_eq!(names(&window), ["e", "a", "c", "d", "b"]);
-    assert_eq!(window.move_tab(ids[2], 2), Ok(()));
-    assert_eq!(names(&window), ["e", "a", "c", "d", "b"]);
-    check(&window);
+    let moves = [
+        (ids[1], 3, ["a", "c", "d", "b", "e"]),
+        (ids[4], 0, ["e", "a", "c", "d", "b"]),
+        // To its own position: nothing changes.
+        (ids[2], 2, ["e", "a", "c", "d", "b"]),
+    ];
+    for (id, to, expected) in moves {
+        assert_eq!(window.move_tab(id, to), Ok(()));
+        check(&window);
+        assert_eq!(names(&window), expected);
+    }
 }
 
 #[test]
 fn the_active_tab_stays_the_same_tab_when_tabs_move() {
     let (mut window, ids) = window(&["a", "b", "c", "d"]);
-    assert_eq!(
-        window.activate(ids[1]),
-        Ok(Some(Switch {
-            from: ids[0],
-            to: ids[1]
-        }))
-    );
+    assert_eq!(window.activate(ids[1]), Ok(switched(ids[0], ids[1])));
+    check(&window);
     let moves = [
         // The active tab itself.
         (ids[1], 3, ["a", "c", "d", "b"]),
@@ -223,22 +227,19 @@ fn a_position_past_the_last_tab_is_refused() {
 #[test]
 fn a_closed_tab_is_refused() {
     let (mut window, ids) = window(&["a", "b"]);
-    assert_eq!(
-        window.close(ids[1]),
-        Ok(Close::Removed {
-            content: "b",
-            activated: None
-        })
-    );
+    assert_eq!(window.close(ids[1]), removed("b", None));
+    check(&window);
     let gone = ids[1];
     assert_eq!(window.close(gone), Err(Error::NoSuchTab(gone)));
+    check(&window);
     assert_eq!(window.move_tab(gone, 0), Err(Error::NoSuchTab(gone)));
+    check(&window);
     assert_eq!(window.activate(gone), Err(Error::NoSuchTab(gone)));
+    check(&window);
     assert_eq!(window.get(gone), None);
     assert_eq!(window.get_mut(gone), None);
     assert_eq!(window.index_of(gone), None);
     assert!(!window.is_visible(gone));
-    check(&window);
     assert_eq!(names(&window), ["a"]);
 }
 
@@ -248,20 +249,17 @@ fn a_tab_of_another_window_is_refused() {
     let (second, _) = window(&["c"]);
     let other = second.active().id();
     assert_eq!(first.activate(other), Err(Error::NoSuchTab(other)));
+    check(&first);
     assert_eq!(first.close(other), Err(Error::NoSuchTab(other)));
     check(&first);
+    assert_eq!(names(&first), ["a", "b"]);
 }
 
 #[test]
 fn activating_answers_the_switch_or_none_if_it_was_already_active() {
     let (mut window, ids) = window(&["a", "b"]);
-    assert_eq!(
-        window.activate(ids[1]),
-        Ok(Some(Switch {
-            from: ids[0],
-            to: ids[1]
-        }))
-    );
+    assert_eq!(window.activate(ids[1]), Ok(switched(ids[0], ids[1])));
+    check(&window);
     assert_eq!(window.activate(ids[1]), Ok(None));
     check(&window);
 }
@@ -269,24 +267,29 @@ fn activating_answers_the_switch_or_none_if_it_was_already_active() {
 #[test]
 fn next_and_previous_go_round_the_bar() {
     let (mut window, ids) = window(&["a", "b", "c"]);
-    let switch = |from: usize, to: usize| {
-        Some(Switch {
-            from: ids[from],
-            to: ids[to],
-        })
-    };
-    assert_eq!(window.activate_next(), switch(0, 1));
-    assert_eq!(window.activate_next(), switch(1, 2));
-    assert_eq!(window.activate_next(), switch(2, 0));
-    assert_eq!(window.activate_previous(), switch(0, 2));
-    assert_eq!(window.activate_previous(), switch(2, 1));
-    check(&window);
+    let steps = [
+        (true, 0, 1),
+        (true, 1, 2),
+        (true, 2, 0),
+        (false, 0, 2),
+        (false, 2, 1),
+    ];
+    for (next, from, to) in steps {
+        let switch = if next {
+            window.activate_next()
+        } else {
+            window.activate_previous()
+        };
+        assert_eq!(switch, switched(ids[from], ids[to]));
+        check(&window);
+    }
 }
 
 #[test]
 fn with_one_tab_next_and_previous_change_nothing() {
     let mut window = Window::new("a");
     assert_eq!(window.activate_next(), None);
+    check(&window);
     assert_eq!(window.activate_previous(), None);
     check(&window);
 }
@@ -294,20 +297,17 @@ fn with_one_tab_next_and_previous_change_nothing() {
 #[test]
 fn the_keyboard_and_the_screen_follow_the_active_tab() {
     let (mut window, ids) = window(&["a", "b"]);
-    assert_eq!(
-        window.activate(ids[1]),
-        Ok(Some(Switch {
-            from: ids[0],
-            to: ids[1]
-        }))
-    );
+    assert_eq!(window.activate(ids[1]), Ok(switched(ids[0], ids[1])));
+    check(&window);
     assert_eq!(window.focused().id(), ids[1]);
     assert!(window.is_visible(ids[1]));
     assert!(!window.is_visible(ids[0]));
     *window.focused_mut() = "B";
+    check(&window);
     if let Some(content) = window.get_mut(ids[0]) {
         *content = "A";
     }
+    check(&window);
     assert_eq!(names(&window), ["A", "B"]);
 }
 
@@ -355,7 +355,18 @@ fn random_changes_keep_the_rules_and_match_a_plain_list() {
             match next(8) {
                 0 | 1 => {
                     last += 1;
-                    ids.insert(last, window.open(last));
+                    let id = match next(3) {
+                        0 => window.open(last),
+                        1 => window.try_open_with(|_| Ok::<_, ()>(last)).unwrap(),
+                        _ => {
+                            // A content that cannot be made opens nothing.
+                            assert_eq!(window.try_open_with(|_| Err::<u32, _>(())), Err(()));
+                            check(&window);
+                            assert_eq!(names(&window), list);
+                            window.open(last)
+                        }
+                    };
+                    ids.insert(last, id);
                     list.push(last);
                 }
                 2 | 3 => {
@@ -372,13 +383,7 @@ fn random_changes_keep_the_rules_and_match_a_plain_list() {
                         } else {
                             None
                         };
-                        assert_eq!(
-                            answer,
-                            Ok(Close::Removed {
-                                content: tab,
-                                activated
-                            })
-                        );
+                        assert_eq!(answer, removed(tab, activated));
                         closed.push(ids[&tab]);
                     }
                 }
@@ -419,6 +424,7 @@ fn random_changes_keep_the_rules_and_match_a_plain_list() {
                     if !closed.is_empty() {
                         let gone = closed[next(closed.len())];
                         assert_eq!(window.close(gone), Err(Error::NoSuchTab(gone)));
+                        check(&window);
                         assert_eq!(window.activate(gone), Err(Error::NoSuchTab(gone)));
                     }
                 }

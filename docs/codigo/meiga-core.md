@@ -1585,6 +1585,10 @@ impl TabId {
     pub const fn get(self) -> u64 {
         self.0
     }
+
+    pub const fn from_raw(number: u64) -> Self {
+        Self(number)
+    }
 }
 
 fn take(counter: &AtomicU64) -> u64 {
@@ -1592,10 +1596,10 @@ fn take(counter: &AtomicU64) -> u64 {
 }
 ```
 
-- **`TabId`** identifica unha tab mentres meiga corre. É un `u64` dentro dun tipo propio (un *newtype*): o compilador non deixa confundilo cun número calquera nin cun `WindowId`, e fóra do módulo ninguén pode crear un, porque o campo é privado.
-- **`next`** dá o seguinte número dun contador `static`, que existe unha soa vez en todo o programa e empeza en 1. É privada: só o modelo crea identificadores, cando crea unha tab.
+- **`TabId`** identifica unha tab mentres meiga corre. É un `u64` dentro dun tipo propio (un *newtype*): o compilador non deixa confundilo cun número calquera nin cun `WindowId`. O campo é privado: fóra do módulo, un identificador só se fai co número doutro, con `from_raw`.
+- **`next`** dá o seguinte número dun contador `static`, que existe unha soa vez en todo o programa e empeza en 1. É privada: só o modelo dá números novos, cando crea unha tab.
 - **`take`** súmalle 1 ao contador e devolve o valor de antes nunha soa operación atómica: dous fíos que abran tabs á vez nunca reciben o mesmo número, e unha tab pechada non devolve o seu. Chega a orde de memoria `Relaxed`, porque só importa que os números non se repitan ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)).
-- **`get`** dá o número, por exemplo para envialo nunha mensaxe a outro fío (2.2).
+- **`get`** dá o número, por exemplo para envialo nunha mensaxe a outro fío (2.2), e **`from_raw`**, desde a revisión da 2.1, volta facer o identificador co número que chega: as mensaxes de Windows levan números, e non tipos de Rust. Un número inventado non fai dano: o modelo dálle a cada tab nova un número do seu contador e só el pon tabs na xanela, así que `from_raw` non pode facer que dúas tabs compartan un, e un número que non é dunha tab da xanela non atopa nada (`Error::NoSuchTab`).
 - Os `derive`: `Clone` e `Copy` copian o identificador coma un número; `Debug` móstrao nas mensaxes das probas; `PartialEq` e `Eq` compáranos; e `Hash` deixa usalos de chave nun mapa, coma fan as probas.
 - **`WindowId`** é igual para as xanelas, co seu propio contador. Polo de agora só o garda cada `Window` (`Window::id`), porque meiga ten unha xanela: prepara as varias xanelas (F6).
 
@@ -1632,6 +1636,7 @@ pub struct Switch {
     pub to: TabId,
 }
 
+#[must_use = "the program has to close the content of the tab and show the tab that is active now"]
 pub enum Close<T> {
     Removed {
         content: T,
@@ -1641,9 +1646,10 @@ pub enum Close<T> {
 }
 ```
 
-- **`Tab<T>`** é unha tab: o seu identificador e o seu contido, do tipo que escolla o programa ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Os campos son privados: fóra do módulo só se len, con `id()` e `content()`. Só o modelo crea tabs, ao crear a xanela e ao abrir unha.
+- **`Tab<T>`** é unha tab: o seu identificador e o seu contido, do tipo que escolla o programa ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Os campos son privados: fóra do módulo só se len, con `id()` e `content()`. Só o modelo crea tabs, ao crear a xanela e ao abrir unha ([Abrir e pechar](#abrir-e-pechar)).
 - **`Switch`:** a tab activa cambiou, de `from` a `to`. Desde a 2.2, o programa redebuxará todo e cambiará a prioridade dos dous fíos lectores.
 - **`Close<T>`,** o que fixo pechar unha tab: `Removed`, a tab saíu da xanela, co seu contido e, se era a activa, a tab que ocupa o seu lugar (`activated`); ou `LastTab`, era a única, segue na xanela, e a xanela ten que pecharse con ela.
+- **`#[must_use]`** en `Close`, desde a revisión da 2.1: o compilador avisa se quen pecha unha tab ignora a resposta, que pode traer a sesión da tab e a tab que pasa a ser a activa, ou pedir que se peche a xanela. Por ir no tipo, avisa tamén cando o erro sae cun `?`: en `window.close(id)?;`, o `?` usa o `Result`, pero o `Close` que queda dentro ignórase, e iso si o ve o compilador.
 - `Close` deriva `PartialEq` e `Eq`, se o contido os ten: as probas comparan a resposta enteira cun `assert_eq!`.
 
 ### `Window`: os datos e as consultas
@@ -1663,6 +1669,7 @@ pub struct Window<T> {
 | Método | Que fai |
 |---|---|
 | `new(content)` | Crea unha xanela cunha tab, a activa, con ese contido. |
+| `try_new_with(content)` | Igual, pero o contido faino unha función que recibe o identificador da tab; se falla, devolve o seu erro, e non hai xanela ([Abrir e pechar](#abrir-e-pechar)). |
 | `id()` | O identificador da xanela. |
 | `tabs()` | As tabs, na orde da barra, nunha *slice* para lelas. |
 | `tab_count()` | Cantas tabs ten: polo menos unha. Chámase así, e non `len`, porque Clippy pide un `is_empty` xunto a cada `len`, e unha xanela nunca está baleira. |
@@ -1681,7 +1688,17 @@ pub struct Window<T> {
 
 ```rust
 pub fn open(&mut self, content: T) -> TabId {
-    let tab = Tab::new(content);
+    self.push(Tab::new(content))
+}
+
+pub fn try_open_with<E>(
+    &mut self,
+    content: impl FnOnce(TabId) -> Result<T, E>,
+) -> Result<TabId, E> {
+    Ok(self.push(Tab::try_with(content)?))
+}
+
+fn push(&mut self, tab: Tab<T>) -> TabId {
     let id = tab.id;
     self.tabs.push(tab);
     id
@@ -1689,6 +1706,22 @@ pub fn open(&mut self, content: T) -> TabId {
 ```
 
 **Abrir** pon a tab nova ao final da barra (decisión 6, decidido contigo) e devolve o seu identificador. Non a activa: o botón + activaraa despois con `activate`, e a restauración da sesión (7.2) abrirá as tabs sen activalas.
+
+```rust
+fn try_with<E>(content: impl FnOnce(TabId) -> Result<T, E>) -> Result<Self, E> {
+    let id = TabId::next();
+    Ok(Self {
+        id,
+        content: content(id)?,
+    })
+}
+```
+
+**Abrir cun contido que sabe o seu identificador,** desde a revisión da 2.1: `try_open_with` e `try_new_with`, a da xanela nova, reciben unha función que fai o contido, e `Tab::try_with` dálle o identificador da tab antes de que a tab exista. Desde a 2.2, esa función creará a sesión, cuxo fío lector enviará o identificador cos seus avisos, así que o necesita ao nacer.
+
+- `impl FnOnce(TabId) -> Result<T, E>` acepta calquera función ou *closure* que reciba un `TabId` e devolva o contido ou un erro ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). `FnOnce` chámase unha vez, así que pode levar dentro o que move ao contido. O tipo do erro, `E`, escólleo quen chama: o modelo non sabe que é unha sesión nin como falla.
+- Se a función falla, o `?` devolve o erro antes de `push`, e a xanela queda como estaba; a xanela nova non chega a existir. O identificador pérdese: o contador non o devolve, coma cando se pecha unha tab, e con 64 bits non se esgota.
+- `open` e `new` usan `Tab::new`, co contido xa feito, e as catro maneiras de crear unha tab rematan igual: só `push` e `with_tab`, a da xanela nova, poñen tabs na xanela, sempre recén creadas e co seu identificador novo.
 
 ```rust
 pub fn close(&mut self, id: TabId) -> Result<Close<T>, Error> {
@@ -1798,11 +1831,11 @@ fn activate_at(&mut self, index: usize) -> Option<Switch> {
 
 - **`activate`** activa unha tab polo seu identificador; **`activate_next`** e **`activate_previous`**, a seguinte e a anterior. O resto da división (`%`) dá a volta: desde a última, a seguinte é a primeira, e desde a primeira, a anterior é a última. Para a anterior, súmase `count` antes de restar 1, para non baixar de 0. Cunha soa tab, as dúas dan a mesma tab, e nada cambia.
 - **`activate_at`** fai o cambio e responde cun `Switch`, de que tab a que tab, ou con `None` se xa era a activa.
-- **`#[must_use]`** fai que o compilador avise se quen chama ignora a resposta: desde a 2.2, quen active unha tab terá que mostrala. `activate` xa devolve un `Result`, que o compilador tampouco deixa ignorar. O exemplo `tabs`, que non debuxa, descarta a resposta a propósito, con `let _ =`.
+- **`#[must_use]`** en `activate_next` e `activate_previous` fai que o compilador avise se quen chama ignora a resposta: desde a 2.2, quen active unha tab terá que mostrala. `activate` devolve un `Result`, que o compilador tampouco deixa ignorar enteiro; pero, se o erro sae cun `?` (`window.activate(id)?;`), o `Option<Switch>` que queda dentro pódese ignorar sen aviso. Un `#[must_use]` en `Switch` non o evitaría: o aviso dun tipo non pasa a través de `Option`. `Close` si o leva, porque se devolve sen `Option` ([`Tab`, `Switch` e `Close`](#tab-switch-e-close)). O exemplo `tabs`, que non debuxa, descarta a resposta a propósito, con `let _ =` e con `map(|_| ())`.
 
 ## `crates/meiga-core/src/model/tests.rs`
 
-As probas do modelo: dezaoito, que levan uns milisegundos.
+As probas do modelo: vinte e unha, que levan uns milisegundos.
 
 ```rust
 fn check<T>(window: &Window<T>) {
@@ -1821,12 +1854,13 @@ fn check<T>(window: &Window<T>) {
 }
 ```
 
-- **`check`** comproba as invariantes despois de cada cambio: polo menos unha tab, a activa entre elas, a enfocada igual ca a activa, ningún identificador repetido, a posición de cada tab igual ca a que dá `index_of`, e só a activa visíbel.
-- **`window(&["a", "b", "c"])`** crea unha xanela cunha tab por nome, a primeira activa, e devolve tamén os seus identificadores; **`names`** dá os contidos de esquerda a dereita, para comparalos cunha lista.
+- **`check`** comproba as invariantes: polo menos unha tab, a activa entre elas, a enfocada igual ca a activa, ningún identificador repetido, a posición de cada tab igual ca a que dá `index_of`, e só a activa visíbel. Cada proba chámaa despois de cada cambio, tamén dos que a xanela rexeita.
+- **`window(&["a", "b", "c"])`** crea unha xanela cunha tab por nome, a primeira activa, e devolve tamén os seus identificadores; tamén comproba as invariantes, ao crear a xanela e despois de abrir cada tab. **`names`** dá os contidos de esquerda a dereita, para comparalos cunha lista. **`removed`** e **`switched`** escriben as respostas de pechar e de activar.
 
-Dezasete probas comproban cada regra:
+Vinte probas comproban cada regra:
 
 - unha xanela nova ten unha tab, e é a activa; unha tab ábrese ao final, e non se activa;
+- un contido pode saber o identificador da súa tab, ao crear a xanela e ao abrir unha, e un contido que non se pode facer non abre nada; un identificador volta do seu número, e o número 0, que o contador nunca dá, non atopa ningunha tab;
 - os identificadores nunca se repiten, nin noutra xanela nin despois de pechar unha tab;
 - pechar a activa activa a da dereita ou, se era a última, a da esquerda; pechar outra deixa a activa, tamén cando a pechada estaba á súa esquerda e a activa corre un posto; e a única tab queda, e a xanela péchase con ela;
 - mover corre as tabs do medio, e a activa segue sendo a mesma tab: cando se move ela, cando outra a cruza desde a esquerda ou desde a dereita, e cando outra se move sen cruzala;
@@ -1835,9 +1869,9 @@ Dezasete probas comproban cada regra:
 - o teclado e a pantalla seguen a activa (`focused`, `focused_mut` e `is_visible`), e `get_mut` cambia o contido doutra tab;
 - e as mensaxes dos erros.
 
-**A proba ao chou** (`random_changes_keep_the_rules_and_match_a_plain_list`) fai 500 cambios en cada unha de 20 xanelas, 10 000 en total: abrir, pechar, mover (ás veces a unha posición despois da última), activar unha tab, a seguinte ou a anterior, e pechar ou activar unha tab xa pechada. Os cambios saen dunha secuencia *xorshift* fixa, coma nas probas de `damage.rs` e do escáner: se falla, falla sempre igual. Fai os mesmos cambios nunha lista simple, cos contidos das tabs e o contido da activa, coas regras escritas da forma máis directa. Despois de cada cambio comproba as invariantes, que a xanela e a lista coinciden, e que as respostas son as que tocan. Ao final comproba que a barra pasou por unha tab, por dúas e por dez ou máis, para que os extremos se proben tamén.
+**A proba ao chou** (`random_changes_keep_the_rules_and_match_a_plain_list`) fai 500 cambios en cada unha de 20 xanelas, 10 000 en total: abrir, con `open` ou con `try_open_with`, e ás veces despois dun intento cun contido que non se pode facer; pechar; mover (ás veces a unha posición despois da última); activar unha tab, a seguinte ou a anterior; e pechar ou activar unha tab xa pechada. Os cambios saen dunha secuencia *xorshift* fixa, coma nas probas de `damage.rs` e do escáner: se falla, falla sempre igual. Fai os mesmos cambios nunha lista simple, cos contidos das tabs e o contido da activa, coas regras escritas da forma máis directa. Despois de cada cambio comproba as invariantes, que a xanela e a lista coinciden, e que as respostas son as que tocan. Ao final comproba que a barra pasou por unha tab, por dúas e por dez ou máis, para que os extremos se proben tamén.
 
-Comprobouse tamén ao revés, con catro copias do modelo estragadas a propósito: unha activa a tab da esquerda ao pechar a activa, outra non corre a activa ao pechar unha tab á súa esquerda, outra axusta mal a activa ao mover, e a última non dá a volta coa seguinte. As catro fallan as probas.
+Comprobouse tamén ao revés, con catro copias do modelo estragadas a propósito: unha activa a tab da esquerda ao pechar a activa, outra non corre a activa ao pechar unha tab á súa esquerda, outra axusta mal a activa ao mover, e a última non dá a volta coa seguinte. Despois da revisión, outras dúas: unha dálle ao contido outro identificador ca o da súa tab, e outra fai mal o identificador co seu número. As seis fallan as probas.
 
 ## `crates/meiga-core/src/term/mod.rs`
 

@@ -20,6 +20,15 @@ impl<T> Tab<T> {
         }
     }
 
+    /// A tab whose content is made knowing its identifier.
+    fn try_with<E>(content: impl FnOnce(TabId) -> Result<T, E>) -> Result<Self, E> {
+        let id = TabId::next();
+        Ok(Self {
+            id,
+            content: content(id)?,
+        })
+    }
+
     pub const fn id(&self) -> TabId {
         self.id
     }
@@ -37,8 +46,10 @@ pub struct Switch {
     pub to: TabId,
 }
 
-/// What closing a tab did.
+/// What closing a tab did. It has to be looked at: it may bring the content
+/// of the tab, such as its session, and the tab that is active now.
 #[derive(Debug, PartialEq, Eq)]
+#[must_use = "the program has to close the content of the tab and show the tab that is active now"]
 pub enum Close<T> {
     /// The tab left the window, and this is its content. If it was the active
     /// tab, `activated` is the tab that took its place.
@@ -68,9 +79,21 @@ pub struct Window<T> {
 impl<T> Window<T> {
     /// A window with a single tab, which is the active one.
     pub fn new(content: T) -> Self {
+        Self::with_tab(Tab::new(content))
+    }
+
+    /// A window with a single tab, whose content is made knowing the
+    /// identifier of the tab: from subphase 2.2, its session, so that its
+    /// reader thread sends the identifier with its wake-ups. If making the
+    /// content fails, there is no window, and the error comes back.
+    pub fn try_new_with<E>(content: impl FnOnce(TabId) -> Result<T, E>) -> Result<Self, E> {
+        Ok(Self::with_tab(Tab::try_with(content)?))
+    }
+
+    fn with_tab(tab: Tab<T>) -> Self {
         Self {
             id: WindowId::next(),
-            tabs: vec![Tab::new(content)],
+            tabs: vec![tab],
             active: 0,
         }
     }
@@ -142,7 +165,21 @@ impl<T> Window<T> {
     /// does not activate it: the button + will activate it, but a restored
     /// session opens its tabs without activating them (subphase 7.2).
     pub fn open(&mut self, content: T) -> TabId {
-        let tab = Tab::new(content);
+        self.push(Tab::new(content))
+    }
+
+    /// Opens a tab at the end of the tab bar, as [`open`](Self::open), with
+    /// a content made knowing the identifier of the tab, as
+    /// [`try_new_with`](Self::try_new_with). If making the content fails, the
+    /// window does not change, and the error comes back.
+    pub fn try_open_with<E>(
+        &mut self,
+        content: impl FnOnce(TabId) -> Result<T, E>,
+    ) -> Result<TabId, E> {
+        Ok(self.push(Tab::try_with(content)?))
+    }
+
+    fn push(&mut self, tab: Tab<T>) -> TabId {
         let id = tab.id;
         self.tabs.push(tab);
         id

@@ -314,9 +314,9 @@ flowchart LR
 ```
 
 - **Cada tab leva o seu contido:** o modelo é xenérico, `Window<T>`, e o programa escolle que gardar en cada tab ([Tecnoloxías › Xenéricos e contadores atómicos](tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Así, a orde das tabs vive nun só sitio.
-- **Identificadores que nunca se repiten:** cada tab ten un `TabId`, e cada xanela un `WindowId`, que saen de contadores atómicos. O aviso do fío lector dunha tab levará o seu identificador (2.2): aínda que as tabs se movan ou se pechen, nunca chegará a outra.
+- **Identificadores que nunca se repiten:** cada tab ten un `TabId`, e cada xanela un `WindowId`, que saen de contadores atómicos. O aviso do fío lector dunha tab levará o seu identificador (2.2): aínda que as tabs se movan ou se pechen, nunca chegará a outra. Para iso, a sesión farase sabendo xa o identificador da súa tab (`try_open_with`).
 - **Sempre unha tab activa:** a xanela nunca queda sen tabs, e pechar a única pide pechar a xanela. Ao pechar a activa, actívase a da dereita ou, se era a última, a da esquerda, coma en Chrome; e as tabs novas ábrense ao final.
-- **A activa, a enfocada e as visíbeis:** a barra marcará a activa, o teclado irá á enfocada, e o fotograma debuxará as visíbeis. Hoxe son a mesma tab, pero o programa preguntará cada unha polo seu nome: coa vista dividida (F1), só cambiará o modelo.
+- **A activa, a enfocada e as visíbeis:** a barra marcará a activa, o teclado irá á enfocada, e o fotograma debuxará as visíbeis. Hoxe son a mesma tab, pero o programa preguntará cada unha polo seu nome: coa vista dividida (F1), esas preguntas seguirán valendo. O modelo gardará o *layout* e o foco, e o programa debuxará cada tab visíbel no seu rectángulo, dará a cada ConPTY o seu tamaño e levará o rato á tab que estea debaixo.
 
 O código explícase en [Código › meiga-core › `model`](codigo/meiga-core.md#cratesmeiga-coresrcmodelmodrs).
 
