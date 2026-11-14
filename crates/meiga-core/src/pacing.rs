@@ -4,8 +4,9 @@
 use std::time::{Duration, Instant};
 
 /// The interval between frames when `max_fps` is `auto`: 30 frames per
-/// second in remote sessions (Remote Desktop) and 60 locally. The final
-/// values are decided with measurements in subphase 1.10.
+/// second in remote sessions (Remote Desktop) and 60 locally, as decided in
+/// ADR 0017 (`docs/adr/0017-os-fotogramas-por-escritorio-remoto.md`) with the
+/// measurements of subphase 1.10.
 pub const fn auto_interval(remote: bool) -> Duration {
     let fps = if remote { 30 } else { 60 };
     Duration::from_nanos(1_000_000_000 / fps)

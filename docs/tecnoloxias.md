@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 1.9. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 1.10. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -559,7 +559,9 @@ meiga usa un *waitable timer* de alta resolución para os fotogramas, e só o ac
 
 **Os bucles modais.** Mentres o usuario move ou redimensiona unha xanela, ou ten aberto o seu menú, Windows executa un bucle de mensaxes propio, ata que remata. Ese bucle trata as mensaxes, pero non espera polo temporizador de meiga. Por iso, entre `WM_ENTERSIZEMOVE` e `WM_EXITSIZEMOVE`, e entre `WM_ENTERMENULOOP` e `WM_EXITMENULOOP`, meiga programa tamén os fotogramas con `SetTimer`: mentres tanto, van ao ritmo dos tics, un cada 47 ms aproximadamente.
 
-**As sesións remotas.** `GetSystemMetrics(SM_REMOTESESSION)` di se o programa corre nunha sesión de Escritorio remoto. meiga pregúntao en cada fotograma para escoller o intervalo de `max_fps = "auto"`: 30 fotogramas por segundo en remoto e 60 en local ([ADR 0005](adr/0005-fios-e-fotogramas.md)). Pregúntase cada vez porque unha sesión pode pasar de local a remota sen pechar os programas: abonda con conectarse a ela por Escritorio remoto.
+**As sesións remotas.** `GetSystemMetrics(SM_REMOTESESSION)` di se o programa corre nunha sesión de Escritorio remoto. meiga pregúntao en cada fotograma para escoller o intervalo de `max_fps = "auto"`: 30 fotogramas por segundo en remoto e 60 en local ([ADR 0005](adr/0005-fios-e-fotogramas.md), [ADR 0017](adr/0017-os-fotogramas-por-escritorio-remoto.md)). Pregúntase cada vez porque unha sesión pode pasar de local a remota sen pechar os programas: abonda con conectarse a ela por Escritorio remoto.
+
+**O límite do Escritorio remoto.** Por defecto, o Escritorio remoto non lle envía ao cliente máis de 30 fotogramas por segundo, faga o que faga o programa. O valor `DWMFRAMEINTERVAL` (`REG_DWORD`) da clave `HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations`, no equipo ao que se conecta, sobe ese límite a 60 cando vale 15 ([Microsoft Learn](https://learn.microsoft.com/troubleshoot/windows-server/remote/frame-rate-limited-to-30-fps)). meiga non o le: aínda que a sesión permita 60, usa 30, porque, cando a xanela enteira cambia en cada fotograma, coma cando o texto se despraza durante moito tempo, 60 custarían arredor do dobre a meiga e máis ao DWM e ao Escritorio remoto, e para escribir ou cos *spinners* non cambian nada ([ADR 0017](adr/0017-os-fotogramas-por-escritorio-remoto.md)).
 
 ## 27. DirectWrite: fontes e glifos
 

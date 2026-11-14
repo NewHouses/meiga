@@ -4,7 +4,7 @@
 
 A lightweight terminal for Windows, written in Rust, with performance as the top priority.
 
-> **Status:** early development. `meiga.exe` is already a terminal: it runs a program in a pseudoconsole (ConPTY), by default PowerShell 7, shows its output with colours, bold and italic text, underlines, wide characters, a cursor and the title that the program sets, and sends it the keys that you type as the Windows console does, also the dead keys and AltGr of layouts such as the Spanish one. The mouse selects text, which goes to the clipboard, and pastes it, and programs that ask for the mouse, such as vim or htop, get it. The grid follows the size and the scale of the window, with no garbage left on the screen, the scrollback keeps 10 000 lines, with a thin scroll bar, and the text can be zoomed. Each frame presents only the cells that changed, and it uses no CPU while idle or minimized. Tabs come next.
+> **Status:** early development. `meiga.exe` is already a terminal: it runs a program in a pseudoconsole (ConPTY), by default PowerShell 7, shows its output with colours, bold and italic text, underlines, wide characters, a cursor and the title that the program sets, and sends it the keys that you type as the Windows console does, also the dead keys and AltGr of layouts such as the Spanish one. The mouse selects text, which goes to the clipboard, and pastes it, and programs that ask for the mouse, such as vim or htop, get it. The grid follows the size and the scale of the window, with no garbage left on the screen, the scrollback keeps 10 000 lines, with a thin scroll bar, and the text can be zoomed. Each frame presents only the cells that changed, and it uses no CPU while idle or minimized. This first milestone, a terminal for a single shell, has passed its performance gate. Tabs come next.
 
 ## Goals
 
@@ -107,10 +107,11 @@ meiga uses the `conpty.dll` and `OpenConsole.exe` next to `meiga.exe`, as in the
 .\tools\perf\run-scenario.ps1 ai-stream warp -Shell wsl
 ```
 
-With `-Start`, it starts a terminal that runs the program of its command line, such as meiga, with the scenario as its program, and closes it at the end:
+With `-Start`, it starts a terminal that runs the program of its command line, such as meiga, with the scenario as its program, and closes it at the end. With `-Maximized` too, it starts it maximized:
 
 ```powershell
 .\tools\perf\run-scenario.ps1 bigfile -Start .\target\release\meiga.exe
+.\tools\perf\run-scenario.ps1 spinner -Start .\target\release\meiga.exe -Maximized
 ```
 
 `tools\perf\measure-startup.ps1` measures how long `meiga.exe` takes to open its window, with its shell started: it starts it 20 times, closes it each time, and prints the median and the 95th percentile of the time until the window is painted:

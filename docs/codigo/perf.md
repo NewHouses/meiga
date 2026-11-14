@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 1.6.
+> Estado: subfase 1.10. Na 1.10 os scripts non cambiaron: só chegou a ligazón ao ADR 0017.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -830,7 +830,7 @@ Unha fila por modo:
 | Columna | Que é |
 |---|---|
 | `width` e `height` | O tamaño da xanela, maximizada. |
-| `fps` | Os fotogramas por segundo: como moito 30 por Escritorio remoto e 60 en local, o intervalo de `max_fps = "auto"`. |
+| `fps` | Os fotogramas por segundo: como moito 30 por Escritorio remoto e 60 en local, o intervalo de `max_fps = "auto"` ([ADR 0017](../adr/0017-os-fotogramas-por-escritorio-remoto.md)). |
 | `kpixels` | Os miles de píxeles que presenta un fotograma (a mediana). Nos parciais, uns 5: o cadrado e o sitio onde estaba son un rectángulo de 80 × 64. Nos completos e nos de texto, os da xanela enteira. |
 | `compose_us` e `compose_p95_us` | O tempo de compoñer un fotograma, en microsegundos: a mediana e o percentil 95. |
 | `present_us` e `present_p95_us` | O tempo de presentalo. |
