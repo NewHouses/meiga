@@ -1,6 +1,6 @@
 # ADR 0005 · Modelo de fíos e fotogramas
 
-- **Estado:** Aceptado; concretado polos [ADR 0008](0008-temporizador-dos-fotogramas.md), [ADR 0011](0011-fin-e-peche-das-sesions.md) e [ADR 0013](0013-da-saida-a-pantalla.md)
+- **Estado:** Aceptado; concretado polos [ADR 0008](0008-temporizador-dos-fotogramas.md), [ADR 0011](0011-fin-e-peche-das-sesions.md), [ADR 0013](0013-da-saida-a-pantalla.md) e [ADR 0017](0017-os-fotogramas-por-escritorio-remoto.md)
 - **Data:** 2026-11-06
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0004](0004-conpty-empaquetado.md)
 

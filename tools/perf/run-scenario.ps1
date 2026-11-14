@@ -47,6 +47,10 @@ Instead of -Name, the path of a terminal that runs the program of its
 command line, such as meiga. The script starts it with the scenario as its
 program, measures that process, and closes its window at the end.
 
+.PARAMETER Maximized
+With -Start, starts the terminal maximized, as the baseline measured each
+terminal.
+
 .PARAMETER Shell
 Shell of the terminal where the scenario runs: pwsh or wsl. It only changes
 the command that the script shows.
@@ -87,6 +91,9 @@ pwsh -File .\tools\perf\run-scenario.ps1 spinner -Name warp -Instances 5 -Label 
 
 .EXAMPLE
 pwsh -File .\tools\perf\run-scenario.ps1 bigfile -Start .\target\release\meiga.exe
+
+.EXAMPLE
+pwsh -File .\tools\perf\run-scenario.ps1 spinner -Start .\target\release\meiga.exe -Maximized
 #>
 [CmdletBinding(DefaultParameterSetName = 'Name')]
 param(
@@ -102,6 +109,9 @@ param(
 
     [Parameter(Mandatory, ParameterSetName = 'Start')]
     [string]$Start,
+
+    [Parameter(ParameterSetName = 'Start')]
+    [switch]$Maximized,
 
     [ValidateSet('pwsh', 'wsl')]
     [string]$Shell = 'pwsh',
@@ -176,6 +186,9 @@ elseif ($PSCmdlet.ParameterSetName -eq 'Start') {
     if ($Instances -ne 1) {
         throw '-Start opens a single terminal: use -Instances 1.'
     }
+    if ($Maximized -and [Environment]::Version.Major -lt 8) {
+        throw '-Maximized needs PowerShell 7.4 or later, which runs on .NET 8.'
+    }
     $terminalLabel = [IO.Path]::GetFileNameWithoutExtension($Start)
 }
 else {
@@ -236,10 +249,14 @@ function Get-StartedCount {
 
 # Starts the terminal of -Start with $program, which it runs, and measures
 # that process. ProcessStartInfo quotes each argument, as Start-Process does
-# not.
+# not, and since .NET 8 it passes the window style to the new process without
+# the shell too.
 function Start-Terminal {
     $info = [Diagnostics.ProcessStartInfo]::new($Start)
     $info.UseShellExecute = $false
+    if ($Maximized) {
+        $info.WindowStyle = [Diagnostics.ProcessWindowStyle]::Maximized
+    }
     foreach ($argument in $program) {
         $info.ArgumentList.Add($argument)
     }
