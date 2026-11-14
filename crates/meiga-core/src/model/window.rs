@@ -133,6 +133,14 @@ impl<T> Window<T> {
             .map(|tab| &mut tab.content)
     }
 
+    /// The contents of all the tabs, with their identifiers, in the order
+    /// of the tab bar, to change them: for example, from subphase 2.2, the
+    /// ones of the tabs that are not shown. The tabs themselves do not
+    /// change.
+    pub fn contents_mut(&mut self) -> impl Iterator<Item = (TabId, &mut T)> {
+        self.tabs.iter_mut().map(|tab| (tab.id, &mut tab.content))
+    }
+
     /// The active tab: the one that the tab bar marks.
     pub fn active(&self) -> &Tab<T> {
         &self.tabs[self.active]

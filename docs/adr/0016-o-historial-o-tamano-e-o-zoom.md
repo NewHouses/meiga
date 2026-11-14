@@ -1,6 +1,6 @@
 # ADR 0016 · O historial, o tamaño e o zoom
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md)
 - **Data:** 2026-11-09
 - **Relacionados:** [ADR 0004](0004-conpty-empaquetado.md), [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0010](0010-texto-con-directwrite.md), [ADR 0012](0012-fachada-do-terminal.md), [ADR 0013](0013-da-saida-a-pantalla.md), [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md)
 

@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: mantemento M1, despois da subfase 1.10. No M1, `fetch-conpty.ps1` fixa o ConPTY 1.25.261109001; os outros scripts non cambiaron. Na 1.9 chegou `check-resize.ps1`, que comproba o tamaño, o historial e o zoom de meiga, e `check-mouse.ps1` resta a franxa da barra de desprazamento ao medir as celas.
+> Estado: subfase 2.2. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta; os outros scripts non cambiaron. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -14,6 +14,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`check-keyboard.ps1`](#toolscheck-keyboardps1) | Comprobar que as teclas que se teclean en `meiga.exe` chegan ao programa do terminal coma as le PowerShell, co teclado español e co estadounidense. |
 | [`check-mouse.ps1`](#toolscheck-mouseps1) | Comprobar que en `meiga.exe` o rato selecciona e copia texto, que as teclas e o botón dereito copian e pegan, e que o rato chega aos programas do terminal que o piden. |
 | [`check-resize.ps1`](#toolscheck-resizeps1) | Comprobar que, cando a xanela de `meiga.exe` cambia de tamaño, tamén coa caixa de mensaxe aberta, a súa pantalla ten as mesmas filas ca a consola do ConPTY; que a roda, as teclas e a barra de desprazamento moven a vista do historial; e que o zoom cambia a grella. |
+| [`check-tabs.ps1`](#toolscheck-tabsps1) | Comprobar que en `meiga.exe` os atallos abren, mostran e pechan as tabs, e que unha tab oculta non debuxa nada, recibe as respostas ás súas preguntas, non copia ao portapapeis e, cando se mostra, colle o seu título e a grella da xanela. |
 | [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
@@ -3036,6 +3037,896 @@ O `finally` é o de `check-mouse.ps1`: meiga non queda aberto; o punteiro volta 
 
 A CI executa este script en cada PR, despois de `check-mouse.ps1`, no paso *Check the resizing, the history and the zoom* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a escala é do 100 %, e a franxa mide 12 píxeles.
 
+## `tools/check-tabs.ps1`
+
+Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Os atallos: Ctrl+Maiús+T abre unha tab coa shell por defecto e móstraa cun fotograma completo; Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior, e dan a volta; e Ctrl+Maiús+W pecha a tab que se mostra, cos seus programas, ou a xanela, se é a última. E unha tab oculta: o seu fío lector baixa de prioridade; a saída do seu programa non debuxa nada, pero o programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que non remata; o seu título agarda a que se mostre, e o texto que copia ao portapapeis non chega nunca; e a súa grella non cambia ata que se mostra. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación, coma en [`check-present.ps1`](#toolscheck-presentps1), e escribe nun arquivo o que ve. Teclea os atallos na xanela coma [`check-keyboard.ps1`](#toolscheck-keyboardps1) as súas teclas, pero co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1) as accións do rato, e sabe que tab se mostra pola prioridade dos fíos lectores. A xanela non ten que estar en primeiro plano, pero sen iso a comprobación demostra menos do portapapeis (o paso 8). Leva uns 10 s, boa parte deles agardando a que deixe de pestanexar o cursor da tab nova (o paso 3).
+
+```powershell
+.\tools\check-tabs.ps1                                  # comproba target\release\meiga.exe
+.\tools\check-tabs.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-tabs.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
+```
+
+Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script da primeira tab con `pwsh`, que é tamén a shell por defecto das tabs novas. As tabs novas cargan o perfil de PowerShell: un perfil que debuxe algo segundos despois do *prompt* pode facer fallar a comprobación, porque nos pasos 4 e 5 non pode haber ningún fotograma. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`.
+
+**Coidado:** mentres corre, non uses o rato nin o teclado: as teclas mesturaríanse coas da comprobación, e un clic noutra xanela cambiaría o primeiro plano, que a comprobación mira no paso 8 e que ten que quedar igual ata o final dese paso. Se cambia e o paso falla, a mensaxe de erro dío. E usa o portapapeis: se tiña texto, ao rematar volta deixalo nel, pero calquera outra cousa, coma unha imaxe, pérdese. Ademais, a xanela de meiga cambia de tamaño unha vez.
+
+Saída esperada, coa xanela en primeiro plano, coma no *runner* da CI, e cos valores que dependen da máquina e do tempo:
+
+```text
+OK: Ctrl+Shift+T opens a tab with the default shell (pwsh.exe), and shows it with a full frame; the reader of the hidden tab gets a lower priority.
+OK: while a tab is hidden, the output of its program draws nothing.
+OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline (… ms), without drawing.
+OK: Ctrl+Tab shows the other tab with one full frame and gives it the grid of the window (…x… -> …x…), which it did not get while it was hidden.
+OK: the title of a hidden tab reaches the window once the tab is shown; the text that it copied to the clipboard never does, and the text that it copies once shown does.
+OK: Ctrl+Tab and Ctrl+Shift+Tab go round the tabs: 3 -> 1 -> 3 -> 2.
+OK: Ctrl+Shift+W closes the tab that is shown, and its programs end; then the tab on its right is shown or, after the last one, the one on its left.
+OK: closing the last tab closes the window, and it ends with exit code 0.
+```
+
+- **Os milisegundos** da terceira liña son os que agardou o programa a resposta á súa pregunta: os 150 ms da hora límite da actualización sincronizada, máis o que tardan a pregunta en chegar a meiga e a resposta en voltar ao programa. Cambian dunha vez a outra, e a comprobación acepta ata 1 000.
+- **As grellas** da cuarta, en columnas e filas: a que tiña a primeira tab cando se ocultou, a da xanela ao abrirse, e a que recibe ao mostrarse, a da xanela de 640 × 480 píxeles. Dependen da escala da pantalla e do tamaño que lle dá Windows á xanela ao abrila.
+- **O portapapeis.** A quinta liña depende da xanela de meiga, coma en [`check-mouse.ps1`](#toolscheck-mouseps1): se non está en primeiro plano, é `OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.`
+
+Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1; se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coma `check-present.ps1`; e, se é do portapapeis e a xanela entrou ou saíu do primeiro plano mentres tanto, dío, e pide correr a comprobación outra vez. E garda o rexistro dos fotogramas e os informes do script da primeira tab, e di onde, cunha liña `Kept …` por arquivo. Pase o que pase, `meiga.exe` non queda aberto, e o portapapeis volta ter o texto que tiña.
+
+Esta comprobación non ve o foco nin o rato, que pasan á tab nova ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 9), nin os avisos das tabs que se perden mentres está aberta a caixa de mensaxe (decisión 13). Tampouco mide os orzamentos da subfase, os espertares e a CPU con varias tabs: os números dunha máquina compartida, coma o *runner*, non dirían nada ([Subfases › 2.2](../subfases/2.2-sesions.md)).
+
+Explicación por partes. O comezo (a axuda, os parámetros, a versión de PowerShell e a ruta de `meiga.exe`) é igual ca en [`check-mouse.ps1`](#toolscheck-mouseps1).
+
+**As funcións de Windows**, declaradas en C# nunha clase propia, `TabsCheck`:
+
+```powershell
+if (-not ('Meiga.Tools.TabsCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name TabsCheck -MemberDefinition @'
+…
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
+
+[DllImport("kernel32.dll")]
+static extern int GetThreadPriority(IntPtr thread);
+
+[DllImport("kernel32.dll")]
+static extern int GetThreadDescription(IntPtr thread, out IntPtr description);
+
+[DllImport("kernel32.dll")]
+static extern IntPtr LocalFree(IntPtr memory);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool CloseHandle(IntPtr handle);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern uint SuspendThread(IntPtr thread);
+
+[DllImport("kernel32.dll")]
+static extern uint ResumeThread(IntPtr thread);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetThreadContext(IntPtr thread, IntPtr context);
+…
+'@
+}
+$api = [Meiga.Tools.TabsCheck]
+```
+
+| Función | Para que |
+|---|---|
+| `GetWindowThreadProcessId` e `GetCurrentThreadId` | O fío da xanela de meiga, e o do script. |
+| `PeekMessageW`, `AttachThreadInput` e `SetKeyboardState` | Poñen abaixo as modificadoras dos atallos, coma en `check-keyboard.ps1`. |
+| `PostMessageW` | Publica na xanela as mensaxes das teclas. |
+| `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
+| `GetForegroundWindow` | A xanela de primeiro plano. |
+| `SetWindowPos` | Cambia o tamaño da xanela. |
+| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
+| `OpenClipboard`, `EmptyClipboard` e `CloseClipboard` | Baleiran o portapapeis. |
+| `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se teclea un atallo, e agardan a que pare. |
+| `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len a prioridade dun fío de meiga polo seu nome. |
+
+- Son as de `check-mouse.ps1` que necesita, sen as do rato nin as da caixa de mensaxe; `SetWindowPos`, coma en `check-resize.ps1`; e catro novas: `GetThreadContext`, para agardar a que pare o fío da xanela, e `GetThreadDescription`, `GetThreadPriority` e `LocalFree`, para ler a prioridade dun fío.
+- **Unha clase propia,** coma en `check-resize.ps1`: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían as funcións novas.
+- As oito últimas, de `OpenThread` a `GetThreadContext`, non levan `public`: só as usan `TypeKey` e `PriorityOf`, dentro da clase. Son dúas das tres funcións propias da clase, en C#; a terceira é `ClearClipboard`, a de `check-mouse.ps1`.
+
+```csharp
+// Types a key in the window: sets the key state of its thread, which this
+// thread shares, to `state`, and posts the messages of the key `code` going
+// down and up, with the lParams `down` and `up`. The thread of the window is
+// suspended meanwhile: the key state changes as the thread reads its input,
+// and Windows gives the window input of its own, such as mouse moves. Once
+// the thread runs again, it reads the posted messages before any input.
+public static void TypeKey(IntPtr window, uint thread, byte[] state, uint code, long down, long up)
+{
+    // THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT
+    IntPtr handle = OpenThread(0x0002 | 0x0008, false, thread);
+    if (handle == IntPtr.Zero) throw new System.ComponentModel.Win32Exception();
+    // A CONTEXT of x64: 1232 bytes, aligned to 16.
+    IntPtr memory = Marshal.AllocHGlobal(1232 + 16);
+    try
+    {
+        if (SuspendThread(handle) == uint.MaxValue) throw new System.ComponentModel.Win32Exception();
+        try
+        {
+            // SuspendThread does not wait until the thread stops; reading its
+            // context does. ContextFlags: CONTEXT_CONTROL of x64.
+            IntPtr context = new IntPtr((memory.ToInt64() + 15) & ~15L);
+            Marshal.WriteInt32(context, 0x30, 0x00100001);
+            if (!GetThreadContext(handle, context)) throw new System.ComponentModel.Win32Exception();
+            if (!SetKeyboardState(state)) throw new System.ComponentModel.Win32Exception();
+            // WM_KEYDOWN and WM_KEYUP
+            if (!PostMessageW(window, 0x0100, new UIntPtr(code), new IntPtr(down)) ||
+                !PostMessageW(window, 0x0101, new UIntPtr(code), new IntPtr(up)))
+                throw new System.ComponentModel.Win32Exception();
+        }
+        finally { ResumeThread(handle); }
+    }
+    finally
+    {
+        Marshal.FreeHGlobal(memory);
+        CloseHandle(handle);
+    }
+}
+```
+
+**Teclear co fío da xanela suspendido: `TypeKey`.** Un atallo necesita dúas cousas: as súas modificadoras abaixo no estado das teclas do fío da xanela, porque as mensaxes publicadas non o cambian, e as mensaxes da súa tecla ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows), *Simular teclas*). Pero o estado das teclas dun fío cambia mentres este le a súa entrada, e Windows tamén lle dá á xanela entrada propia, coma os movementos do rato (ver [`check-mouse.ps1`](#toolscheck-mouseps1)). Antes, a comprobación puña as modificadoras e publicaba a tecla por separado, e nunha de 25 execucións o paso 8 fallou: despois de Ctrl+Tab, a xanela non debuxou nada nin mostrou a outra tab, coma cun Tab sen Ctrl, que nun *prompt* baleiro non debuxa nada. Agora fai as dúas cousas co fío da xanela suspendido, coma `PostAll` en `check-mouse.ps1`, e desde entón pasou 27 veces seguidas, 20 delas cun `meiga.exe` recén copiado, coma despois de compilalo.
+
+- **A orde.** Mentres o fío está suspendido, `TypeKey` pon o estado das teclas e publica a tecla que baixa e a que sobe. Cando o fío volta correr, le primeiro as mensaxes enviadas, despois as publicadas, e só despois a entrada, como documenta [`PeekMessageW`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-peekmessagew), coa que meiga le as súas mensaxes: trata a tecla co estado que lle deixou a comprobación.
+- **Agardar a que pare.** `SuspendThread` pídelle a Windows que suspenda o fío, e volta sen agardar: se o planificador está ocupado, o fío aínda corre un intre, e podería ler entrada despois de que a comprobación puxese o estado. `GetThreadContext` le o contexto do fío, os seus rexistros, que Windows só garda cando o fío para: cando volta, o fío está parado ([*The SuspendThread function suspends a thread, but it does so asynchronously*](https://devblogs.microsoft.com/oldnewthing/20150205-00/?p=44743)). A comprobación non usa o que le.
+- **O contexto** é unha estrutura `CONTEXT`, que depende do procesador. Os números son os de x64, a única arquitectura para a que se compila meiga: 1 232 bytes, que teñen que empezar nun enderezo múltiplo de 16. Para non depender do aliñamento da memoria que dá `Marshal.AllocHGlobal`, a comprobación reserva 16 bytes de máis, e `(memory.ToInt64() + 15) & ~15L` leva o enderezo ao seguinte múltiplo de 16. Na posición `0x30` está `ContextFlags`, as partes do contexto que se len: `0x00100001`, `CONTEXT_CONTROL` de x64, só os rexistros de control, coma o punteiro de instrución.
+- `OpenThread` abre o fío cos permisos de suspendelo e continualo (`THREAD_SUSPEND_RESUME`, `0x0002`) e de ler o seu contexto (`THREAD_GET_CONTEXT`, `0x0008`). `SetKeyboardState` pon o estado no fío do script, que o comparte co da xanela (ver o paso 1); e `PostMessageW` publica `WM_KEYDOWN` (`0x0100`) e `WM_KEYUP` (`0x0101`), cos `lParam` que calcula `Send-Key`. Os atallos das tabs non levan Alt, así que non fai falta `WM_SYSKEYDOWN`, a que usa `check-keyboard.ps1` con Alt.
+- Os dous `finally` continúan o fío, liberan a memoria e pechan o *handle* aínda que falle algo: meiga non queda suspendido. Se falla unha función de Windows, `Win32Exception` leva o seu erro, coma en `PostAll`.
+- En teoría, `check-keyboard.ps1`, `check-mouse.ps1` e `check-resize.ps1`, que poñen as modificadoras co fío da xanela correndo, poderían fallar do mesmo xeito. As dúas primeiras nunca fallaron así, e as tres quedan como estaban.
+
+```csharp
+// The priority of the thread of a process whose name is `name`, or null if
+// the process has none, or has ended.
+public static int? PriorityOf(int process, string name)
+{
+    System.Diagnostics.Process target;
+    try { target = System.Diagnostics.Process.GetProcessById(process); }
+    catch (ArgumentException) { return null; }
+    using (target)
+    {
+        System.Diagnostics.ProcessThreadCollection threads;
+        try { threads = target.Threads; }
+        catch (InvalidOperationException) { return null; }
+        foreach (System.Diagnostics.ProcessThread thread in threads)
+        {
+            // THREAD_QUERY_LIMITED_INFORMATION
+            IntPtr handle = OpenThread(0x0800, false, (uint)thread.Id);
+            if (handle == IntPtr.Zero) continue;
+            try
+            {
+                IntPtr text;
+                if (GetThreadDescription(handle, out text) < 0) continue;
+                string description;
+                try { description = Marshal.PtrToStringUni(text); }
+                finally { LocalFree(text); }
+                if (description == name) return GetThreadPriority(handle);
+            }
+            finally { CloseHandle(handle); }
+        }
+    }
+    return null;
+}
+```
+
+**A prioridade dun fío: `PriorityOf`.**
+
+- meiga dálles nome aos dous fíos de cada sesión, co número do proceso do seu programa: o lector chámase `conpty reader` e ese número ([Código › meiga-win › `Conpty::spawn`](meiga-win.md#conptyspawn)). Rust gárdao coma a descrición do fío (`SetThreadDescription`), que pode ler outro proceso.
+- `Process.GetProcessById` dá o proceso de meiga, e `Threads`, os seus fíos. Se meiga xa rematou, a primeira lanza `ArgumentException`, ou a segunda `InvalidOperationException`, se remata entre as dúas: entón `PriorityOf` devolve `null`, coma se non atopase o fío, e quen agarda unha prioridade, `Wait-For`, falla co código de saída de meiga, en vez de cunha excepción de .NET. `using` libera o obxecto `Process` ao saír, tamén con `return`.
+- Para cada fío, `OpenThread` abre un *handle* co permiso máis pequeno que abonda para ler a descrición e a prioridade, `THREAD_QUERY_LIMITED_INFORMATION` (`0x0800`). Se non pode, por exemplo porque o fío xa rematou, pasa ao seguinte.
+- `GetThreadDescription` devolve un `HRESULT`, negativo se falla, e deixa a descrición nunha memoria que reserva Windows: `Marshal.PtrToStringUni` cópiaa nun texto de .NET, e `LocalFree` libéraa, como pide a súa documentación.
+- Se a descrición é o nome que se busca, `GetThreadPriority` dá o nivel do fío, o que lle puxo meiga con `SetThreadPriority`, sen as subidas que lle dá Windows durante un intre ([Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)).
+- Os `finally` liberan a memoria e pechan o *handle* tamén cando se sae con `continue` ou con `return`.
+- `int?` é un número que pode faltar: `null`, en PowerShell `$null`, se ningún fío ten ese nome, por exemplo porque a sesión xa rematou, ou se meiga xa rematou.
+- **Por que a prioridade.** Desde fóra non é doado saber que tab se mostra: meiga aínda non ten a barra das tabs, que chega na subfase 2.3. Pero o lector dunha tab oculta corre con prioridade por debaixo do normal (`THREAD_PRIORITY_BELOW_NORMAL`), e o da tab que se mostra, coa normal ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 10): a mesma lectura comproba esa decisión e di que tab se mostra.
+
+```powershell
+$THREAD_PRIORITY_NORMAL = 0
+$THREAD_PRIORITY_BELOW_NORMAL = -1
+# The console of each tab: the one of the ConPTY of meiga, or the one of
+# Windows if the ConPTY is not next to meiga.exe.
+$consoles = 'OpenConsole.exe', 'conhost.exe'
+$MAPVK_VK_TO_VSC = 0
+# SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS
+$SWP_RESIZE_ONLY = 0x0002 -bor 0x0004 -bor 0x0010 -bor 0x4000
+# The keys that each modifier sets down: Shift and the left Shift, and Ctrl
+# and the left Ctrl.
+$modifierKeys = @{
+    Shift = 0x10, 0xA0
+    Ctrl = 0x11, 0xA2
+}
+```
+
+As constantes, as de Windows cos seus nomes:
+
+- As dúas prioridades que pode ter un lector: a normal, 0, a coa que empeza todo fío, e a de debaixo, -1.
+- `$consoles`, os nomes que pode ter a consola de cada tab, o anfitrión da súa pseudoconsola ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)): `OpenConsole.exe`, o do ConPTY que vai con meiga, ou `conhost.exe`, o de Windows, se ese ConPTY non está ao lado de `meiga.exe`, coma en [`check-window.ps1`](#toolscheck-windowps1).
+- `MAPVK_VK_TO_VSC` pídelle a `MapVirtualKeyExW` o código de exploración dunha tecla.
+- `SWP_RESIZE_ONLY` xunta as opcións de `SetWindowPos` de [`check-present.ps1`](#toolscheck-presentps1): cambiar só o tamaño, sen mover a xanela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`), sen activala (`SWP_NOACTIVATE`) e sen esperar a que meiga trate a petición (`SWP_ASYNCWINDOWPOS`). Esta última só ten efecto entre fíos con colas de entrada distintas ([`SetWindowPos`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setwindowpos)): no paso 7, o fío do script xa está unido ao da xanela (o paso 1), así que `SetWindowPos` pode agardar a que meiga trate a petición.
+- `$modifierKeys` son as teclas que pon abaixo cada modificadora, coma en `check-mouse.ps1`: Maiús e Ctrl.
+
+```powershell
+# The script of the first tab. Each time the check sets the event
+# <Name>-go, it does its next step and reports it in $Log, and sets
+# <Name>-done.
+$program = @'
+param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][string]$Log)
+$ErrorActionPreference = 'Stop'
+$go = [Threading.EventWaitHandle]::OpenExisting("$Name-go")
+$done = [Threading.EventWaitHandle]::OpenExisting("$Name-done")
+$e = [char]27
+$out = [Console]::Out
+function Get-Size { '{0}x{1}' -f [Console]::WindowWidth, [Console]::WindowHeight }
+# The answer to a question, which comes as keys, up to $Last or for
+# $Milliseconds at most, and how long it took.
+function Read-Answer([char]$Last, [int]$Milliseconds) {
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    $answer = ''
+    while ($watch.ElapsedMilliseconds -lt $Milliseconds) {
+        if ([Console]::KeyAvailable) {
+            $char = [Console]::ReadKey($true).KeyChar
+            $answer += $char
+            if ($char -eq $Last) { break }
+        }
+        else { Start-Sleep -Milliseconds 5 }
+    }
+    '{0} {1}' -f ($answer -replace $e, '\e'), $watch.ElapsedMilliseconds
+}
+$hidden = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('meiga-tabs-hidden'))
+$shown = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('meiga-tabs-shown'))
+```
+
+**O script da primeira tab.** Coma o de [`check-present.ps1`](#toolscheck-presentps1), fai un paso cada vez que a comprobación sinala o evento `<Name>-go`, e sinala `<Name>-done` cando o fixo. O novo é o informe: despois de cada paso, o script escribe no arquivo de `-Log` unha liña co que viu, que despois le a comprobación.
+
+- `Get-Size` dá o tamaño da grella da tab, `<columnas>x<filas>`: o da xanela da consola, que é a pseudoconsola da tab.
+- **`Read-Answer`** le a resposta a unha pregunta ao terminal. As respostas chegan ao programa coma teclas, porque o ConPTY as converte, coma o texto pegado ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). `KeyAvailable` di se hai unha tecla, sen esperar, e `ReadKey($true)` le a tecla sen mostrala; mentres non hai ningunha, a función agarda 5 ms entre unha mirada e a seguinte. Le ata o último carácter da resposta, `$Last`, ou ata que pasan `$Milliseconds`, e devolve a resposta, co ESC escrito `\e`, e os milisegundos que levou.
+- `$hidden` e `$shown` son os dous textos que o script copia ao portapapeis, `meiga-tabs-hidden` e `meiga-tabs-shown`, en UTF-8 e en Base64, coma os pide *OSC 52* ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
+
+```powershell
+$steps = @(
+    # Hide the cursor, so that it never blinks, give the tab a title, and
+    # tell the process and the size.
+    { $out.Write("$e[?25l$e]0;meiga-tabs-1$e\$e[2J$e[H"); "ready $PID $(Get-Size)" },
+    # Output for a second.
+    { foreach ($i in 1..20) { $out.Write("$e[$($i + 1);3Hline $i"); Start-Sleep -Milliseconds 50 }; 'burst' },
+    # A question in a synchronized update that is never ended.
+    { $out.Write("$e[?2026h$e[c"); "sync $(Read-Answer 'c' 5000)" },
+    # A title, and text for the clipboard.
+    { $out.Write("$e]0;meiga-tabs-hidden$e\$e]52;c;$hidden$e\"); 'title' },
+    # The size, which it also writes on its screen, twice.
+    { $size = Get-Size; $out.Write("$e[1;1Hsize $size"); "size $size" },
+    { $size = Get-Size; $out.Write("$e[1;1Hsize $size"); "size $size" },
+    # Other text for the clipboard.
+    { $out.Write("$e]52;c;$shown$e\"); 'copy' }
+)
+foreach ($step in $steps) {
+    if (-not $go.WaitOne(60000)) { exit 1 }
+    [IO.File]::AppendAllText($Log, "$(& $step)`n")
+    $null = $done.Set()
+}
+# Until the tab closes, which ends this script.
+$null = $go.WaitOne()
+'@
+```
+
+**Os pasos do script**, cada un co seu informe:
+
+| Paso | Que escribe na pantalla | O informe |
+|---|---|---|
+| 1 | Oculta o cursor (`ESC [ ? 25 l`), pon o título `meiga-tabs-1` (*OSC 0*), borra a pantalla e leva o cursor ao principio. | `ready <proceso> <columnas>x<filas>`: o número do seu proceso e o tamaño da grella. |
+| 2 | `line 1` a `line 20`, nas filas 2 a 21, desde a columna 3, unha cada 50 ms: saída durante un segundo. | `burst` |
+| 3 | Abre unha actualización sincronizada (`ESC [ ? 2026 h`, *DECSET 2026*), que non remata nunca, e pregunta que terminal é (`ESC [ c`, *DA1*). Le a resposta, ata o `c`, ou durante 5 s como moito. | `sync <resposta> <milisegundos>`: `sync \e[?6c …`. |
+| 4 | O título `meiga-tabs-hidden`, e o texto `meiga-tabs-hidden` para o portapapeis (`ESC ] 52 ; c ; base64 ESC \`). | `title` |
+| 5 e 6 | `size` e o tamaño da grella, ao principio da primeira fila. | `size <columnas>x<filas>` |
+| 7 | O texto `meiga-tabs-shown` para o portapapeis. | `copy` |
+
+- **O cursor, oculto,** coma en `check-present.ps1`: o cursor que pestanexa debuxa fotogramas que non pide o script. Así, a primeira tab non debuxa nada se o script non escribe, tampouco cando se ve.
+- **O informe é o que devolve o paso.** Cada bloque escribe na pantalla e despois dá o seu informe, un texto: `"$(& $step)"` executa o bloque e mete o que devolve nunha liña. `AppendAllText` abre o arquivo, escribe e péchao, e só despois sinala o script `done`: cando a comprobación le o arquivo, a liña xa está nel.
+- `ESC [ fila ; columna H` leva o cursor a unha cela: `$($i + 1)` calcula a fila dentro do texto.
+- **A pregunta, nunha actualización que non remata.** Mentres hai unha aberta, `vte` garda tamén as preguntas do programa, e a resposta só sae cando remata ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). O script non a remata nunca: a resposta, `ESC [ ? 6 c`, chega cando a remata meiga, á súa hora límite.
+- **Os pasos do tamaño escriben tamén na pantalla.** O segundo, xa coa tab á vista, esperta a xanela por ela: se meiga gardase aínda o texto que a tab copiou oculta, levaríao entón ao portapapeis (o paso 8 da comprobación).
+- **Os 60 s e o final**, coma en `check-present.ps1`: se a comprobación se interrompe, o script remata só; despois do último paso, agarda sen límite ata que se pecha a súa tab, a última que queda, coa xanela.
+
+```powershell
+$name = "meiga-check-tabs-$PID"
+$temp = [IO.Path]::GetTempPath()
+$log = Join-Path $temp "$name.csv"
+$reports = Join-Path $temp "$name.txt"
+$script = Join-Path $temp "$name.ps1"
+Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+Remove-Item -LiteralPath $reports -ErrorAction SilentlyContinue
+$go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
+$done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
+
+# As per monitor (v2), the same as meiga, the size of the window is in pixels.
+$previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+```
+
+- Os tres arquivos van ao cartafol temporal, co número do proceso da comprobación, coma en `check-present.ps1`: o rexistro dos fotogramas (`.csv`), os informes do script da primeira tab (`.txt`) e o propio script (`.ps1`). Os eventos levan o mesmo nome, con `-go` e `-done`.
+- Os informes bórranse antes de arrancar meiga: o script engade unha liña por paso, e a comprobación le a última. O rexistro non fai falta borralo: meiga baléirao ao arrancar.
+- **Os eventos con nome**, de reinicio automático, coma en `check-present.ps1`: cada `Set` deixa pasar unha espera. O script ábreos con `OpenExisting`, así que se crean antes de arrancar meiga.
+- **A escala do fío.** Por monitor (v2), coma meiga e coma en `check-present.ps1`: os 640 × 480 que se lle piden a `SetWindowPos` no paso 7 son píxeles da xanela, tamén nunha pantalla ao 150 %. Ao rematar, o fío volta á escala que tiña.
+
+```powershell
+# Waits until $Condition is true, or throws what $Failure says.
+function Wait-For([scriptblock]$Condition, [scriptblock]$Failure) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (-not (& $Condition)) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode): $(& $Failure)"
+        }
+        if ([DateTime]::UtcNow -gt $deadline) { throw (& $Failure) }
+        Start-Sleep -Milliseconds 20
+    }
+}
+```
+
+**As esperas.** `Wait-For` é coma a de [`check-mouse.ps1`](#toolscheck-mouseps1): executa `$Condition` cada 20 ms ata que dá `$true` e, se pasa `TimeoutSeconds`, falla coa mensaxe de `$Failure`. Se meiga remata mentres tanto, falla no momento, e agora a mensaxe di tamén o que agardaba: `meiga.exe ended with exit code …: …`.
+
+```powershell
+# The lines of the frame log, as objects. meiga writes each line at once.
+function Get-Log {
+    if (-not (Test-Path -LiteralPath $log)) { return }
+    Get-Content -LiteralPath $log | ConvertFrom-Csv
+}
+
+# The frames after the first $From lines of the log.
+function Get-Frames([int]$From) {
+    @(Get-Log | Select-Object -Skip $From | Where-Object kind -EQ 'frame')
+}
+```
+
+**O rexistro dos fotogramas.**
+
+- `Get-Log` é o de `check-present.ps1`: le o rexistro mentres meiga corre, e `ConvertFrom-Csv` fai de cada liña un obxecto coas columnas da cabeceira. meiga escribe cada liña enteira dunha vez.
+- `Get-Frames` dá as liñas `frame` que van despois das `$From` primeiras: os fotogramas que debuxou meiga, sen os `paint`, que pide Windows, nin os `compose`, que compoñen o *framebuffer* enteiro sen presentalo ([Código › meiga › `trace.rs`](meiga.md#cratesmeigasrctracers)). Cada paso conta antes as liñas do rexistro, en `$start`, e despois mira as que chegaron.
+
+```powershell
+# Waits until meiga has written nothing in its log for $Milliseconds.
+function Wait-Quiet([int]$Milliseconds, [int]$Seconds = $TimeoutSeconds) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
+    $count = -1
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $lines = @(Get-Log).Count
+        if ($lines -ne $count) {
+            $count = $lines
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge $Milliseconds) {
+            return
+        }
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) while the check waited for it to stop drawing."
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$exe kept drawing for $Seconds s."
+        }
+        Start-Sleep -Milliseconds 50
+    }
+}
+```
+
+**`Wait-Quiet`** agarda a que meiga leve `$Milliseconds` sen escribir nada no rexistro, coma a de `check-present.ps1`, pero co tempo de calma e o máximo, `$Seconds`, coma parámetros, e sen devolver as liñas.
+
+- Conta as liñas cada 50 ms. Cando o número cambia, empeza a contar o tempo outra vez, desde `$since`. `$count` empeza en -1, que non é ningún número de liñas: a primeira volta empeza sempre a contar.
+- Os pasos úsana antes de contar as liñas do rexistro, para que as que cheguen despois sexan só súas, e despois dun cambio, para ter todos os seus fotogramas: 400 ms, máis de 10 intervalos entre fotogramas, coma en `check-present.ps1`. Antes da saída da tab oculta, un segundo, ata `TimeoutSeconds` + 10 s (o paso 3).
+- Se meiga remata, ou segue debuxando todo ese tempo, falla.
+
+```powershell
+function Test-Full($Line) {
+    [long]$Line.pixels -eq [long]$Line.width * [long]$Line.height -and [long]$Line.pixels -gt 0
+}
+
+function Show-Lines($Lines) {
+    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels -AutoSize | Out-Host
+}
+```
+
+- `Test-Full` é o de `check-present.ps1`: di se unha liña cubriu a xanela enteira, cos píxeles que presentou iguais ao ancho polo alto.
+- `Show-Lines` mostra unhas liñas do rexistro nunha táboa, antes dun erro: o número, o momento, o tipo e a causa de cada unha, o tamaño do *framebuffer*, e cantos rectángulos e píxeles debuxou.
+
+```powershell
+# The reports of the script of the first tab.
+function Get-Reports {
+    if (-not (Test-Path -LiteralPath $reports)) { return @() }
+    @(Get-Content -LiteralPath $reports)
+}
+
+# Tells the script of the first tab to do its next step, waits until it has
+# done it, and returns its report.
+function Invoke-Step([string]$What) {
+    $null = $go.Set()
+    if (-not $done.WaitOne($TimeoutSeconds * 1000)) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) before the script of the first tab could $What."
+        }
+        throw "The script of the first tab did not $What within $TimeoutSeconds s."
+    }
+    @(Get-Reports)[-1]
+}
+```
+
+**Os informes.** `Get-Reports` le as liñas do arquivo dos informes, ou ningunha se aínda non existe. `Invoke-Step` é o de `check-present.ps1`: sinala `go` e agarda `done`; se non chega a tempo, o erro di que paso era e se meiga rematou. O novo: devolve o informe do paso, a última liña do arquivo. Os pasos que non o necesitan descártano con `$null =`.
+
+```powershell
+# The programs of the tabs: the processes that meiga started, but for the
+# consoles. A process that ended before meiga started may have had a
+# process with the same number as its parent.
+function Get-Shells {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -notin $consoles -and $_.CreationDate -ge $started })
+}
+
+# The consoles of the tabs.
+function Get-Consoles {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -in $consoles -and $_.CreationDate -ge $started })
+}
+
+# The priority of the reader thread of the tab whose program is $Program,
+# or $null if it has none.
+function Get-Priority([int]$Program) {
+    $api::PriorityOf($process.Id, "conpty reader $Program")
+}
+
+# Waits until the tab of $Shown is the one with the reader of normal
+# priority, and the ones of $Hidden have the lower one.
+function Wait-Shown([int]$Shown, [int[]]$Hidden, [string]$What) {
+    Wait-For {
+        (Get-Priority $Shown) -eq $THREAD_PRIORITY_NORMAL -and
+        @($Hidden | Where-Object { (Get-Priority $_) -ne $THREAD_PRIORITY_BELOW_NORMAL }).Count -eq 0
+    } {
+        $all = @($Shown) + $Hidden | ForEach-Object { "$_ $(Get-Priority $_)" }
+        "$What`: the priorities of the readers are not the expected ones (process and priority: $($all -join ', '))."
+    }
+}
+```
+
+**Os programas e as prioridades.**
+
+- **`Get-Shells`** dá os programas das tabs. Cada sesión ten dous procesos fillos de meiga: o seu programa e a súa consola, unha das de `$consoles`. Coma en [`check-window.ps1`](#toolscheck-windowps1), le os fillos de meiga a través de CIM, e quita as consolas: queda un programa por tab. A comprobación coñece cada tab polo número do proceso do seu programa.
+- **`Get-Consoles`** dá as consolas, unha por tab: o paso 10 cóntaas.
+- **`CreationDate -ge $started`**, tamén coma en `check-window.ps1`: Windows reutiliza os números dos procesos, así que un proceso cuxo pai rematou antes de que empezase meiga pode ter coma `ParentProcessId` o número que agora ten meiga. Os fillos de verdade creáronse despois ca meiga: `$started` é a hora á que empezou, que a comprobación le ao arrancalo (ver *Abrir meiga*, máis abaixo).
+- `Get-Priority` dá a prioridade do lector da tab dun programa, co nome que lle pon meiga.
+- **`Wait-Shown`** agarda a que se mostre a tab do programa `$Shown`, e a que estean ocultas as dos programas de `$Hidden`: o lector da primeira, coa prioridade normal, e os das outras, coa de debaixo. Se non pasa a tempo, a mensaxe di o número de cada programa e a prioridade do seu lector, ou nada se non o atopa.
+- **Por que as dúas prioridades.** Ao mostrar unha tab, meiga sobe o seu lector á prioridade normal antes de que a vista colla o seu terminal, e baixa o da tab que se oculta despois ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 10). Cando os dous lectores teñen a súa, a xanela xa cambiou de tab e colleu o título da nova; o fotograma vén despois. Mirar só a nova non abondaría: durante un intre, os dous lectores teñen a normal.
+
+```powershell
+function Get-Title {
+    $process.Refresh()
+    $process.MainWindowTitle
+}
+
+# The text of the clipboard: nothing if it has none, or if another program
+# keeps it open.
+function Get-Text {
+    try { Get-Clipboard -Raw } catch { $null }
+}
+```
+
+- `Get-Title` le o título da xanela, con `Refresh()` cada vez, coma en `check-window.ps1`.
+- `Get-Text` é o de `check-mouse.ps1`: o texto do portapapeis, ou nada se non ten texto ou se outro programa o ten aberto.
+
+```powershell
+# Types a shortcut, such as "Ctrl+Shift+T": sets its modifier keys down, and
+# no other key, and posts the messages of the key going down and up (see
+# TypeKey).
+function Send-Key([string]$Key) {
+    $parts = $Key -split '\+'
+    $code = [int][ConsoleKey]$parts[-1]
+    $state = [byte[]]::new(256)
+    foreach ($modifier in ($parts | Select-Object -SkipLast 1)) {
+        foreach ($down in $modifierKeys[$modifier]) { $state[$down] = 0x80 }
+    }
+    $scan = $api::MapVirtualKeyExW($code, $MAPVK_VK_TO_VSC, $keyboard)
+    [long]$bits = 1 -bor ($scan -shl 16)
+    # Going up: the key was down (bit 30), and goes up (bit 31).
+    $api::TypeKey($window, $thread, $state, $code, $bits, ($bits -bor 0xC0000000L))
+}
+```
+
+**Teclear un atallo,** coma en [`check-keyboard.ps1`](#toolscheck-keyboardps1) (*Teclear unha tecla*), pero co fío da xanela suspendido. As mensaxes van directamente á xanela de meiga, así que non necesita o foco:
+
+1. O estado das teclas, `$state`, leva abaixo as modificadoras do atallo, e só esas: Ctrl, e Maiús se a leva. As modificadoras son todas as partes do atallo menos a última.
+2. O `lParam` leva unha repetición e o código de exploración da tecla na distribución da xanela, `$keyboard`, que a comprobación le ao principio; e, ao subir, os bits 30 e 31. Sen Alt nin teclas estendidas: os atallos das tabs non as usan.
+3. `TypeKey`, enriba, suspende o fío da xanela, pon o estado das teclas e publica as dúas mensaxes, `WM_KEYDOWN` e `WM_KEYUP`, unha tras outra, co código de tecla virtual, co nome de `ConsoleKey`: `T`, `Tab` ou `W`.
+
+**Un atallo cada vez.** O estado das teclas é un só, e meiga leo cando trata a mensaxe, non cando se publica. `TypeKey` protexe cada atallo da entrada de Windows, pero non do seguinte atallo: se a comprobación puxese o estado do seguinte antes de que meiga tratase o anterior, o anterior chegaría coas modificadoras do seguinte. Por iso, antes do seguinte atallo, a comprobación agarda sempre o que fai o anterior: un programa novo, as prioridades dos lectores, ou que remate un programa.
+
+```powershell
+# Opens a tab with Ctrl+Shift+T, and returns the process of its program once
+# its tab is shown, with the tabs of $Hidden hidden.
+function Open-Tab([int[]]$Hidden) {
+    $before = @(Get-Shells | ForEach-Object ProcessId)
+    Send-Key 'Ctrl+Shift+T'
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (-not ($opened = Get-Shells | Where-Object { $_.ProcessId -notin $before } | Select-Object -First 1)) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) after Ctrl+Shift+T."
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "Ctrl+Shift+T did not open a tab with a program within $TimeoutSeconds s."
+        }
+        Start-Sleep -Milliseconds 20
+    }
+    Wait-Shown $opened.ProcessId $Hidden 'After Ctrl+Shift+T'
+    $opened
+}
+
+# Waits until the process $Id has ended, also after meiga.
+function Wait-Ended([int]$Id, [string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (Get-Process -Id $Id -ErrorAction Ignore) {
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What was still running after $TimeoutSeconds s."
+        }
+        Start-Sleep -Milliseconds 20
+    }
+}
+```
+
+**Abrir unha tab, e agardar a que remate un programa.**
+
+- **`Open-Tab`** apunta os programas que hai, teclea Ctrl+Maiús+T e agarda un programa que non estaba: o da tab nova. Despois, `Wait-Shown`: a tab nova móstrase, e as de `$Hidden` quedan ocultas. Devolve o proceso, co seu nome (`Name`) e o seu número (`ProcessId`).
+- O `while` asigna e comproba de vez: entre parénteses, unha asignación dá o valor asignado, coma en `Wait-Copied` de [`check-resize.ps1`](#toolscheck-resizeps1). Non usa `Wait-For` porque o proceso fai falta despois do bucle, e unha variábel asignada no bloque de `Wait-For` desaparece co seu ámbito, como se explica alí.
+- **`Wait-Ended`** agarda a que remate un proceso, coma ao final de `check-window.ps1`: `Get-Process -Id … -ErrorAction Ignore` non dá nada, sen erro, cando xa non existe. Non mira meiga, así que serve tamén despois de que remate: o programa da primeira tab remata despois da xanela.
+
+```powershell
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
+    '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name, '-Log', $reports) {
+    $info.ArgumentList.Add($argument)
+}
+$process = $null
+$attached = $false
+$saved = Get-Text
+$passed = $false
+try {
+    $process = [Diagnostics.Process]::Start($info)
+    $started = $process.StartTime
+    $idle = try { $process.WaitForInputIdle($TimeoutSeconds * 1000) } catch { $false }
+    if (-not $idle) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) before it opened its window."
+        }
+        throw "$exe did not open its window within $TimeoutSeconds s."
+    }
+    $process.Refresh()
+    $window = $process.MainWindowHandle
+    $processId = [uint32]0
+    $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
+    $keyboard = $api::GetKeyboardLayout($thread)
+```
+
+**Abrir meiga.**
+
+- A liña de comandos é coma en `check-present.ps1`: o rexistro dos fotogramas (`--trace-frames`), e pwsh co script da primeira tab e as mesmas opcións, o nome dos eventos (`-Name`) e o arquivo dos informes (`-Log`). Só a primeira tab corre o programa da liña de comandos de meiga: as novas corren a shell por defecto ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 12).
+- As variábeis que usan o `finally` e as funcións créanse antes, porque `Set-StrictMode` non deixa ler unha que non existe, e `$saved` garda o texto do portapapeis.
+- Despois, coma `Start-Meiga` en `check-mouse.ps1`: arranca meiga, agarda a súa xanela con `WaitForInputIdle`, e colle a xanela e o fío que a trata; e, para as teclas, a distribución do teclado dese fío.
+- `$started`, lido xusto despois de arrancar meiga, é a hora á que empezou: os fillos que contan `Get-Shells` e `Get-Consoles` son os creados despois.
+
+**Os pasos,** dez, numerados no código. Os 1, 3, 6 e 7 non teñen liña `OK:`: preparan os seguintes, ou fallan se algo vai mal; o 8 ten dúas.
+
+| Paso | Que fai a comprobación | Que ten que pasar |
+|---|---|---|
+| 1 | O script da primeira tab oculta o cursor e pon un título. | A xanela ten ese título, e o lector da tab, a prioridade normal. |
+| 2 | Ctrl+Maiús+T. | Arranca un programa novo, nunha tab que se mostra cun primeiro fotograma completo. O lector da tab nova ten a prioridade normal, e o da primeira, a de debaixo. |
+| 3 | Nada. | Un segundo sen fotogramas: o cursor da tab nova xa non pestanexa. |
+| 4 | A primeira tab, oculta, escribe durante un segundo. | Ningún fotograma. |
+| 5 | A primeira tab abre unha actualización sincronizada, pregunta que terminal é e non a remata. | O programa recibe a resposta en menos de 1 s, e a xanela non debuxa nada. |
+| 6 | Un texto propio no portapapeis. A primeira tab pon un título e copia outro texto. | Nin o título da xanela nin o portapapeis cambian. |
+| 7 | A xanela pasa a 640 × 480 píxeles. | A primeira tab segue coa súa grella. |
+| 8 | Ctrl+Tab. Mira se a xanela está en primeiro plano. A primeira tab di o seu tamaño, e despois copia outro texto. | Móstrase a primeira tab, cun só fotograma completo, co título que puxo oculta e coa grella da xanela. O texto que copiou oculta non chega ao portapapeis; o novo, en primeiro plano, si. |
+| 9 | Ctrl+Maiús+T, Ctrl+Tab e dúas veces Ctrl+Maiús+Tab. | Móstranse a terceira tab, a primeira, a terceira e a segunda. |
+| 10 | Tres veces Ctrl+Maiús+W. | Péchanse a segunda tab e a terceira, cos seus programas, e móstranse a terceira e a primeira; a última pecha a xanela, e meiga sae co código 0. |
+
+```powershell
+    # 1. The first tab, alone.
+    $ready = Invoke-Step 'start'
+    $first, $firstSize = ($ready -split ' ')[1, 2]
+    $first = [int]$first
+    Wait-For { (Get-Title) -eq 'meiga-tabs-1' } { "The title of the window is '$(Get-Title)' instead of 'meiga-tabs-1'." }
+    Wait-Shown $first @() 'With one tab'
+```
+
+**1. A primeira tab, soa.** O primeiro paso do script oculta o cursor e pon o título, e o seu informe di o número do seu proceso e a súa grella: `$first` é o programa da primeira tab, e `$firstSize`, a grella que tiña ao arrancar. `($ready -split ' ')[1, 2]` colle a segunda e a terceira palabra do informe de vez. Cando a xanela ten o título `meiga-tabs-1`, meiga xa leu o que escribiu o script. Cunha tab soa, o seu lector ten a prioridade normal, a coa que empeza todo fío.
+
+```powershell
+    # SetKeyboardState sets the key state of the thread that calls it: share
+    # it with the thread of the window. This thread needs a message queue,
+    # which PeekMessageW creates.
+    $message = [Meiga.Tools.TabsCheck+MSG]::new()
+    $null = $api::PeekMessageW([ref]$message, [IntPtr]::Zero, 0, 0, 0)
+    $attached = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $true)
+    if (-not $attached) {
+        throw "AttachThreadInput failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+```
+
+**O estado das teclas compartido,** coma `Connect-Keyboard` en `check-mouse.ps1`: `SetKeyboardState` cambia o do fío que a chama, e con `AttachThreadInput` o fío do script e o da xanela compárteno. Antes, `PeekMessageW` crea a cola de mensaxes que necesita `AttachThreadInput`.
+
+```powershell
+    # 2. A second tab, with the default shell.
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    $second = Open-Tab @($first)
+    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'The window drew nothing after Ctrl+Shift+T.' }
+    $frame = (Get-Frames $start)[0]
+    if (-not (Test-Full $frame)) {
+        Show-Lines (Get-Frames $start)
+        throw 'The first frame after Ctrl+Shift+T does not draw the whole window.'
+    }
+    if ((Get-Title) -eq 'meiga-tabs-1') {
+        throw 'The window kept the title of the first tab after Ctrl+Shift+T.'
+    }
+    Write-Host "OK: Ctrl+Shift+T opens a tab with the default shell ($($second.Name)), and shows it with a full frame; the reader of the hidden tab gets a lower priority."
+    $second = [int]$second.ProcessId
+```
+
+**2. Unha tab nova.**
+
+- Primeiro, `Wait-Quiet`: meiga remata de debuxar o que escribiu a primeira tab. As liñas do rexistro que cheguen despois de `$start` son da tab nova.
+- Ctrl+Maiús+T abre unha tab ao final e móstraa ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 11): `Open-Tab` agarda o seu programa e as prioridades, a normal para o lector novo e a de debaixo para o da primeira tab.
+- **O primeiro fotograma, completo.** A vista esquece a pantalla que tiña e copia enteira a da tab nova, e o fotograma debuxa a xanela enteira, marxes incluídas (decisión 5). Se a vista copiase só o que cambiou, o fotograma só debuxaría as celas distintas.
+- **O título.** A xanela xa non pode ter o da primeira tab: colle o da nova, ou «meiga» mentres o seu programa non pon ningún (decisión 8). Non fai falta agardalo: meiga cámbiao antes de baixar a prioridade do lector vello, que `Open-Tab` xa viu.
+- A liña `OK:` di o nome do programa novo, `pwsh.exe`, a shell por defecto (decisión 12). A comprobación non o compara con nada. Despois, `$second` garda só o número do seu proceso.
+
+```powershell
+    # 3. Nothing is drawn for a second: the cursor of the new tab, if it
+    # blinks, has stopped.
+    Wait-Quiet 1000 ($TimeoutSeconds + 10)
+```
+
+**3. Un segundo sen fotogramas.** A shell da tab nova mostra o seu cursor e, mentres a xanela ten o foco, o cursor pestanexa, se Windows o deixa: cada cambio é un fotograma ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)). Deixa de pestanexar, visíbel, cando pasa o tempo de espera sen cambios na pantalla, 5 s por defecto, contados desde o último que escribiu a shell ao arrancar. Os pasos 4 e 5 non esperan ningún fotograma, así que antes a comprobación agarda un segundo sen ningún, máis ca medio pestanexo, 530 ms por defecto. Iso pode levar o tempo de espera e uns segundos máis: por iso agarda ata `TimeoutSeconds` + 10 s. Sen o foco, ou cando Windows desactiva o pestanexo, coma pode facer o Escritorio remoto, a espera é máis curta.
+
+```powershell
+    # 4. The hidden tab writes for a second.
+    $start = @(Get-Log).Count
+    $null = Invoke-Step 'write while it is hidden'
+    Start-Sleep -Milliseconds 300
+    $frames = @(Get-Frames $start)
+    if ($frames.Count -gt 0) {
+        Show-Lines $frames
+        throw 'The window drew while the output of a hidden tab changed.'
+    }
+    Write-Host 'OK: while a tab is hidden, the output of its program draws nothing.'
+```
+
+**4. A saída dunha tab oculta.** A primeira tab, oculta, escribe 20 liñas nun segundo. O seu fío lector dállas ao seu terminal, pero a xanela non copia nin debuxa a pantalla dunha tab oculta, e o primeiro cambio espértaa unha soa vez ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 3). `Invoke-Step` volta cando o script escribiu a última liña; a pausa de 300 ms dálle tempo á saída para chegar a meiga e, se meiga debuxase, ao fotograma para aparecer no rexistro, coma no paso 6 de `check-present.ps1`. Non pode haber ningún fotograma: nin da tab oculta, nin da que se ve, que está quieta.
+
+```powershell
+    # 5. A question in a synchronized update that the program never ends.
+    $start = @(Get-Log).Count
+    $sync = Invoke-Step 'ask in a synchronized update while it is hidden'
+    $answer, $milliseconds = ($sync -split ' ')[1, 2]
+    if ($answer -ne '\e[?6c' -or [int]$milliseconds -gt 1000) {
+        throw "A hidden tab that left a synchronized update open did not get the answer to its question in time: '$sync'."
+    }
+    Start-Sleep -Milliseconds 200
+    $frames = @(Get-Frames $start)
+    if ($frames.Count -gt 0) {
+        Show-Lines $frames
+        throw 'The window drew when it ended the synchronized update of a hidden tab.'
+    }
+    Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline ($milliseconds ms), without drawing."
+```
+
+**5. Unha pregunta nunha actualización sincronizada que o programa non remata.**
+
+- O script pregunta que terminal é dentro dunha actualización que deixa aberta, e o seu informe di a resposta e os milisegundos que agardou. A resposta ten que ser `ESC [ ? 6 c` (`\e[?6c` no informe), e chegar en menos de 1 s.
+- **Por que chega.** O fío lector avisa á xanela cando se abre a actualización, a xanela apunta cando remata, e o temporizador dos fotogramas vence a esa hora, aínda que non haxa ningún fotograma que debuxar: meiga remata a actualización sen copiar nin debuxar nada, e a resposta vai ao programa (decisión 4). Os programas que preguntan algo ao terminal esperan a resposta: nunha tab que non se mostrase, quedarían parados.
+- **Os milisegundos** da liña `OK:` son os da hora límite, 150 ms, máis o camiño da pregunta e o da resposta, así que cambian dunha vez a outra. O límite dun segundo deixa marxe para unha máquina ocupada. Unha meiga que non rematase as actualizacións das tabs ocultas gardaría a pregunta ata mostrar a tab, e o script agardaría os seus 5 s sen resposta.
+- Despois, 200 ms máis: rematar a actualización non pode debuxar nada.
+- `$answer, $milliseconds = …` asigna as dúas palabras de vez. Son textos: `[int]` converte os milisegundos nun número para comparalos.
+
+```powershell
+    # 6. A title, and text for the clipboard, while it is hidden.
+    $sentinel = "meiga-check-tabs-$PID"
+    Wait-For { try { Set-Clipboard -Value $sentinel } catch { $null }; (Get-Text) -ceq $sentinel } `
+    { "Could not put '$sentinel' in the clipboard." }
+    $title = Get-Title
+    $null = Invoke-Step 'write a title and copy text while it is hidden'
+    Start-Sleep -Milliseconds 300
+    if ((Get-Title) -ne $title) {
+        throw "The title of a hidden tab reached the window: '$(Get-Title)'."
+    }
+    if ((Get-Text) -cne $sentinel) {
+        throw "A hidden tab copied text to the clipboard: '$(Get-Text)'."
+    }
+```
+
+**6. Un título e un texto para o portapapeis, coa tab oculta.**
+
+- **Un texto testemuña.** A comprobación pon no portapapeis un texto propio, `meiga-check-tabs-` e o número do seu proceso, e téntao outra vez mentres outro programa o teña aberto, coma `Set-Text` en `check-mouse.ps1`. Se o portapapeis deixa de telo, copiou unha tab.
+- A tab oculta pon o título `meiga-tabs-hidden` e copia o texto `meiga-tabs-hidden`. Despois de 300 ms, a xanela segue co título que tiña, e o portapapeis, coa testemuña: a xanela non colle o título dunha tab oculta nin o seu texto ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 8). O título agarda a que se mostre a tab (o paso 8); o texto non chega nunca.
+- **O primeiro plano.** meiga só deixa que un programa copie ao portapapeis se a súa xanela ten o foco e está en primeiro plano ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 11). Sen el, o portapapeis tampouco cambiaría se meiga collese o texto: por iso o paso 8 mira onde está a xanela, e ten un control positivo.
+
+```powershell
+    # 7. The window changes size: the hidden tab keeps its grid.
+    $start = @(Get-Log).Count
+    if (-not $api::SetWindowPos($window, [IntPtr]::Zero, 0, 0, 640, 480, $SWP_RESIZE_ONLY)) {
+        throw 'SetWindowPos could not change the size of the window.'
+    }
+    Wait-For { @(Get-Log | Select-Object -Skip $start | Where-Object kind -EQ 'compose').Count -gt 0 } `
+    { 'The window was not composed at its new size.' }
+    Wait-Quiet 400
+    $hiddenSize = ((Invoke-Step 'tell its size while it is hidden') -split ' ')[1]
+    if ($hiddenSize -ne $firstSize) {
+        throw "A hidden tab got another grid while the window changed size: $hiddenSize instead of $firstSize."
+    }
+```
+
+**7. A xanela cambia de tamaño.**
+
+- `SetWindowPos` fai a xanela de 640 × 480 píxeles, co seu marco, máis pequena ca a que abre Windows: a grella que a enche é outra. Se Windows non acepta a petición, a comprobación falla no momento. Cando `SetWindowPos` volta, meiga pode non ter composto aínda o tamaño novo, así que a comprobación agarda unha liña `compose`, o *framebuffer* composto co tamaño novo, coma no paso 9 de `check-present.ps1`, e despois a que meiga deixe de debuxar: a shell da segunda tab, a que se ve, recibe a grella nova e redebuxa.
+- A primeira tab, oculta, escribe o seu tamaño e dío no seu informe: ten que ser o de antes, `$firstSize`. Unha tab oculta mantén a súa grella: o seu terminal non reparte o historial, nin o seu ConPTY a pantalla, nin o seu programa redebuxa, para un tamaño que pode cambiar outra vez antes de que se vexa ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 6).
+- **As parénteses** de `(Invoke-Step …) -split ' '` fan falta: sen elas, PowerShell lería `-split` coma un parámetro de `Invoke-Step`.
+
+```powershell
+    # 8. Ctrl+Tab: the first tab again.
+    $start = @(Get-Log).Count
+    Send-Key 'Ctrl+Tab'
+    Wait-Shown $first @($second) 'After Ctrl+Tab'
+    Wait-For { (Get-Title) -eq 'meiga-tabs-hidden' } `
+    { "The window did not take the title of the tab that it shows: it is '$(Get-Title)' instead of 'meiga-tabs-hidden'." }
+    Wait-Quiet 400
+    $full = @(Get-Frames $start | Where-Object { Test-Full $_ })
+    if ($full.Count -ne 1) {
+        Show-Lines (Get-Frames $start)
+        throw "Showing another tab made $($full.Count) full frames instead of 1."
+    }
+```
+
+**8. Ctrl+Tab: a primeira tab, outra vez.**
+
+- Desde a última tab, Ctrl+Tab mostra a primeira: dá a volta. `Wait-Shown` agarda o seu lector coa prioridade normal, e o da segunda, coa de debaixo.
+- A xanela colle o título que a primeira tab puxo mentres estaba oculta, `meiga-tabs-hidden` (decisión 8).
+- **Un só fotograma completo.** Cando meiga deixa de debuxar, desde o atallo ten que haber exactamente un fotograma completo: cambiar de tab debuxa a xanela enteira unha vez (decisión 5), e a grella nova vai nese mesmo fotograma, porque a vista lla dá na seguinte posta ao día, sen agardar polo intervalo entre fotogramas (decisión 6). Se a grella chegase nun fotograma posterior, habería dous completos: un coa grella vella e outro coa nova.
+
+```powershell
+    # A program can only copy text while the window is in the foreground,
+    # which has to stay so, or not, until the end of this step.
+    $foreground = $api::GetForegroundWindow() -eq $window
+    $moved = {
+        if (($api::GetForegroundWindow() -eq $window) -ne $foreground) {
+            ' The window went in or out of the foreground meanwhile: run the check again without using the mouse or the keyboard.'
+        }
+    }
+    $shownSize = ((Invoke-Step 'tell its size once it is shown') -split ' ')[1]
+    if ($shownSize -eq $firstSize) {
+        throw "Once shown, the tab still has the grid that it had before the window changed size: $shownSize."
+    }
+```
+
+**O primeiro plano, e a grella da xanela.**
+
+- `$foreground` di se a xanela de meiga está en primeiro plano: só entón pode copiar un programa ao portapapeis (o paso 6). Coma en `check-mouse.ps1`, a comprobación non escolle onde está a xanela: míraa, e despois comproba o que corresponde. Mira o primeiro plano eiquí, xusto antes de que a tab á vista escriba e copie, que é cando importa: así queda pouco tempo para que cambie.
+- **`$moved`** é un bloque que, se a xanela entrou ou saíu do primeiro plano desde entón, dá unha frase máis para a mensaxe de erro: que a xanela cambiou, e que se volte correr a comprobación sen usar o rato nin o teclado. Se non cambiou, non dá nada. `$(& $moved)` execútao dentro do texto da mensaxe, así que mira o primeiro plano no momento do erro.
+- **A grella da xanela.** A tab di outra vez o seu tamaño, e agora ten que ser outro: a grella que enche a xanela de 640 × 480, que recibiu ao mostrarse.
+
+```powershell
+    # What it writes now wakes the window up for it, which would take the
+    # text for the clipboard, if it were still waiting.
+    Start-Sleep -Milliseconds 300
+    if ((Get-Text) -cne $sentinel) {
+        throw "The text that a tab copied to the clipboard while it was hidden reached it once it was shown: '$(Get-Text)'."
+    }
+    # The text that it copies now does, if the window can take it: then the
+    # window could have taken the other one too.
+    $null = Invoke-Step 'copy text once it is shown'
+    if ($foreground) {
+        Wait-For { (Get-Text) -ceq 'meiga-tabs-shown' } `
+        { "The text that a tab copied to the clipboard once it was shown did not reach it: it has '$(Get-Text)'.$(& $moved)" }
+    }
+    else {
+        Start-Sleep -Milliseconds 300
+        if ((Get-Text) -cne $sentinel) {
+            throw "A tab copied text to the clipboard while the window was not in the foreground: '$(Get-Text)'.$(& $moved)"
+        }
+    }
+    Write-Host "OK: Ctrl+Tab shows the other tab with one full frame and gives it the grid of the window ($firstSize -> $shownSize), which it did not get while it was hidden."
+    if ($foreground) {
+        Write-Host 'OK: the title of a hidden tab reaches the window once the tab is shown; the text that it copied to the clipboard never does, and the text that it copies once shown does.'
+    }
+    else {
+        Write-Host 'OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.'
+    }
+```
+
+**O portapapeis, coa tab á vista.**
+
+- **O texto copiado oculta, nunca.** O tamaño que acaba de escribir a tab na súa pantalla esperta a xanela por ela, e a xanela, cando esperta pola tab que se ve, colle o texto para o portapapeis se ten un pendente. Se meiga gardase aínda o que a tab copiou oculta, chegaría agora. Despois de 300 ms, o portapapeis ten que seguir coa testemuña: meiga descartou o texto ao mostrar a tab (decisión 8).
+- **O control positivo.** Despois, a tab, xa á vista, copia `meiga-tabs-shown`. En primeiro plano, coma na CI, ese texto ten que chegar ao portapapeis: a xanela podía copiar, así que, se o texto da tab oculta non chegou, foi porque meiga o descartou. Sen o primeiro plano, meiga non deixa copiar a ningún programa, oculto ou á vista: o portapapeis ten que seguir coa testemuña, e a liña `OK:` dío. Entón, a comprobación só demostra que ningunha tab copia, e non que meiga descarte o texto dunha tab oculta.
+- **Se cambia o primeiro plano** no medio, un dos dous controis pode fallar aínda que meiga faga o que debe: por iso as súas mensaxes rematan con `$(& $moved)`, que o di. A do texto copiado oculta non: ese texto non pode chegar nunca, estea onde estea a xanela.
+- As dúas liñas `OK:` saen ao final, cando pasou todo o paso.
+
+```powershell
+    # 9. A third tab, and around the tabs.
+    $third = [int](Open-Tab @($first, $second)).ProcessId
+    Send-Key 'Ctrl+Tab'
+    Wait-Shown $first @($second, $third) 'Ctrl+Tab from the last tab'
+    Send-Key 'Ctrl+Shift+Tab'
+    Wait-Shown $third @($first, $second) 'Ctrl+Shift+Tab from the first tab'
+    Send-Key 'Ctrl+Shift+Tab'
+    Wait-Shown $second @($first, $third) 'Ctrl+Shift+Tab'
+    Write-Host 'OK: Ctrl+Tab and Ctrl+Shift+Tab go round the tabs: 3 -> 1 -> 3 -> 2.'
+```
+
+**9. A volta ás tabs.** Unha terceira tab, ao final, despois da segunda: as tabs quedan na orde 1, 2 e 3, e móstrase a 3. Ctrl+Tab, desde a última, mostra a primeira; Ctrl+Maiús+Tab, desde a primeira, a última; e outra vez, a anterior, a segunda ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 11). Despois de cada atallo, `Wait-Shown` comproba que se mostra a tab que toca, coas outras dúas ocultas. `3 -> 1 -> 3 -> 2` son os seus lugares na orde.
+
+```powershell
+    # 10. Closing the tabs.
+    Send-Key 'Ctrl+Shift+W'
+    Wait-Ended $second 'The program of the closed tab'
+    Wait-Shown $third @($first) 'After closing the second tab'
+    Send-Key 'Ctrl+Shift+W'
+    Wait-Ended $third 'The program of the closed tab'
+    Wait-Shown $first @() 'After closing the last tab of the bar'
+    Wait-For { (Get-Consoles).Count -eq 1 } { "With one tab left, $exe does not have one console." }
+    Write-Host 'OK: Ctrl+Shift+W closes the tab that is shown, and its programs end; then the tab on its right is shown or, after the last one, the one on its left.'
+
+    Send-Key 'Ctrl+Shift+W'
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "$exe was still running $TimeoutSeconds s after its last tab was closed."
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0."
+    }
+    Wait-Ended $first 'The program of the first tab'
+    Write-Host 'OK: closing the last tab closes the window, and it ends with exit code 0.'
+    $passed = $true
+}
+```
+
+**10. Pechar as tabs.**
+
+- Ctrl+Maiús+W pecha a segunda tab, a que se mostra, e a súa sesión, sen esperar ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)): o seu programa ten que rematar, e móstrase a tab da súa dereita, a terceira. Outra vez: pecha a terceira, que agora é a última, e móstrase a da súa esquerda, a primeira ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 11).
+- Despois, `Get-Consoles` ten que dar unha soa consola, a da primeira tab: as das dúas tabs pechadas remataron tamén. Vale calquera das de `$consoles`, así que isto funciona tamén co ConPTY de Windows.
+- **A última tab.** Ctrl+Maiús+W nela pecha a xanela, coma o botón X: meiga ten que rematar, co código de saída 0, coma en `check-window.ps1`; e o programa da primeira tab, o script, tamén, porque a súa sesión se pecha coa xanela. Despois, `$passed` di que todo foi ben.
+
+```powershell
+finally {
+    if ($attached) {
+        $null = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $false)
+    }
+    if ($process) {
+        if (-not $process.HasExited) {
+            $process.Kill()
+        }
+        $process.Dispose()
+    }
+    $null = $api::SetThreadDpiAwarenessContext($previousDpi)
+    # The text that the clipboard had, or nothing.
+    for ($try = 0; $try -lt 20; $try++) {
+        …
+    }
+    $go.Dispose()
+    $done.Dispose()
+    Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    if ($passed) {
+        Remove-Item -LiteralPath $log, $reports -ErrorAction SilentlyContinue
+    }
+    else {
+        foreach ($file in $log, $reports) {
+            if (Test-Path -LiteralPath $file) { Write-Host "Kept $file" }
+        }
+    }
+}
+```
+
+O `finally` é coma o de `check-mouse.ps1`, sen o punteiro, que esta comprobación non move:
+
+- O fío do script deixa de compartir o estado das teclas, e meiga non queda aberto: se a comprobación fallou no medio, remátao (`Kill`). O fío volta á súa escala.
+- **O portapapeis** volta ter o texto que tiña ou, se non tiña texto, queda baleiro, co mesmo bucle de ata 20 intentos, cada 50 ms.
+- `Dispose` pecha os eventos, coma en `check-present.ps1`, e o script da primeira tab bórrase sempre.
+- **Se algo fallou,** o rexistro dos fotogramas e os informes gárdanse, e a comprobación di onde, cunha liña `Kept …` por arquivo: no rexistro están os fotogramas de cada paso, e nos informes, o que viu o script. Se todo foi ben, bórranse.
+
+A CI executa este script en cada PR, despois de `check-resize.ps1`, no paso *Check the tabs* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a xanela de meiga está en primeiro plano, así que comproba tamén o control positivo: o texto que copia unha tab á vista chega ao portapapeis, e o dunha tab oculta, non.
+
 ## `tools/terminal-sample.ps1`
 
 Desde a subfase 1.6. Escribe unha mostra do que ten que saber mostrar un terminal, para comprobala a ollo: as cores, os estilos e os caracteres que non son ASCII. Ata a 1.5, a demo de meiga mostraba un texto fixo; desde a 1.6, meiga só mostra o que escribe o seu programa, e esta mostra é o programa que ensina de vez todo o que debuxa. Tamén se pode executar noutro terminal, para comparar. Non comproba nada soa: hai que mirala.
@@ -3308,10 +4199,10 @@ A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso 
    }
    ```
 
-`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 1.9, con [`check-resize.ps1`](#toolscheck-resizeps1), son 22:
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 2.2, con [`check-tabs.ps1`](#toolscheck-tabsps1), son 23:
 
 ```text
-OK: the 22 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+OK: the 23 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
 ```
 
 | Comprobación | Como |

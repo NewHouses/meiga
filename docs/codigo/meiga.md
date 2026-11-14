@@ -1,8 +1,8 @@
 # Código › `meiga` (o programa)
 
-> Estado: subfase 1.10. O programa é un terminal: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell, mostra a súa saída na xanela, coas cores, os estilos, o cursor e o título que pon o programa, e envíalle as teclas e o foco. O rato selecciona texto, que vai ao portapapeis, ou chega ao programa, se o pediu; as teclas e o botón dereito copian e pegan. A grella enche a xanela e segue o seu tamaño e a súa escala; o historial vese coa roda, coas teclas e cunha barra de desprazamento; e o texto ten zoom. Presenta só as zonas que cambian. Tamén ten tres modos de medición (`--bench`), un rexistro dos fotogramas (`--trace-frames`) e as marcas das zonas presentadas (`--marks`). Na 1.6 desapareceu a demo, e chegaron `session.rs` e `view.rs`; na 1.7, o teclado, e as marcas pasaron da tecla P á opción `--marks`; na 1.8, o rato, a selección e o portapapeis, con `mouse.rs` e `clipboard.rs`; e na 1.9, o historial, o tamaño e o zoom, con `scrollbar.rs`. Na 1.10 non cambiou o código: só chegou a ligazón ao ADR 0017.
+> Estado: subfase 2.2. O programa é un terminal con tabs: lanza nunha pseudoconsola o programa da súa liña de comandos ou, sen el, PowerShell, mostra a súa saída na xanela, coas cores, os estilos, o cursor e o título que pon o programa, e envíalle as teclas e o foco. Cada tab ten a súa sesión, e as que se abren despois da primeira corren PowerShell; unha tab oculta segue lendo a saída do seu programa, sen debuxala, e respondéndolle. O rato selecciona texto, que vai ao portapapeis, ou chega ao programa, se o pediu; as teclas e o botón dereito copian e pegan. A grella enche a xanela e segue o seu tamaño e a súa escala; o historial vese coa roda, coas teclas e cunha barra de desprazamento; e o texto ten zoom. Presenta só as zonas que cambian. Tamén ten tres modos de medición (`--bench`), un rexistro dos fotogramas (`--trace-frames`) e as marcas das zonas presentadas (`--marks`). Na 1.6 desapareceu a demo, e chegaron `session.rs` e `view.rs`; na 1.7, o teclado, e as marcas pasaron da tecla P á opción `--marks`; na 1.8, o rato, a selección e o portapapeis, con `mouse.rs` e `clipboard.rs`; e na 1.9, o historial, o tamaño e o zoom, con `scrollbar.rs`. Na 1.10 non cambiou o código: só chegou a ligazón ao ADR 0017; nin na 2.1, que trouxo o modelo das tabs a `meiga-core`. Na 2.2 chegaron as tabs: unha sesión por cada unha, que segue en segundo plano, e catro atallos provisionais para abrilas, pechalas e cambiar de tab, con `tabs.rs`.
 
-**Responsabilidade:** unir as pezas. Crea a xanela, lanza o programa nunha sesión de ConPTY, leva a súa saída á pantalla co fluxo de fotogramas, e as teclas e o rato ao programa, dálles ao terminal e ao programa a grella que enche a xanela, e copia e pega co portapapeis de Windows, usando os outros tres crates. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates) e, para o camiño da saída, [Arquitectura › Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma); para o das teclas, [Arquitectura › O teclado](../arquitectura.md#o-teclado-da-tecla-ao-programa); para o do rato e o do texto, [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); e para o dun cambio de tamaño e o da vista do historial, [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom).
+**Responsabilidade:** unir as pezas. Crea a xanela e as súas tabs, lanza o programa de cada tab nunha sesión de ConPTY, leva á pantalla a saída do da tab que se mostra co fluxo de fotogramas, e as teclas e o rato a ese programa, dálles ao terminal e ao programa a grella que enche a xanela, e copia e pega co portapapeis de Windows, usando os outros tres crates. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates) e, para o camiño da saída, [Arquitectura › Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma); para o das teclas, [Arquitectura › O teclado](../arquitectura.md#o-teclado-da-tecla-ao-programa); para o do rato e o do texto, [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); para o dun cambio de tamaño e o da vista do historial, [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom); e para o das tabs, [Arquitectura › As tabs: unha sesión por tab e as tabs en segundo plano](../arquitectura.md#as-tabs-unha-sesión-por-tab-e-as-tabs-en-segundo-plano).
 
 | Arquivo | Contido |
 |---|---|
@@ -11,9 +11,10 @@
 | [`meiga.exe.manifest`](#cratesmeigameigaexemanifest) | O manifesto da aplicación: como debe executala Windows. |
 | [`src/main.rs`](#cratesmeigasrcmainrs) | O punto de entrada: as opcións, a xanela e a mensaxe de erro. |
 | [`src/options.rs`](#cratesmeigasrcoptionsrs) | As opcións da liña de comandos, co programa que se lanza. |
-| [`src/app.rs`](#cratesmeigasrcapprs) | `App`, o *handler* da xanela: crea o contido, o terminal ou un modo de medición, leva os eventos a el e aos fotogramas, e pon no portapapeis o texto que copia o programa. |
-| [`src/session.rs`](#cratesmeigasrcsessionrs) | A sesión do terminal: o programa, e o fío lector que lle dá a súa saída ao terminal, responde ao programa e esperta a xanela. |
-| [`src/view.rs`](#cratesmeigasrcviewrs) | `TerminalView`, o terminal na xanela: a súa copia da pantalla, posta ao día antes de cada fotograma, o debuxo das celas, as súas liñas, a selección e o cursor, e as teclas e o foco, que lle envía ao programa, salvo as que colle para copiar e pegar, para mover a vista do historial e para o zoom; a grella que enche a xanela, que lles dá ao terminal e ao programa ao ritmo dos fotogramas; e a fonte, que crea de novo co zoom e coa escala. |
+| [`src/app.rs`](#cratesmeigasrcapprs) | `App`, o *handler* da xanela: crea o contido, as tabs do terminal ou un modo de medición, e leva os eventos á vista e aos fotogramas, e os avisos dos fíos lectores e os atallos das tabs, ás tabs. |
+| [`src/tabs.rs`](#cratesmeigasrctabsrs) | Desde a subfase 2.2. `Tabs`, as tabs da xanela: cada unha co seu terminal e a súa sesión, que segue mentres a tab está oculta, e a vista, que mostra a activa. Leva os avisos dos fíos lectores á tab de cada un, remata á súa hora as actualizacións sincronizadas das tabs ocultas, baixa a prioridade dos fíos lectores das tabs ocultas, salvo mentres a xanela ten o *lock* do seu terminal, e abre, pecha e cambia de tab cos atallos. |
+| [`src/session.rs`](#cratesmeigasrcsessionrs) | A sesión dunha tab: o programa, e o fío lector que lle dá a súa saída ao terminal da tab, responde ao programa e esperta a xanela co identificador da tab. |
+| [`src/view.rs`](#cratesmeigasrcviewrs) | `TerminalView`, o terminal da tab que mostra a xanela, a mesma vista para todas as tabs: a súa copia da pantalla, posta ao día antes de cada fotograma, o debuxo das celas, as súas liñas, a selección e o cursor, e as teclas e o foco, que lle envía ao programa, salvo as que colle para copiar e pegar, para mover a vista do historial, para o zoom e para as tabs; a grella que enche a xanela, que lles dá ao terminal e ao programa ao ritmo dos fotogramas; a fonte, que crea de novo co zoom e coa escala; o título e o texto que copia o programa; e o cambio ao terminal doutra tab. |
 | [`src/mouse.rs`](#cratesmeigasrcmousers) | `Mouse`, o rato da vista: selecciona texto, cópiao ao soltar o botón e pega co dereito, ou envíalle ao programa os clics, os movementos e a roda. A roda tamén despraza o historial, ou fai o zoom con Ctrl; a barra de desprazamento é súa; e unha selección arrastrada fóra da grella despraza a vista soa. |
 | [`src/scrollbar.rs`](#cratesmeigasrcscrollbarrs) | `ScrollBar`, a barra de desprazamento: a franxa á dereita da xanela, co polgar que mostra que parte do historial se ve, que se arrastra, e as páxinas cun clic na franxa. |
 | [`src/clipboard.rs`](#cratesmeigasrcclipboardrs) | Copiar a selección ao portapapeis e pegar o portapapeis no programa, coa pregunta antes de pegar varias liñas. Pegar leva a vista do historial á pantalla. |
@@ -25,39 +26,44 @@ Así se reparten o traballo:
 
 ```mermaid
 graph LR
-    conpty["ConPTY<br/>(meiga-win)"] -- "a saída do programa" --> reader["Fío lector<br/>(session.rs)"]
-    reader -- "feed, baixo o lock" --> shared["Shared (Mutex)<br/>o terminal e catro marcas"]
-    reader -- "WM_WAKE, se non<br/>había outro pendente" --> win["meiga-win<br/>Window"]
+    conpty["ConPTY<br/>(meiga-win)<br/>unha sesión por tab"] -- "a saída do programa" --> reader["Fío lector de cada tab<br/>(session.rs)"]
+    reader -- "feed, baixo o lock" --> shared["Shared (Mutex) de cada tab<br/>o terminal e catro marcas"]
+    reader -- "WM_WAKE co número da tab,<br/>se non había outro pendente" --> win["meiga-win<br/>Window"]
     win -- "eventos e WM_PAINT" --> app["App"]
-    app -- "App::wake:<br/>Frames::changed" --> frames["Frames"]
-    frames -- "Scene::update e,<br/>despois, draw" --> content["Content<br/>TerminalView ou Bench"]
-    shared -- "copia do que cambiou<br/>(baixo o lock)" --> content
+    app -- "App::wake: Tabs::wake;<br/>os atallos: Tabs::act" --> content["Content<br/>Tabs ou Bench"]
+    app -- "Frames::changed" --> frames["Frames"]
+    frames -- "Scene::update e,<br/>despois, draw" --> content
+    content -- "a tab que se mostra:<br/>wake, show, update e draw" --> view["TerminalView<br/>(view.rs)"]
+    content -- "as tabs ocultas: o fin das<br/>actualizacións sincronizadas" --> shared
+    content -- "a prioridade dos lectores" --> reader
+    shared -- "copia do que cambiou<br/>(baixo o lock)" --> view
     frames -- "cando" --> pacer["FramePacer<br/>(meiga-core)"]
     frames -- "compoñer e presentar" --> surface["Surface<br/>(meiga-render)"]
     frames -- "unha liña por fotograma" --> trace["Trace"]
-    app -- "Event::Key e os do rato:<br/>key e mouse" --> content
-    app -- "Event::Resized e<br/>Event::DpiChanged" --> content
-    content -- "as teclas e o foco<br/>(Input::write)" --> conpty
-    content -- "a grella nova, no fotograma:<br/>Terminal::resize (baixo o lock)" --> shared
-    content -- "e despois, Input::resize<br/>(aínda baixo o lock)" --> conpty
-    content -- "os eventos do rato" --> mouse["Mouse<br/>(mouse.rs)"]
+    app -- "Event::Key e os do rato:<br/>key e mouse" --> view
+    app -- "Event::Resized e<br/>Event::DpiChanged" --> view
+    view -- "as teclas e o foco<br/>(Input::write)" --> conpty
+    view -- "a grella nova, no fotograma:<br/>Terminal::resize (baixo o lock)" --> shared
+    view -- "e despois, Input::resize<br/>(aínda baixo o lock)" --> conpty
+    view -- "os eventos do rato" --> mouse["Mouse<br/>(mouse.rs)"]
     mouse -- "a selección e a vista<br/>do historial (baixo o lock)" --> shared
     mouse -- "os clics na franxa" --> bar["ScrollBar<br/>(scrollbar.rs)"]
     mouse -- "os informes e a roda<br/>(Input::write)" --> conpty
-    content -- "Ctrl+C e Ctrl+V" --> clip["copy e paste<br/>(clipboard.rs)"]
+    view -- "Ctrl+C e Ctrl+V" --> clip["copy e paste<br/>(clipboard.rs)"]
     mouse -- "ao soltar o botón<br/>e co dereito" --> clip
     clip -- "o texto pegado<br/>(Input::write)" --> conpty
     clip -- "escribir e ler" --> board["Portapapeis<br/>de Windows"]
-    app -- "App::wake: OSC 52, co foco<br/>e en primeiro plano" --> board
+    view -- "TerminalView::wake: OSC 52,<br/>co foco e en primeiro plano" --> board
 ```
 
-1. O fío lector da sesión ([`session.rs`](#cratesmeigasrcsessionrs)) dálle cada bloque de saída ao terminal, baixo o *lock* de `Shared`, envía as respostas ao programa e esperta a xanela con `WM_WAKE`, só se non había outro aviso pendente.
-2. `App::wake` ([`app.rs`](#cratesmeigasrcapprs)) pon o título; desde a subfase 1.8, leva ao portapapeis o texto que copiou o programa (OSC 52), só se a xanela ten o foco e está en primeiro plano; e, se cambiou a pantalla, pídelle un fotograma a `Frames` (`changed`), que o fai no momento ou ao final do intervalo ([`frames.rs`](#cratesmeigasrcframesrs)).
-3. O fotograma pon primeiro ao día o contido (`Scene::update`): a vista do terminal ([`view.rs`](#cratesmeigasrcviewrs)) copia baixo o *lock* só o que cambiou, e di que zonas son. Despois, fóra do *lock*, compón esas zonas (`draw`) e preséntaas.
+1. O fío lector da sesión de cada tab ([`session.rs`](#cratesmeigasrcsessionrs)) dálle cada bloque de saída ao terminal da tab, baixo o *lock* de `Shared`, envía as respostas ao programa e esperta a xanela con `WM_WAKE`, só se non había outro aviso pendente. Desde a subfase 2.2, o aviso leva o identificador da tab.
+2. `App::wake` ([`app.rs`](#cratesmeigasrcapprs)) lévalle o aviso ás tabs ([`tabs.rs`](#cratesmeigasrctabsrs)). Se é da tab que se mostra, a vista pon o título; desde a subfase 1.8, leva ao portapapeis o texto que copiou o programa (OSC 52), só se a xanela ten o foco e está en primeiro plano; e, se cambiou a pantalla, `App` pídelle un fotograma a `Frames` (`changed`), que o fai no momento ou ao final do intervalo ([`frames.rs`](#cratesmeigasrcframesrs)). Ata a 2.1, todo isto facíao `App::wake`.
+3. O fotograma pon primeiro ao día o contido (`Scene::update`): a vista do terminal ([`view.rs`](#cratesmeigasrcviewrs)) copia baixo o *lock* só o que cambiou no terminal da tab que se mostra, e di que zonas son. Despois, fóra do *lock*, compón esas zonas (`draw`) e preséntaas.
 4. Coa xanela minimizada non hai fotogramas, e a vista non copia nada: só fai o que non pode esperar (`Scene::update_hidden`): rematar á súa hora unha actualización sincronizada que o programa deixou aberta, para que as súas preguntas teñan resposta ([`frames.rs`](#coa-xanela-minimizada-hidden)).
 5. Desde a subfase 1.7, as teclas chegan á xanela coma `Event::Key`, e `App` pásallas á vista, que as converte no que le o programa, segundo os modos que activou, e as escribe na entrada da sesión, sen esperar: o fío escritor da sesión lévaas ao ConPTY ([`key` e `focus`](#as-teclas-e-o-foco-key-e-focus)). Os cambios do foco tamén lle chegan ao programa, se os pediu.
 6. Desde a subfase 1.8, `App` pásalle á vista tamén os eventos do rato, e a vista ao seu rato ([`mouse.rs`](#cratesmeigasrcmousers)): os clics seleccionan texto na grella do terminal, baixo o *lock*, ou, se o programa pediu o rato e Maiús non está premido, van a el coma informes, pola entrada da sesión. A selección vai ao portapapeis ao soltar o botón; Ctrl+C e Ctrl+Maiús+C cópiana, e Ctrl+V, Ctrl+Maiús+V e o botón dereito pegan ([`clipboard.rs`](#cratesmeigasrcclipboardrs)). Despois, `App` fai o que lle pide a vista ([`respond`](#respond-o-que-pide-a-vista)): un fotograma, se cambiou a selección, e poñerse ao día, se se mostrou a caixa de mensaxe que pregunta antes de pegar.
 7. Desde a subfase 1.9, `App` pásalle á vista os cambios de tamaño da xanela (`Event::Resized`), salvo se está minimizada, e os de escala (`Event::DpiChanged`), e, ao pecharse a caixa de mensaxe que pregunta antes de pegar, o tamaño e a escala que a xanela ten entón ([`catch_up`](#respond-o-que-pide-a-vista)). A vista calcula a grella que enche a xanela, sen a franxa da barra de desprazamento, e dálla ao terminal e ao ConPTY no seguinte fotograma, como moito unha vez por intervalo, baixo o *lock* ([`resized` e `resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). A roda, as teclas do historial e a barra de desprazamento ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)) moven a vista do historial; e Ctrl e `+`, `-` ou `0`, e Ctrl e a roda, fan o zoom: a vista crea a fonte nova, e con ela cambia a grella ([`zoom`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)).
+8. Desde a subfase 2.2, a xanela ten tabs, cada unha co seu terminal e a súa sesión ([`tabs.rs`](#cratesmeigasrctabsrs), [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)), e unha soa vista, que mostra a activa. O fío lector dunha tab oculta segue dándolle a saída ao seu terminal, cunha prioridade por debaixo da normal, salvo mentres a xanela ten o *lock* dese terminal: así, a xanela nunca espera por un lector de menos prioridade ca ela. Pero a xanela non copia a súa pantalla, nin colle o seu título nin o seu portapapeis: as marcas desas cousas quedan postas, e a saída do seu programa esperta a xanela como moito unha vez por cada unha. Só as súas actualizacións sincronizadas non poden esperar: se, despois de darlle ao terminal un bloque de saída, o programa deixou unha aberta, o fío lector avisa, e a xanela remátaa á súa hora, sen debuxar nada, coma coa xanela minimizada; unha que se abre e se pecha no mesmo bloque non avisa. Ctrl+Maiús+T abre unha tab, Ctrl+Maiús+W pecha a que se mostra, e Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)); ao cambiar de tab, a vista mostra o terminal da nova cun único fotograma completo ([`show`](#mostrar-outra-tab-show)).
 
 ## `crates/meiga/Cargo.toml`
 
@@ -186,6 +192,7 @@ mod mouse;
 mod options;
 mod scrollbar;
 mod session;
+mod tabs;
 mod trace;
 mod view;
 
@@ -244,16 +251,16 @@ fn report(text: &str) {
 
 - `#![cfg_attr(condición, atributo)]` aplica o atributo só se se cumpre a condición. `debug_assertions` está activado nas compilacións de depuración e desactivado en *release*, así que en *release* meiga é unha aplicación gráfica, sen xanela de consola. Ver [Tecnoloxías › Subsistema](../tecnoloxias.md#6-subsistema-de-windows).
 - `#![forbid(unsafe_code)]`: o programa non ten nin un bloque `unsafe`. Todas as chamadas a Windows pasan por `meiga-win` e `meiga-render`, que as envolven en funcións seguras.
-- `mod …;` declara os dez módulos do programa, que están nos arquivos do mesmo nome. Desde a subfase 1.8 hai dous máis: `mouse`, o rato da vista ([`mouse.rs`](#cratesmeigasrcmousers)), e `clipboard`, copiar e pegar ([`clipboard.rs`](#cratesmeigasrcclipboardrs)); e desde a 1.9, `scrollbar`, a barra de desprazamento ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)).
+- `mod …;` declara os once módulos do programa, que están nos arquivos do mesmo nome. Desde a subfase 1.8 hai dous máis: `mouse`, o rato da vista ([`mouse.rs`](#cratesmeigasrcmousers)), e `clipboard`, copiar e pegar ([`clipboard.rs`](#cratesmeigasrcclipboardrs)); desde a 1.9, `scrollbar`, a barra de desprazamento ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)); e desde a 2.2, `tabs`, as tabs da xanela ([`tabs.rs`](#cratesmeigasrctabsrs)).
 - `use meiga_win::window::{self, Window, WindowOptions};` importa o módulo (`self`, para escribir `window::show_error`) e os dous tipos.
-- `TITLE` é o título da xanela, «meiga»: o que ten ao abrila e sempre que o programa do terminal non pon outro (ver [`app.rs`](#cratesmeigasrcapprs)).
+- `TITLE` é o título da xanela, «meiga»: o que ten ao abrila e sempre que o programa da tab que se mostra non pon outro (ver [`app.rs`](#cratesmeigasrcapprs)).
 - `fn main() -> ExitCode`: `main` pode devolver o código de saída do proceso: `ExitCode::SUCCESS` (0), `ExitCode::FAILURE` (1) ou outro número, con `ExitCode::from`.
 - **As opcións.** `env::args_os()` dá os argumentos da liña de comandos, como `OsString`, os textos do sistema operativo, que en Windows poden non ser UTF-8 válido. `.skip(1)` salta o primeiro, que é o nome do programa. Se as opcións están mal, meiga mostra o erro e como se usa ([`USAGE`](#cratesmeigasrcoptionsrs)) e sae co código 2, o habitual para os erros de uso.
 - **`run`** fai os pasos en orde:
   1. Se se pediu o rexistro dos fotogramas, crea o arquivo. Se non pode, o erro di que arquivo era: `map_err` cambia o erro por un texto, e `?` convérteo en `Box<dyn Error>`, que acepta textos.
   2. Crea a xanela, aínda oculta.
-  3. Crea `App`, o *handler*, con todas as opcións: lanza o programa no terminal, ou prepara un modo de medición, e compón xa o primeiro fotograma no *framebuffer* (ver [`app.rs`](#cratesmeigasrcapprs)).
-  4. `window.run` mostra a xanela e entrega os seus eventos a `App` ata que se pecha. Ao rematar `run`, `app` destrúese e, con el, a sesión do terminal.
+  3. Crea `App`, o *handler*, con todas as opcións: lanza o programa na primeira tab do terminal, ou prepara un modo de medición, e compón xa o primeiro fotograma no *framebuffer* (ver [`app.rs`](#cratesmeigasrcapprs)).
+  4. `window.run` mostra a xanela e entrega os seus eventos a `App` ata que se pecha: co botón de pechar, con Alt+F4 ou, desde a subfase 2.2, ao pechar a súa última tab ([`close_active`](#os-atallos-act-open-e-close_active)). Ao rematar `run`, `app` destrúese e, con el, as tabs e as súas sesións.
 - `match &options.trace_frames`: o `&` mira o valor sen quitarllo a `options`. As sangrías raras de `let trace =` son as de rustfmt.
 - `Box<dyn Error>`: calquera erro nunha caixa (ver [`HandlerError`](meiga-win.md#handler)). Os erros de `meiga-win`, de `meiga-render` e os textos convértense solos con `?`.
 - Se algo falla, `report` avisa:
@@ -390,7 +397,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Self, String> {
 
 ## `crates/meiga/src/app.rs`
 
-`App` é o *handler* da xanela ([`Handler`](meiga-win.md#handler)): crea o contido, recibe os eventos, pásallos ao contido e decide os fotogramas con `Frames`.
+`App` é o *handler* da xanela ([`Handler`](meiga-win.md#handler)): crea o contido, recibe os eventos, pásallos ao contido e decide os fotogramas con `Frames`. Desde a subfase 2.2, o contido do terminal son as súas tabs ([`Tabs`](#cratesmeigasrctabsrs)): `App` lévalle á vista os eventos da xanela, e ás tabs, os avisos dos fíos lectores e os atallos das tabs.
 
 ### `Content` e `App`
 
@@ -400,28 +407,28 @@ pub const TITLE: &str = "meiga";
 
 /// What the window shows. Both hold a whole font, so they go in boxes.
 enum Content {
-    Terminal(Box<TerminalView>),
+    Terminal(Box<Tabs>),
     Bench(Box<Bench>),
 }
 
 impl Scene for Content {
     fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
         match self {
-            Content::Terminal(view) => view.update(now, damage),
+            Content::Terminal(tabs) => tabs.update(now, damage),
             Content::Bench(_) => None,
         }
     }
 
     fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
         match self {
-            Content::Terminal(view) => view.update_hidden(now),
+            Content::Terminal(tabs) => tabs.update_hidden(now),
             Content::Bench(_) => None,
         }
     }
 
     fn draw(&mut self, canvas: &mut Canvas<'_>) {
         match self {
-            Content::Terminal(view) => view.draw(canvas),
+            Content::Terminal(tabs) => tabs.draw(canvas),
             Content::Bench(bench) => bench.draw(canvas),
         }
     }
@@ -429,19 +436,17 @@ impl Scene for Content {
 
 pub struct App {
     frames: Frames,
+    /// The tabs own their sessions, which close when they are dropped.
     content: Content,
-    /// The session of the terminal, which closes when it is dropped. `None`
-    /// for the benchmarks, and if the program could not start.
-    _session: Option<Pty>,
 }
 ```
 
-- `TITLE`: o título da xanela ao abrila, e sempre que o programa non pon ningún. `main.rs` crea a xanela con el.
-- `Content` é o que mostra a xanela: o terminal ([`TerminalView`](#cratesmeigasrcviewrs)) ou un dos modos de medición ([`Bench`](#cratesmeigasrcbenchrs)). Implementa [`Scene`](#scene), así que `Frames` pode poñelo ao día, debuxalo e, coa xanela minimizada, deixarlle facer o que non pode esperar (`update_hidden`), sen saber cal é. Os modos de medición non teñen nada que poñer ao día nin que facer coa xanela minimizada (`None`): as súas zonas chegan con `step`, antes de cada fotograma.
-- **As dúas variantes en `Box`.** Un `enum` ocupa en memoria o que a súa variante máis grande, e as dúas levan dentro unha fonte enteira ([`Font`](meiga-render.md#cratesmeiga-rendersrctextrs)); a vista, ademais, a súa copia da pantalla, coa paleta de 256 cores. Na `Box` van na memoria dinámica, e o `enum` só garda un punteiro: mover o contido, de `terminal` a `App::new` e de aí a `App`, só copia ese punteiro.
-- **`_session`**: a sesión do terminal ([`Pty`](meiga-win.md#cratesmeiga-winsrcconptyrs)). Ninguén a le: vai en `App` para vivir tanto coma ela, porque destruíla pecha a sesión ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Ao pecharse a xanela, `run` remata, `App` destrúese e o programa e a súa consola rematan tamén, como comproba `check-window.ps1`. O guión baixo do nome di que non se usa, pero, ao contrario que `_` só, non a destrúe no momento. É `None` nos modos de medición, e se o programa non se puido lanzar.
+- `TITLE`: o título da xanela ao abrila, e sempre que o programa non pon ningún. `main.rs` crea a xanela con el. Desde a subfase 2.2 úsao tamén a vista, que pon na xanela o título da tab que mostra, ou «meiga» se o seu programa non puxo ningún ([`wake`](#o-título-o-portapapeis-e-a-pantalla-wake) e [`show`](#mostrar-outra-tab-show)).
+- `Content` é o que mostra a xanela: o terminal ou un dos modos de medición ([`Bench`](#cratesmeigasrcbenchrs)). Desde a subfase 2.2, o terminal son as súas tabs ([`Tabs`](#cratesmeigasrctabsrs)), que levan dentro a vista; ata a 2.1, era a vista ([`TerminalView`](#cratesmeigasrcviewrs)). Implementa [`Scene`](#scene), así que `Frames` pode poñelo ao día, debuxalo e, coa xanela minimizada, deixarlle facer o que non pode esperar (`update_hidden`), sen saber cal é. As tabs fano coa vista e coas tabs ocultas ([`Scene` e `earliest`](#scene-e-earliest)). Os modos de medición non teñen nada que poñer ao día nin que facer coa xanela minimizada (`None`): as súas zonas chegan con `step`, antes de cada fotograma.
+- **As dúas variantes en `Box`.** Un `enum` ocupa en memoria o que a súa variante máis grande, e as dúas levan dentro unha fonte enteira ([`Font`](meiga-render.md#cratesmeiga-rendersrctextrs)); as tabs, ademais, a vista, coa súa copia da pantalla e a paleta de 256 cores, e o modelo das tabs. Na `Box` van na memoria dinámica, e o `enum` só garda un punteiro: mover o contido, de `App::new` a `App`, só copia ese punteiro.
+- **As sesións son das tabs**, desde a subfase 2.2: cada tab garda a súa ([`Tab`](#tab)), e destruíla pecha a sesión ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Ata a 2.1, `App` gardaba a única sesión nun campo propio, `_session`, que ninguén lía: estaba alí para vivir tanto coma `App`. Agora fai o mesmo `content`: ao pecharse a xanela, `run` remata, `App` destrúese e, con el, as tabs e as súas sesións, e os seus programas e as súas consolas rematan tamén, como comproba `check-window.ps1`. Nos modos de medición non hai ningunha sesión.
 
-### `App::new` e `terminal`
+### `App::new`
 
 ```rust
 pub fn new(
@@ -450,7 +455,7 @@ pub fn new(
     trace: Option<Trace>,
 ) -> Result<Self, HandlerError> {
     // Only the content with text reads the fonts of the system.
-    let (mut content, session) = match options.bench {
+    let mut content = match options.bench {
         Some(BenchMode::Text) => {
             let system = FontSystem::new()?;
             let font = Font::new(
@@ -459,25 +464,20 @@ pub fn new(
                 f32::from(FONT_POINTS),
                 window.dpi(),
             )?;
-            let bench = Bench::new(BenchMode::Text, Some(font));
-            (Content::Bench(Box::new(bench)), None)
+            Content::Bench(Box::new(Bench::new(BenchMode::Text, Some(font))))
         }
-        Some(mode) => (Content::Bench(Box::new(Bench::new(mode, None))), None),
-        None => terminal(window, options.command.as_deref())?,
+        Some(mode) => Content::Bench(Box::new(Bench::new(mode, None))),
+        None => Content::Terminal(Box::new(Tabs::new(window, options.command.as_deref())?)),
     };
     let mut frames = Frames::new(window, &mut content, trace, options.marks)?;
     if options.bench.is_some() {
         frames.schedule(window)?;
     }
-    Ok(Self {
-        frames,
-        content,
-        _session: session,
-    })
+    Ok(Self { frames, content })
 }
 ```
 
-- **O contido:** un modo de medición, como antes, ou o terminal, que crea `terminal` co programa das opcións. `as_deref` dá un `Option<&str>` sen copiar o texto.
+- **O contido:** un modo de medición, como antes, ou o terminal: desde a subfase 2.2, as súas tabs, coa primeira, que corre o programa das opcións ([`Tabs::new`](#tabs-e-new)). `as_deref` dá un `Option<&str>` sen copiar o texto. Ata a 2.1 creábao `terminal`, unha función deste módulo, que devolvía o contido e a sesión, un par que `App::new` gardaba en dous campos. O que facía está agora en `Tabs::new` e en [`Tab::start`](#tab), e `App::new` só garda o contido.
 - **As fontes.** Só o contido con texto le as fontes do sistema ([`FontSystem`](meiga-render.md#fontsystem)): o terminal e o modo `text`, cunha fonte ao DPI da xanela ([`Window::dpi`](meiga-win.md#windowdpi)). Os modos `partial` e `full` non cargan nada de DirectWrite, e miden o mesmo ca na subfase 1.2.
 - **Os puntos.** Desde a subfase 1.9, `FONT_POINTS` é un número enteiro, porque o zoom cambia o tamaño da fonte dun punto en punto ([`view.rs`](#constantes)), e `Font::new` recibe os puntos coma un `f32`: `f32::from` convérteos sen perder nada.
 - Os erros de `meiga-render` convértense en `HandlerError` con `?`, como os de `meiga-win`: se non hai ningunha das fontes, meiga para cunha caixa de mensaxe que o di.
@@ -485,96 +485,28 @@ pub fn new(
 - **As marcas** (o bordo magenta das zonas presentadas) só se debuxan coa opción `--marks`: no terminal son unha axuda para ver que presenta cada fotograma, e nos modos de medición engadirían traballo aos fotogramas que se miden. Ata a subfase 1.6 activábaas a tecla P; desde a 1.7, todas as teclas van ao programa.
 - Un modo de medición pide xa o seu primeiro fotograma (`schedule`), que chegará en canto a xanela empece o seu bucle de mensaxes.
 
-```rust
-fn terminal(
-    window: &Window,
-    command: Option<&str>,
-) -> Result<(Content, Option<Pty>), HandlerError> {
-    let fonts = FontSystem::new()?;
-    let dpi = window.dpi();
-    let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
-    let cell = font.cell();
-    let client = window.client_size()?;
-    let mut terminal = Terminal::new(view::grid_size(client, cell, ScrollBar::width_at(dpi)));
-    terminal.set_cell_size(cell);
-    let size = terminal.size();
-    let shared = Arc::new(Mutex::new(Shared::new(terminal)));
-    let waker = window.waker();
-    let session = match session::start(command, size, &shared, &waker) {
-        Ok(pty) => Some(pty),
-        Err(message) => {
-            lock(&shared).terminal.feed(message.as_bytes());
-            None
-        }
-    };
-    let input = session.as_ref().map(Pty::input);
-    let view = TerminalView::new(shared, input, waker, fonts, font, dpi, client);
-    // The clicks select text until the program asks for the mouse.
-    window.set_pointer(Pointer::Text);
-    Ok((Content::Terminal(Box::new(view)), session))
-}
-```
-
-O terminal, paso a paso:
-
-1. **A fonte**, ao DPI da xanela: dela sae o tamaño da cela. Desde a subfase 1.9, as fontes do sistema (`fonts`) quedan na vista, que crea con elas a fonte nova cando cambian o zoom ou a escala ([`new_font`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)).
-2. **A grella:** a que enche a xanela, sen a franxa da barra de desprazamento ([`grid_size`](#o-tamaño-resized-resize_grid-e-grid_size)): tantas celas enteiras como caben, polo menos 2 × 1. O que sobra son as marxes, que a vista pinta coa cor do fondo. Desde a subfase 1.9, é a mesma conta que fai a vista cada vez que cambia o tamaño da xanela, e a franxa mídese co DPI da xanela ([`ScrollBar::width_at`](#scrollbar)), porque aínda non hai vista, nin rato, nin barra. Ata a 1.8, a conta estaba eiquí, sen a franxa, e a grella quedaba así toda a vida da xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
-3. **`set_cell_size`**: co tamaño da cela, o terminal responde aos programas que preguntan polo tamaño da grella en píxeles (`CSI 14 t`, [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
-4. **`size`**: o tamaño que ten de verdade o terminal, co mínimo xa aplicado. A pseudoconsola ten que ter o mesmo.
-5. **`Shared`** ([`session.rs`](#cratesmeigasrcsessionrs)), o terminal e as súas marcas, vai nun `Arc<Mutex<…>>`: o `Mutex` deixa usalo desde dous fíos, un cada vez, e o `Arc`, un contador de referencias que se pode compartir entre fíos, mantén vivo o que comparten mentres o use calquera deles.
-6. **O `Waker`** da xanela é o que usa o fío lector para espertala ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcwindowrs)): garda o *handle* da xanela, e pódese copiar e levar a outro fío.
-7. **A sesión** lánzase xa, antes do primeiro fotograma: así o programa empeza canto antes, e o que escriba mentres meiga compón ese fotograma xa está no terminal, ou chega en seguida ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Se non se pode lanzar, a mensaxe vai ao terminal coma se a escribise o programa, e o primeiro fotograma móstraa.
-8. **`Pty::input`** dá unha copia da entrada da sesión para a vista, que a usa para as teclas e os eventos de foco, desde a subfase 1.7 ([`key` e `focus`](#as-teclas-e-o-foco-key-e-focus)), para os informes do rato e o texto que se pega, desde a 1.8 ([`mouse.rs`](#cratesmeigasrcmousers) e [`clipboard.rs`](#cratesmeigasrcclipboardrs)), para cambiar o tamaño da pseudoconsola, desde a 1.9 ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)), e para as poucas respostas que aparecen cando ela remata unha actualización sincronizada (ver [`update`](#poñer-ao-día-update)).
-9. **A vista** recibe tamén, desde a subfase 1.9, as fontes do sistema, o DPI e o tamaño da área cliente ([`TerminalView`](#terminalview)): para a fonte nova, para a barra de desprazamento e para a grella cando cambie o tamaño da xanela.
-10. **O punteiro**, desde a subfase 1.8, é a barra de texto ([`Pointer::Text`](meiga-win.md#cratesmeiga-winsrcwindowrs)): os clics seleccionan texto mentres o programa non pide o rato. A xanela empeza coa frecha, a da súa clase, que queda nos modos de medición. Despois, o rato da vista escolle o punteiro en cada movemento ([`moved`](#mover-o-rato-moved)).
-
 ### `wake`: o aviso do fío lector
 
 ```rust
-fn wake(&mut self, window: &Window) -> Result<(), HandlerError> {
-    let Content::Terminal(view) = &self.content else {
+fn wake(&mut self, window: &Window, tab: u64) -> Result<(), HandlerError> {
+    let Content::Terminal(tabs) = &mut self.content else {
         return Ok(());
     };
-    let (title, clipboard, screen) = {
-        let mut shared = lock(view.shared());
-        let title = mem::take(&mut shared.title_changed)
-            .then(|| shared.terminal.title().map(str::to_owned));
-        let clipboard = mem::take(&mut shared.clipboard_changed)
-            .then(|| shared.terminal.take_clipboard())
-            .flatten();
-        (title, clipboard, shared.screen_changed)
-    };
-    if let Some(title) = title {
-        window.set_title(title.as_deref().unwrap_or(TITLE));
-    }
-    // A program cannot change the clipboard from a window that the user
-    // is not using: the window needs the focus, and to be the foreground
-    // window. If another program keeps the clipboard open, the text is
-    // lost, as in Windows Terminal.
-    if let Some(text) = clipboard
-        && view.is_focused()
-        && window.is_foreground()
-    {
-        let _ = clipboard::write_text(window, &text);
-    }
-    if screen {
+    if tabs.wake(window, TabId::from_raw(tab), Instant::now()) {
         self.frames.changed(window, &mut self.content)?;
     }
     Ok(())
 }
 ```
 
-O fío lector espertou a xanela con `WM_WAKE`: cambiou o título, a pantalla ou, desde a subfase 1.8, o portapapeis, ou máis dunha cousa, ou o programa abriu unha actualización sincronizada ([Tecnoloxías › Avisar á xanela](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage)).
+O fío lector dunha tab espertou a xanela con `WM_WAKE`: cambiou o título, a pantalla ou, desde a subfase 1.8, o portapapeis, ou máis dunha cousa, ou o programa deixou aberta unha actualización sincronizada ([Tecnoloxías › Avisar á xanela](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage)). Desde a subfase 2.2, o aviso di de que tab vén ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 2).
 
-- `let … else`: se o contido non é o terminal, non hai nada que facer.
-- **Baixo o *lock*, o mínimo.** O `MutexGuard` que devolve `lock` solta o `Mutex` ao destruírse, ao final do bloque `{ … }`. Dentro só se len as marcas, cópiase o título, se cambiou, e cóllese o texto para o portapapeis, se o hai. `lock` recibe un `&Mutex`, e o `&Arc<Mutex<…>>` de `shared()` convértese só (*deref coercion*).
-- **O título.** `mem::take` devolve a marca e déixaa a `false`: a xanela colleu o título, e o seguinte cambio voltará espertala. `bool::then` executa a *closure* só se a marca estaba posta, e dá o seu resultado en `Some`. Queda un `Option<Option<String>>`: o de fóra di se cambiou; o de dentro, o título, ou `None` se o programa o quitou, e entón a xanela volta a «meiga». Copialo (`to_owned`) permite usalo despois de soltar o *lock*, e os títulos cambian pouco.
-- `set_title` ([`SetWindowTextW`](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)) chámase fóra do *lock*, como todo o que non é copiar ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
-- **O portapapeis**, desde a subfase 1.8. Se o programa copiou texto (OSC 52, [Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)), a súa marca quítase coma a do título, e [`take_clipboard`](meiga-core.md#cratesmeiga-coresrctermmodrs) dá o texto, que deixa de estar no terminal. Se o programa copiou varias veces antes de que a xanela atendese o aviso, só queda a última. Eiquí `then` dá un `Option<Option<String>>`, e `flatten` xúntao nun: sen marca, ou sen texto, `None`.
-- **Só desde a xanela que se está a usar.** O texto vai ao portapapeis ([`write_text`](meiga-win.md#cratesmeiga-winsrcclipboardrs)), fóra do *lock*, só se a vista ten o foco (`is_focused`) e a xanela está en primeiro plano (`is_foreground`): un programa non pode cambiar o portapapeis desde unha xanela que non se está a usar. O foco só non abonda: [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) atopou que unha xanela aberta en segundo plano pode ter o foco do seu fío sen estar en primeiro plano ([Tecnoloxías › O foco](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela), [ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 11). Se non, o texto pérdese, e tamén se outro programa ten o portapapeis aberto máis de 150 ms, coma no Windows Terminal: `let _ =` descarta o erro. `if let … && … && …` encadea o patrón e as dúas condicións (*let chains*, da edición 2024): o corpo só se executa se se cumpren todas.
-- **A pantalla.** A súa marca só se le: quítaa o fotograma, cando copia o que cambiou ([`TerminalView::update`](#poñer-ao-día-update)). Mentres tanto, o fío lector non volta espertar a xanela pola pantalla: coa xanela minimizada, que non copia nada, a saída só a esperta unha vez, agás para rematar á súa hora unha actualización sincronizada. `Frames::changed` pide un fotograma, que o *pacer* fai no momento ou ao final do intervalo; coa xanela minimizada, en vez del, a vista fai só o que non pode esperar ([`hidden`](#coa-xanela-minimizada-hidden)).
-- **Unha actualización sincronizada** tamén esperta a xanela por eiquí, e `wake` non mira a súa marca: para abrila, o programa escribiu, así que a marca da pantalla xa está posta. `Frames::changed` leva entón á vista, no fotograma ou, coa xanela minimizada, en `update_hidden`, e a vista le a hora límite e dilla a `Frames` ([`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync)).
-- **Os préstamos.** `view` é unha referencia compartida a `self.content`, que se usa por última vez en `is_focused`: despois, Rust permite pasarlle `&mut self.content` a `Frames::changed`.
+- **O identificador da tab** chega no `wParam` da mensaxe, que ten 64 bits, coma o número: meiga só se compila para x64, e `meiga-win` compróbao ao compilar. O fío lector pon nel o número do `TabId` da súa tab ([`Reader`](#o-fío-lector-reader)), e `meiga-win` dállo ao *handler* en `Event::Wake` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)). [`TabId::from_raw`](meiga-core.md#cratesmeiga-coresrcmodelmodrs) volta facer o identificador co número: só serve para buscar unha tab, e un número que non é de ningunha non atopa nada.
+- **O que fai cada tab co aviso** decídeo `Tabs::wake` ([os avisos](#os-avisos-wake-e-catch_up_wakes)): na tab que se mostra, a vista colle o título e o texto que copiou o programa, e di se cambiou a pantalla ([`TerminalView::wake`](#o-título-o-portapapeis-e-a-pantalla-wake)); nunha oculta, só se apunta cando remata a actualización sincronizada que deixou aberta o seu programa; e o aviso dunha tab que xa pechou ignórase. Devolve se hai que poñer ao día a escena: se cambiou a pantalla da tab que se mostra, ou se unha tab oculta ten aberta unha actualización sincronizada, cuxa hora límite `Frames` coñece na seguinte posta ao día.
+- **`Frames::changed`** pide entón un fotograma, que o *pacer* fai no momento ou ao final do intervalo; coa xanela minimizada, en vez del, as tabs fan só o que non pode esperar ([`hidden`](#coa-xanela-minimizada-hidden)). O aviso dunha tab oculta non dá ningunha zona: se tampouco cambiou nada na tab que se mostra, o fotograma non debuxa nada, e só queda o temporizador, programado para a hora límite ([`draw`](#draw)).
+- **Ata a 2.1**, `wake` collía eiquí o título e o texto do portapapeis do único terminal, que lle daba a vista (`shared()`). Desde a 2.2 faino a vista, que sabe que terminal mostra: `App` só lles leva o aviso ás tabs, sen saber cal se mostra, e `TerminalView::shared` desapareceu.
+- `let … else`: se o contido non é o terminal, non hai nada que facer. A referencia é `&mut`, e non `&` coma ata a 2.1: `Tabs::wake` cambia as tabs, porque apunta cando rematan as súas actualizacións sincronizadas.
+- **Os préstamos.** `tabs` é unha referencia a `self.content`, que se usa por última vez en `tabs.wake(…)`: despois, Rust permite pasarlle outra vez `&mut self.content` a `Frames::changed`.
 
 ### Os eventos
 
@@ -583,10 +515,10 @@ fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
     match event {
         Event::Resized { size, minimized } => {
             // A minimized window keeps its grid.
-            if let Content::Terminal(view) = &mut self.content
+            if let Content::Terminal(tabs) = &mut self.content
                 && !minimized
             {
-                view.resized(size);
+                tabs.view_mut().resized(size);
             }
             self.frames
                 .resized(window, size, minimized, &mut self.content)?;
@@ -595,8 +527,8 @@ fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
             }
         }
         Event::DpiChanged { dpi } => {
-            if let Content::Terminal(view) = &mut self.content {
-                view.dpi_changed(dpi);
+            if let Content::Terminal(tabs) = &mut self.content {
+                tabs.view_mut().dpi_changed(dpi);
                 // The new size of the window, if it changes, comes right
                 // after this event. A frame now would give the terminal
                 // and the program the grid of the new cells in the old
@@ -617,16 +549,16 @@ fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
                 self.frames.schedule(window)?;
             }
         }
-        Event::Wake => self.wake(window)?,
+        Event::Wake(tab) => self.wake(window, tab)?,
         Event::Focus { focused } => {
-            if let Content::Terminal(view) = &mut self.content {
-                view.focus(focused, Instant::now());
+            if let Content::Terminal(tabs) = &mut self.content {
+                tabs.view_mut().focus(focused, Instant::now());
                 self.frames.changed(window, &mut self.content)?;
             }
         }
         Event::Key(key) => {
-            if let Content::Terminal(view) = &mut self.content {
-                let response = view.key(window, &key);
+            if let Content::Terminal(tabs) = &mut self.content {
+                let response = tabs.view_mut().key(window, &key);
                 self.respond(window, response)?;
             }
         }
@@ -636,8 +568,8 @@ fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
         | Event::Wheel { .. }
         | Event::CaptureLost
         | Event::MouseLeft => {
-            if let Content::Terminal(view) = &mut self.content {
-                let response = view.mouse(window, &event);
+            if let Content::Terminal(tabs) = &mut self.content {
+                let response = tabs.view_mut().mouse(window, &event);
                 self.respond(window, response)?;
             }
         }
@@ -652,13 +584,13 @@ fn paint(&mut self, _window: &Window, dc: HDC, area: Rect) -> Result<(), Handler
 
 | Evento | Que fai |
 |---|---|
-| `Wake` | O fío lector avisou: `wake` pon o título e o texto que copiou o programa e, se cambiou a pantalla, pide un fotograma; coa xanela minimizada, a vista só fai o que non pode esperar. |
-| `Focus` | A xanela gañou ou perdeu o foco ([`Event::Focus`](meiga-win.md#cratesmeiga-winsrceventrs)): o cursor do terminal cambia, o programa sabe do foco se o pediu ([`focus`](#as-teclas-e-o-foco-key-e-focus)), e pídese un fotograma para debuxar o cursor. Nos modos de medición, nada. |
-| `FrameTimer` | Toca debuxar. Nun modo de medición, primeiro avanza un paso e marca as zonas que cambian. Despois, `Frames` debuxa o fotograma pendente; se non había ningún, é o momento que pediu o terminal, como o seguinte cambio do pestanexo do cursor, e pide un fotograma para el ([`timer`](#pedir-un-fotograma)). Coa xanela minimizada, o temporizador só se programa para a hora límite dunha actualización sincronizada, e a vista remátaa sen debuxar nada. Nun modo de medición, despois pide o seguinte fotograma. |
+| `Wake` | O fío lector dunha tab avisou, desde a subfase 2.2 co identificador da súa tab: `wake` lévao ás tabs. Se é a que se mostra, a vista pon o título e o texto que copiou o programa e, se cambiou a pantalla, pídese un fotograma; se é unha oculta, só se apunta cando remata a súa actualización sincronizada. Coa xanela minimizada, as tabs só fan o que non pode esperar. |
+| `Focus` | A xanela gañou ou perdeu o foco ([`Event::Focus`](meiga-win.md#cratesmeiga-winsrceventrs)): o cursor do terminal cambia, o programa da tab que se mostra sabe do foco se o pediu ([`focus`](#as-teclas-e-o-foco-key-e-focus)), e pídese un fotograma para debuxar o cursor. Nos modos de medición, nada. |
+| `FrameTimer` | Toca debuxar. Nun modo de medición, primeiro avanza un paso e marca as zonas que cambian. Despois, `Frames` debuxa o fotograma pendente; se non había ningún, é o momento que pediu o terminal, como o seguinte cambio do pestanexo do cursor, ou, desde a subfase 2.2, a hora límite dunha actualización sincronizada dunha tab oculta, e pide un fotograma para el ([`timer`](#pedir-un-fotograma)). Coa xanela minimizada, o temporizador só se programa para a hora límite dunha actualización sincronizada, e a vista, ou as tabs, remátana sen debuxar nada. Nun modo de medición, despois pide o seguinte fotograma. |
 | `Resized` | `Frames` adapta o *framebuffer* ao tamaño novo, ou, se a xanela se minimizou, deixa de debuxar, e o temporizador queda só para a hora límite dunha actualización sincronizada aberta, se a hai. Nun modo de medición, ao restaurala, os fotogramas continúan. Desde a subfase 1.9, antes diso, a vista calcula a grella que enche a xanela ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)), e dálla ao terminal e ao programa no seguinte fotograma, como moito unha vez por intervalo. Coa xanela minimizada, que ten tamaño 0 × 0, a grella non cambia: o terminal e o programa repartirían o texto para nada, e ao restaurala a xanela volta ao tamaño de antes. Ata a 1.8, a grella non cambiaba nunca: se a xanela medraba, as marxes medraban, e se se facía pequena, a grella cortábase. |
 | `DpiChanged` | Desde a subfase 1.9. A xanela pasou a un monitor con outra escala, ou cambiou a escala do seu ([`Event::DpiChanged`](meiga-win.md#cratesmeiga-winsrceventrs)): a vista crea a fonte, a barra de desprazamento e o cursor para o DPI novo ([`dpi_changed`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)). Chega antes ca o tamaño que suxire Windows, que chega de inmediato coma `Resized` e calcula a grella coas celas novas ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)). Por iso, desde a revisión do código, non se debuxa no momento: [`schedule`](#pedir-un-fotograma) pide un fotograma ao temporizador, e o tamaño novo chega antes. O seu fotograma dálles ao terminal e ao programa a grella nova, unha vez, e debuxa a xanela enteira; o do temporizador xa non atopa nada que facer. Se o tamaño da xanela non cambia, é o do temporizador o que lles dá a grella das celas novas na mesma xanela. Nos modos de medición, nada. |
 | `SizeMoveStarted` e `SizeMoveEnded` | O usuario empeza e remata de mover ou redimensionar a xanela: mentres tanto, o *framebuffer* reserva memoria con marxe ([`Fit::Room`](meiga-render.md#fit-e-surface)). Ao rematar, preséntase o que cambiase mentres tanto. |
-| `Key` | Desde a subfase 1.7. Unha tecla baixou ou subiu ([`Event::Key`](meiga-win.md#cratesmeiga-winsrckeyboardrs)): a vista envíalla ao programa ([`key`](#as-teclas-e-o-foco-key-e-focus)) ou, desde a 1.8, cóllea para copiar, pegar ou quitar a selección e, desde a 1.9, para mover a vista do historial e para o zoom. Despois, `respond` fai o que pide a vista. A tecla en si non pide ningún fotograma: o que escriba o programa en resposta chega coma calquera saída; só se pide un se cambiou a selección, a vista do historial ou a fonte. Nos modos de medición, nada. |
+| `Key` | Desde a subfase 1.7. Unha tecla baixou ou subiu ([`Event::Key`](meiga-win.md#cratesmeiga-winsrckeyboardrs)): a vista envíalla ao programa ([`key`](#as-teclas-e-o-foco-key-e-focus)) ou, desde a 1.8, cóllea para copiar, pegar ou quitar a selección, desde a 1.9, para mover a vista do historial e para o zoom e, desde a 2.2, para abrir, pechar e cambiar de tab. Despois, `respond` fai o que pide a vista. A tecla en si non pide ningún fotograma: o que escriba o programa en resposta chega coma calquera saída; só se pide un se cambiou a selección, a vista do historial ou a fonte, ou se a xanela mostra outra tab. Nos modos de medición, nada. |
 | `MouseDown`, `MouseUp`, `MouseMoved`, `Wheel`, `CaptureLost` e `MouseLeft` | Desde a subfase 1.8. Un botón do rato baixou ou subiu, o rato moveuse, xirou a roda, ou outra xanela colleu o rato; e, desde a 1.9, o punteiro saíu da xanela, despois de pasar pola franxa da barra de desprazamento (`MouseLeft`) ([`Event`](meiga-win.md#cratesmeiga-winsrceventrs)): a vista pásallo ao seu rato, que selecciona, copia e pega, move a vista do historial, ou envíalle ao programa os clics, os movementos e a roda; e coa roda e Ctrl, a vista fai o zoom ([`mouse`](#o-rato-mouse-e-dialog_closed)). Despois, `respond` fai o que pide a vista. Nos modos de medición, nada. |
 
 - `WM_PAINT` (`paint`) copia a zona que pide Windows desde o *framebuffer*. `_window`: o guión baixo indica que o parámetro non se usa.
@@ -666,35 +598,44 @@ fn paint(&mut self, _window: &Window, dc: HDC, area: Rect) -> Result<(), Handler
 - **Todos os eventos.** Ata a subfase 1.7, o último brazo era `_ => {}`, e o rato non facía nada. Desde a 1.8, o `match` nomea todas as variantes de `Event`, sen `_`: se `meiga-win` engade outra, o programa non compila ata que `App` decida que facer con ela. Así chegaron na 1.9 `DpiChanged` e `MouseLeft`.
 - **A orde en `Resized`.** Desde a subfase 1.9, a vista recibe o tamaño antes ca `Frames`: o fotograma que compón `Frames::resized` pon ao día a vista, e con ela xa vai a grella nova, se pasou un intervalo desde o cambio anterior ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). `if let … && !minimized` encadea o patrón e a condición (*let chains*).
 - `Event::MouseDown { .. } | …`: un brazo para varios patróns, separados por `|`. `{ .. }` encaixa coa variante sen mirar os seus campos, e a vista recibe o evento enteiro (`&event`), que o seu rato volta mirar ([`Mouse::event`](#mouse)).
-- **Os préstamos.** En `Focus`, `view` é unha referencia `&mut` a `self.content`. Despois de `view.focus(…)` xa non se usa, e Rust permite pasar outra vez `&mut self.content` a `Frames::changed`. O mesmo en `Resized`, desde a 1.9, e en `Key` e no rato: `respond` colle `&mut self` enteiro, e chámase cando `view` xa non se usa. Por iso a vista devolve o que hai que facer, en vez de pedir ela o fotograma: non ten `Frames`, e `Frames::changed` necesita o contido enteiro, onde está ela.
+- **A vista, a través das tabs.** Desde a subfase 2.2, os eventos da xanela, salvo os avisos, van á vista con `tabs.view_mut()` ([`Tabs`](#tabs-e-new)): a vista é unha para todas as tabs, e mostra a activa, así que as teclas, o rato, o foco, o tamaño e a escala son da tab que se mostra. As ocultas non os ven: o seu programa recibiu que perdeu o foco ao ocultarse, se o pediu, e a súa grella agarda a que se mostren ([`show`](#mostrar-outra-tab-show)).
+- **Os préstamos.** En `Focus`, `tabs` é unha referencia `&mut` a `self.content`, e `view_mut` dá outra á súa vista. Despois de `tabs.view_mut().focus(…)` xa non se usan, e Rust permite pasar outra vez `&mut self.content` a `Frames::changed`. O mesmo en `Resized`, desde a 1.9, e en `Key` e no rato: `respond` colle `&mut self` enteiro, e chámase cando `tabs` xa non se usa. Por iso a vista devolve o que hai que facer, en vez de facelo ela: non ten `Frames`, e `Frames::changed` necesita o contido enteiro, onde está ela; nin, desde a 2.2, as tabs, que a levan dentro.
 - `if let Content::Bench(bench) = &mut self.content`: entra só se o contido é un modo de medición, e dá unha referencia a el.
 
 ### `respond`: o que pide a vista
 
 ```rust
 fn respond(&mut self, window: &Window, response: Response) -> Result<(), HandlerError> {
+    let mut changed = response.redraw;
     if response.dialog {
-        if let Content::Terminal(view) = &mut self.content {
-            view.dialog_closed(window);
+        if let Content::Terminal(tabs) = &mut self.content {
+            tabs.view_mut().dialog_closed(window);
         }
         self.catch_up(window)?;
-        // While the message box was open, the window lost its wakes, and
-        // maybe some paint: what changed meanwhile is shown now.
+        // While the message box was open, the window lost its wake-ups,
+        // and maybe some paint: what changed meanwhile is shown now.
         window.invalidate(None);
-        self.wake(window)?;
+        if let Content::Terminal(tabs) = &mut self.content {
+            changed |= tabs.catch_up_wakes(window, Instant::now());
+        }
     }
-    if response.redraw {
+    if let Some(action) = response.tab
+        && let Content::Terminal(tabs) = &mut self.content
+    {
+        changed |= tabs.act(window, action, Instant::now());
+    }
+    if changed {
         self.frames.changed(window, &mut self.content)?;
     }
     Ok(())
 }
 
 fn catch_up(&mut self, window: &Window) -> Result<(), HandlerError> {
-    let Content::Terminal(view) = &self.content else {
+    let Content::Terminal(tabs) = &self.content else {
         return Ok(());
     };
     let dpi = window.dpi();
-    if dpi != view.dpi() {
+    if dpi != tabs.view().dpi() {
         self.event(window, Event::DpiChanged { dpi })?;
     }
     let size = window.client_size()?;
@@ -707,15 +648,440 @@ Desde a subfase 1.8. Despois dunha tecla ou dun evento do rato, fai o que lle pi
 
 - **Pechouse a caixa de mensaxe** que pregunta antes de pegar ([`paste`](#pegar-paste)). A caixa ten o seu propio bucle de mensaxes, que lle pasa tamén as da xanela ao *window procedure*, pero, mentres estaba aberta, o *handler* seguía ocupado na tecla ou no clic que a abriu, esperando por ela: `meiga-win` non o pode chamar outra vez, e descarta os eventos que chegan entón ([Código › meiga-win › `Handler`](meiga-win.md#handler), [Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). Ao pecharse:
   1. **A vista esquece as teclas que colleu e os botóns do rato** ([`dialog_closed`](#o-rato-mouse-e-dialog_closed)): a súa soltura puido chegar mentres tanto, e perderse. O programa recibe agora a soltura dos botóns cuxa baixada recibiu.
-  2. **A vista ponse ao día coa escala e co tamaño da xanela** (`catch_up`), desde a revisión do código da subfase 1.9: mentres a caixa estaba aberta, a xanela puido cambiar de tamaño ou de escala, por exemplo se cambia a escala do monitor, ou se outro programa lle cambia o tamaño, e eses eventos tamén se perderon. Windows aplica igual o tamaño que suxire o cambio de escala ([`WM_DPICHANGED`](meiga-win.md#cratesmeiga-winsrcwindowrs)), pero a vista, o terminal e o programa seguirían coa grella de antes ata o seguinte cambio. `catch_up` trata a escala e o tamaño de agora coma se acabasen de chegar, na mesma orde ca Windows: primeiro a escala da xanela, se non é a da vista ([`dpi`](#terminalview)), e despois o tamaño, sempre. Co mesmo tamaño, `Resized` non fai nada: a vista non cambia a grella, e `Frames` non toca o *framebuffer*. Minimizada, a xanela deixa de debuxar, coma con calquera `Resized`. `catch_up` chama a `event` desde `respond`, que xa vén de `event`: non hai ningún problema, porque `App` é un valor normal, sen *lock* nin `RefCell`, e cada chamada colle `&mut self` cando a anterior xa non o usa. `check-resize.ps1` compróbao: cambia o tamaño da xanela coa caixa aberta, e o programa recibe a grella nova ao pechala ([Código › ferramentas](ferramentas.md#toolscheck-resizeps1)).
+  2. **A vista ponse ao día coa escala e co tamaño da xanela** (`catch_up`), desde a revisión do código da subfase 1.9: mentres a caixa estaba aberta, a xanela puido cambiar de tamaño ou de escala, por exemplo se cambia a escala do monitor, ou se outro programa lle cambia o tamaño, e eses eventos tamén se perderon. Windows aplica igual o tamaño que suxire o cambio de escala ([`WM_DPICHANGED`](meiga-win.md#cratesmeiga-winsrcwindowrs)), pero a vista, o terminal e o programa seguirían coa grella de antes ata o seguinte cambio. `catch_up` trata a escala e o tamaño de agora coma se acabasen de chegar, na mesma orde ca Windows: primeiro a escala da xanela, se non é a da vista ([`dpi`](#terminalview)), que desde a 2.2 se le con `tabs.view()`, e despois o tamaño, sempre. Co mesmo tamaño, `Resized` non fai nada: a vista non cambia a grella, e `Frames` non toca o *framebuffer*. Minimizada, a xanela deixa de debuxar, coma con calquera `Resized`. `catch_up` chama a `event` desde `respond`, que xa vén de `event`: non hai ningún problema, porque `App` é un valor normal, sen *lock* nin `RefCell`, e cada chamada colle `&mut self` cando a anterior xa non o usa. `check-resize.ps1` compróbao: cambia o tamaño da xanela coa caixa aberta, e o programa recibe a grella nova ao pechala ([Código › ferramentas](ferramentas.md#toolscheck-resizeps1)).
   3. **A xanela píntase enteira** desde o *framebuffer* (`invalidate`): quizais se perdeu algún `WM_PAINT`.
-  4. **`wake` le o que cambiou mentres tanto.** Os avisos do fío lector tamén se perderon e, coas súas marcas postas, o fío lector non envía outros ([`Shared`](#shared-e-lock)): o título, o texto que copiou o programa e a pantalla agardan a que alguén mire.
-- **Cambiou a selección** ou, desde a subfase 1.9, a vista do historial ou a fonte: pídese un fotograma (`changed`), que copia e debuxa só as celas onde cambiou ([`update`](#poñer-ao-día-update)) ou, cunha fonte nova, a xanela enteira. O zoom da roda xa o fixo a vista ([`mouse`](#o-rato-mouse-e-dialog_closed)), e `respond` non o ve.
+  4. **As tabs len o que cambiou mentres tanto** (`catch_up_wakes`). Os avisos dos fíos lectores tamén se perderon, desde a subfase 2.2 os de todas as tabs, e, coas súas marcas postas, os fíos lectores non envían outros ([`Shared`](#shared-e-lock)): o título, o texto que copiou o programa e a pantalla da tab que se mostra agardan a que alguén mire, e as actualizacións sincronizadas que deixaron abertas as tabs ocultas, a que a xanela saiba cando rematan. `catch_up_wakes` fai con todas as tabs o que faría o seu aviso ([os avisos](#os-avisos-wake-e-catch_up_wakes), [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 13). Ata a 2.1, `respond` chamaba eiquí a `wake`, que só tiña un terminal que mirar.
+- **Cambiou a selección** ou, desde a subfase 1.9, a vista do historial ou a fonte (`redraw`): hai que copiar e debuxar só as celas onde cambiou ([`update`](#poñer-ao-día-update)) ou, cunha fonte nova, a xanela enteira. O zoom da roda xa o fixo a vista ([`mouse`](#o-rato-mouse-e-dialog_closed)), e `respond` non o ve.
+- **Un atallo das tabs** (`tab`), desde a subfase 2.2: `Tabs::act` fai o que pide, abrir, pechar ou cambiar de tab ([`act`](#os-atallos-act-open-e-close_active)), e di se a xanela mostra agora outra tab, que o fotograma ten que debuxar enteira. Pechar a última tab pecha a xanela, e entón non fai falta ningún fotograma. `if let … && let …` encadea os dous patróns (*let chains*): o atallo só se fai se o contido é o terminal. Unha resposta non trae nunca un atallo e a caixa á vez: a caixa ábrea pegar, e un atallo das tabs non pega.
+- **Un só fotograma.** Desde a 2.2, `changed` xunta o que piden a vista (`redraw`), os avisos que se perderon e o atallo das tabs, e `Frames::changed` chámase unha vez, ao final. Ata a 2.1 podía haber dúas chamadas, a de `wake` ao pecharse a caixa e a de `redraw`: se a primeira debuxaba no momento, a segunda deixaba outro fotograma para o final do intervalo, que xa non adoitaba ter nada que debuxar. Cada parte recibe a hora de agora (`Instant::now()`), coma a vista en `focus`.
 - **Desde a revisión do código.** Antes, ao pecharse a caixa, `respond` só pintaba a xanela e chamaba a `wake`, e a vista non sabía o que pasara mentres tanto: unha tecla collida que subira na caixa, coma o C de Ctrl+C se Ctrl+V abriu a caixa co C aínda abaixo, comía a súa seguinte pulsación; e o programa nunca recibía a soltura dun botón que se premeu para el antes de abrila. `check-mouse.ps1` comproba os dous casos ([Código › ferramentas](ferramentas.md#toolscheck-mouseps1)).
+
+## `crates/meiga/src/tabs.rs`
+
+Desde a subfase 2.2. As **tabs da xanela**: cada unha co seu terminal e a súa sesión, que segue mentres a tab está oculta, e a vista, unha soa, que mostra a activa ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Arquitectura › As tabs: unha sesión por tab e as tabs en segundo plano](../arquitectura.md#as-tabs-unha-sesión-por-tab-e-as-tabs-en-segundo-plano)). A orde das tabs, cal está activa e cal se activa ao pechar unha decídeos o modelo de `meiga-core` ([`model::Window`](meiga-core.md#cratesmeiga-coresrcmodelwindowrs), [ADR 0018](../adr/0018-o-modelo-das-tabs.md)), que non sabe nada de terminais nin de Windows. Este módulo pon dentro de cada tab o seu terminal e a súa sesión, leva o aviso de cada fío lector á súa tab, remata á súa hora as actualizacións sincronizadas das tabs ocultas, cambia a prioridade dos fíos lectores, e abre, pecha e cambia de tab cando o pide un atallo.
+
+| | A tab que se mostra | Unha tab oculta |
+|---|---|---|
+| O fío lector | Dálle a saída do programa ao terminal, con prioridade normal. | O mesmo, con prioridade por debaixo da normal, salvo mentres a xanela ten o *lock* do seu terminal: entón, coa normal. |
+| A pantalla | A vista copia o que cambiou, antes de cada fotograma. | Ninguén a copia: a súa marca queda posta, e a saída esperta a xanela como moito unha vez. |
+| O título | A xanela cólleo co aviso do fío lector. | Agarda a que se mostre a tab. |
+| O texto que copia o programa (OSC 52) | Vai ao portapapeis, se a xanela ten o foco e está en primeiro plano. | Descártase cando se mostra a tab. |
+| Unha actualización sincronizada que o programa deixa aberta | Remátaa a vista á súa hora, na posta ao día dun fotograma. | Remátaa `end_hidden_syncs` á súa hora, sen copiar nin debuxar nada. |
+| O tamaño da xanela | A vista dálles a grella nova ao terminal e ao programa, como moito unha vez por intervalo. | Mantén a súa grella ata que se mostra. |
+| O foco | O programa sabe se a xanela o ten, se o pediu. | Se a xanela tiña o foco, o programa recibiu que o perdeu ao ocultarse a tab, se o pediu. |
+
+- **Por que unha vista para todas.** A vista leva a copia da pantalla, unha cela por cada cela da grella, a fonte coa súa caché de glifos, o cursor, o rato e a barra de desprazamento. Unha por tab multiplicaría esa memoria polas tabs, para gardar algo que ao cambiar de tab se copia outra vez nun só fotograma ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 1).
+- **Por que non se copia a pantalla das tabs ocultas.** Copiala quitaría a súa marca, e cada cambio da saída dunha tab que non se ve espertaría a xanela. Así, a saída dunha tab oculta só esperta o seu fío lector, que a analiza: a xanela non fai nada por ela ([ADR 0005](../adr/0005-fios-e-fotogramas.md)). Ao mostrala, a vista cópiaa enteira, unha vez ([`show`](#mostrar-outra-tab-show)).
+- **A xanela nunca espera por un lector de menos prioridade ca ela.** Antes de coller o *lock* do terminal dunha tab, sobe o seu lector á prioridade normal: ao mostrala ([`show`](#cambiar-de-tab-show)), e cada vez que atende unha oculta ([`learn_sync`](#mentres-está-oculta-set_priority-e-learn_sync)), que só a mantén mentres a xanela ten o *lock*. Se non, co procesador ocupado, a xanela podería esperar polo *lock* que ten un fío que Windows deixa para despois, unha inversión de prioridades, e Windows non a atenúa co `Mutex` da biblioteca estándar ([Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)).
+
+### `TabAction`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TabAction {
+    /// Open a tab with the default shell at the end, and show it.
+    New,
+    /// Show the next tab or, from the last one, the first.
+    Next,
+    /// Show the previous tab or, from the first one, the last.
+    Previous,
+    /// Close the tab that is shown, and its session. The last one closes
+    /// the window.
+    Close,
+}
+```
+
+O que pide un atallo das tabs: abrir unha (`New`), mostrar a seguinte (`Next`) ou a anterior (`Previous`), dando a volta, ou pechar a que se mostra (`Close`).
+
+- **Quen o pide e quen o fai.** A vista recoñece os atallos ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)) e devolve a acción na súa resposta (`Response::tab`, [`Response`](#context-e-response)), e `App::respond` dálla a `Tabs::act` ([`respond`](#respond-o-que-pide-a-vista)). A vista non pode facelo ela: está dentro de `Tabs`, e non ten as tabs. É o mesmo camiño ca o dos fotogramas, que a vista tampouco pide: di o que fai falta, e faino quen pode.
+- **Unha acción, e non unha tecla.** `Tabs` non sabe que tecla foi: os botóns da barra de tabs (subfase 2.3) e os atallos configurábeis (2.6) poderán pedir o mesmo.
+- **Os `derive`.** `Response` deriva `Clone`, `Copy`, `Debug`, `PartialEq` e `Eq`, e leva un `Option<TabAction>`, así que `TabAction` ten que derivalos tamén. `Default` non lle fai falta: un `Option` vale `None` por defecto. Copiala non custa nada: catro variantes sen datos caben nun byte.
+
+### `Tab`
+
+```rust
+struct Tab {
+    shared: Arc<Mutex<Shared>>,
+    /// It closes when the tab closes. `None` if its program could not
+    /// start.
+    session: Option<Pty>,
+    /// While the tab is hidden, when the synchronized update that its
+    /// program has open ends, if the program does not end it first.
+    sync_due: Option<Instant>,
+}
+
+impl Tab {
+    fn start(command: Option<&str>, grid: GridSize, cell: Size, waker: &Waker, id: TabId) -> Self {
+        let mut terminal = Terminal::new(grid);
+        terminal.set_cell_size(cell);
+        let shared = Arc::new(Mutex::new(Shared::new(terminal)));
+        let session = match session::start(command, grid, &shared, waker, id) {
+            Ok(pty) => Some(pty),
+            Err(message) => {
+                lock(&shared).terminal.feed(message.as_bytes());
+                None
+            }
+        };
+        Self {
+            shared,
+            session,
+            sync_due: None,
+        }
+    }
+
+    fn terminal(&self, id: TabId) -> TabTerminal {
+        TabTerminal {
+            id,
+            shared: Arc::clone(&self.shared),
+            input: self.session.as_ref().map(Pty::input),
+        }
+    }
+}
+```
+
+O contido de cada tab no modelo: o seu terminal, que comparte co seu fío lector, e a súa sesión. É privado: fóra deste módulo, ninguén o ve.
+
+| Campo | Que garda |
+|---|---|
+| `shared` | O terminal da tab e as súas marcas, que comparte co fío lector da sesión ([`Shared`](#shared-e-lock)). |
+| `session` | A sesión ([`Pty`](meiga-win.md#cratesmeiga-winsrcconptyrs)), que se pecha ao destruír a tab ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). `None` se o programa non se lanzou. |
+| `sync_due` | Mentres a tab está oculta, cando remata a actualización sincronizada que o seu programa deixou aberta, se non a remata el antes. Mentres se mostra, `None`: as súas actualizacións remátaas a vista ([`update`](#poñer-ao-día-update)). |
+
+- **Dous `Tab`.** O modelo ten o seu, `model::Tab<T>`, co identificador e o contido de cada tab, e o contido é este `Tab`. Por iso o módulo importa o módulo `model`, e non os seus tipos, e escribe `model::Window<Tab>`: os dous nomes non chocan.
+- **`start`** crea o terminal e a sesión dunha tab, o que facía ata a 2.1 a función `terminal` de `app.rs`, paso a paso:
+  1. **O terminal**, coa grella que recibe ([`Terminal::new`](meiga-core.md#cratesmeiga-coresrctermmodrs)), e o tamaño da cela (`set_cell_size`), co que responde aos programas que preguntan polo tamaño da grella en píxeles (`CSI 14 t`, [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)).
+  2. **`Shared`** ([`session.rs`](#cratesmeigasrcsessionrs)), o terminal e as súas marcas, vai nun `Arc<Mutex<…>>`: o `Mutex` deixa usalo desde dous fíos, un cada vez, e o `Arc`, un contador de referencias que se pode compartir entre fíos, mantén vivo o que comparten mentres o use calquera deles: a tab, a vista mentres a mostra, e o fío lector.
+  3. **A sesión** lánzase xa ([`session::start`](#start-lanzar-o-programa)), coa mesma grella ca o terminal: `grid_size` xa aplica o mínimo do terminal, así que `Terminal::new` non a cambia, e a pseudoconsola ten o mesmo tamaño ca el. Ata a 2.1, a sesión recibía o tamaño que tiña o terminal despois de crealo (`terminal.size()`), que é o mesmo. O fío lector esperta a xanela con `waker` e co identificador da tab, `id`: por iso o identificador fai falta antes de que a tab estea no modelo ([`Tabs::new`](#tabs-e-new)).
+  4. **Se o programa non se pode lanzar**, a mensaxe vai ao terminal coma se a escribise o programa (`feed`), e a tab queda, sen sesión (`None`): mostra por que, e Ctrl+Maiús+W pode pechala.
+- **A sesión da primeira tab** lánzase antes do primeiro fotograma: así o programa empeza canto antes, e o que escriba mentres meiga compón ese fotograma xa está no terminal, ou chega en seguida ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). A das outras, ao abrilas ([`open`](#os-atallos-act-open-e-close_active)).
+- **`terminal`** dálle á vista o que necesita para mostrar a tab ([`TabTerminal`](#terminalview)): o identificador, outra referencia ao terminal (`Arc::clone` só suma un ao contador) e unha copia da entrada da sesión ([`Pty::input`](meiga-win.md#cratesmeiga-winsrcconptyrs)), ou `None` se o programa non se lanzou. A vista usa a entrada para as teclas e o foco, os informes do rato, o texto que se pega, o tamaño da pseudoconsola e as respostas que aparecen cando ela remata unha actualización sincronizada. A copia non mantén aberta a sesión: péchase igual ao destruír a tab. O `Tab` non garda o seu identificador, porque xa o garda o modelo: quen chama sábeo, e pásallo.
+
+### Mentres está oculta: `set_priority` e `learn_sync`
+
+```rust
+fn set_priority(&self, priority: Priority) {
+    // If it fails, the reader keeps the priority that it had, which only
+    // changes how soon it runs while the processor is busy.
+    if let Some(session) = &self.session {
+        let _ = session.set_reader_priority(priority);
+    }
+}
+
+fn learn_sync(&mut self, now: Instant, answers: &mut Vec<u8>) {
+    // If the reader held the lock with a lower priority, the window
+    // would wait for a thread that a busy processor leaves for later: a
+    // priority inversion. The mutex of the standard library waits with
+    // WaitOnAddress, which does not know who holds it, so Windows cannot
+    // raise it.
+    self.set_priority(Priority::Normal);
+    let (due, _) = lock(&self.shared).end_late_sync(now, answers);
+    self.set_priority(Priority::BelowNormal);
+    self.sync_due = due;
+    // Outside the lock, as the reader thread does.
+    if !answers.is_empty() {
+        if let Some(session) = &self.session {
+            session.write(answers);
+        }
+        answers.clear();
+    }
+}
+```
+
+- **`set_priority`** cambia a prioridade do fío lector da sesión ([`Pty::set_reader_priority`](meiga-win.md#cratesmeiga-winsrcconptyrs), [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)): `Priority::Normal` mentres a tab se mostra, e `Priority::BelowNormal` mentres está oculta, salvo mentres a xanela ten o *lock* do seu terminal ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 10). Non aforra CPU, porque o lector analiza a mesma saída: só fai que, co procesador ocupado, o lector da tab que se ve e a xanela corran primeiro. Por debaixo da normal, un só nivel, e non a máis baixa (`THREAD_PRIORITY_IDLE`): con ela, co procesador ocupado, un lector oculto podería quedar moito tempo sen correr, e o seu programa pararía coa tubaxe chea. Cámbiaa a xanela, non o propio fío: ao cambiar de tab ([`show`](#cambiar-de-tab-show)) e, nunha tab oculta, arredor de cada *lock* do seu terminal (`learn_sync`). Cada vez é unha chamada a `SetThreadPriority`. Se falla, `let _ =` descarta o erro: o lector queda coa prioridade que tiña, que só cambia canto tarda en correr co procesador ocupado. Sen sesión, non hai lector.
+- **`learn_sync`**, mentres a tab está oculta: a xanela apunta cando remata a actualización sincronizada que o programa deixou aberta, e remátaa se xa é a hora. É o que fai a vista coa tab que se mostra coa xanela minimizada ([`update_hidden`](#coa-xanela-minimizada-update_hidden)), co mesmo código ([`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync)):
+  1. **O lector sobe á prioridade normal** antes de que a xanela colla o *lock* do seu terminal. Se o lector o tivese coa prioridade por debaixo da normal, e o procesador estivese ocupado con fíos de prioridade normal, Windows deixaríao para despois, e a xanela, que espera polo *lock*, tamén: unha inversión de prioridades. Windows non a pode atenuar co *AutoBoost*: o `Mutex` da biblioteca estándar espera con `WaitOnAddress`, que non sabe que fío ten o *lock*, así que Windows non sabe a quen subir ([Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)).
+  2. **Baixo o *lock*,** `end_late_sync` remata a actualización se chegou a súa hora, deixa en `answers` as respostas ás preguntas que o programa fixo dentro dela, e devolve a hora límite da que siga aberta, ou `None`. Tamén pon ou quita a marca `sync_noted`: desde agora a xanela sabe da que queda aberta, e o fío lector non volta avisar por ela.
+  3. **O lector volta baixar** á prioridade por debaixo da normal en canto a xanela solta o *lock*: o `MutexGuard` que devolve `lock` é temporal, e destrúese ao final da mesma sentenza. Así, a prioridade normal só dura arredor do *lock* da xanela, e só para a tab que atende.
+  4. **A hora** queda en `sync_due`, que le [`end_hidden_syncs`](#as-actualizacións-sincronizadas-das-tabs-ocultas-end_hidden_syncs) en cada posta ao día da escena.
+  5. **Fóra do *lock*,** as respostas van ao programa ([`Pty::write`](meiga-win.md#cratesmeiga-winsrcconptyrs), que non agarda: deixa os bytes para o fío escritor), coma no fío lector ([`Reader`](#o-fío-lector-reader)). O búfer baléirase sen liberar a memoria: é o de `Tabs`, para todas as tabs ocultas.
+  - **Cando:** co aviso dunha tab oculta ([`wake`](#os-avisos-wake-e-catch_up_wakes)), cando chega a hora que apuntou ([`end_hidden_syncs`](#as-actualizacións-sincronizadas-das-tabs-ocultas-end_hidden_syncs)), ao pecharse a caixa de mensaxe que pregunta antes de pegar (`catch_up_wakes`, con todas as ocultas) e, para a tab que se oculta, ao cambiar de tab ([`show`](#cambiar-de-tab-show)). Nesta última, o lector aínda ten a prioridade normal, a da tab que se mostraba, e `learn_sync` déixao coa baixa ao soltar o *lock*.
+  - **Desde a revisión do código.** Antes, `learn_sync` collía o *lock* co lector da tab oculta na prioridade por debaixo da normal, e só `show` subía un lector antes do *lock*: coa máquina ocupada, se o lector tiña o *lock*, a xanela esperaría por el ata que Windows o subise para que non quedase sen procesador.
+  - **O título e o portapapeis** que traia a actualización ao rematar non espertan a xanela, ao contrario ca na tab que se mostra ([`send`](#poñer-ao-día-update)): as súas marcas quedan postas, e o segundo valor de `end_late_sync`, que diría se hai que espertar a xanela por eles, descártase (`_`). O título agarda a que se mostre a tab, e o texto do portapapeis descártase entón ([`show`](#mostrar-outra-tab-show)).
+  - **Se o programa remata el a actualización** antes da hora, a xanela non se entera: remátaa nun bloque de saída que non deixa ningunha aberta, e iso non avisa. `sync_due` segue coa hora vella, e a marca `sync_noted`, posta. Á hora, `learn_sync` non atopa ningunha aberta: `sync_due` volta a `None`, a marca quítase, e a seguinte que quede aberta volta avisar. Se mentres tanto o programa abriu outra que segue aberta, o fío lector non avisou, porque a marca seguía posta, pero á hora da primeira `learn_sync` atopa a segunda, que remata despois, e apunta a súa hora. Como moito, a xanela esperta unha vez de máis ([`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync)).
+
+### `Tabs` e `new`
+
+```rust
+pub struct Tabs {
+    tabs: model::Window<Tab>,
+    view: TerminalView,
+    /// The answers for the programs of the hidden tabs, kept to avoid an
+    /// allocation each time.
+    answers: Vec<u8>,
+}
+
+impl Tabs {
+    pub fn new(window: &Window, command: Option<&str>) -> Result<Self, HandlerError> {
+        let fonts = FontSystem::new()?;
+        let dpi = window.dpi();
+        let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
+        let cell = font.cell();
+        let client = window.client_size()?;
+        let grid = view::grid_size(client, cell, ScrollBar::width_at(dpi));
+        let waker = window.waker();
+        let Ok(tabs) = model::Window::try_new_with(|id| {
+            Ok::<_, Infallible>(Tab::start(command, grid, cell, &waker, id))
+        });
+        let first = tabs.active();
+        let terminal = first.content().terminal(first.id());
+        let view = TerminalView::new(terminal, waker, fonts, font, dpi, client);
+        // The clicks select text until the program asks for the mouse.
+        window.set_pointer(Pointer::Text);
+        Ok(Self {
+            tabs,
+            view,
+            answers: Vec::new(),
+        })
+    }
+
+    pub const fn view(&self) -> &TerminalView {
+        &self.view
+    }
+
+    pub const fn view_mut(&mut self) -> &mut TerminalView {
+        &mut self.view
+    }
+}
+```
+
+| Campo | Que garda |
+|---|---|
+| `tabs` | O modelo das tabs ([`model::Window`](meiga-core.md#cratesmeiga-coresrcmodelwindowrs)): a orde da barra de tabs e a activa, que é a que se mostra. Sempre ten polo menos unha. |
+| `view` | A vista do terminal ([`TerminalView`](#cratesmeigasrcviewrs)), unha para todas as tabs, que mostra a activa. |
+| `answers` | As respostas para os programas das tabs ocultas, que se gardan para non reservar memoria cada vez. |
+
+**`new`** crea o terminal da xanela, coa súa primeira tab. Ata a 2.1 facíao `terminal`, en `app.rs`. Paso a paso:
+
+1. **A fonte**, ao DPI da xanela: dela sae o tamaño da cela. As fontes do sistema (`fonts`) quedan na vista, que crea con elas a fonte nova cando cambian o zoom ou a escala ([`new_font`](#o-zoom-e-a-escala-zoom-set_points-dpi_changed-e-new_font)).
+2. **A grella:** a que enche a xanela, sen a franxa da barra de desprazamento ([`grid_size`](#o-tamaño-resized-resize_grid-e-grid_size)): tantas celas enteiras como caben, polo menos 2 × 1. O que sobra son as marxes, que a vista pinta coa cor do fondo. É a mesma conta que fai a vista cada vez que cambia o tamaño da xanela, pero a franxa mídese co DPI da xanela ([`ScrollBar::width_at`](#scrollbar)), porque aínda non hai vista, nin rato, nin barra. Ata a 1.8, a conta estaba en `terminal`, sen a franxa, e a grella quedaba así toda a vida da xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+3. **O `Waker`** da xanela é o que usa o fío lector para espertala ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcwindowrs)): garda o *handle* da xanela, e pódese copiar e levar a outro fío. A primeira tab recibe unha referencia a el, e o seu fío lector, unha copia; despois, a vista quédase con el.
+4. **O modelo, coa primeira tab**, que corre `command`, o programa da liña de comandos, ou, sen el, o shell por defecto ([`Tab::start`](#tab)). As tabs que se abren despois corren sempre o shell por defecto ([`open`](#os-atallos-act-open-e-close_active)).
+5. **A vista** mostra a primeira tab, que é a activa: `active` dá a tab do modelo, co seu identificador (`id`) e o seu contido (`content`), e o contido dá o seu terminal (`terminal`). Recibe tamén as fontes do sistema, a fonte, o DPI e o tamaño da área cliente ([`TerminalView`](#terminalview)).
+6. **O punteiro**, desde a subfase 1.8, é a barra de texto ([`Pointer::Text`](meiga-win.md#cratesmeiga-winsrcwindowrs)): os clics seleccionan texto mentres o programa non pide o rato. A xanela empeza coa frecha, a da súa clase, que queda nos modos de medición. Despois, o rato da vista escolle o punteiro en cada movemento ([`moved`](#mover-o-rato-moved)).
+
+- **`try_new_with` e `Infallible`.** A sesión necesita o identificador da tab antes de que a tab exista: o fío lector arranca con ela, e pode espertar a xanela en canto o programa escriba algo. O modelo dá o identificador antes de crear o contido en `try_new_with` e en `try_open_with`, que reciben unha *closure* co identificador e devolven o que ela devolve ([ADR 0018](../adr/0018-o-modelo-das-tabs.md)). Estas funcións aceptan que crear o contido falle, cun `Result`, pero `Tab::start` non pode fallar: un programa que non se lanza é unha mensaxe no terminal. Por iso o erro é `Infallible`, un `enum` sen variantes, que non ten ningún valor: un `Result<T, Infallible>` sempre é `Ok`. `Ok::<_, Infallible>` dille ao compilador o tipo do erro, que non podería deducir doutro xeito.
+- **`let Ok(tabs) = …;`** vai sen `else`: desde Rust 1.82, un patrón que só deixa fóra variantes que non poden ter ningún valor é irrefutábel. O compilador sabe que o `Err` é imposíbel, e o código non necesita `unwrap`, que as regras do proxecto prohiben, nin un brazo para un erro que non pode chegar.
+- **`view` e `view_mut`** danlle a vista a `App`, para os eventos da xanela ([Os eventos](#os-eventos)) e para a escala en `catch_up` ([`respond`](#respond-o-que-pide-a-vista)): as teclas, o rato, o foco, o tamaño e a escala son da vista, que é a mesma para todas as tabs. Son `const fn`: só dan unha referencia a un campo.
+
+### Os avisos: `wake` e `catch_up_wakes`
+
+```rust
+pub fn wake(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
+    if id == self.tabs.active().id() {
+        return self.view.wake(window);
+    }
+    // A hidden tab, or none: a tab that closed after its reader woke
+    // the window up.
+    let Some(tab) = self.tabs.get_mut(id) else {
+        return false;
+    };
+    tab.learn_sync(now, &mut self.answers);
+    tab.sync_due.is_some()
+}
+
+pub fn catch_up_wakes(&mut self, window: &Window, now: Instant) -> bool {
+    let active = self.tabs.active().id();
+    let mut changed = self.view.wake(window);
+    for (id, tab) in self.tabs.contents_mut() {
+        if id != active {
+            tab.learn_sync(now, &mut self.answers);
+            changed |= tab.sync_due.is_some();
+        }
+    }
+    changed
+}
+```
+
+**`wake`**: o fío lector da tab `id` espertou a xanela ([`App::wake`](#wake-o-aviso-do-fío-lector)), e a xanela colle o que pode ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisións 2, 3 e 4):
+
+- **A tab que se mostra:** a vista colle o título e o texto que copiou o programa, e di se cambiou a pantalla ([`TerminalView::wake`](#o-título-o-portapapeis-e-a-pantalla-wake)), coma ata a 2.1 facía `App::wake`.
+- **Unha tab oculta:** só a actualización sincronizada (`learn_sync`, co seu lector na prioridade normal mentres a xanela ten o *lock* do seu terminal). A xanela non copia a súa pantalla, nin colle o seu título nin o seu portapapeis, así que esas marcas quedan postas, e a saída do programa non volta espertar a xanela por elas: por estas tres cousas, unha tab oculta esperta a xanela como moito unha vez cada unha, escriba o que escriba. O aviso da pantalla aínda non serve para nada: servirá para o indicador de actividade (subfase 2.8).
+- **As actualizacións sincronizadas** son a excepción. O fío lector avisa se, despois de darlle ao terminal un bloque de saída, o programa deixou unha aberta, e a xanela non sabía dela ([`note`](#shared-e-lock)). `learn_sync` apunta a súa hora, e `wake` devolve `true`: un fotograma pon ao día a escena, e a hora chega así a `Frames` ([`end_hidden_syncs`](#as-actualizacións-sincronizadas-das-tabs-ocultas-end_hidden_syncs)), que programa para ela o temporizador. Por isto o fotograma non ten ningunha zona, e, se tampouco cambiou nada na tab que se mostra, non debuxa nada. Unha actualización que se abre e se pecha no mesmo bloque, coma a dun programa que escribe cada fotograma enteiro dunha vez, non deixa nada aberto, e non avisa: nunha tab oculta, cuxa marca da pantalla xa está posta, esa saída non esperta a xanela.
+- **Un identificador que non é de ningunha tab** é o dunha tab que pechou despois de que o seu fío lector espertase a xanela: o aviso agardaba na cola, ou o lector aínda leu a súa última saída antes de rematar ([`close_active`](#os-atallos-act-open-e-close_active)). `get_mut` non atopa nada, e o aviso ignórase: a tab, o seu terminal e a súa sesión xa non están. Non pode chegar a outra tab, porque o modelo nunca repite un identificador ([`TabId`](meiga-core.md#cratesmeiga-coresrcmodelmodrs)).
+- **O valor** di se un fotograma ten que poñer ao día a escena: se cambiou a pantalla da tab que se mostra, ou se a tab oculta ten aberta unha actualización sincronizada. `App::wake` pide entón o fotograma.
+
+**`catch_up_wakes`**: pechouse a caixa de mensaxe que pregunta antes de pegar ([`respond`](#respond-o-que-pide-a-vista)). Mentres estaba aberta, perdéronse os avisos de todas as tabs, e, coas súas marcas postas, os fíos lectores non envían outros ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 13). `catch_up_wakes` fai con cada tab o que faría o seu aviso, haxa aviso perdido ou non: coa que se mostra, a vista; coas ocultas, `learn_sync`. Devolve o mesmo ca `wake`, para todas.
+
+- **`contents_mut`**, desde a 2.2 no modelo ([`model::Window`](meiga-core.md#cratesmeiga-coresrcmodelwindowrs)), dá o contido de cada tab, para cambialo, co seu identificador, sen cambiar as tabs. `active` lese antes: mentres `contents_mut` ten prestadas as tabs, non se lle pode preguntar ao modelo cal é a activa. `self.view` e `self.answers` son outros campos, e Rust déixaos usar mentres tanto.
+
+### Os atallos: `act`, `open` e `close_active`
+
+```rust
+pub fn act(&mut self, window: &Window, action: TabAction, now: Instant) -> bool {
+    let switch = match action {
+        TabAction::New => self.open(window),
+        TabAction::Next => self.tabs.activate_next(),
+        TabAction::Previous => self.tabs.activate_previous(),
+        TabAction::Close => return self.close_active(window, now),
+    };
+    let Some(switch) = switch else {
+        return false;
+    };
+    self.show(window, switch, now);
+    true
+}
+
+fn open(&mut self, window: &Window) -> Option<Switch> {
+    let grid = self.view.window_grid();
+    let cell = self.view.cell();
+    let waker = window.waker();
+    let Ok(id) = self
+        .tabs
+        .try_open_with(|id| Ok::<_, Infallible>(Tab::start(None, grid, cell, &waker, id)));
+    // It cannot fail: the tab was just opened.
+    self.tabs.activate(id).ok().flatten()
+}
+
+fn close_active(&mut self, window: &Window, now: Instant) -> bool {
+    let from = self.tabs.active().id();
+    match self.tabs.close(from) {
+        Ok(Close::Removed { content, activated }) => {
+            if let Some(to) = activated {
+                self.show(window, Switch { from, to }, now);
+            }
+            // Its session closes without waiting. Its reader thread may
+            // still wake the window up with the identifier of the tab,
+            // which no tab has any more.
+            drop(content);
+            activated.is_some()
+        }
+        Ok(Close::LastTab) => {
+            window.close();
+            false
+        }
+        // The active tab is always a tab of the window.
+        Err(_) => false,
+    }
+}
+```
+
+**`act`** fai o que pide un atallo ([`TabAction`](#tabaction)), e di se a xanela mostra agora outra tab, que un fotograma ten que debuxar ([`respond`](#respond-o-que-pide-a-vista)). Os atallos son os do Windows Terminal, provisionais ata a subfase 2.6 ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 11):
+
+- **`New`** abre unha tab e actívaa (`open`).
+- **`Next` e `Previous`**: o modelo activa a seguinte ou a anterior, e dá a volta: despois da última, a primeira, e antes da primeira, a última ([`activate_next` e `activate_previous`](meiga-core.md#cratesmeiga-coresrcmodelwindowrs)). Cunha soa tab, non cambia nada.
+- **O cambio** que devolve o modelo (`Switch`) di que tab deixou de estar activa e cal o está agora; `None`, que a activa non cambiou. Entón non hai nada que mostrar, nin ningún fotograma. Se cambiou, `show` mostra a nova.
+- **`Close`** volta xa: `close_active` mostra ela a tab que queda activa, se a hai.
+
+**`open`** abre unha tab ao final da barra, co shell por defecto, e actívaa, como fará o botón + (subfase 2.3):
+
+- **A grella** é a que enche a xanela agora ([`window_grid`](#terminalview)), e a cela, a da fonte de agora ([`cell`](#terminalview)): o zoom é da xanela, e todas as tabs teñen o mesmo tamaño de letra ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 7). Así, a tab nova xa ten a grella que se ve, e mostrala non a cambia.
+- **O shell por defecto** (`None`): PowerShell 7 ou, se non está, Windows PowerShell ([`start`](#start-lanzar-o-programa)). Só a primeira tab corre o programa da liña de comandos de meiga, ata que cheguen os perfís, na subfase 2.5 (decisión 12).
+- **O `Waker`** é outro, que dá a xanela: o da vista é dela, e outro non custa nada.
+- **`try_open_with`** dá o identificador antes de crear o contido, coma `try_new_with` en `new`, e por iso tamén co erro `Infallible` e cun `let Ok(id) =` irrefutábel. A sesión lánzase xa, antes de mostrar a tab: o que escriba o programa mentres tanto xa estará no terminal cando a vista o copie. O seu fío lector empeza coa prioridade normal, a coa que empezan os fíos, e a tab vaise mostrar.
+- **`activate`** activa a tab nova e devolve o cambio. Devolve un `Result<Option<Switch>, Error>`: un erro se a tab non fose da xanela, e `None` se xa fose a activa. Ningunha das dúas cousas pode pasar cunha tab que se acaba de abrir, e `ok().flatten()` convérteo nun `Option<Switch>` sen `unwrap`. O modelo non activa só as tabs que abre: unha sesión restaurada abrirá as súas sen activalas (subfase 7.2).
+
+**`close_active`** pecha a tab que se mostra e a súa sesión:
+
+- **O modelo** quítaa da barra ([`close`](meiga-core.md#cratesmeiga-coresrcmodelwindowrs)), devolve o seu contido, e activa a da súa dereita ou, se era a última, a da esquerda, coma en Chrome (`activated`). Como pecha a activa, sempre activa outra, salvo que fose a única.
+- **Primeiro `show`, despois `drop`.** Mentres `show` cambia de tab, a sesión da tab que pecha segue aberta, e a vista remata co seu terminal o mesmo ca en calquera outro cambio: o rato solta os botóns que se premeron para o seu programa, unha selección que se arrastraba remata e cópiase, e o programa recibe que perdeu o foco, se o pediu ([`show`](#mostrar-outra-tab-show)). Despois, `drop(content)` destrúe a tab, e a súa sesión péchase sen esperar ([`Pty`](meiga-win.md#cratesmeiga-winsrcconptyrs), [ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)): o fío escritor pecha a pseudoconsola, o programa remata, e o que aínda non lle escribise xa non lle chega. O `drop` explícito di onde se pecha: sen el, o contido destruiríase igual, ao final do brazo.
+- **O fío lector** da tab pechada pode seguir uns instantes: le a última saída e escribe a liña do final ([`ended`](#o-fío-lector-reader)), e esperta a xanela co identificador dunha tab que xa non existe, que `wake` ignora. O terminal vive mentres tanto no `Reader`, que garda outra referencia (`Arc`), e libérase cando remata o fío.
+- **A última tab** non se pecha: o modelo devolve `Close::LastTab`, e a tab queda, para que a xanela nunca estea sen ningunha. [`Window::close`](meiga-win.md#cratesmeiga-winsrcwindowrs) pecha a xanela coma Alt+F4, con `WM_CLOSE`, cando o *handler* volta: o bucle de mensaxes remata, `App` destrúese, e con el a tab e a súa sesión ([`main.rs`](#cratesmeigasrcmainrs)). Non fai falta ningún fotograma.
+- **`Err`**: o modelo só falla cun identificador que non é de ningunha tab, e o da activa sempre o é.
+
+### Cambiar de tab: `show`
+
+```rust
+fn show(&mut self, window: &Window, switch: Switch, now: Instant) {
+    // It cannot fail: the model has just activated the tab.
+    let Some(to) = self.tabs.get_mut(switch.to) else {
+        return;
+    };
+    // Its reader gets the normal priority back before the view locks its
+    // terminal: if the reader held the lock, the window would wait for a
+    // thread that the busy processor would leave for later.
+    to.set_priority(Priority::Normal);
+    // From now on, the view ends its synchronized updates.
+    to.sync_due = None;
+    let terminal = to.terminal(switch.to);
+    self.view.show(window, terminal, now);
+    if let Some(from) = self.tabs.get_mut(switch.from) {
+        // The view no longer ends the synchronized update that its
+        // program may have open, and its reader gets the lower priority.
+        from.learn_sync(now, &mut self.answers);
+    }
+}
+```
+
+Mostra a tab `switch.to` no sitio de `switch.from`, que pode ter pechado. O modelo xa a activou: `show` fai o que iso supón para os fíos lectores e para a vista.
+
+1. **O lector da tab nova sobe á prioridade normal antes de que a vista colla o *lock* do seu terminal** ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 10; [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)). Ao revés, se o lector tivese o *lock*, con prioridade por debaixo da normal, e o procesador estivese ocupado con fíos de prioridade normal, Windows deixaría o lector para despois, e a xanela, que espera por el, tamén: unha inversión de prioridades.
+2. **`sync_due` a `None`:** desde agora, as actualizacións sincronizadas da tab remátaas a vista, na posta ao día de cada fotograma ([`update`](#poñer-ao-día-update)).
+3. **A vista mostra o seu terminal** ([`TerminalView::show`](#mostrar-outra-tab-show)): remata co terminal vello, colle o novo, e prepara un único fotograma completo.
+4. **A tab vella, se aínda existe** (non, se `close_active` a acaba de pechar): a vista xa non remata as súas actualizacións sincronizadas, así que `learn_sync` apunta cando remata a que o seu programa teña aberta, ou remátaa se xa é a hora, e baixa o seu lector á prioridade por debaixo da normal ([`learn_sync`](#mentres-está-oculta-set_priority-e-learn_sync)). Báixao ao soltar o *lock* do seu terminal: mentres a xanela o ten, o lector segue coa normal, a que tiña mentres a tab se mostraba, así que tampouco eiquí espera a xanela por un lector de prioridade baixa. Ata a revisión do código, `show` baixábao ela mesma, despois de `learn_sync`; agora faino `learn_sync`, coma con calquera tab oculta.
+
+- `get_mut(switch.to)` non pode fallar, porque o modelo acaba de activar esa tab, como di o comentario; se fallase, `show` non faría nada, en vez de parar meiga.
+- **Os préstamos.** `to` é unha referencia `&mut` a unha tab do modelo, que se usa por última vez en `to.terminal(…)`: despois, Rust deixa usar `self.view` e prestar outra vez as tabs para `from`. `from.learn_sync` recibe `&mut self.answers`, que é outro campo.
+
+### As actualizacións sincronizadas das tabs ocultas: `end_hidden_syncs`
+
+```rust
+fn end_hidden_syncs(&mut self, now: Instant) -> Option<Instant> {
+    let active = self.tabs.active().id();
+    let answers = &mut self.answers;
+    self.tabs
+        .contents_mut()
+        .filter(|&(id, _)| id != active)
+        .filter_map(|(_, tab)| {
+            if tab.sync_due.is_some_and(|due| due <= now) {
+                tab.learn_sync(now, answers);
+            }
+            tab.sync_due
+        })
+        .min()
+}
+```
+
+Remata as actualizacións sincronizadas das tabs ocultas cuxa hora chegou, e devolve cando remata a seguinte. Chámase en cada posta ao día da escena, con fotogramas e coa xanela minimizada ([`Scene` e `earliest`](#scene-e-earliest)), e remátaas sen copiar nin debuxar nada, coma a vista coa xanela minimizada ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 4; [ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+
+1. **As tabs ocultas:** todas menos a activa, cuxas actualizacións remata a vista.
+2. **Se chegou a hora** dunha (`due <= now`), `learn_sync` remátaa, envía ao programa as respostas ás preguntas que fixo dentro dela, e apunta a hora da seguinte, se queda outra aberta. Se non chegou, non fai nada: nin sequera colle o *lock* do seu terminal, nin cambia a prioridade do seu lector.
+3. **A seguinte hora:** `filter_map` deixa só as tabs que teñen unha, e `min` dá a máis próxima, ou `None` se non hai ningunha. `Frames` programa para ela o temporizador dos fotogramas ([`wait_for_scene`](#a-escena-e-o-temporizador-update-e-wait_for_scene) e [`hidden`](#coa-xanela-minimizada-hidden)): á hora, vence aínda que non haxa nada que debuxar.
+
+- **Así, o programa dunha tab oculta recibe as respostas** ás preguntas que fixo dentro dunha actualización que non remata, como moito á súa hora límite, e non queda parado esperando por elas. Sen isto, recibiríaas ao mostrar a tab, ou nunca, nunha tab que non se mostrase.
+- **Sen custo nas tabs que non teñen nada aberto.** Un fotograma da tab que se mostra só le o `sync_due` de cada tab oculta: non colle o *lock* de ningunha, nin cambia a prioridade de ningún lector, salvo na que xa ten que rematar. Sen ningunha actualización aberta nas tabs ocultas, devolve `None`, e o temporizador non esperta a xanela por elas: en repouso, con varias tabs, a xanela non esperta.
+- **Se o programa a rematou el**, á hora apuntada `learn_sync` non atopa ningunha aberta: `sync_due` volta a `None`, e a seguinte que quede aberta volta avisar ([`learn_sync`](#mentres-está-oculta-set_priority-e-learn_sync)).
+- **Os préstamos.** `active` lese antes, porque `contents_mut` presta todas as tabs para cambialas. `answers` préstase tamén antes, á parte: a *closure* usa o búfer mentres o iterador ten prestadas as tabs, e son campos distintos de `Tabs`.
+- `filter(|&(id, _)| …)`: o patrón desfai a referencia ao par e copia o identificador, que é `Copy`; `_` non toca a tab.
+
+### `Scene` e `earliest`
+
+```rust
+impl Scene for Tabs {
+    fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
+        let shown = self.view.update(now, damage);
+        let hidden = self.end_hidden_syncs(now);
+        earliest(shown, hidden)
+    }
+
+    fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
+        let shown = self.view.update_hidden(now);
+        let hidden = self.end_hidden_syncs(now);
+        earliest(shown, hidden)
+    }
+
+    fn draw(&mut self, canvas: &mut Canvas<'_>) {
+        self.view.draw(canvas);
+    }
+}
+
+fn earliest(first: Option<Instant>, second: Option<Instant>) -> Option<Instant> {
+    first.into_iter().chain(second).min()
+}
+```
+
+Desde a 2.2, `Tabs` é a [`Scene`](#scene) do terminal: `Frames` pona ao día e debúxaa ([`Content`](#content-e-app)).
+
+- **`update`**, antes de cada fotograma: a vista ponse ao día coa tab que se mostra ([`update`](#poñer-ao-día-update)), e as tabs ocultas rematan as actualizacións sincronizadas que xa teñen que rematar (`end_hidden_syncs`). As zonas que cambian só son da vista: as tabs ocultas non debuxan nada.
+- **`update_hidden`**, coa xanela minimizada: o mesmo, sen copiar nada. A vista só remata a actualización sincronizada da tab que se mostra ([`update_hidden`](#coa-xanela-minimizada-update_hidden)), e as ocultas, as súas.
+- **O seguinte momento** é o máis próximo dos dous, o da vista e o das tabs ocultas, e `Frames` programa para el o temporizador.
+- **`draw`** debuxa a vista: só se ve a tab activa.
+- **`earliest`**: o máis próximo de dous momentos que poden non estar. `Option` ordena `None` antes de calquera `Some`, así que `first.min(second)` daría `None` en canto faltase un dos dous, e a xanela esquecería o outro. `into_iter().chain(second)` fai un iterador só cos momentos que hai, e `min` dá o máis próximo, ou `None` se non hai ningún. A vista fai o mesmo cos seus catro momentos ([`update`](#poñer-ao-día-update)).
+
+**Sen probas unitarias.** Este módulo necesita a xanela, sesións e programas. O que se pode probar sen eles próbano as de `meiga-core`: o modelo das tabs ([`model/tests.rs`](meiga-core.md#cratesmeiga-coresrcmodeltestsrs)) e a copia enteira da pantalla dun terminal novo (`a_forgotten_screen_takes_all_of_another_terminal`, en [`term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs)); e as de `meiga-win`: a prioridade do fío lector (`the_priority_of_the_reader_changes_while_the_session_runs`, en [`tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs)) e o número do aviso ([`event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)). O resto compróbao `check-tabs.ps1` (ver [Comprobacións feitas](#comprobacións-feitas)).
 
 ## `crates/meiga/src/session.rs`
 
-A **sesión do terminal**: o programa que corre nunha pseudoconsola, o fío lector que lle dá a súa saída ao terminal, e o que ese fío comparte coa xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). A sesión en si, coas súas tubaxes e os seus dous fíos, é de `meiga-win` ([`Conpty` e `Pty`](meiga-win.md#cratesmeiga-winsrcconptyrs)); este módulo decide que programa se lanza e que fai o fío lector con cada bloque de saída.
+A **sesión dunha tab**: o programa que corre nunha pseudoconsola, o fío lector que lle dá a súa saída ao terminal da tab, e o que ese fío comparte coa xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a subfase 2.2, cada tab ten a súa ([`tabs.rs`](#cratesmeigasrctabsrs), [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)), e o fío lector esperta a xanela co identificador da súa tab. A sesión en si, coas súas tubaxes e os seus dous fíos, é de `meiga-win` ([`Conpty` e `Pty`](meiga-win.md#cratesmeiga-winsrcconptyrs)); este módulo decide que programa se lanza e que fai o fío lector con cada bloque de saída.
 
 ### `Shared` e `lock`
 
@@ -764,12 +1130,13 @@ pub fn lock(shared: &Mutex<Shared>) -> MutexGuard<'_, Shared> {
 
 O que comparten o fío lector e a xanela: o terminal ([`Terminal`](meiga-core.md#cratesmeiga-coresrctermmodrs)) e catro marcas, detrás dun `Mutex`. O fío lector dálle a saída ao terminal, e a xanela copia del o que cambiou: os dous collendo o mesmo `Mutex`, un cada vez ([ADR 0005](../adr/0005-fios-e-fotogramas.md)).
 
-- **As marcas** din para que se espertou a xanela e aínda non o atendeu: `screen_changed`, a pantalla, ata que a xanela a copia; `title_changed`, o título, ata que a xanela o colle; desde a subfase 1.8, `clipboard_changed`, o texto que o programa copiou ao portapapeis (OSC 52), ata que a xanela o colle; e `sync_noted`, unha actualización sincronizada aberta, ata que a xanela sabe cando remata ([máis abaixo](#as-actualizacións-sincronizadas-end_late_sync)). Cada unha quítase cando a xanela atende o seu, en momentos distintos: o título e o texto do portapapeis, en canto chega o aviso ([`App::wake`](#wake-o-aviso-do-fío-lector)); a pantalla, no seguinte fotograma, que pode chegar despois ou, coa xanela minimizada, non chegar; e a actualización sincronizada, cando a vista le a súa hora límite, tamén coa xanela minimizada.
+- **As marcas** din para que se espertou a xanela e aínda non o atendeu: `screen_changed`, a pantalla, ata que a xanela a copia; `title_changed`, o título, ata que a xanela o colle; desde a subfase 1.8, `clipboard_changed`, o texto que o programa copiou ao portapapeis (OSC 52), ata que a xanela o colle; e `sync_noted`, unha actualización sincronizada aberta, ata que a xanela sabe cando remata ([máis abaixo](#as-actualizacións-sincronizadas-end_late_sync)). Cada unha quítase cando a xanela atende o seu, en momentos distintos: o título e o texto do portapapeis, cando a xanela os colle, en canto chega o aviso, se a tab se mostra ([`TerminalView::wake`](#o-título-o-portapapeis-e-a-pantalla-wake)), ou, desde a subfase 2.2, nunha tab oculta, cando se mostra, que colle o título e descarta o texto que o programa copiou mentres tanto ([`show`](#mostrar-outra-tab-show)); a pantalla, no seguinte fotograma, que pode chegar despois ou, coa xanela minimizada ou a tab oculta, non chegar; e a actualización sincronizada, cando a xanela mira a súa hora límite e xa non queda ningunha aberta: a vista, tamén coa xanela minimizada, ou, nunha tab oculta, [`learn_sync`](#mentres-está-oculta-set_priority-e-learn_sync).
 - `sync_noted` é privada: só a cambian `note` e `end_late_sync`, os dous en `Shared`. As outras tres son públicas, porque a xanela as le e as quita.
-- **`note`** anota que o terminal leu saída, cos seus `Changes`, e di se hai que espertar a xanela: só se unha das marcas que toca non estaba posta. `mem::replace` pon o valor novo e devolve o vello. A da pantalla ponse con calquera saída; se ao final non cambiou ningunha cela, o fotograma non ten zonas e non debuxa nada ([`draw`](#draw)). A do título e a do portapapeis, só se cambiou o título ou se o programa copiou texto (`note_others`). A da actualización sincronizada, se despois do bloque o programa ten unha aberta (`sync_deadline`).
+- **`note`** anota que o terminal leu saída, cos seus `Changes`, e di se hai que espertar a xanela: só se unha das marcas que toca non estaba posta. `mem::replace` pon o valor novo e devolve o vello. A da pantalla ponse con calquera saída; se ao final non cambiou ningunha cela, o fotograma non ten zonas e non debuxa nada ([`draw`](#draw)). A do título e a do portapapeis, só se cambiou o título ou se o programa copiou texto (`note_others`). A da actualización sincronizada, se despois do bloque o programa ten unha aberta (`sync_deadline`): unha que se abre e se pecha no mesmo bloque, coma a dun programa que escribe cada fotograma enteiro dunha vez, non a pon, e non esperta a xanela.
 - **`note_others`**, desde a subfase 1.8, anota o título e o texto do portapapeis, e di se hai que espertar a xanela por eles. Úsana `note` e [`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync): os dous poden chegar tamén cando remata unha actualización sincronizada, que gardaba o que escribiu o programa. Ata a 1.7, as dúas funcións miraban o título cada unha por si.
-- **Por que avisar dunha actualización sincronizada.** Mentres está aberta (`ESC [ ? 2026 h`), `vte` garda todo o que escribe o programa, tamén as súas preguntas, ata que o programa a remata ou ata que alguén a remata á súa hora límite: o terminal non ten temporizador ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Se o programa non a remata, remátaa a xanela, co temporizador dos fotogramas, e para iso ten que saber que hai unha. Antes de cada fotograma xa o mira, pero coa xanela minimizada non hai fotogramas, e a marca da pantalla, que xa está posta, non a esperta: sen esta marca, un programa que preguntase algo dentro dunha actualización que non remata agardaría a resposta ata que se restaurase a xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+- **Por que avisar dunha actualización sincronizada.** Mentres está aberta (`ESC [ ? 2026 h`), `vte` garda todo o que escribe o programa, tamén as súas preguntas, ata que o programa a remata ou ata que alguén a remata á súa hora límite: o terminal non ten temporizador ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Se o programa non a remata, remátaa a xanela, co temporizador dos fotogramas, e para iso ten que saber que hai unha. Antes de cada fotograma xa o mira, pero coa xanela minimizada non hai fotogramas, e a marca da pantalla, que xa está posta, non a esperta: sen esta marca, un programa que preguntase algo dentro dunha actualización que non remata agardaría a resposta ata que se restaurase a xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)) ou, desde a subfase 2.2, ata que se mostrase a súa tab.
 - Así, por moita saída que chegue, o fío lector non envía outro aviso pola pantalla ata que a xanela a copie, nin outro polo título ou polo portapapeis ata que os colla, nin outro pola actualización sincronizada ata que a xanela saiba cando remata: os avisos non se acumulan na cola da xanela ([Tecnoloxías › Avisar á xanela](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage)).
+- **Nunha tab oculta**, desde a subfase 2.2, a xanela non copia a pantalla, nin colle o título nin o portapapeis, así que esas tres marcas quedan postas mentres a tab está oculta: a saída do seu programa esperta a xanela como moito unha vez por cada unha, escriba o que escriba ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 3). Só segue avisando a actualización sincronizada que o programa deixa aberta e da que a xanela non sabe: a xanela remátaa á súa hora ([`end_hidden_syncs`](#as-actualizacións-sincronizadas-das-tabs-ocultas-end_hidden_syncs)). Ao mostrar a tab, a vista colle o título, descarta o texto que o programa copiou ao portapapeis mentres estaba oculta e copia a pantalla enteira ([`show`](#mostrar-outra-tab-show)).
 - **`lock`** colle o `Mutex`. Se un fío tivese un pánico mentres o ten, o `Mutex` quedaría envelenado (*poisoned*), e `lock()` devolvería un erro que leva igualmente o acceso, que `PoisonError::into_inner` colle. Ningún dos dous fíos deixa o terminal a medio cambiar, así que a xanela pode seguir mostrándoo. En *release* non pasa nunca, porque un pánico remata o proceso (`panic = "abort"`); e así o código non necesita `unwrap()`, que as regras do proxecto prohiben.
 
 ### As actualizacións sincronizadas: `end_late_sync`
@@ -790,7 +1157,7 @@ pub fn end_late_sync(&mut self, now: Instant, answers: &mut Vec<u8>) -> (Option<
 }
 ```
 
-Remata á súa hora a actualización sincronizada que o programa deixou aberta. Chámaa a vista do terminal, baixo o *lock*: antes de cada fotograma ([`update`](#poñer-ao-día-update)) e, coa xanela minimizada, cando o fío lector a esperta ou vence o temporizador ([`update_hidden`](#coa-xanela-minimizada-update_hidden)).
+Remata á súa hora a actualización sincronizada que o programa deixou aberta. Chámaa a vista do terminal, baixo o *lock*: antes de cada fotograma ([`update`](#poñer-ao-día-update)) e, coa xanela minimizada, cando o fío lector a esperta ou vence o temporizador ([`update_hidden`](#coa-xanela-minimizada-update_hidden)). Desde a subfase 2.2, chámaa tamén `Tabs` para as tabs ocultas ([`learn_sync`](#mentres-está-oculta-set_priority-e-learn_sync)): cando o seu fío lector esperta a xanela, ao ocultalas, cando chega a hora que apuntou e ao pecharse a caixa de mensaxe que pregunta antes de pegar ([`catch_up_wakes`](#os-avisos-wake-e-catch_up_wakes)).
 
 1. Se hai unha aberta e a súa hora límite xa chegou (`deadline <= now`), o terminal móstraa tal como está (`end_sync`): le o que gardaba ([Código › meiga-core](meiga-core.md#cratesmeiga-coresrctermmodrs)). Iso pode traer respostas ás preguntas que o programa fixo mentres tanto, que se engaden a `answers`, e un título novo ou, desde a subfase 1.8, un texto para o portapapeis, que poñen as súas marcas coma en `note` (`note_others`).
 2. Lese a hora límite da que quede aberta: a mesma, se aínda non chegou, ou ningunha, se se acaba de rematar: `end_sync` le todo o que gardaba e non deixa ningunha aberta.
@@ -798,8 +1165,8 @@ Remata á súa hora a actualización sincronizada que o programa deixou aberta. 
 4. Devolve esa hora, para que `Frames` programe para ela o temporizador dos fotogramas, e se hai que espertar a xanela polo título ou polo portapapeis (`wake`, que ata a 1.7 se chamaba `title`): `false` se as súas marcas xa estaban postas, porque entón a xanela xa ten un aviso pendente por eles.
 
 - **Por que en `Shared`.** Rematar a actualización e cambiar as marcas tocan o que está detrás do *lock*, e `sync_noted` cámbiaa tamén `note`, desde o fío lector: así, as dúas funcións que a cambian están xuntas, e a vista usa o mesmo código con fotogramas e sen eles.
-- **As respostas** non se envían eiquí: `end_late_sync` só as recolle, baixo o *lock*, e a vista envíaas despois, fóra del ([`send`](#poñer-ao-día-update)). O búfer `answers` é o da vista, que se reutiliza.
-- **Unha marca, e non a hora.** Se o programa remata a actualización e abre outra antes de que a xanela mire, a marca segue posta e o fío lector non avisa: o temporizador vence á hora da primeira, que é antes, e a vista le entón a da segunda. Como moito, a xanela esperta unha vez de máis.
+- **As respostas** non se envían eiquí: `end_late_sync` só as recolle, baixo o *lock*, e a vista, ou `learn_sync` nas tabs ocultas, envíaas despois, fóra del ([`send`](#poñer-ao-día-update)). O búfer `answers` é o da vista, ou o de `Tabs`, que se reutilizan.
+- **Unha marca, e non a hora.** Se o programa remata a actualización e abre outra antes de que a xanela mire, a marca segue posta e o fío lector non avisa: o temporizador vence á hora da primeira, que é antes, e a vista le entón a da segunda. Como moito, a xanela esperta unha vez de máis. E se o programa a remata e non abre outra, a xanela sábeo no seguinte fotograma ou, sen fotogramas, coma coa xanela minimizada ou nunha tab oculta, á hora da primeira, cando a marca se quita: desde entón, a seguinte que quede aberta volta avisar.
 - `now` e `answers` son parámetros, e non o reloxo e a sesión: así, a proba decide a hora e le as respostas.
 
 ### `start`: lanzar o programa
@@ -812,11 +1179,13 @@ pub fn start(
     size: GridSize,
     shared: &Arc<Mutex<Shared>>,
     waker: &Waker,
+    tab: TabId,
 ) -> Result<Pty, String> {
     let conpty = Conpty::load();
     let reader = || Reader {
         shared: Arc::clone(shared),
         waker: waker.clone(),
+        tab,
         answers: Vec::new(),
     };
     let (program, started) = match command {
@@ -845,13 +1214,14 @@ fn start_error(command: &str, error: &Error) -> String {
 }
 ```
 
-Lanza o programa nunha sesión do tamaño da grella. A súa saída vai ao terminal de `shared`, e o fío lector esperta a xanela con `waker`.
+Lanza o programa nunha sesión do tamaño da grella. A súa saída vai ao terminal de `shared`, e o fío lector esperta a xanela con `waker` e, desde a subfase 2.2, co identificador da tab da sesión, `tab`.
 
 - **Que ConPTY.** [`Conpty::load`](meiga-win.md#cratesmeiga-winsrcconptyrs) usa a que vai ao lado de `meiga.exe` (`conpty.dll` e `OpenConsole.exe`) ou, se non está, a de Windows ([ADR 0004](../adr/0004-conpty-empaquetado.md)).
-- **Que programa.** O da liña de comandos, se o hai, xa coas súas comiñas ([`options.rs`](#cratesmeigasrcoptionsrs)). Se non, `pwsh`, PowerShell 7, e, se non está instalado, `powershell`, Windows PowerShell, que vén con Windows. `let [first, second] = DEFAULT_SHELLS;` dálle un nome a cada elemento do *array*.
+- **Que programa.** O da liña de comandos, se o hai, xa coas súas comiñas ([`options.rs`](#cratesmeigasrcoptionsrs)). Se non, `pwsh`, PowerShell 7, e, se non está instalado, `powershell`, Windows PowerShell, que vén con Windows. `let [first, second] = DEFAULT_SHELLS;` dálle un nome a cada elemento do *array*. Desde a subfase 2.2, só a primeira tab recibe a liña de comandos: as outras, `None`, o shell por defecto ([`open`](#os-atallos-act-open-e-close_active)).
 - **Só se non se atopa.** O segundo só se proba se o primeiro non existe: `CreateProcessW` busca o programa como explica [Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows) e, se non o atopa, falla co erro 2, que Rust clasifica como `io::ErrorKind::NotFound`. Con calquera outro erro, como a falta de permisos ou un fallo da ConPTY, o segundo fallaría igual, e probalo só agocharía o primeiro erro. `is_not_found` mira o erro de Windows que leva dentro o de `meiga-win` ([`Error::os_error`](meiga-win.md#cratesmeiga-winsrcerrorrs)). O patrón `Err(error) if …` só encaixa se se cumpre a condición; os demais resultados, de éxito ou de erro, quedan como están (`started`).
-- **Un `Reader` por intento.** `spawn` quédase co `Output` que recibe, así que, para poder probar dous programas, `reader` é unha *closure* que crea un novo cada vez. `Arc::clone` só suma un ao contador de referencias: os dous apuntan ao mesmo `Shared`. Copiar o `Waker` tampouco custa nada.
-- **O erro** é un texto para o terminal, non un erro de meiga: [`terminal`](#appnew-e-terminal) dállo ao terminal coma se o escribise o programa, e a xanela queda aberta ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Di que programa, coa súa liña de comandos, e por que, entre corchetes coma a liña do final: ``[could not start `no-such-program`: CreateProcessW failed: …]``. `ESC [ ? 25 l` oculta o cursor, porque non hai nada no que escribir. Como todos os textos do programa, vai en inglés.
+- **Un `Reader` por intento.** `spawn` quédase co `Output` que recibe, así que, para poder probar dous programas, `reader` é unha *closure* que crea un novo cada vez. `Arc::clone` só suma un ao contador de referencias: os dous apuntan ao mesmo `Shared`. Copiar o `Waker` tampouco custa nada, nin o identificador da tab, que é `Copy`: a *closure* cópiao en cada `Reader`.
+- **O identificador da tab**, desde a subfase 2.2: a xanela ten unha sesión por tab, e cada aviso ten que dicir de cal vén ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 2). Chega ao lanzar a sesión, antes de que a tab estea no modelo: por iso as tabs créanse con `try_new_with` e `try_open_with`, que dan o identificador antes de crear o contido ([`Tabs::new`](#tabs-e-new)).
+- **O erro** é un texto para o terminal, non un erro de meiga: [`Tab::start`](#tab) dállo ao terminal coma se o escribise o programa, e a tab e a xanela quedan abertas ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Di que programa, coa súa liña de comandos, e por que, entre corchetes coma a liña do final: ``[could not start `no-such-program`: CreateProcessW failed: …]``. `ESC [ ? 25 l` oculta o cursor, porque non hai nada no que escribir. Como todos os textos do programa, vai en inglés.
 
 ### O fío lector: `Reader`
 
@@ -859,6 +1229,8 @@ Lanza o programa nunha sesión do tamaño da grella. A súa saída vai ao termin
 struct Reader {
     shared: Arc<Mutex<Shared>>,
     waker: Waker,
+    /// The tab of the session, which the window learns with each wake-up.
+    tab: TabId,
     /// The answers for the program, kept to avoid an allocation each time.
     answers: Vec<u8>,
 }
@@ -879,7 +1251,7 @@ impl Output for Reader {
             self.answers.clear();
         }
         if wake {
-            self.waker.wake();
+            self.waker.wake(self.tab.get());
         }
     }
 
@@ -891,7 +1263,7 @@ impl Output for Reader {
             shared.note(changes)
         };
         if wake {
-            self.waker.wake();
+            self.waker.wake(self.tab.get());
         }
     }
 }
@@ -899,7 +1271,7 @@ impl Output for Reader {
 
 `Reader` é o [`Output`](meiga-win.md#cratesmeiga-winsrcconptyrs) da sesión: `meiga-win` chama a `received` desde o fío lector, con cada bloque que le da pseudoconsola, e a `ended` despois do último.
 
-- **`Send + 'static`.** `Output` esíxeo, porque o `Reader` vai ao fío lector e vive tanto coma el. Por iso leva un `Arc`, e non unha referencia, e un `Waker`, que garda o *handle* da xanela coma un número, que pode ir a outro fío ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcwindowrs)). O terminal tamén pode: `meiga-core` compróbao ao compilar.
+- **`Send + 'static`.** `Output` esíxeo, porque o `Reader` vai ao fío lector e vive tanto coma el. Por iso leva un `Arc`, e non unha referencia, e un `Waker`, que garda o *handle* da xanela coma un número, que pode ir a outro fío ([Código › meiga-win](meiga-win.md#cratesmeiga-winsrcwindowrs)). O terminal tamén pode: `meiga-core` compróbao ao compilar. E o identificador da tab, desde a 2.2, é outro número.
 
 **`received`, paso a paso:**
 
@@ -907,10 +1279,11 @@ impl Output for Reader {
 2. Se hai respostas para o programa, `take_responses` móveas ao búfer, aínda baixo o *lock*.
 3. `note` di se hai que espertar a xanela. Eiquí remata o bloque, e con el o *lock*: só dura o que o terminal tarda en ler o bloque ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
 4. Fóra do *lock*, as respostas van ao programa con `input`, a entrada da sesión, que `meiga-win` lle pasa ao `Output` con cada bloque. `Input::write` non agarda: deixa os bytes para o fío escritor. Así, a xanela, que necesita o *lock* para copiar, nunca agarda polo envío das respostas. O búfer baléirase sen liberar a memoria.
-5. Se fai falta, `wake` envía `WM_WAKE` á xanela con `PostMessageW`, que volta de inmediato.
+5. Se fai falta, `wake` envía `WM_WAKE` á xanela con `PostMessageW`, que volta de inmediato. Desde a subfase 2.2, o aviso leva o número do identificador da tab (`TabId::get`) no `wParam` da mensaxe ([`Waker::wake`](meiga-win.md#cratesmeiga-winsrcwindowrs)), e a xanela sabe así de que tab vén ([`App::wake`](#wake-o-aviso-do-fío-lector)).
 
-- **Por que responde o fío lector.** As respostas saen xusto despois do bloque que as pide, e na mesma orde ca as preguntas, aínda que a xanela estea ocupada ou minimizada. Desde a xanela, agardarían a que atendese o aviso, e a súa orde coas outras respostas perderíase ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). O ConPTY xa pregunta ao arrancar polos atributos do terminal (`ESC [ c`), e moitos programas preguntan pola cor do fondo antes de escoller as súas cores ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Dentro dunha actualización sincronizada, as preguntas agardan co resto da saída: se o programa a remata, respóndeas o fío lector; se pasa a súa hora límite, a vista ([`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync)).
-- **`ended`**: o programa rematou, e a pseudoconsola pechou a súa saída despois do último bloque. O terminal mostra unha liña co código de saída (`end`), nunha fila propia se o cursor non está ao principio dunha (`column > 0`), e o fío lector esperta a xanela para que a mostre. Desde a subfase 1.8, a mesma secuencia desactiva o rato e o *bracketed paste* do programa. A xanela queda aberta, coa última pantalla do programa.
+- **Por que responde o fío lector.** As respostas saen xusto despois do bloque que as pide, e na mesma orde ca as preguntas, aínda que a xanela estea ocupada ou minimizada, ou a tab oculta. Desde a xanela, agardarían a que atendese o aviso, e a súa orde coas outras respostas perderíase ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). O ConPTY xa pregunta ao arrancar polos atributos do terminal (`ESC [ c`), e moitos programas preguntan pola cor do fondo antes de escoller as súas cores ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Dentro dunha actualización sincronizada, as preguntas agardan co resto da saída: se o programa a remata, respóndeas o fío lector; se pasa a súa hora límite, a vista ([`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync)) ou, nunha tab oculta, `Tabs` ([`end_hidden_syncs`](#as-actualizacións-sincronizadas-das-tabs-ocultas-end_hidden_syncs)).
+- **A súa prioridade**, desde a subfase 2.2: a normal mentres a súa tab se mostra, e por debaixo da normal mentres está oculta, salvo mentres a xanela ten o *lock* do seu terminal ([`set_priority` e `learn_sync`](#mentres-está-oculta-set_priority-e-learn_sync)). Cámbiaa a xanela, non o fío: ao cambiar de tab, e arredor de cada *lock* do terminal dunha tab oculta. Coa máquina ocupada, os lectores das tabs ocultas deixan ir primeiro o da tab que se ve e a xanela, que nunca espera por un lector de menos prioridade ca ela.
+- **`ended`**: o programa rematou, e a pseudoconsola pechou a súa saída despois do último bloque. O terminal mostra unha liña co código de saída (`end`), nunha fila propia se o cursor non está ao principio dunha (`column > 0`), e o fío lector esperta a xanela para que a mostre. Desde a subfase 1.8, a mesma secuencia desactiva o rato e o *bracketed paste* do programa. A xanela queda aberta, coa última pantalla do programa. Desde a 2.2, nunha tab oculta, a liña vese ao mostrar a tab; e, se a tab se pechou, a sesión rematou por iso, e o aviso chega cun identificador que xa non é de ningunha tab, que a xanela ignora ([`wake`](#os-avisos-wake-e-catch_up_wakes)).
 
 ### O fin do programa: `end`
 
@@ -941,7 +1314,9 @@ O que mostra o terminal cando remata o programa, coma no Windows Terminal: por e
 
 ## `crates/meiga/src/view.rs`
 
-A **vista do terminal**: o terminal na xanela. Garda a súa propia copia da pantalla, un [`Screen`](meiga-core.md#cratesmeiga-coresrctermscreenrs), que pon ao día desde o terminal da sesión antes de cada fotograma, e debuxa desde ela as celas, as súas liñas e o cursor. É a [`Scene`](#scene) do terminal. Desde a subfase 1.7 envía as teclas ao programa e, desde a 1.8, colle as que copian, pegan ou quitan a selección, debuxa as celas seleccionadas e lévalle os eventos do rato ao seu [`Mouse`](#cratesmeigasrcmousers). Desde a 1.9, calcula a grella que enche a xanela e dálla ao terminal e ao programa, ao ritmo dos fotogramas; colle tamén as teclas do historial e do zoom; crea a fonte de novo co zoom e coa escala; e debuxa a barra de desprazamento do seu rato ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)), despois da grella ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)).
+A **vista do terminal**: o terminal da tab que mostra a xanela. Garda a súa propia copia da pantalla, un [`Screen`](meiga-core.md#cratesmeiga-coresrctermscreenrs), que pon ao día desde o terminal da tab antes de cada fotograma, e debuxa desde ela as celas, as súas liñas e o cursor. Desde a subfase 1.7 envía as teclas ao programa e, desde a 1.8, colle as que copian, pegan ou quitan a selección, debuxa as celas seleccionadas e lévalle os eventos do rato ao seu [`Mouse`](#cratesmeigasrcmousers). Desde a 1.9, calcula a grella que enche a xanela e dálla ao terminal e ao programa, ao ritmo dos fotogramas; colle tamén as teclas do historial e do zoom; crea a fonte de novo co zoom e coa escala; e debuxa a barra de desprazamento do seu rato ([`scrollbar.rs`](#cratesmeigasrcscrollbarrs)), despois da grella ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)).
+
+**Unha vista para todas as tabs**, desde a subfase 2.2: a mesma vista, coa súa fonte, o seu zoom e a súa barra de desprazamento, mostra a tab activa, e, cando a xanela mostra outra tab, colle o terminal da nova ([`show`](#mostrar-outra-tab-show), [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 1). Ata a 2.1 era a [`Scene`](#scene) do terminal; desde a 2.2 éo [`Tabs`](#scene-e-earliest), que a leva dentro e lle pasa as postas ao día e o debuxo. Colle tamén as teclas das tabs, que pasa a `Tabs` na súa resposta; e o título e o texto que copia o programa, que ata a 2.1 collía `App` ([`wake`](#o-título-o-portapapeis-e-a-pantalla-wake)).
 
 **Por que unha copia.** Compoñer leva tempo, e o fío lector, que está lendo a saída do programa, non debe agardar por iso. Baixo o *lock* só se copian as celas que cambiaron; compoñer e presentar fanse despois, fóra del ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
 
@@ -967,6 +1342,10 @@ const BASE_DPI: u32 = 96;
 const VK_C: u16 = 0x43;
 const VK_V: u16 = 0x56;
 const VK_ESCAPE: u16 = 0x1b;
+/// T, W and Tab, of the shortcuts of the tabs.
+const VK_T: u16 = 0x54;
+const VK_W: u16 = 0x57;
+const VK_TAB: u16 = 0x09;
 /// Page Up, Page Down, End, Home, and the up and down arrows.
 const VK_PRIOR: u16 = 0x21;
 const VK_NEXT: u16 = 0x22;
@@ -990,12 +1369,14 @@ const VK_OEM_MINUS: u16 = 0xbd;
 - `DIM`: o texto tenue (`SGR 2`) vai un terzo do camiño, 85 de 255, desde a súa cor cara á do seu fondo ([`Rgb::mix`](meiga-core.md#cratesmeiga-coresrccolorrs)).
 - `BASE_DPI`: os puntos por polgada ao 100 %, para escalar o grosor do cursor ([`thickness`](#o-pestanexo-caret)).
 - `VK_C`, `VK_V` e `VK_ESCAPE`, desde a subfase 1.8: os códigos de tecla virtual de Windows da C, da V e de Esc, as teclas que colle meiga ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)). O evento da tecla trae o código coma un número ([`KeyEvent`](meiga-core.md#cratesmeiga-coresrcinputrs)), e o crate non depende de `windows-sys` ([`Cargo.toml`](#cratesmeigacargotoml)), así que as define el.
+- `VK_T`, `VK_W` e `VK_TAB`, desde a subfase 2.2: a T, a W e o tabulador, as teclas dos atallos das tabs (Ctrl+Maiús+T, Ctrl+Maiús+W, Ctrl+Tab e Ctrl+Maiús+Tab). As letras teñen o código do seu carácter en maiúscula, coma a C e a V.
 - **As teclas do historial e do zoom**, desde a subfase 1.9: RePáx (`VK_PRIOR`), AvPáx (`VK_NEXT`), Fin, Inicio e as frechas arriba e abaixo; e o 0, o `+` e o `-`, do teclado principal e do numérico (`VK_NUMPAD0`, `VK_ADD` e `VK_SUBTRACT`). No principal, `VK_OEM_PLUS` é a tecla de `+` no teclado español e a de `=` no estadounidense, e `VK_OEM_MINUS`, a de `-` nos dous: os atallos usan os códigos de tecla virtual, e non os caracteres, así que o zoom usa as mesmas teclas en calquera distribución, teñan o carácter que teñan ([Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)).
 
 ### `TerminalView`
 
 ```rust
 pub struct TerminalView {
+    tab: TabId,
     shared: Arc<Mutex<Shared>>,
     input: Option<Input>,
     waker: Waker,
@@ -1022,8 +1403,9 @@ pub struct TerminalView {
 
 | Campo | Que garda |
 |---|---|
-| `shared` | O que comparte co fío lector: o terminal e as súas marcas ([`Shared`](#shared-e-lock)). |
-| `input` | A entrada da sesión, para as teclas, os eventos de foco e as respostas que aparecen cando a vista remata unha actualización sincronizada; desde a subfase 1.8, tamén para os informes do rato e o texto que se pega; e desde a 1.9, para darlle ao programa o tamaño da grella ([`Input::resize`](meiga-win.md#input)). `None` se o programa non se lanzou. |
+| `tab` | Desde a subfase 2.2. A tab que mostra a vista. O fío lector da súa sesión esperta a xanela co seu identificador, e a vista tamén, cando remata unha actualización sincronizada que cambia o título ou trae un texto para o portapapeis ([`send`](#poñer-ao-día-update)). |
+| `shared` | O que comparte co fío lector da tab que mostra: o terminal e as súas marcas ([`Shared`](#shared-e-lock)). Desde a 2.2 cámbiao `show`. |
+| `input` | A entrada da sesión da tab que mostra, para as teclas, os eventos de foco e as respostas que aparecen cando a vista remata unha actualización sincronizada; desde a subfase 1.8, tamén para os informes do rato e o texto que se pega; e desde a 1.9, para darlle ao programa o tamaño da grella ([`Input::resize`](meiga-win.md#input)). `None` se o programa non se lanzou. Desde a 2.2 cámbiaa `show`. |
 | `waker` | Para espertar a xanela cando esa actualización cambia o título ou trae un texto para o portapapeis. |
 | `fonts` | Desde a subfase 1.9. As fontes do sistema ([`FontSystem`](meiga-render.md#fontsystem)), para crear a fonte nova cando cambian o zoom ou a escala. |
 | `font` e `cell` | A fonte, coa súa caché de glifos, e o tamaño da súa cela. |
@@ -1031,26 +1413,41 @@ pub struct TerminalView {
 | `client` | Desde a subfase 1.9. O tamaño da área cliente da xanela, en píxeles. |
 | `grid` | Desde a subfase 1.9. A grella que teñen o terminal e o programa. |
 | `wanted` e `resized_at` | Desde a subfase 1.9. A grella que enche a xanela, mentres o terminal e o programa aínda non a teñen, e cando lla deu a vista por última vez: cambia como moito unha vez por intervalo dos fotogramas, porque os dous reparten o seu texto cada vez ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). |
-| `redraw` | Desde a subfase 1.9. Hai que debuxar a xanela enteira outra vez, porque cambiou a fonte. |
-| `screen` | A copia da pantalla: as celas, o cursor, a paleta e o que cambiou desde o último fotograma. |
+| `redraw` | Desde a subfase 1.9. Hai que debuxar a xanela enteira outra vez, porque cambiou a fonte ou, desde a 2.2, a tab que se mostra. |
+| `screen` | A copia da pantalla: as celas, o cursor, a paleta e o que cambiou desde o último fotograma. Desde a 2.2, a mesma para todas as tabs: ao cambiar de tab, cópiase nela a pantalla da nova, na mesma memoria ([`show`](#mostrar-outra-tab-show)). |
 | `caret` | Como se ve e como pestanexa o cursor ([`Caret`](#o-pestanexo-caret)). |
-| `mouse` | Desde a subfase 1.8. O rato: os clics, a selección que medra, os botóns que se premeron para o programa e a roda ([`Mouse`](#mouse)); desde a 1.9, tamén a barra de desprazamento e a vista que se move soa. |
+| `mouse` | Desde a subfase 1.8. O rato: os clics, a selección que medra, os botóns que se premeron para o programa e a roda ([`Mouse`](#mouse)); desde a 1.9, tamén a barra de desprazamento e a vista que se move soa. Desde a 2.2, cando a xanela mostra outra tab, remata o que estaba a facer coa vella ([`switched`](#cando-a-xanela-mostra-outra-tab-switched)). |
 | `taken` | Desde a subfase 1.8. As teclas que colleu meiga ao baixar, polo seu código de tecla virtual: ata que soben, o programa non as recibe ([`key`](#as-teclas-e-o-foco-key-e-focus)). |
 | `run` e `answers` | Os caracteres dun tramo de celas e as respostas, que se gardan para non reservar memoria cada vez. |
 | `encoder` e `keys` | Desde a subfase 1.7. O que converte as teclas no que le o programa ([`KeyEncoder`](meiga-core.md#keyencoder)), e o que le para unha tecla, que se garda polo mesmo motivo. |
 
 ```rust
+pub struct TabTerminal {
+    pub id: TabId,
+    pub shared: Arc<Mutex<Shared>>,
+    /// What sends input to its program, or `None` if the program did not
+    /// start.
+    pub input: Option<Input>,
+}
+```
+
+**`TabTerminal`**, desde a subfase 2.2: o terminal dunha tab, coma o necesita a vista para mostralo. O identificador da tab, o terminal, compartido co seu fío lector, e a entrada da súa sesión, ou `None` se o programa non se lanzou. Dáo [`Tab::terminal`](#tab), e recíbeno `new` e [`show`](#mostrar-outra-tab-show), que o desfán nos seus tres campos. Os campos son públicos: é só un paquete, sen nada que protexer.
+
+- **Por que un paquete.** As tres cousas viaxan xuntas, da tab á vista, en `new` e en `show`. Ademais, así `new` recibe seis parámetros, e non oito: Clippy avisa das funcións con máis de sete (`too_many_arguments`), e o proxecto non desactiva avisos.
+
+```rust
 pub fn new(
-    shared: Arc<Mutex<Shared>>,
-    input: Option<Input>,
+    terminal: TabTerminal,
     waker: Waker,
     fonts: FontSystem,
     font: Font,
     dpi: u32,
     client: Size,
 ) -> Self {
+    let TabTerminal { id, shared, input } = terminal;
     let grid = lock(&shared).terminal.size();
     Self {
+        tab: id,
         shared,
         input,
         waker,
@@ -1074,19 +1471,142 @@ pub fn new(
         keys: Vec::new(),
     }
 }
+
+pub const fn cell(&self) -> Size {
+    self.cell
+}
+
+pub fn window_grid(&self) -> GridSize {
+    grid_size(self.client, self.cell, self.mouse.bar().width())
+}
 ```
 
 - **`new`**: `cell: font.cell()` vai antes ca `font` porque os campos se avalían na orde na que se escriben, e despois de mover a fonte ao seu campo xa non se podería usar. A copia da pantalla empeza baleira, sen celas: a primeira copia dálle o tamaño do terminal e marca todas as celas como cambiadas. O rato le xa as preferencias do rato de Windows.
-- Desde a subfase 1.9, recibe tamén as fontes do sistema, o DPI e o tamaño da área cliente, e le a grella que xa ten o terminal: a que calculou [`terminal`](#appnew-e-terminal), coa mesma conta ca `resized`. O programa xa a ten, así que non hai nada pendente (`wanted` a `None`). A fonte empeza en `FONT_POINTS`, e o rato recibe o DPI e o tamaño da área cliente, para a barra de desprazamento.
-- `area` dá os píxeles dunhas columnas dunha fila, e `shared` dálle a [`App::wake`](#wake-o-aviso-do-fío-lector) o que comparte co fío lector. Desde a subfase 1.8, `is_focused` dille se a xanela ten o foco, para o texto que copia un programa. E, desde a revisión do código da 1.9, `dpi` dálle a [`App::catch_up`](#respond-o-que-pide-a-vista) a escala para a que debuxa a vista, para saber se cambiou mentres estaba aberta a caixa de mensaxe.
+- Desde a subfase 1.9, recibe tamén as fontes do sistema, o DPI e o tamaño da área cliente, e le a grella que xa ten o terminal: a que calculou [`Tabs::new`](#tabs-e-new), ata a 2.1 `terminal`, coa mesma conta ca `resized`. O programa xa a ten, así que non hai nada pendente (`wanted` a `None`). A fonte empeza en `FONT_POINTS`, e o rato recibe o DPI e o tamaño da área cliente, para a barra de desprazamento.
+- Desde a subfase 2.2, recibe o terminal da primeira tab nun [`TabTerminal`](#terminalview), que desfai nos seus tres campos: `let TabTerminal { id, shared, input } = terminal;` move cada campo a unha variábel, sen copialo.
+- `area` dá os píxeles dunhas columnas dunha fila. Desde a subfase 1.8, `is_focused` di se a xanela ten o foco, para o texto que copia un programa ([`wake`](#o-título-o-portapapeis-e-a-pantalla-wake)). Desde a revisión do código da 1.9, `dpi` dálle a [`App::catch_up`](#respond-o-que-pide-a-vista) a escala para a que debuxa a vista, para saber se cambiou mentres estaba aberta a caixa de mensaxe.
+- **`cell` e `window_grid`**, desde a subfase 2.2, danlle a [`Tabs::open`](#os-atallos-act-open-e-close_active) o tamaño da cela e a grella dunha tab nova: a que enche a xanela agora, coa fonte do zoom e da escala de agora, sen a franxa da barra. `window_grid` é a mesma conta ca `resized` ([`grid_size`](#o-tamaño-resized-resize_grid-e-grid_size)), que desde a 2.2 a usa tamén.
+- **`shared` desapareceu** na 2.2: daba a `App::wake` o terminal, para coller o título e o texto do portapapeis. Agora faino a propia vista ([`wake`](#o-título-o-portapapeis-e-a-pantalla-wake)), que é quen sabe que tab mostra.
+
+### O título, o portapapeis e a pantalla: `wake`
+
+```rust
+pub fn wake(&self, window: &Window) -> bool {
+    let (title, clipboard, screen) = {
+        let mut shared = lock(&self.shared);
+        let title = mem::take(&mut shared.title_changed)
+            .then(|| shared.terminal.title().map(str::to_owned));
+        let clipboard = mem::take(&mut shared.clipboard_changed)
+            .then(|| shared.terminal.take_clipboard())
+            .flatten();
+        (title, clipboard, shared.screen_changed)
+    };
+    if let Some(title) = title {
+        window.set_title(title.as_deref().unwrap_or(TITLE));
+    }
+    // A program cannot change the clipboard from a window that the user
+    // is not using: the window needs the focus, and to be the foreground
+    // window. If another program keeps the clipboard open, the text is
+    // lost, as in Windows Terminal.
+    if let Some(text) = clipboard
+        && self.is_focused()
+        && window.is_foreground()
+    {
+        let _ = meiga_win::clipboard::write_text(window, &text);
+    }
+    screen
+}
+```
+
+O fío lector da tab que mostra a vista espertou a xanela ([`Tabs::wake`](#os-avisos-wake-e-catch_up_wakes)): cambiou o título, a pantalla ou, desde a subfase 1.8, o portapapeis, ou máis dunha cousa, ou o programa deixou aberta unha actualización sincronizada. A xanela colle o título, e o texto para o portapapeis se pode, e `wake` devolve se cambiou a pantalla, que un fotograma ten que mostrar: a seguinte posta ao día sabe tamén cando remata a actualización sincronizada, aínda coa xanela minimizada. Ata a 2.1, este código estaba en [`App::wake`](#wake-o-aviso-do-fío-lector), que collía o terminal con `shared()`; desde a 2.2 está na vista, que sabe que tab mostra, e `Tabs::wake` só a chama co aviso da tab que se mostra.
+
+- **Baixo o *lock*, o mínimo.** O `MutexGuard` que devolve `lock` solta o `Mutex` ao destruírse, ao final do bloque `{ … }`. Dentro só se len as marcas, cópiase o título, se cambiou, e cóllese o texto para o portapapeis, se o hai. `lock` recibe un `&Mutex`, e o `&Arc<Mutex<…>>` de `self.shared` convértese só (*deref coercion*).
+- **O título.** `mem::take` devolve a marca e déixaa a `false`: a xanela colleu o título, e o seguinte cambio voltará espertala. `bool::then` executa a *closure* só se a marca estaba posta, e dá o seu resultado en `Some`. Queda un `Option<Option<String>>`: o de fóra di se cambiou; o de dentro, o título, ou `None` se o programa o quitou, e entón a xanela volta a «meiga». Copialo (`to_owned`) permite usalo despois de soltar o *lock*, e os títulos cambian pouco.
+- `set_title` ([`SetWindowTextW`](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)) chámase fóra do *lock*, como todo o que non é copiar ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
+- **O portapapeis**, desde a subfase 1.8. Se o programa copiou texto (OSC 52, [Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)), a súa marca quítase coma a do título, e [`take_clipboard`](meiga-core.md#cratesmeiga-coresrctermmodrs) dá o texto, que deixa de estar no terminal. Se o programa copiou varias veces antes de que a xanela atendese o aviso, só queda a última. Eiquí `then` dá un `Option<Option<String>>`, e `flatten` xúntao nun: sen marca, ou sen texto, `None`.
+- **Só desde a xanela que se está a usar.** O texto vai ao portapapeis ([`write_text`](meiga-win.md#cratesmeiga-winsrcclipboardrs)), fóra do *lock*, só se a vista ten o foco (`is_focused`) e a xanela está en primeiro plano (`is_foreground`): un programa non pode cambiar o portapapeis desde unha xanela que non se está a usar. O foco só non abonda: [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) atopou que unha xanela aberta en segundo plano pode ter o foco do seu fío sen estar en primeiro plano ([Tecnoloxías › O foco](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela), [ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 11). Se non, o texto pérdese, e tamén se outro programa ten o portapapeis aberto máis de 150 ms, coma no Windows Terminal: `let _ =` descarta o erro. `if let … && … && …` encadea o patrón e as dúas condicións (*let chains*, da edición 2024): o corpo só se executa se se cumpren todas. Polo mesmo motivo, o texto que copia o programa dunha tab oculta descártase ao mostrala ([`show`](#mostrar-outra-tab-show)).
+- **`meiga_win::clipboard`**, co camiño enteiro: na vista, `clipboard` é o módulo do programa que copia e pega ([`clipboard.rs`](#cratesmeigasrcclipboardrs)), e o portapapeis de Windows é o de `meiga-win`.
+- **A pantalla.** A súa marca só se le: quítaa o fotograma, cando copia o que cambiou ([`update`](#poñer-ao-día-update)). Mentres tanto, o fío lector non volta espertar a xanela pola pantalla: coa xanela minimizada, que non copia nada, a saída só a esperta unha vez, agás polas actualizacións sincronizadas que o programa deixe abertas. `App::wake` pide un fotograma, que o *pacer* fai no momento ou ao final do intervalo; coa xanela minimizada, en vez del, a vista fai só o que non pode esperar ([`hidden`](#coa-xanela-minimizada-hidden)).
+- **Unha actualización sincronizada** tamén esperta a xanela por eiquí, e `wake` non mira a súa marca: para abrila, o programa escribiu, así que a marca da pantalla está posta, e `wake` devolve `true`. A posta ao día que pide entón `App::wake`, a dun fotograma ou, coa xanela minimizada, `update_hidden`, le a hora límite e dilla a `Frames` ([`end_late_sync`](#as-actualizacións-sincronizadas-end_late_sync)). Se un fotograma xa quitou esa marca ao copiar a pantalla, xa leu tamén a hora límite.
+- **`&self`.** `wake` non cambia a vista: as marcas e o texto do portapapeis están en `Shared`, e o `MutexGuard` deixa cambialos a través do `Mutex`.
+
+### Mostrar outra tab: `show`
+
+```rust
+pub fn show(&mut self, window: &Window, terminal: TabTerminal, now: Instant) {
+    let context = Context {
+        window,
+        shared: &self.shared,
+        input: self.input.as_ref(),
+        cell: self.cell,
+    };
+    self.mouse.switched(&context);
+    let focused = self.caret.focused;
+    if focused {
+        self.tell_focus(false);
+    }
+    let TabTerminal { id, shared, input } = terminal;
+    self.tab = id;
+    self.shared = shared;
+    self.input = input;
+    if focused {
+        self.tell_focus(true);
+    }
+    let (title, grid) = {
+        let mut shared = lock(&self.shared);
+        // The zoom, or the scale of the window, may have changed the
+        // cells while the tab was hidden.
+        shared.terminal.set_cell_size(self.cell);
+        shared.title_changed = false;
+        shared.clipboard_changed = false;
+        let _ = shared.terminal.take_clipboard();
+        (
+            shared.terminal.title().map(str::to_owned),
+            shared.terminal.size(),
+        )
+    };
+    window.set_title(title.as_deref().unwrap_or(TITLE));
+    // The next copy takes the whole screen, in the same memory, and the
+    // frame draws the whole window, its margins too.
+    self.screen.forget();
+    self.redraw = true;
+    // A new screen is activity: the cursor blinks again from the start.
+    self.caret.since = now;
+    // The terminal of a hidden tab keeps its grid. The one that fills
+    // the window now goes to it at the next update, without waiting for
+    // the frame interval since the last one.
+    self.grid = grid;
+    self.resized_at = None;
+    self.resized(self.client);
+}
+```
+
+Desde a subfase 2.2. A vista deixa o terminal da tab que mostraba e mostra o doutra, desde `now` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisións 5 a 9). Chámaa [`Tabs::show`](#cambiar-de-tab-show), cando o fío lector da tab nova xa ten a prioridade normal. Paso a paso:
+
+1. **O rato remata co terminal vello** ([`Mouse::switched`](#cando-a-xanela-mostra-outra-tab-switched)), coma cando outra xanela colle o rato: o seu programa recibe a soltura dos botóns que tiña premidos, unha selección que se arrastraba remata e cópiase, e a barra solta o polgar. O `Context` aínda leva o terminal e a entrada vellos, porque os campos da vista aínda non cambiaron. Os clics seguidos e a roda empezan de novo co terminal novo.
+2. **O foco.** Se a xanela o ten (`caret.focused`), o programa vello recibe que o perdeu, e o novo, que o ten, se os pediron ([`tell_focus`](#as-teclas-e-o-foco-key-e-focus)). `tell_focus` usa a entrada e o terminal que ten a vista nese momento: a orde das liñas escolle o programa. Sen o foco, ningún dos dous recibe nada, e o novo saberá que o ten cando a xanela o recupere ([`focus`](#as-teclas-e-o-foco-key-e-focus)).
+3. **O cambio.** O `TabTerminal` desfaise nos seus tres campos, que substitúen os da vista: a referencia ao terminal vello e a copia da súa entrada destrúense eiquí, e a tab vella segue coas súas.
+4. **Baixo o *lock* do terminal novo:**
+   - **A cela.** O zoom, ou a escala da xanela, puideron cambiar a cela mentres a tab estaba oculta: o terminal recibe a de agora (`set_cell_size`), e así as súas respostas polo tamaño en píxeles son as boas (decisión 7).
+   - **O título e o portapapeis.** As súas marcas quítanse: a xanela colle o título agora, sen esperar por ningún aviso. O texto que o programa copiase ao portapapeis mentres a tab estaba oculta descártase (`take_clipboard`, que `let _ =` tira): un programa só pode copiar desde a xanela que se está a usar, e unha tab oculta non se está a usar (decisión 8). O que copie desde agora vai ao portapapeis coma sempre ([`wake`](#o-título-o-portapapeis-e-a-pantalla-wake)).
+   - Cópianse o título, se o hai, e a grella que ten o terminal. A marca da pantalla e a das actualizacións sincronizadas quedan como están: atendeas a seguinte posta ao día.
+5. **O título da xanela** pasa a ser o da tab, ou «meiga» (`TITLE`) se o seu programa non puxo ningún, fóra do *lock*.
+6. **Un único fotograma completo** (decisión 5). `forget` fai que a copia da pantalla esqueza o que mostra ([`Screen::forget`](meiga-core.md#cratesmeiga-coresrctermscreenrs)): a seguinte copia, en `update`, cópiaa enteira, coma a dunha pantalla doutro tamaño, na mesma memoria, sen reservar nada. `redraw` fai que o fotograma debuxe a xanela enteira, tamén as marxes, que poden ter outra cor de fondo, e a barra, que mostra outro historial.
+7. **O cursor** pestanexa outra vez desde o principio, visíbel: unha pantalla nova é actividade ([`Caret`](#o-pestanexo-caret)).
+8. **A grella, ao mostrala** (decisión 6). O terminal dunha tab oculta mantén a súa grella aínda que a xanela cambie de tamaño: o terminal non reparte o seu historial, nin o ConPTY a súa pantalla, nin o programa redebuxa, para un tamaño que pode cambiar outra vez antes de que se vexa. Agora, `grid` pasa a ser a grella do terminal novo, e `resized` calcula a que enche a xanela (`wanted`), se é outra. `resized_at` a `None` fai que a seguinte posta ao día lla dea xa ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)), sen esperar un intervalo desde o último cambio, que foi doutro terminal: no mesmo fotograma completo, o terminal reparte o texto, e o programa recibe o tamaño novo. O programa redebuxa despois, e pode verse un instante a pantalla repartida, coma ao cambiar o tamaño da xanela.
+
+- **O que non cambia.** A fonte, o zoom, a barra, a copia da pantalla e as teclas collidas son da xanela, e quedan. Unha tecla collida segue collida: o tabulador de Ctrl+Tab sobe despois, e a súa soltura tampouco chega ao programa novo. Ctrl, que é unha modificadora e nunca se colle, chegou ao programa vello ao baixar, e chégalle ao novo ao subir; os programas miran as modificadoras de cada evento, e non se nota ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md#consecuencias)).
+- **O punteiro**, a barra de texto ou a frecha, segundo se o programa da tab nova pediu o rato, cambia co seguinte movemento do rato ([`moved`](#mover-o-rato-moved)).
+- **O fotograma** non o pide `show`: `Tabs::act` di que a xanela mostra outra tab, e `App::respond` pídeo ([`respond`](#respond-o-que-pide-a-vista)).
+- **Os préstamos.** O `Context` leva referencias a `self.shared` e a `self.input`, e `self.mouse.switched` colle `&mut self.mouse`: son campos distintos. Despois, `context` xa non se usa, e Rust deixa chamar a `tell_focus` e cambiar os campos.
 
 ### As teclas e o foco: `key` e `focus`
 
 ```rust
 pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
     // A key that meiga took does not reach the program while it repeats,
-    // nor when it goes up. The ones that move the view or zoom do it
-    // again while they repeat.
+    // nor when it goes up. The ones that move the view, zoom or go to
+    // the next tab do it again while they repeat.
     if let Some(taken) = self.taken.iter().position(|&key| key == event.key) {
         if !event.down {
             self.taken.swap_remove(taken);
@@ -1124,7 +1644,19 @@ pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
 fn shortcut(&mut self, window: &Window, event: &KeyEvent) -> Option<Response> {
     let controls = event.controls;
     let (ctrl, alt, shift) = (controls.ctrl(), controls.alt(), controls.shift());
+    let tab = |action| {
+        Some(Response {
+            tab: Some(action),
+            ..Response::default()
+        })
+    };
     match event.key {
+        // The tabs, with fixed shortcuts until subphase 2.6, as in
+        // Windows Terminal. Ctrl+T and Ctrl+W go to the program.
+        VK_T if ctrl && shift && !alt => tab(TabAction::New),
+        VK_W if ctrl && shift && !alt => tab(TabAction::Close),
+        VK_TAB if ctrl && !alt && shift => tab(TabAction::Previous),
+        VK_TAB if ctrl && !alt => tab(TabAction::Next),
         // Ctrl, and Shift or not, but not Alt, nor AltGr.
         VK_C if ctrl && !alt => {
             clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW)
@@ -1175,6 +1707,10 @@ pub fn focus(&mut self, focused: bool, now: Instant) {
     }
     self.caret.focused = focused;
     self.screen.mark_cursor_changed();
+    self.tell_focus(focused);
+}
+
+fn tell_focus(&self, focused: bool) {
     if let Some(input) = &self.input {
         let modes = lock(&self.shared).terminal.modes();
         input.write(focus_sequence(focused, &modes));
@@ -1183,10 +1719,10 @@ pub fn focus(&mut self, focused: bool, now: Instant) {
 ```
 
 - **`key`**, desde a subfase 1.7: envía unha tecla ao programa ([ADR 0014](../adr/0014-o-teclado.md)). Desde a 1.8, antes mira se é unha das que colle meiga ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 4); recibe tamén a xanela, para o portapapeis e a caixa de mensaxe, e devolve o que ten que facer a xanela despois ([`Response`](#context-e-response)), que fai [`App::respond`](#respond-o-que-pide-a-vista). Paso a paso:
-  1. **Unha tecla collida** (`taken`) non chega ao programa mentres se repite nin cando sobe: o programa non recibiu a súa baixada, así que tampouco recibe o resto. Cando sobe, sae da lista: `swap_remove` pon a última no seu sitio, en vez de mover todas as que van despois, porque a orde non importa. Desde a subfase 1.9, as que moven a vista do historial ou fan o zoom (`repeats`) fan o seu outra vez mentres se repiten, coma no Windows Terminal: Maiús+RePáx pasa páxinas mentres se mantén premida ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 8 e 12). Se mentres tanto o atallo deixa de collela, por exemplo porque subiu Maiús, `unwrap_or_default` dá a resposta por defecto: nada, e a repetición tampouco vai ao programa.
+  1. **Unha tecla collida** (`taken`) non chega ao programa mentres se repite nin cando sobe: o programa non recibiu a súa baixada, así que tampouco recibe o resto. Cando sobe, sae da lista: `swap_remove` pon a última no seu sitio, en vez de mover todas as que van despois, porque a orde non importa. Desde a subfase 1.9, as que moven a vista do historial ou fan o zoom (`repeats`) fan o seu outra vez mentres se repiten, coma no Windows Terminal: Maiús+RePáx pasa páxinas mentres se mantén premida ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 8 e 12); e, desde a 2.2, o tabulador: Ctrl+Tab mantido pasa de tab en tab. Se mentres tanto o atallo deixa de collela, por exemplo porque subiu Maiús, `unwrap_or_default` dá a resposta por defecto: nada, e a repetición tampouco vai ao programa.
   2. **Un atallo.** Se a tecla baixa e `shortcut` a colle, meiga fai o que toca, e a tecla entra en `taken`. Se se mostrou a caixa de mensaxe, non: a tecla sobe na caixa, e a vista non a vería subir. `if event.down && let Some(response) = …` encadea unha condición e un `if let` (*let chains*, da edición 2024), e `shortcut` só se chama se a tecla baixa.
   3. **Calquera outra** vai ao programa, coma na 1.7. Se baixa e non é unha modificadora (`is_modifier`), quita antes a selección, coma no Windows Terminal, e, desde a subfase 1.9, leva a vista á pantalla, onde escribe o programa ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs) con `Scroll::Bottom`): o que se teclea vese ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 7). Se había selección, ou a vista estaba no historial, pide un fotograma (`redraw`). Se o programa non se lanzou, non hai a quen enviala.
-  - **Os modos** saen do terminal da sesión, baixo o *lock*: se o ConPTY activou o win32-input-mode, e os modos das frechas e do Intro. `modes()` dá unha copia, e o *lock* sóltase ao final da mesma liña, porque o `MutexGuard` é temporal: o resto faise fóra del. Quitar a selección e levar a vista á pantalla collen o *lock* dentro do bloque do `if`, e sóltano ao rematar el.
+  - **Os modos** saen do terminal da tab que se mostra, baixo o *lock*: se o ConPTY activou o win32-input-mode, e os modos das frechas e do Intro. `modes()` dá unha copia, e o *lock* sóltase ao final da mesma liña, porque o `MutexGuard` é temporal: o resto faise fóra del. Quitar a selección e levar a vista á pantalla collen o *lock* dentro do bloque do `if`, e sóltano ao rematar el.
   - **O que le o programa** escríbeo [`KeyEncoder`](meiga-core.md#keyencoder) en `keys`, que se baleira e se reutiliza: enviar unha tecla non reserva memoria.
   - **`input.write`** non espera: deixa os bytes nun búfer da sesión e avisa ao seu fío escritor, que os escribe na tubaxe do ConPTY ([Código › meiga-win › `Input`](meiga-win.md#input)). Así, a xanela nunca queda bloqueada porque o programa non le.
 
@@ -1194,6 +1730,9 @@ pub fn focus(&mut self, focused: bool, now: Instant) {
 
 | Tecla | Que fai |
 |---|---|
+| Ctrl+Maiús+T | Desde a subfase 2.2, abre unha tab ao final, co shell por defecto, e móstraa ([`open`](#os-atallos-act-open-e-close_active)). Ctrl+T vai ao programa. |
+| Ctrl+Maiús+W | Desde a 2.2, pecha a tab que se mostra e a súa sesión, e mostra a da súa dereita ou, se era a última, a da esquerda. Pechar a última tab pecha a xanela ([`close_active`](#os-atallos-act-open-e-close_active)). Ctrl+W vai ao programa: en bash, por exemplo, borra a palabra anterior. |
+| Ctrl+Tab e Ctrl+Maiús+Tab | Desde a 2.2, mostran a tab seguinte e a anterior, e dan a volta. Mantidas, repítense. Cunha soa tab non fan nada, pero cóllense igual: non chegan ao programa. |
 | Ctrl+C e Ctrl+Maiús+C | Se hai selección, cópiaa e quítaa ([`copy`](#copiar-copy)). Se non, `copy` devolve `false`, `then_some` dá `None`, e a tecla vai ao programa, que a le coma sempre: Ctrl+C segue parando os programas cando non hai nada seleccionado. |
 | Ctrl+V e Ctrl+Maiús+V | Quita a selección e pega o portapapeis no programa ([`paste`](#pegar-paste)), que desde a subfase 1.9 leva a vista á pantalla. Cóllea sempre, aínda que o programa non se lanzase: Maiús+Insert segue indo ao programa, para os que pegan eles mesmos. |
 | Esc, sen Ctrl, Alt nin Maiús | Se hai selección, quítaa. Se non, vai ao programa. |
@@ -1206,8 +1745,10 @@ pub fn focus(&mut self, focused: bool, now: Instant) {
 - **As teclas modificadoras.** Desde a subfase 1.9, `ctrl`, `alt` e `shift` din se está premida cada unha, e cada atallo pide as súas. Ctrl+C e Ctrl+V queren Ctrl, con Maiús ou sen el, pero sen Alt, coma na 1.8. AltGr chega coma o Ctrl esquerdo e o Alt dereito ([Código › meiga-core › `input.rs`](meiga-core.md#cratesmeiga-coresrcinputrs)), así que non conta: os caracteres de AltGr+C e AltGr+V, nas distribucións que os teñen, chegan ao programa.
 - **As do historial**, coma no Windows Terminal, sempre sen Alt ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 8). Sen Maiús, RePáx, AvPáx, as frechas, Inicio e Fin van ao programa, coma sempre; e o PSReadLine non usa ningunha das do historial.
 - **As do zoom**, con Ctrl só: sen Alt, nin AltGr, nin Maiús (decisión 12). `VK_OEM_PLUS | VK_ADD`: un brazo para dúas teclas, a do teclado principal e a do numérico.
+- **As das tabs**, desde a subfase 2.2, as do Windows Terminal, fixas ata que a subfase 2.6 faga os atallos configurábeis ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 11). Ctrl+Maiús+T e Ctrl+Maiús+W queren Ctrl e Maiús, sen Alt nin AltGr: Ctrl+T e Ctrl+W seguen chegando ao programa, que as usa. Os dous brazos do tabulador queren Ctrl sen Alt; o de Maiús vai primeiro, porque un `match` colle o primeiro brazo que encaixa, e o de Ctrl+Tab non mira Maiús.
+- **A resposta dun atallo das tabs** faina a *closure* `tab`: só o campo `tab`, coa acción ([`TabAction`](#tabaction)), e o resto por defecto (`..Response::default()`). A vista non pode facer o que pide, porque as tabs non son súas: faino `App::respond`, con `Tabs::act` ([`respond`](#respond-o-que-pide-a-vista)). Tampouco pide un fotograma: pídeo `respond` se a xanela mostra outra tab. O tipo do parámetro, `TabAction`, dedúceo Rust do campo `tab`, onde vai.
 - `bool::then_some` dá `Some` co valor se o `bool` é `true`, e `None` se non: `copy` e `clear_selection` din se había selección. `Response::REDRAW`, desde a 1.9, é a resposta que só pide un fotograma ([`Response`](#context-e-response)).
-- **Pegar**, desde a 1.9, devolve un `Response` ([`paste`](#pegar-paste)): `redraw`, se levou a vista á pantalla, e `dialog`, se mostrou a caixa. `map_or_else`: sen programa non hai onde pegar, e a resposta é a por defecto. `..pasted` copia de `pasted` os campos que non se nomean, `dialog` e `zoom`, e o fotograma pídese se se quitou unha selección ou se pegar moveu a vista. Ata a 1.8, `paste` só dicía se mostrara a caixa.
+- **Pegar**, desde a 1.9, devolve un `Response` ([`paste`](#pegar-paste)): `redraw`, se levou a vista á pantalla, e `dialog`, se mostrou a caixa. `map_or_else`: sen programa non hai onde pegar, e a resposta é a por defecto. `..pasted` copia de `pasted` os campos que non se nomean, `dialog`, `zoom` e, desde a 2.2, `tab`, e o fotograma pídese se se quitou unha selección ou se pegar moveu a vista. Ata a 1.8, `paste` só dicía se mostrara a caixa.
 
 **`scroll_history`**, desde a subfase 1.9: move a vista do historial do terminal, baixo o *lock* ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs)).
 
@@ -1229,7 +1770,7 @@ fn scroll_history(&self, scroll: Scroll) -> Option<Response> {
 - **Cada tecla, o seu `Scroll`**: `PageUp` e `PageDown`, unha pantalla; `Rows(1)` e `Rows(-1)`, unha fila, cara arriba se é positiva; e `Top` e `Bottom`, o principio do historial e a pantalla.
 - `..Response::default()` pon o resto dos campos aos seus valores por defecto.
 
-**`repeats`**, desde a subfase 1.9: as teclas collidas que fan o seu outra vez mentres se repiten, as do historial e as do zoom. Ctrl+0 non: volta aos 12 puntos unha vez. Nin Ctrl+C, Ctrl+V e Esc: copian, pegan ou quitan a selección unha vez por pulsación.
+**`repeats`**, desde a subfase 1.9: as teclas collidas que fan o seu outra vez mentres se repiten, as do historial e as do zoom e, desde a 2.2, o tabulador, que pasa de tab en tab con Ctrl, cara adiante ou, con Maiús, cara atrás. Ctrl+0 non: volta aos 12 puntos unha vez. Nin Ctrl+C, Ctrl+V e Esc: copian, pegan ou quitan a selección unha vez por pulsación. Nin a T nin a W: Ctrl+Maiús+T abre unha tab por pulsación, e Ctrl+Maiús+W pecha unha; mantida, Ctrl+Maiús+W pecharía unha tab tras outra, e ao final a xanela.
 
 ```rust
 const fn repeats(key: u16) -> bool {
@@ -1245,6 +1786,7 @@ const fn repeats(key: u16) -> bool {
             | VK_OEM_MINUS
             | VK_ADD
             | VK_SUBTRACT
+            | VK_TAB
     )
 }
 ```
@@ -1268,6 +1810,7 @@ const fn is_modifier(key: u16) -> bool {
   - `mark_cursor_changed` marca as celas do cursor como cambiadas, e o seguinte fotograma debúxao coa forma nova: a súa ou, sen o foco, un rectángulo baleiro. Ese fotograma pídeo [`App`](#os-eventos).
   - O cursor empeza sen o foco (`focused: false`): Windows envía `WM_SETFOCUS` ao mostrar e activar a xanela.
   - Desde a subfase 1.7, o programa tamén o sabe, se o pediu: [`focus_sequence`](meiga-core.md#os-eventos-de-foco) dá `ESC [ I` ou `ESC [ O`, ou nada. O ConPTY pídeo ao arrancar ([Tecnoloxías › As teclas no terminal](../tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt)).
+  - **`tell_focus`**, desde a subfase 2.2, é ese aviso, nunha función, porque o usa tamén [`show`](#mostrar-outra-tab-show): ao cambiar de tab coa xanela co foco, o programa da tab vella recibe que o perdeu, e o da nova, que o ten. Escribe no programa da tab que mostra a vista nese momento. Os modos lense baixo o *lock*, nunha liña, e a secuencia vai fóra del, sen esperar ([`Input::write`](meiga-win.md#input)). Só o programa da tab que se mostra sabe do foco: os das ocultas recibiron, ao ocultarse, que o perderon, se a xanela o tiña e eles o pediran, e non saben nada máis ata que se mostran.
 
 ### O zoom e a escala: `zoom`, `set_points`, `dpi_changed` e `new_font`
 
@@ -1320,7 +1863,7 @@ Desde a subfase 1.9. O tamaño da fonte cambia co zoom e coa escala, e a xanela 
 - **`zoom`**: a fonte `steps` puntos máis grande, ou máis pequena se son negativos, de 6 a 72. Chámano Ctrl e `+` ou `-`, cun punto ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)), e Ctrl e a roda, cun punto por parte ([`mouse`](#o-rato-mouse-e-dialog_closed)). A conta vai nun `i32`: `saturating_add` non pasa dos seus límites, aínda que a roda dea moitas partes de golpe, e `clamp` déixaa entre `MIN_POINTS` e `MAX_POINTS`, así que `as u16` non perde nada.
 - **`set_points`** cambia o tamaño e crea a fonte nova. Co mesmo tamaño, nada: Ctrl e `+` nos 72 puntos, ou Ctrl+0 nos 12, non debuxan nada. Se non, `Response::REDRAW`, un fotograma.
 - **`dpi_changed`**: a xanela pasou a un monitor con outra escala, ou cambiou a escala do seu ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)). Chámaa [`App`](#os-eventos) con `Event::DpiChanged`, que chega antes ca o tamaño novo da xanela: o cursor ([`Caret::set_dpi`](#o-pestanexo-caret)), a barra de desprazamento ([`Mouse::set_dpi`](#mouse)) e a fonte colleno xa, e o cambio de tamaño que vén despois calcula a grella coas celas novas. Ao revés, a grella cambiaría dúas veces, a primeira coas celas vellas. Desde a revisión do código, `App` tampouco debuxa entre os dous, para que o terminal e o programa non reciban a grella das celas novas na xanela vella; se o tamaño non cambia, a grella é a das celas novas na mesma xanela. Co mesmo DPI, nada.
-- **`new_font`** crea a fonte co tamaño e coa escala que ten agora a vista, coas fontes do sistema que garda: o em mide `puntos × DPI / 72` píxeles ([Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos)). Con ela cambian a cela, que o terminal usa para responder aos programas que preguntan polo tamaño en píxeles (`set_cell_size`, coma en [`terminal`](#appnew-e-terminal)), e a grella que enche a xanela, que se calcula co tamaño que xa tiña a xanela (`resized`). A fonte nova ten a súa caché de glifos, baleira: os glifos rasterízanse de novo a medida que se debuxan.
+- **`new_font`** crea a fonte co tamaño e coa escala que ten agora a vista, coas fontes do sistema que garda: o em mide `puntos × DPI / 72` píxeles ([Tecnoloxías › DirectWrite](../tecnoloxias.md#27-directwrite-fontes-e-glifos)). Con ela cambian a cela, que o terminal usa para responder aos programas que preguntan polo tamaño en píxeles (`set_cell_size`, coma en [`Tab::start`](#tab)), e a grella que enche a xanela, que se calcula co tamaño que xa tiña a xanela (`resized`). A fonte nova ten a súa caché de glifos, baleira: os glifos rasterízanse de novo a medida que se debuxan. Desde a subfase 2.2, o zoom é da xanela, e todas as tabs teñen o mesmo tamaño de letra, pero só o terminal da tab que se mostra recibe xa a cela e a grella novas: os das ocultas recíbenas ao mostralas ([`show`](#mostrar-outra-tab-show)).
 - **Se DirectWrite non pode crear a fonte**, queda a de antes, coa súa cela (`if let Ok`). O tamaño en puntos, ou o DPI, xa cambiou, e a seguinte vez parte del.
 - **A xanela enteira** debúxase outra vez (`redraw`, que mira [`update`](#poñer-ao-día-update)): cambian todas as celas e as marxes.
 
@@ -1330,7 +1873,7 @@ Desde a subfase 1.9. O tamaño da fonte cambia co zoom e coa escala, e a xanela 
 pub fn resized(&mut self, client: Size) {
     self.client = client;
     self.mouse.bar_mut().set_client(client);
-    let grid = grid_size(client, self.cell, self.mouse.bar().width());
+    let grid = self.window_grid();
     self.wanted = (grid != self.grid).then_some(grid);
 }
 
@@ -1369,7 +1912,7 @@ pub fn grid_size(client: Size, cell: Size, bar: u32) -> GridSize {
 
 Desde a subfase 1.9, a grella segue o tamaño da xanela ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisións 2 e 3; [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom)).
 
-- **`resized`**: a área cliente da xanela ten agora `client` píxeles. Chámana [`App`](#os-eventos), cando a xanela cambia de tamaño e non está minimizada, e `new_font`. A franxa da barra vai co bordo dereito (`set_client`), e a grella que enche a xanela calcúlase xa, sen a franxa, pero non se lle dá a ninguén: queda en `wanted`, se é distinta da que teñen o terminal e o programa. Se a xanela volta ao tamaño de antes, `wanted` volta a `None`, e non cambia nada.
+- **`resized`**: a área cliente da xanela ten agora `client` píxeles. Chámana [`App`](#os-eventos), cando a xanela cambia de tamaño e non está minimizada, `new_font` e, desde a subfase 2.2, [`show`](#mostrar-outra-tab-show), para a tab que se mostra. A franxa da barra vai co bordo dereito (`set_client`), e a grella que enche a xanela calcúlase xa, sen a franxa, pero non se lle dá a ninguén: queda en `wanted`, se é distinta da que teñen o terminal e o programa. Se a xanela volta ao tamaño de antes, `wanted` volta a `None`, e non cambia nada. Desde a 2.2, a conta está en `window_grid`, que lle dá tamén a grella a unha tab nova ([`open`](#os-atallos-act-open-e-close_active)): como `client` xa cambiou, é a mesma conta ca antes. Só a recibe o terminal da tab que se mostra: os das tabs ocultas manteñen a súa grella ata que se mostran.
 - **`resize_grid`**, ao principio de cada fotograma ([`update`](#poñer-ao-día-update)), dálle a grella ao terminal e ao programa, como moito unha vez por intervalo dos fotogramas, 33,3 ms por Escritorio remoto e 16,7 ms en local ([`frames::interval`](#funcións-auxiliares)):
   1. Sen grella pendente, nada: `?` sobre un `Option` volta con `None` se é `None`.
   2. Se a última cambiou hai menos dun intervalo, aínda non: devolve cando poderá, e `update` dillo a `Frames`, que programa para entón o temporizador dos fotogramas. Así, mentres se arrastra o bordo da xanela, cada `WM_SIZE` só cambia `wanted`, cada fotograma leva o último tamaño, e o temporizador leva o último de todos.
@@ -1378,8 +1921,8 @@ Desde a subfase 1.9, a grella segue o tamaño da xanela ([ADR 0016](../adr/0016-
 - **Se `ResizePseudoConsole` falla**, o programa queda co tamaño de antes, e o seu texto pode verse mal ata o seguinte cambio: `let _ =` descarta o erro, que non é motivo para parar meiga. Sen programa, só cambia o terminal.
 - **Por que non en cada `WM_SIZE`.** Cada cambio reparte o historial enteiro, ata 10 000 liñas, e fai que o ConPTY reparta o seu búfer e que os programas a pantalla completa redebuxen todo: moitos máis cambios dos que se poden ver.
 - `if let Some(due) = … && now < due` (*let chains*): só se houbo un cambio antes, a súa hora máis un intervalo cabe nun `Instant` (`checked_add`), e esa hora aínda non chegou.
-- **`grid_size`**: a grella de celas de `cell` píxeles que enche unha área cliente de `client` píxeles, sen a franxa da barra, de `bar` píxeles: tantas columnas e filas enteiras como caben, e polo menos a máis pequena do terminal, 2 × 1 ([`MIN_SIZE`](meiga-core.md#cratesmeiga-coresrctermmodrs)), aínda que a xanela sexa máis pequena. O que sobra, menos dunha cela, son as marxes, que `draw` pinta coa cor do fondo. É pública: [`terminal`](#appnew-e-terminal) usa a mesma conta para a primeira grella.
-  - `cell.max(1)` evita dividir entre 0, e `try_from` dá `u16::MAX` se o número non cabe: unha cela sempre ten píxeles, e ningunha xanela ten tantas celas, pero o tipo non o garante. `saturating_sub` dá 0 nunha xanela máis estreita ca a franxa. Ata a 1.8, esta conta estaba en `terminal`, sen a franxa nin o mínimo, que lle daba `Terminal::new`.
+- **`grid_size`**: a grella de celas de `cell` píxeles que enche unha área cliente de `client` píxeles, sen a franxa da barra, de `bar` píxeles: tantas columnas e filas enteiras como caben, e polo menos a máis pequena do terminal, 2 × 1 ([`MIN_SIZE`](meiga-core.md#cratesmeiga-coresrctermmodrs)), aínda que a xanela sexa máis pequena. O que sobra, menos dunha cela, son as marxes, que `draw` pinta coa cor do fondo. É pública: [`Tabs::new`](#tabs-e-new) usa a mesma conta para a grella da primeira tab.
+  - `cell.max(1)` evita dividir entre 0, e `try_from` dá `u16::MAX` se o número non cabe: unha cela sempre ten píxeles, e ningunha xanela ten tantas celas, pero o tipo non o garante. `saturating_sub` dá 0 nunha xanela máis estreita ca a franxa. Ata a 1.8, esta conta estaba en `terminal`, a función de `app.rs` que ata a 2.1 creaba o terminal, sen a franxa nin o mínimo, que lle daba `Terminal::new`.
 
 ### O rato: `mouse` e `dialog_closed`
 
@@ -1474,12 +2017,12 @@ fn send(&mut self, title: bool) {
     }
     if title {
         // The window takes the title when it wakes up.
-        self.waker.wake();
+        self.waker.wake(self.tab.get());
     }
 }
 ```
 
-Antes de cada fotograma, `Frames` chama a `update` ([`Scene`](#scene)). Paso a paso:
+Antes de cada fotograma, `Frames` chama a `update` ([`Scene`](#scene)), desde a subfase 2.2 a través das tabs ([`Scene` e `earliest`](#scene-e-earliest)). Paso a paso:
 
 1. **A grella**, desde a subfase 1.9: se cambiou o tamaño da xanela ou o da cela, `resize_grid` dálles a grella nova ao terminal e ao programa, ou di cando poderá ([`resize_grid`](#o-tamaño-resized-resize_grid-e-grid_size)). Vai antes da copia, para que este fotograma xa mostre o texto repartido. Colle o *lock* ela mesma, e sóltao antes do paso seguinte.
 2. **Baixo o *lock*:**
@@ -1488,7 +2031,7 @@ Antes de cada fotograma, `Frames` chama a `update` ([`Scene`](#scene)). Paso a p
    - **A copia.** [`copy_damage`](meiga-core.md#cratesmeiga-coresrctermmodrs) copia á vista as filas que cambiaron, o cursor e a paleta, e marca as celas que agora son distintas. Desde a subfase 1.8, as celas da selección levan a marca `SELECTED`, e copia tamén as filas onde cambiou a selección, que `alacritty_terminal` non dá como cambiadas: arrastrar só debuxa as celas onde cambia ([Código › meiga-core › `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)). Desde a 1.9, copia as filas que mostra a vista do historial.
    - **A marca da pantalla** quítase: a xanela xa copiou, e a seguinte saída voltará espertala.
    - **O historial**, desde a 1.9: cantas filas ten e onde está a vista ([`history`](meiga-core.md#cratesmeiga-coresrctermmodrs)), para a barra de desprazamento.
-3. **Fóra do *lock*,** `send` envía as respostas ao programa coa copia de `Input` e, se cambiou o título, esperta a xanela: o título cólleo [`App::wake`](#wake-o-aviso-do-fío-lector), coma cando o cambia o fío lector, porque a vista non ten a xanela. Desde a subfase 1.8, o mesmo `bool`, que na vista segue chamándose `title`, di tamén se o programa copiou texto ao portapapeis (OSC 52) dentro da actualización: tamén o colle `App::wake`. As marcas xa quedaron postas, así que o fío lector non envía outro aviso por eles. Se o programa non se lanzou, non hai `Input`, e o búfer baléirase igual.
+3. **Fóra do *lock*,** `send` envía as respostas ao programa coa copia de `Input` e, se cambiou o título, esperta a xanela: o título cólleo a vista cando chega o aviso ([`wake`](#o-título-o-portapapeis-e-a-pantalla-wake)), coma cando o cambia o fío lector, porque `update` non ten a xanela. Desde a subfase 1.8, o mesmo `bool`, que na vista segue chamándose `title`, di tamén se o programa copiou texto ao portapapeis (OSC 52) dentro da actualización: tamén o colle `wake`. Desde a 2.2, o aviso leva o identificador da tab que mostra a vista (`self.tab.get()`), coma os do seu fío lector, e por iso chega á vista ([`Tabs::wake`](#os-avisos-wake-e-catch_up_wakes)); ata a 2.1, collíao `App::wake`. As marcas xa quedaron postas, así que o fío lector non envía outro aviso por eles. Se o programa non se lanzou, non hai `Input`, e o búfer baléirase igual.
 4. **A actividade.** Se cambiou algo na pantalla, o pestanexo empeza de novo, visíbel: mentres o programa escribe, o cursor non pestanexa, e deixa de facelo cando pasa o tempo de espera sen cambios ([`Caret`](#o-pestanexo-caret)).
 5. **O pestanexo.** `phase` di se o cursor se ve agora e cando cambia iso. Se cambiou desde o último fotograma, as súas celas márcanse como cambiadas. Vai despois da actividade: se non, cada cambio do pestanexo contaría como actividade, e o cursor non deixaría nunca de pestanexar.
 6. **A barra**, desde a subfase 1.9, ponse ao día co historial e coas filas da pantalla ([`ScrollBar::update`](#poñer-ao-día-e-debuxar-update-e-draw)): se o polgar se moveu, cambiou de tamaño ou de aspecto, a súa zona tamén cambiou.
@@ -1509,7 +2052,7 @@ fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
 }
 ```
 
-Coa xanela minimizada, `Frames` non pon ao día a vista nin debuxa nada, pero chama a `update_hidden` cando a vista pode ter algo que non pode esperar: ao minimizar a xanela, cando o fío lector a esperta e cando vence o temporizador ([`hidden`](#coa-xanela-minimizada-hidden)).
+Coa xanela minimizada, `Frames` non pon ao día a vista nin debuxa nada, pero chama a `update_hidden` cando a vista pode ter algo que non pode esperar: ao minimizar a xanela, cando un fío lector a esperta e cando vence o temporizador ([`hidden`](#coa-xanela-minimizada-hidden)). Desde a subfase 2.2, chámaa a través das tabs, que rematan tamén as actualizacións sincronizadas das tabs ocultas ([`Scene` e `earliest`](#scene-e-earliest)).
 
 - **Só a actualización sincronizada.** Remátaa se chegou a súa hora, envía as respostas e esperta a xanela polo título ou, desde a subfase 1.8, polo portapapeis, coma `update`, co mesmo código (`end_late_sync` e `send`); e devolve a hora límite da que siga aberta, para que `Frames` programe para ela o temporizador. Así, o programa recibe a resposta ás preguntas que fixo dentro dela, aínda que a xanela non se vexa ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)).
 - **Non copia a pantalla:** cópiase unha vez ao restaurar a xanela, con todo o que cambiou mentres tanto. Copiala agora sería traballo para nada, e quitaría a marca da pantalla, así que a seguinte saída voltaría espertar a xanela.
@@ -1899,7 +2442,7 @@ Desde a subfase 1.8. O **rato da vista**: os clics que seleccionan texto, e os q
 | Xira a roda | Con Ctrl, o zoom, desde a subfase 1.9. Sen el, na pantalla alternativa, frechas (`?1007`); e na principal, nada ata a 1.8, e desde a 1.9, despraza o historial. | Un informe por cada parte, tamén con Ctrl. |
 | Preme, arrastra ou xira a roda sobre a franxa da barra | Desde a subfase 1.9, a barra: o polgar móvese coa vista, e un clic fóra del pasa páxinas. A roda despraza o historial, ou fai o zoom con Ctrl. | O mesmo: a franxa é de meiga. |
 
-Coma no Windows Terminal, **Maiús garda o rato para meiga**: con el, os clics seleccionan texto tamén nun programa que pediu o rato, e a roda, que ata a 1.8 non facía nada, despraza o historial ou, con Ctrl, fai o zoom ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). Desde a 1.9, a franxa da barra tamén é sempre de meiga. Os movementos e a soltura dun botón que se premeu para o programa son del, con Maiús ou sen el; e, se a xanela perde o rato antes de que o botón suba, o programa recibe a soltura entón ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)).
+Coma no Windows Terminal, **Maiús garda o rato para meiga**: con el, os clics seleccionan texto tamén nun programa que pediu o rato, e a roda, que ata a 1.8 non facía nada, despraza o historial ou, con Ctrl, fai o zoom ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). Desde a 1.9, a franxa da barra tamén é sempre de meiga. Os movementos e a soltura dun botón que se premeu para o programa son del, con Maiús ou sen el; e, se a xanela perde o rato antes de que o botón suba, o programa recibe a soltura entón ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)). Desde a subfase 2.2, o rato é un por xanela, coma a vista, e cando a xanela mostra outra tab, remata o que estaba a facer coa vella, do mesmo xeito ([`switched`](#cando-a-xanela-mostra-outra-tab-switched)).
 
 ### `Context` e `Response`
 
@@ -1923,6 +2466,8 @@ pub struct Response {
     /// The wheel turned with Ctrl these notches, which zoom: in when they
     /// are positive.
     pub zoom: i32,
+    /// A shortcut of the tabs.
+    pub tab: Option<TabAction>,
 }
 
 impl Response {
@@ -1931,13 +2476,14 @@ impl Response {
         redraw: true,
         dialog: false,
         zoom: 0,
+        tab: None,
     };
 }
 ```
 
 - **`Context`** é o que necesita o rato para atender un evento: a xanela, para capturar o rato, escoller o punteiro, o portapapeis e a caixa de mensaxe; o que comparte a vista co fío lector, o terminal, coa selección e os modos do programa; a entrada do programa, `None` se non se lanzou; e o tamaño da cela, para saber que cela está debaixo do punteiro. A vista créao con cada evento ([`mouse`](#o-rato-mouse-e-dialog_closed)), coa xanela que lle pasa `App` e referencias aos seus campos: `'a` é a vida desas referencias, e un `Context` non pode durar máis ca elas, así que o rato non o garda.
-- **`Response`** é o que ten que facer a xanela despois: `redraw`, un fotograma, porque cambiou a selección ou, desde a subfase 1.9, a vista do historial ou a barra; `dialog`, poñerse ao día, porque se mostrou a caixa de mensaxe que pregunta antes de pegar, e mentres tanto os eventos da xanela non chegaron; e, desde a 1.9, `zoom`, as partes que xirou a roda con Ctrl, adiante positivas, que fan o zoom. Faino [`App::respond`](#respond-o-que-pide-a-vista), salvo o zoom, que fai antes a vista, porque ten a fonte ([`mouse`](#o-rato-mouse-e-dialog_closed)). As teclas devolven o mesmo ([`key`](#as-teclas-e-o-foco-key-e-focus)). `Default` dá `false`, `false` e 0: nada que facer.
-- **`Response::REDRAW`**, desde a 1.9: só un fotograma, a resposta máis común, nunha constante. Dentro de `impl Response`, `Self` é `Response`, e unha `const` pódese usar en calquera expresión, coma `then_some(Response::REDRAW)`. Ata a 1.8, cada sitio escribía `Response { redraw: true, dialog: false }`.
+- **`Response`** é o que ten que facer a xanela despois: `redraw`, un fotograma, porque cambiou a selección ou, desde a subfase 1.9, a vista do historial ou a barra; `dialog`, poñerse ao día, porque se mostrou a caixa de mensaxe que pregunta antes de pegar, e mentres tanto os eventos da xanela non chegaron; desde a 1.9, `zoom`, as partes que xirou a roda con Ctrl, adiante positivas, que fan o zoom; e, desde a 2.2, `tab`, un atallo das tabs ([`TabAction`](#tabaction)), que só dan as teclas ([`shortcut`](#as-teclas-e-o-foco-key-e-focus)). Faino [`App::respond`](#respond-o-que-pide-a-vista), salvo o zoom, que fai antes a vista, porque ten a fonte ([`mouse`](#o-rato-mouse-e-dialog_closed)); o atallo, a través das tabs ([`act`](#os-atallos-act-open-e-close_active)), porque a vista non ten as outras tabs: só mostra unha. O rato está en `mouse.rs`, pero o tipo é de todos os eventos: as teclas devolven o mesmo ([`key`](#as-teclas-e-o-foco-key-e-focus)). `Default` dá `false`, `false`, 0 e `None`: nada que facer.
+- **`Response::REDRAW`**, desde a 1.9: só un fotograma, a resposta máis común, nunha constante. Dentro de `impl Response`, `Self` é `Response`, e unha `const` pódese usar en calquera expresión, coma `then_some(Response::REDRAW)`. Ata a 1.8, cada sitio escribía `Response { redraw: true, dialog: false }`. Desde a 2.2, nomea tamén `tab`: o valor dunha `const` calcúlase ao compilar, e alí non se pode chamar a `Default::default()`, que non é unha función `const`, así que leva todos os campos.
 - **Por que unha resposta.** O rato e a vista non teñen `Frames`, e un fotograma necesita o contido enteiro, onde está a vista, que segue prestada mentres atende o evento: a vista di o que fai falta, e `App` faino cando ela remata.
 
 ### `Mouse`
@@ -2543,6 +3089,29 @@ A xanela xa non pode seguir os botóns: outra xanela colleu o rato (`Event::Capt
 - **Desde a revisión do código.** Antes, ao perder o rato, meiga esquecía os botóns do programa sen dicirllo: en vim ou en tmux con `?1002;1006`, premer e facer Alt+Tab ou Win+L deixaba o botón premido para o programa, que nunca recibía a soltura; e a que chegase despois sobre a xanela xa non ía a el. `check-mouse.ps1` compróbao: preme o botón esquerdo e publica `WM_CAPTURECHANGED` antes de soltalo, e o programa ten que recibir a soltura, unha vez ([Código › ferramentas](ferramentas.md#toolscheck-mouseps1)).
 - `if let Some(cell) = self.reported_at && pressed.contains(&true)` encadea un `if let` cunha condición (*let chains*, da edición 2024): sen ningún botón do programa, nin sequera se colle o *lock*.
 - `Modifiers::default()`: Maiús, Alt e Ctrl, a `false`.
+- Desde a subfase 2.2, chámaa tamén `switched`, cando a xanela mostra outra tab.
+
+### Cando a xanela mostra outra tab: `switched`
+
+```rust
+pub fn switched(&mut self, context: &Context<'_>) {
+    self.forget_buttons(context);
+    self.clicks = Clicks::new();
+    self.reported_at = None;
+    self.wheel = WheelTurns::new();
+    self.wheel_rows = WheelRows::new();
+}
+```
+
+Desde a subfase 2.2. A xanela mostra outro terminal, o doutra tab, en vez do de `context`: o rato é un por xanela, coma a vista, e o que estaba a facer co terminal vello non pode seguir no novo ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 9). Chámaa a vista ao cambiar de tab ([`show`](#mostrar-outra-tab-show)), antes de coller o terminal novo: o `Context` aínda leva o terminal e a entrada da tab vella.
+
+1. **O que estaba a facer remata coa tab vella**, coma cando outra xanela colle o rato ([`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons)): o seu programa recibe a soltura dos botóns que se premeron para el, unha selección que medraba remata e cópiase, a vista deixa de moverse soa, a barra solta o polgar e a xanela solta o rato. Se non, o programa vello seguiría crendo que un botón está abaixo, e os movementos e a soltura dese botón irían ao programa novo, que nunca recibiu o clic.
+2. **O que contaba para a tab vella empeza de novo**, porque non serve para a nova:
+   - **`clicks`**: o último clic. Un clic na tab nova pouco despois doutro na vella, no mesmo sitio, contaría como dobre clic, e seleccionaría unha palabra nun texto onde non se fixera o primeiro.
+   - **`reported_at`**: a última cela que recibiu o programa vello. O rato só lle envía ao programa os movementos a outra cela ([`moved`](#mover-o-rato-moved)): se quedase, o primeiro movemento para o programa novo non lle chegaría se fose á mesma cela.
+   - **`wheel`** e **`wheel_rows`**: as partes da roda e as fraccións de fila que aínda non eran enteiras. Sumaríanse aos primeiros xiros na tab nova, e un xiro máis pequeno ca unha parte faría xa un informe, unha frecha, un paso do zoom ou do historial.
+- **O resto queda**, porque é da xanela e non da tab: as preferencias do rato de Windows, a barra, coas súas medidas e o seu sitio, que se pon ao día co historial do terminal novo no seguinte fotograma ([`ScrollBar::update`](#poñer-ao-día-e-debuxar-update-e-draw)), o DPI, o codificador das frechas e o búfer do que vai ao programa. `selecting`, `reported` e `autoscroll` xa os baleirou `forget_buttons`.
+- **A forma do punteiro** (a barra de texto ou a frecha, segundo se o programa pediu o rato) non cambia ata o seguinte movemento do rato, que a escolle co terminal novo ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md#consecuencias)).
 
 ### `report` e `release`
 
@@ -2743,7 +3312,7 @@ pub fn set_client(&mut self, client: Size) {
 ```
 
 - **`new`**: a barra dunha xanela de `client` píxeles a `dpi`. As medidas calcúlaas `set_dpi`, o mesmo código ca cando cambia a escala. Non mostra ningún polgar: o primeiro fotograma debúxao, se hai historial.
-- **`width_at`**: o ancho da franxa a un DPI, sen barra. Úsao [`terminal`](#appnew-e-terminal) para a primeira grella, antes de que existan a vista, o seu rato e a súa barra. **`width`**: o da barra, para a grella cada vez que cambia o tamaño da xanela ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)).
+- **`width_at`**: o ancho da franxa a un DPI, sen barra. Úsao [`Tabs::new`](#tabs-e-new) para a grella da primeira tab, antes de que existan a vista, o seu rato e a súa barra. **`width`**: o da barra, para a grella cada vez que cambia o tamaño da xanela ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)) e, desde a subfase 2.2, para a dunha tab nova ([`window_grid`](#terminalview)).
 - **`set_dpi`**: a xanela pasou a un monitor con outra escala ([`Mouse::set_dpi`](#mouse)). O polgar calcúlase coas medidas novas no seguinte fotograma.
 - **`set_client`**: a xanela cambiou de tamaño ([`resized`](#o-tamaño-resized-resize_grid-e-grid_size)): a franxa vai ao bordo dereito novo, e o polgar mide o alto novo.
 
@@ -3059,7 +3628,7 @@ pub fn paste(window: &Window, shared: &Mutex<Shared>, input: &Input) -> Response
     Response {
         redraw,
         dialog,
-        zoom: 0,
+        ..Response::default()
     }
 }
 ```
@@ -3072,7 +3641,7 @@ Pega o portapapeis no programa, paso a paso ([Tecnoloxías › Pegar no terminal
 4. **A pregunta.** Se o texto ten máis dunha liña e o programa non pediu o *bracketed paste*, cada liña podería executarse ao chegar o seu Intro, coma no PSReadLine: meiga pregunta antes, nunha caixa de mensaxe co título «meiga» (`TITLE`, de [`app.rs`](#content-e-app)) e o texto de [`question`](#a-pregunta-question) (decisión 6). Con *Cancel*, non pega nada.
 5. **A vista volta á pantalla**, onde escribe o programa, desde a subfase 1.9: antes de escribir o texto, coma no Windows Terminal, para que se vexa chegar ([`Terminal::scroll`](meiga-core.md#cratesmeiga-coresrctermmodrs) con `Scroll::Bottom`, [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 7). Se non se pega nada, a vista non se move.
 6. **O envío.** As marcas, se van, e o texto, nun búfer co sitio xusto: o texto e as dúas marcas, `ESC [ 200 ~` e `ESC [ 201 ~`, de 6 bytes cada unha. Van á entrada da sesión, coma as teclas, sen esperar ([`Input::write`](meiga-win.md#input)).
-7. **Devolve un [`Response`](#context-e-response)**, desde a subfase 1.9, en vez dun `bool`: `redraw`, se a vista estaba no historial e hai que debuxar a pantalla; e `dialog`, se mostrou a caixa, pegase ou non: mentres estaba aberta, os eventos da xanela non chegaron á vista, e [`App::respond`](#respond-o-que-pide-a-vista) ten que sabelo. `zoom` sempre é 0. A variábel que se chamaba `asked` chámase agora `dialog`, coma o campo, e `..Response::default()` pon o resto dos campos aos seus valores por defecto.
+7. **Devolve un [`Response`](#context-e-response)**, desde a subfase 1.9, en vez dun `bool`: `redraw`, se a vista estaba no historial e hai que debuxar a pantalla; e `dialog`, se mostrou a caixa, pegase ou non: mentres estaba aberta, os eventos da xanela non chegaron á vista, e [`App::respond`](#respond-o-que-pide-a-vista) ten que sabelo. O resto dos campos nunca cambia ao pegar: `zoom` é 0 e, desde a subfase 2.2, `tab` é `None`. `..Response::default()` dálles os seus valores por defecto, coma xa facía a resposta de *Cancel*; ata a 2.1, a última escribía `zoom: 0`, e cada campo novo de `Response` obrigaría a cambiala. A variábel que se chamaba `asked` chámase agora `dialog`, coma o campo.
 
 - **A caixa** ([`Window::confirm`](meiga-win.md#cratesmeiga-winsrcwindowrs)) ten *OK* e *Cancel*, a icona de aviso e *Cancel* escollido (`MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2`): un Intro de máis non pega nada. É a de Windows, que xa ten o teclado, a escala e a accesibilidade. Mentres está aberta, o seu bucle de mensaxes reparte tamén as da xanela, pero `confirm` non volta ata que se pecha ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)).
 - **Por que só sen *bracketed paste*.** Un programa que o pediu recibe o texto marcado, e non executa nada ata Intro, coma bash; preguntar sempre molestaría onde nada se executa. Os programas da consola de Windows nunca reciben as marcas: o ConPTY quítallas.
@@ -3156,9 +3725,9 @@ pub trait Scene {
 
 O que mostra a xanela. En cada fotograma, `Frames` chama a `update` e a `draw`; coa xanela minimizada, só a `update_hidden`.
 
-**`update`**, desde a subfase 1.6, pon ao día a escena no instante `now`, e dálle a `damage` as zonas que cambiaron nela. O terminal copia eiquí o que cambiou no terminal da sesión ([`TerminalView::update`](#poñer-ao-día-update)). Devolve cando hai que poñela ao día outra vez, aínda que non cambie nada máis: a hora límite dunha actualización sincronizada, ou o seguinte cambio do pestanexo; e, desde a 1.9, cando pode darlles a grella nova ao terminal e ao programa, ou cando ten que mover outra vez a vista do historial, que se move soa mentres pasan as páxinas da barra ou mentres unha selección se arrastra fóra da grella. Por defecto non fai nada nin pide ningún momento: é o caso dos modos de medición, que marcan as súas zonas antes de cada fotograma.
+**`update`**, desde a subfase 1.6, pon ao día a escena no instante `now`, e dálle a `damage` as zonas que cambiaron nela. O terminal copia eiquí o que cambiou no terminal da sesión ([`TerminalView::update`](#poñer-ao-día-update)); desde a 2.2, o da tab que se mostra, e as tabs rematan tamén as actualizacións sincronizadas das ocultas que chegaron á súa hora, sen debuxar nada ([`Scene` e `earliest`](#scene-e-earliest)). Devolve cando hai que poñela ao día outra vez, aínda que non cambie nada máis: a hora límite dunha actualización sincronizada, ou o seguinte cambio do pestanexo; e, desde a 1.9, cando pode darlles a grella nova ao terminal e ao programa, ou cando ten que mover outra vez a vista do historial, que se move soa mentres pasan as páxinas da barra ou mentres unha selección se arrastra fóra da grella. Desde a 2.2, a hora límite pode ser a dunha tab oculta. Por defecto non fai nada nin pide ningún momento: é o caso dos modos de medición, que marcan as súas zonas antes de cada fotograma.
 
-**`update_hidden`**, coa xanela minimizada, fai só o que non pode esperar a que se restaure, sen poñer ao día a escena, e devolve cando hai que facelo outra vez. O terminal remata eiquí á súa hora a actualización sincronizada que o programa deixou aberta, para que reciba as respostas ás súas preguntas ([`TerminalView::update_hidden`](#coa-xanela-minimizada-update_hidden)). Por defecto, nada.
+**`update_hidden`**, coa xanela minimizada, fai só o que non pode esperar a que se restaure, sen poñer ao día a escena, e devolve cando hai que facelo outra vez. O terminal remata eiquí á súa hora a actualización sincronizada que o programa deixou aberta, para que reciba as respostas ás súas preguntas ([`TerminalView::update_hidden`](#coa-xanela-minimizada-update_hidden)); desde a 2.2, a da tab que se mostra e as das ocultas. Por defecto, nada.
 
 **`draw`** debuxa todo o que cae dentro do recorte do lenzo, sen preocuparse de que cambiou: `Frames` pásalle un lenzo recortado a cada zona que cambiou ([`Canvas::clipped`](meiga-render.md#canvas)), e así só se tocan eses píxeles.
 
@@ -3227,7 +3796,7 @@ pub fn new(
 ```
 
 - Recibe a xanela: dela saen o tamaño do *framebuffer* (`client_size`) e o temporizador.
-- `compose_all` pon ao día a escena e compón o *framebuffer* enteiro. No terminal, esa primeira copia leva todo o que haxa: a pantalla baleira, ou o que xa escribise o programa, que se lanzou antes ([`app.rs`](#appnew-e-terminal)).
+- `compose_all` pon ao día a escena e compón o *framebuffer* enteiro. No terminal, esa primeira copia leva todo o que haxa: a pantalla baleira, ou o que xa escribise o programa da primeira tab, que se lanzou antes ([`Tabs::new`](#tabs-e-new)).
 - `damage.clear()`: a primeira copia deu a xanela enteira como cambiada, pero non hai nada que presentar: o primeiro `WM_PAINT` copia a xanela enteira desde o *framebuffer*.
 - `wait_for_scene` programa o temporizador se a escena pediu un momento ([máis abaixo](#a-escena-e-o-temporizador-update-e-wait_for_scene)).
 - As marcas só están coa opción `--marks` ([`options.rs`](#cratesmeigasrcoptionsrs)): `bool::then` dá `Some(Vec::new())` se é certo, e `None` se non. `Vec::new` vai sen chamar, coma función: `then` só a chama se fai falta. Ata a subfase 1.6 empezaban desactivadas, e a tecla P activábaas e desactivábaas (`toggle_marks`).
@@ -3271,7 +3840,7 @@ pub fn timer(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), Ha
 ```
 
 - `damage` anota unha zona que cambiou, recortada ao *framebuffer*: o que queda fóra non se debuxa. Úsana os modos de medición; o terminal dá as súas zonas en `update`.
-- **`changed`**: a escena cambiou, pero as súas zonas só se saben ao poñela ao día. Marca `changed`, para que haxa fotograma aínda sen zonas, e pídeo coma `request`. Chámano o aviso do fío lector e o cambio do foco ([`app.rs`](#os-eventos)), desde a subfase 1.8 a vista cando cambia a selección ([`respond`](#respond-o-que-pide-a-vista)), desde a 1.9 a vista cando cambian a vista do historial ou a fonte, e `timer`.
+- **`changed`**: a escena cambiou, pero as súas zonas só se saben ao poñela ao día. Marca `changed`, para que haxa fotograma aínda sen zonas, e pídeo coma `request`. Chámano o aviso do fío lector e o cambio do foco ([`app.rs`](#os-eventos)), desde a subfase 1.8 a vista cando cambia a selección ([`respond`](#respond-o-que-pide-a-vista)), desde a 1.9 a vista cando cambian a vista do historial ou a fonte, desde a 2.2 o cambio de tab e o aviso dunha tab oculta que deixou aberta unha actualización sincronizada ([`Tabs::wake`](#os-avisos-wake-e-catch_up_wakes)), e `timer`.
 - **`request`** decide cando se debuxa o que cambiou:
   - coa xanela minimizada, nunca: os cambios esperan en `damage` e na escena, e `changed` segue marcado. A escena só fai o que non pode esperar ([`hidden`](#coa-xanela-minimizada-hidden));
   - se non cambiou nada, só queda programar o temporizador para o momento que pediu a escena (`wait_for_scene`), que pode ser novo: ao cambiar o tamaño da xanela, `compose_all` acaba de poñela ao día;
@@ -3414,8 +3983,8 @@ fn hidden(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), Handl
 
 Coa xanela minimizada, deixa que a escena faga o que non pode esperar ([`Scene::update_hidden`](#scene)), e garda o temporizador dos fotogramas só para a próxima vez que teña que facelo, sen debuxar nada.
 
-- **Cando:** ao minimizar a xanela ([`resized`](#o-tamaño-da-xanela)) e, despois, cada vez que algo pediría un fotograma (`request`), por exemplo cando o fío lector esperta a xanela ou cando vence o temporizador (`timer` → `changed` → `request` → `hidden`). A escena fai o que toca, se toca, e di cando outra vez.
-- **O temporizador** prográmase para ese momento ou, se non hai ningún, detense: coa xanela minimizada e sen ningunha actualización sincronizada aberta, nada esperta a xanela ([ADR 0009](../adr/0009-xanela-que-non-se-ve.md)). Nin se compón nin se presenta nada, e o rexistro dos fotogramas non ten ningunha liña nova.
+- **Cando:** ao minimizar a xanela ([`resized`](#o-tamaño-da-xanela)) e, despois, cada vez que algo pediría un fotograma (`request`), por exemplo cando un fío lector esperta a xanela ou cando vence o temporizador (`timer` → `changed` → `request` → `hidden`). A escena fai o que toca, se toca, e di cando outra vez.
+- **O temporizador** prográmase para ese momento ou, se non hai ningún, detense: coa xanela minimizada e sen ningunha actualización sincronizada aberta, en ningunha tab desde a subfase 2.2, nada esperta a xanela ([ADR 0009](../adr/0009-xanela-que-non-se-ve.md)). Nin se compón nin se presenta nada, e o rexistro dos fotogramas non ten ningunha liña nova.
 - **Por que tamén ao minimizar.** `resized` detén o temporizador e cancela o fotograma programado, e `hidden` prográmao de novo se a escena ten algo pendente. Unha actualización sincronizada que xa estaba aberta, da que a xanela xa sabía a hora, quedaría aberta ata restaurar a xanela se o programa non escribe máis: o fío lector xa avisou dela, e non volta avisar ([`session.rs`](#as-actualizacións-sincronizadas-end_late_sync)).
 - `due` e `wait_for_scene` quedan á parte: son para os fotogramas, que coa xanela minimizada non hai. Ao restaurala, `compose_all` pon ao día a escena, e o temporizador volta aos fotogramas ([máis abaixo](#o-tamaño-da-xanela)).
 
@@ -3631,20 +4200,22 @@ O debuxo dun fotograma de texto:
 
 ## Comprobacións feitas
 
-- `cargo build --release` xera `target\release\meiga.exe`, duns 545 KB (557 568 bytes; na 1.8, 520 704).
+- `cargo build --release` xera `target\release\meiga.exe`, duns 560 KB (573 440 bytes; na 2.1, 566 272, e na 1.9, 557 568).
 - Ao abrilo sen argumentos, aparece a xanela, sen ningunha consola, con PowerShell 7 dentro: a súa cabeceira, o *prompt* e, despois del, o cursor, unha barra. Ao pechala, o proceso remata co código 0.
 - Un script de PowerShell que escribe as 16 cores, as 256, un degradado *truecolor*, a negra, a cursiva, o texto tenue, inverso e oculto, os cinco subliñados, o riscado e caracteres anchos móstraos todos como describe [`view.rs`](#cratesmeigasrcviewrs): os ideogramas e o emoji, en dúas celas (o emoji, dunha soa cor, [ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Outro, que cambia a cor do fondo, a do texto e a vermella da paleta (`OSC 11`, `10` e `4`), cambia tamén a cor do texto que xa estaba escrito.
 - Cun programa que non existe, o terminal mostra o erro de `CreateProcessW` coa liña de comandos que fallou, sen cursor. Cun programa que remata, a súa saída queda na xanela, cunha liña como `[process exited with code 3 (0x00000003)]` debaixo, e a xanela segue aberta ata que se pecha.
 - O texto compárase co do Windows Terminal coa mesma fonte, o mesmo tamaño e as mesmas cores: os glifos teñen exactamente os mesmos píxeles cubertos, enteiros e parciais, e a tinta dunha liña é a mesma, cunha diferenza menor do 0,5 % ([Tecnoloxías › Mesturar o texto co fondo](../tecnoloxias.md#30-mesturar-o-texto-co-fondo-gamma-e-contraste)).
-- O crate ten 23 probas unitarias (`cargo test -p meiga`). As novas da 1.6 son `the_program_and_its_arguments_are_the_command_line`, en `options.rs`; `the_window_is_woken_up_once_until_it_takes_what_changed`, `a_synchronized_update_wakes_the_window_once_and_ends_at_its_deadline` e `the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor`, en `session.rs`; e `the_cursor_blinks_until_the_timeout_and_stays_shown`, `the_cursor_does_not_blink_unless_everything_allows_it`, `a_dotted_underline_keeps_its_dots_when_a_frame_draws_part_of_it` e `styles_give_the_colours_of_the_text_and_its_background`, en `view.rs`. A das opcións sen argumentos é agora `no_options_run_the_default_shell`, e as sete da demo desapareceron con ela. A da actualización sincronizada e a do subliñado de puntos chegaron co arranxo de dous erros que atopou unha revisión do código: coa xanela minimizada, unha actualización sincronizada que o programa deixaba aberta non remataba ata restaurala, e as preguntas de dentro quedaban sen resposta; e os puntos do subliñado desprazábanse un píxel cando un fotograma debuxaba só parte da liña. A 1.7 non engade probas ao programa: a das opcións comproba tamén `--marks`, e as do teclado están en [`meiga-core`](meiga-core.md#cratesmeiga-coresrcinputrs) e [`meiga-win`](meiga-win.md#probas-do-teclado). A 1.8 engade dúas: `the_question_counts_the_lines_and_shows_the_first_ones`, en `clipboard.rs`, e `the_clipboard_of_the_program_wakes_the_window_once`, en `session.rs`; e a do fin do programa comproba tamén que quedan desactivados o rato e o *bracketed paste*. As do rato, da selección e do texto que se pega están en `meiga-core` ([`mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers), [`paste.rs`](meiga-core.md#cratesmeiga-coresrcpasters) e [`term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)), e as das mensaxes do rato e do portapapeis, en `meiga-win` ([`event.rs`](meiga-win.md#cratesmeiga-winsrceventrs) e [`clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs)). A 1.9 engade as catro da barra de desprazamento, en [`scrollbar.rs`](#cratesmeigasrcscrollbarrs): `the_thumb_follows_the_view_and_widens_under_the_pointer`, `dragging_the_thumb_moves_the_view_to_the_nearest_row`, `a_press_outside_the_thumb_moves_by_pages_until_the_thumb_reaches_the_pointer` e `without_history_the_strip_is_empty`. As do historial e do cambio de tamaño do terminal están en `meiga-core` ([`term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs)), e a das filas da roda, en [`mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers); e a do cambio de tamaño da pseudoconsola e a da orde dun cambio de escala, en `meiga-win` ([`tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs) e [`window_proc`](meiga-win.md#window_proc)).
+- O crate ten 23 probas unitarias (`cargo test -p meiga`). As novas da 1.6 son `the_program_and_its_arguments_are_the_command_line`, en `options.rs`; `the_window_is_woken_up_once_until_it_takes_what_changed`, `a_synchronized_update_wakes_the_window_once_and_ends_at_its_deadline` e `the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor`, en `session.rs`; e `the_cursor_blinks_until_the_timeout_and_stays_shown`, `the_cursor_does_not_blink_unless_everything_allows_it`, `a_dotted_underline_keeps_its_dots_when_a_frame_draws_part_of_it` e `styles_give_the_colours_of_the_text_and_its_background`, en `view.rs`. A das opcións sen argumentos é agora `no_options_run_the_default_shell`, e as sete da demo desapareceron con ela. A da actualización sincronizada e a do subliñado de puntos chegaron co arranxo de dous erros que atopou unha revisión do código: coa xanela minimizada, unha actualización sincronizada que o programa deixaba aberta non remataba ata restaurala, e as preguntas de dentro quedaban sen resposta; e os puntos do subliñado desprazábanse un píxel cando un fotograma debuxaba só parte da liña. A 1.7 non engade probas ao programa: a das opcións comproba tamén `--marks`, e as do teclado están en [`meiga-core`](meiga-core.md#cratesmeiga-coresrcinputrs) e [`meiga-win`](meiga-win.md#probas-do-teclado). A 1.8 engade dúas: `the_question_counts_the_lines_and_shows_the_first_ones`, en `clipboard.rs`, e `the_clipboard_of_the_program_wakes_the_window_once`, en `session.rs`; e a do fin do programa comproba tamén que quedan desactivados o rato e o *bracketed paste*. As do rato, da selección e do texto que se pega están en `meiga-core` ([`mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers), [`paste.rs`](meiga-core.md#cratesmeiga-coresrcpasters) e [`term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)), e as das mensaxes do rato e do portapapeis, en `meiga-win` ([`event.rs`](meiga-win.md#cratesmeiga-winsrceventrs) e [`clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs)). A 1.9 engade as catro da barra de desprazamento, en [`scrollbar.rs`](#cratesmeigasrcscrollbarrs): `the_thumb_follows_the_view_and_widens_under_the_pointer`, `dragging_the_thumb_moves_the_view_to_the_nearest_row`, `a_press_outside_the_thumb_moves_by_pages_until_the_thumb_reaches_the_pointer` e `without_history_the_strip_is_empty`. As do historial e do cambio de tamaño do terminal están en `meiga-core` ([`term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs)), e a das filas da roda, en [`mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers); e a do cambio de tamaño da pseudoconsola e a da orde dun cambio de escala, en `meiga-win` ([`tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs) e [`window_proc`](meiga-win.md#window_proc)). A 2.2 tampouco engade probas ao programa, que segue con 23: o que se pode probar das tabs sen a xanela próbano as de `meiga-core`, o modelo ([`model/tests.rs`](meiga-core.md#cratesmeiga-coresrcmodeltestsrs), da 2.1) e a copia enteira da pantalla doutro terminal (`a_forgotten_screen_takes_all_of_another_terminal`, en [`term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs)); e as de `meiga-win`, a prioridade do fío lector (`the_priority_of_the_reader_changes_while_the_session_runs`, en [`tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs)) e o número da tab no aviso (`focus_and_wake_messages_are_events`, en [`event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)).
 - Desde a 1.7, as teclas chegan ao programa: [`tools/check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) teclea na xanela, co teclado español ou co estadounidense, e comproba o carácter, a tecla e as modificadoras que le PowerShell para cada unha, tamén as teclas mortas e AltGr. Detecta os erros: unha copia de meiga que non usa o win32-input-mode falla 10 das 38 teclas do teclado español, e outra na que a tecla que espera polo seu carácter non o colle cando chega outra tecla, 18. O panel de emoji (Win + .) e o ditado (Win + H) escriben no terminal ([ADR 0014](../adr/0014-o-teclado.md)).
 - Desde a 1.8, o rato selecciona, copia e pega, e chega aos programas: [`tools/check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) lanza meiga tres veces, cada unha cun script de PowerShell no seu terminal, e publica na xanela mensaxes do rato e das teclas. Comproba a selección cun clic, con dous e con tres, e arrastrando, e o que chega ao portapapeis; Ctrl+C, Ctrl+Maiús+C e Esc, con selección e sen ela; o botón dereito, que pega; Ctrl+V e Ctrl+Maiús+V, que preguntan nunha caixa de mensaxe antes de pegar varias liñas; unha tecla que colleu meiga e sobe mentres a caixa está aberta, que a seguinte vez chega ao programa; o texto que copia un programa (OSC 52), que só cambia o portapapeis coa xanela en primeiro plano; os eventos do rato dun programa para Windows; Maiús, que garda o rato para meiga; os informes en SGR e no formato do primeiro xterm; a soltura dun botón cando a xanela perde o rato, por outra xanela ou por unha caixa de mensaxe; as frechas da roda na pantalla alternativa; e o *bracketed paste*. Mostra 18 liñas `OK:`. Desde a 1.9, desconta a franxa da barra de desprazamento ao medir as celas.
 - `check-mouse.ps1` detecta os erros: oito copias de meiga, cun erro cada unha, fállana. Nunha, Maiús non garda o rato para meiga, e arrastrar con Maiús chega ao programa coma eventos do rato; noutra, Ctrl+V pega varias liñas sen preguntar; noutra, Esc chega ao programa aínda que haxa selección; noutra, o botón dereito copia outra vez a selección antes de pegar, e pega a palabra seleccionada en vez do portapapeis; noutra, a roda non envía frechas na pantalla alternativa; noutra, ao perder o rato por outra xanela, meiga esquece o botón sen a súa soltura; noutra, ao pecharse a caixa, meiga segue os botóns, e o programa non recibe a soltura; e na última, ao pecharse a caixa, meiga garda as teclas que colleu, e o seguinte C non chega ao programa. As tres últimas desfán as correccións da revisión do código: a primeira, a de [`forget_buttons`](#cando-a-xanela-perde-o-rato-forget_buttons), e as dúas metades da segunda, a de [`dialog_closed`](#o-rato-mouse-e-dialog_closed).
 - Desde a 1.9, a grella segue o tamaño da xanela, e o historial e o zoom funcionan: [`tools/check-resize.ps1`](ferramentas.md#toolscheck-resizeps1) lanza meiga cun script de PowerShell no seu terminal, cambia o tamaño da xanela e publica nela mensaxes do rato e das teclas. Despois de cada cambio de tamaño, selecciona a pantalla enteira de meiga, e compara o texto que chega ao portapapeis coas filas que o script le do búfer da consola, que o ConPTY tamén reparte. Mostra 9 liñas `OK:`: o programa recibe a grella que enche a xanela, e a pantalla ten as filas da consola, cando a xanela se fai máis estreita, máis baixa, máis ancha e máis alta (70 × 20, 45 × 14, 90 × 18 e 60 × 24 celas), tamén despois de que o script escriba onde está o cursor; na pantalla alternativa, a 50 × 16, a principal recibe o tamaño novo cando o programa volta a ela; se a xanela cambia de tamaño, a 66 × 15, mentres está aberta a caixa de mensaxe que pregunta antes de pegar, o programa recibe a grella que a enche ao pecharse a caixa; a roda, coas filas por parte das preferencias de Windows, 3 por defecto, e Maiús+RePáx, Ctrl+Maiús+↑, Ctrl+Maiús+Inicio e Ctrl+Maiús+Fin moven a vista do historial; arrastrar o polgar move a vista, ata o principio do historial, e un clic na franxa debaixo del baixa unha páxina; unha tecla para o programa, e pegar, levan a vista á pantalla; unha selección arrastrada por riba da xanela despraza a vista soa; Ctrl e `+`, e Ctrl e a roda, fan as celas máis grandes e a grella máis pequena, que recibe o programa, e Ctrl e `-`, e Ctrl+0, devolven a grella de antes; e meiga sae co código 0 ao pechar a xanela.
 - `check-resize.ps1` detecta os erros: cinco copias de meiga, cun cambio cada unha, fállana. Nunha, sen a franxa da barra de desprazamento, a primeira grella ten menos de 70 columnas, 66 ao 150 %; noutra, unha tecla para o programa non leva a vista á pantalla; noutra, a selección arrastrada fóra da grella non despraza a vista soa; noutra, a pantalla principal repártese mentres se ve a alternativa, en vez de quedar á parte; e na última, sen `catch_up`, o programa non recibe a grella nova ao pecharse a caixa de mensaxe. O ritmo dos cambios de tamaño, como moito un por intervalo dos fotogramas, non o pode ver a comprobación, que cambia o tamaño unha vez en cada paso. A orde dun cambio de escala, primeiro o DPI e despois o tamaño, compróbaa unha proba de `meiga-win` ([`window_proc`](meiga-win.md#window_proc)), porque `WM_DPICHANGED` non se pode publicar desde outro programa; e o resto, a man ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)).
+- Desde a 2.2, as tabs: [`tools/check-tabs.ps1`](ferramentas.md#toolscheck-tabsps1) lanza meiga co rexistro dos fotogramas (`--trace-frames`) e, na primeira tab, un script de PowerShell que escribe na súa pantalla un paso cada vez, e teclea na xanela os atallos das tabs, coma `check-keyboard.ps1` as súas teclas. Sabe que tab se mostra pola prioridade dos fíos lectores. Comproba que Ctrl+Maiús+T abre unha tab co shell por defecto e a mostra cun só fotograma completo, e que o lector da tab que se oculta baixa de prioridade; que a saída dunha tab oculta non debuxa nada, e que o seu programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que deixa aberta, que a xanela remata á súa hora sen debuxar; que Ctrl+Tab mostra a outra tab cun fotograma completo e lle dá a grella da xanela, que non recibiu mentres estaba oculta; que o título dunha tab oculta chega á xanela ao mostrala, e o texto que copiou ao portapapeis (OSC 52) nunca, mentres que o que copia á vista si, se a xanela está en primeiro plano; que Ctrl+Tab e Ctrl+Maiús+Tab dan a volta ás tabs; que Ctrl+Maiús+W pecha a tab que se mostra, os seus programas rematan, e móstrase a da súa dereita ou, despois da última, a da súa esquerda; e que pechar a última tab pecha a xanela, e meiga sae co código 0. Mostra 8 liñas `OK:`.
+- `check-tabs.ps1` detecta os erros: seis copias de meiga, cun erro cada unha. Cinco fállana no seu paso: a que nunca remata as actualizacións sincronizadas das tabs ocultas, a que non cambia a prioridade dos lectores, a que non lle dá á tab a grella da xanela ao mostrala, a que non copia enteira a pantalla da tab que se mostra e a que colle o título dunha tab oculta. A sexta, a que deixa chegar ao portapapeis o que unha tab copiou mentres estaba oculta, só se nota coa xanela en primeiro plano, coma na CI: por iso a comprobación copia tamén texto desde a tab que se ve, para saber se a xanela podía copialo.
 - `tools/check-window.ps1` comproba o subsistema, a xanela, a escala por monitor e o código de saída. Desde a 1.6, abre meiga con `cmd` no terminal, e comproba tamén que meiga lanza `cmd` e a súa consola, que o título da xanela pasa a ser o que pon `cmd` e que, ao pechar a xanela, `cmd` e a súa consola rematan tamén.
 - `tools/check-present.ps1` comproba os fotogramas no rexistro (`--trace-frames`). Desde a 1.6, executa no terminal un script de PowerShell que escribe na pantalla un paso cada vez, cando a comprobación llo pide, e fai dez comprobacións: o primeiro `paint` cobre a xanela enteira; mentres cambia unha fila, cada fotograma presenta só esa fila; en repouso non se debuxa nada; moitos cambios escritos de golpe agrúpanse en poucos fotogramas; unha cor de fondo nova (`OSC 11`) dá un fotograma completo; coa xanela minimizada non se debuxa nada, aínda que a saída cambie; aínda minimizada, o programa abre unha actualización sincronizada cun título dentro e non a remata: remata igual á súa hora, o título chega á xanela, e non se debuxa nada; ao restaurala, píntase enteira; ao medrar a xanela, compón o tamaño novo e píntao; e, ao pechala, meiga sae co código 0. O script oculta antes o cursor, para que o pestanexo non debuxe nada en repouso (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)).
 - `check-present.ps1` detecta os erros: comprobouse na subfase 1.2, cando aínda enviaba eventos do rato á demo, con copias de `frames.rs` con erros feitos a propósito. Debuxando cada cambio no momento, sen agrupalos, o clic e os 40 movementos enviados de golpe dan 41 fotogramas; e debuxando coa xanela minimizada, aparecen fotogramas. Nos dous casos, a comprobación falla. Sen pedir o repintado ao restaurar a xanela, pasa igual, porque Windows xa o pide. Na 1.6, unha copia de meiga sen o arranxo das actualizacións sincronizadas coa xanela minimizada falla a sétima comprobación: o título non chega á xanela.
 - Os modos de medición funcionan: o temporizador dá os fotogramas ao ritmo pedido, tamén mentres se move a xanela, aínda que entón máis lentos (ver [ADR 0008](../adr/0008-temporizador-dos-fotogramas.md)).
 - O manifesto que leva dentro, extraído con `mt.exe`, ten as tres declaracións, e un só `trustInfo`.
-- `dumpbin /dependents` mostra que só depende de DLL do sistema: `kernel32.dll`, `dwrite.dll`, `ntdll.dll`, `oleaut32.dll`, `combase.dll`, `gdi32.dll`, `user32.dll` e `api-ms-win-core-synch-l1-2-0.dll`. As tres novas da subfase 1.3 son DirectWrite e as dúas que usa o crate `windows` (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Ata a 1.4, `kernel32.dll` aparecía dúas veces, unha delas como `KERNEL32.dll`, porque a biblioteca estándar de Rust e `windows-sys` declaraban as súas funcións de forma distinta; desde a 1.5, as dúas van nunha soa entrada (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)). Windows cárgaa sempre unha soa vez. A 1.6 non engade ningunha: a ConPTY de Windows, as tubaxes, os procesos e os *jobs* están en `kernel32.dll`, e a ConPTY que vai no paquete, `conpty.dll`, cárgase ao lanzar a sesión (`LoadLibraryExW`). A 1.7 tampouco: as funcións do teclado están en `user32.dll`. Nin a 1.8, como mostra [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1), que dá a mesma lista ca na 1.7: o portapapeis, a captura e o punteiro do rato e a caixa de mensaxe están en `user32.dll`, e a memoria do portapapeis (`GlobalAlloc` e `GlobalLock`), en `kernel32.dll`. Nin a 1.9: `TrackMouseEvent` está en `user32.dll`; `ResizePseudoConsole`, en `kernel32.dll`; e `ConptyResizePseudoConsole`, a do paquete, en `conpty.dll`, que se carga ao lanzar a sesión.
+- `dumpbin /dependents` mostra que só depende de DLL do sistema: `kernel32.dll`, `dwrite.dll`, `ntdll.dll`, `oleaut32.dll`, `combase.dll`, `gdi32.dll`, `user32.dll` e `api-ms-win-core-synch-l1-2-0.dll`. As tres novas da subfase 1.3 son DirectWrite e as dúas que usa o crate `windows` (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). Ata a 1.4, `kernel32.dll` aparecía dúas veces, unha delas como `KERNEL32.dll`, porque a biblioteca estándar de Rust e `windows-sys` declaraban as súas funcións de forma distinta; desde a 1.5, as dúas van nunha soa entrada (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)). Windows cárgaa sempre unha soa vez. A 1.6 non engade ningunha: a ConPTY de Windows, as tubaxes, os procesos e os *jobs* están en `kernel32.dll`, e a ConPTY que vai no paquete, `conpty.dll`, cárgase ao lanzar a sesión (`LoadLibraryExW`). A 1.7 tampouco: as funcións do teclado están en `user32.dll`. Nin a 1.8, como mostra [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1), que dá a mesma lista ca na 1.7: o portapapeis, a captura e o punteiro do rato e a caixa de mensaxe están en `user32.dll`, e a memoria do portapapeis (`GlobalAlloc` e `GlobalLock`), en `kernel32.dll`. Nin a 1.9: `TrackMouseEvent` está en `user32.dll`; `ResizePseudoConsole`, en `kernel32.dll`; e `ConptyResizePseudoConsole`, a do paquete, en `conpty.dll`, que se carga ao lanzar a sesión. Nin a 2.2: `SetThreadPriority`, que cambia a prioridade dos fíos lectores, está en `kernel32.dll`.

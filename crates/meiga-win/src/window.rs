@@ -33,7 +33,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER,
     SetCursor, SetTimer, SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow,
     SystemParametersInfoW, TranslateMessage, USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM,
-    USER_TIMER_MINIMUM, WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE,
+    USER_TIMER_MINIMUM, WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE,
     WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_SETCURSOR, WM_TIMER,
     WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
 };
@@ -335,6 +335,14 @@ impl Window {
         unsafe { SetWindowTextW(self.handle, title.as_ptr()) };
     }
 
+    /// Closes the window as Alt+F4 does, once the handler returns: the
+    /// message loop of [`Window::run`] ends.
+    pub fn close(&self) {
+        // SAFETY: PostMessageW accepts any handle, and the message has no
+        // parameters. DefWindowProcW destroys the window when it gets it.
+        unsafe { PostMessageW(self.handle, WM_CLOSE, 0, 0) };
+    }
+
     /// Changes the pointer over the client area, from the next time that
     /// the mouse moves.
     pub fn set_pointer(&self, pointer: Pointer) {
@@ -514,22 +522,30 @@ pub fn is_remote_session() -> bool {
 }
 
 /// Wakes the message loop of a window up from any thread: the window gives
-/// [`Event::Wake`] to its handler.
+/// [`Event::Wake`] to its handler, with the number that the call gave, for
+/// example to say who woke it up.
 ///
 /// Each call posts a message to the window, which waits in its queue until
-/// the loop takes it: whoever calls it should not post another one while one
-/// is waiting. Once the window is destroyed, it does nothing.
+/// the loop takes it, and the queue of a thread holds 10 000 at most:
+/// whoever calls it should post only a few with the same number while they
+/// wait, for example one for each kind of change. Once the window is
+/// destroyed, it does nothing.
 #[derive(Clone, Debug)]
 pub struct Waker(
     /// The handle of the window, as a number, which can go to other threads.
     usize,
 );
 
+// The number of a wake-up goes whole in the wParam of its message: meiga is
+// only built for x64, where it has 64 bits.
+const _: () = assert!(size_of::<WPARAM>() == size_of::<u64>());
+
 impl Waker {
-    pub fn wake(&self) {
+    pub fn wake(&self, number: u64) {
+        let number = number as WPARAM;
         // SAFETY: PostMessageW accepts any handle, and fails without effects
-        // if the window no longer exists. The message has no parameters.
-        unsafe { PostMessageW(self.0 as HWND, WM_WAKE, 0, 0) };
+        // if the window no longer exists.
+        unsafe { PostMessageW(self.0 as HWND, WM_WAKE, number, 0) };
     }
 }
 
