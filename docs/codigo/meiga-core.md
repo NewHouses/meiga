@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 1.10. Contén as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 1.10 só cambiou o comentario de `auto_interval`, que cita o ADR 0017.
+> Estado: subfase 2.1. Contén o modelo das xanelas e as súas tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -17,6 +17,9 @@
 | [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
 | [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda en partes, e `WheelRows`, en filas do historial; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
 | [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
+| [`src/model/mod.rs`](#cratesmeiga-coresrcmodelmodrs) | O modelo das xanelas e as súas tabs: os identificadores, `TabId` e `WindowId`, que nunca se repiten, e os erros. |
+| [`src/model/window.rs`](#cratesmeiga-coresrcmodelwindowrs) | `Window`: as tabs dunha xanela, na orde da barra, e a activa, a enfocada e as visíbeis; abrir, pechar, mover e activar. |
+| [`src/model/tests.rs`](#cratesmeiga-coresrcmodeltestsrs) | As probas do modelo, unha delas con 10 000 cambios ao chou. |
 | [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, o cambio de tamaño, a vista do historial e a copia do que cambia, coas celas seleccionadas. |
 | [`src/term/resize.rs`](#cratesmeiga-coresrctermresizers) | O cambio de tamaño da pantalla principal, que reparte o texto e coloca a pantalla onde a pon o ConPTY, seguindo a primeira fila e o cursor cunhas marcas; e a pantalla principal á parte mentres se ve a alternativa. |
 | [`src/term/handler.rs`](#cratesmeiga-coresrctermhandlerrs) | `Hooked`: o `Handler` entre o parser e o `Term`, que lle pasa todas as ordes, devolve a pantalla principal cando o programa deixa a alternativa ou reinicia o terminal, e deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba. |
@@ -27,6 +30,7 @@
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
 | [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
+| [`examples/tabs.rs`](#cratesmeiga-coreexamplestabsrs) | Un exemplo de consola para probar o modelo das tabs a man. |
 
 ## `crates/meiga-core/Cargo.toml`
 
@@ -80,6 +84,7 @@ pub mod color;
 pub mod damage;
 pub mod geometry;
 pub mod input;
+pub mod model;
 pub mod mouse;
 pub mod pacing;
 pub mod paste;
@@ -91,7 +96,7 @@ pub mod text;
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, e `mouse` e `paste`, na 1.8. `term`, desde a 1.5, ten submódulos, así que vai nun cartafol: o módulo está en `src/term/mod.rs`.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, `mouse` e `paste`, na 1.8, e `model`, na 2.1. `term`, desde a 1.5, e `model` teñen submódulos, así que van en cartafoles: os módulos están en `src/term/mod.rs` e en `src/model/mod.rs`.
 - As dependencias, como `alacritty_terminal`, poden ter `unsafe` dentro: `forbid` só se aplica ao código deste crate.
 
 ## `crates/meiga-core/src/color.rs`
@@ -1547,6 +1552,326 @@ fn trim(text: &str) -> &str {
 | `control_characters_go_away_but_tabs_and_text_stay` | Co *bracketed paste*, un `ESC [ 201 ~` dentro do texto perde o ESC e non remata o pegado; BEL, DEL e os C1 `U+0085` e `U+009B` desaparecen; o tabulador, ñ, € e 😀 quedan. |
 | `without_bracketed_paste_a_single_line_loses_the_blanks_at_its_end` | Sen *bracketed paste*, `  ls -l \t\r\n` queda en `  ls -l`, cos espazos do principio; unha liña só de brancos non envía nada; varias liñas quedan coma están, cun CR ao final de cada unha; e co *bracketed paste*, unha liña conserva os seus brancos e o seu fin de liña. |
 | `an_empty_clipboard_only_goes_with_bracketed_paste` | Un portapapeis baleiro non envía nada sen *bracketed paste*, e só as marcas con el. |
+
+## `crates/meiga-core/src/model/mod.rs`
+
+Desde a subfase 2.1, o modelo das xanelas e as súas tabs: que tabs ten cada xanela, en que orde, cal está activa, e que pasa ao abrir, pechar, mover ou activar unha, sen ningunha interface ([ADR 0018](../adr/0018-o-modelo-das-tabs.md)). Na 2.1 só o usan as súas probas e o exemplo `tabs`; desde a 2.2, o programa terá unha sesión e unha vista en cada tab.
+
+```rust
+mod window;
+
+#[cfg(test)]
+mod tests;
+
+pub use window::{Close, Switch, Tab, Window};
+```
+
+- O módulo ten dous arquivos máis: `window.rs`, coa xanela e as súas tabs, e `tests.rs`, coas probas, que só se compilan con `cargo test` (`#[cfg(test)]`).
+- `pub use` publica os tipos de `window.rs` coma se estivesen eiquí: fóra do crate úsanse coma `meiga_core::model::Window`, sen saber en que arquivo están.
+- O comentario do módulo (`//!`) explica as tres preguntas que o modelo responde por separado ([ADR 0018](../adr/0018-o-modelo-das-tabs.md), decisión 9): a tab activa, a que marca a barra (`Window::active`); a enfocada, a que recibe o teclado (`Window::focused`); e as visíbeis, as que se debuxan (`Window::is_visible`).
+
+### `TabId` e `WindowId`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TabId(u64);
+
+impl TabId {
+    fn next() -> Self {
+        static NEXT: AtomicU64 = AtomicU64::new(1);
+        Self(take(&NEXT))
+    }
+
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+
+    pub const fn from_raw(number: u64) -> Self {
+        Self(number)
+    }
+}
+
+fn take(counter: &AtomicU64) -> u64 {
+    counter.fetch_add(1, Ordering::Relaxed)
+}
+```
+
+- **`TabId`** identifica unha tab mentres meiga corre. É un `u64` dentro dun tipo propio (un *newtype*): o compilador non deixa confundilo cun número calquera nin cun `WindowId`. O campo é privado: fóra do módulo, un identificador só se fai a partir dun número, con `from_raw`.
+- **`next`** dá o seguinte número dun contador `static`, que existe unha soa vez en todo o programa e empeza en 1. É privada: só o modelo dá números novos, cando crea unha tab.
+- **`take`** súmalle 1 ao contador e devolve o valor de antes nunha soa operación atómica: dous fíos que abran tabs á vez nunca reciben o mesmo número, e unha tab pechada non devolve o seu. Chega a orde de memoria `Relaxed`, porque só importa que os números non se repitan ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)).
+- **`get`** dá o número, por exemplo para envialo nunha mensaxe a outro fío (2.2), e **`from_raw`**, desde a revisión da 2.1, volta facer o identificador co número que chega: as mensaxes de Windows levan números, e non tipos de Rust. Un número inventado non rompe o modelo: o modelo dálle a cada tab nova un número do seu contador e só el pon tabs na xanela, así que `from_raw` non pode crear unha tab nin facer que dúas compartan un número, e un número que non é dunha tab da xanela non atopa nada (`Error::NoSuchTab`).
+- Os `derive`: `Clone` e `Copy` copian o identificador coma un número; `Debug` móstrao nas mensaxes das probas; `PartialEq` e `Eq` compáranos; e `Hash` deixa usalos de chave nun mapa, coma fan as probas.
+- **`WindowId`** é igual para as xanelas, co seu propio contador. Polo de agora só o garda cada `Window` (`Window::id`), porque meiga ten unha xanela: prepara as varias xanelas (F6).
+
+### `Error`
+
+```rust
+pub enum Error {
+    NoSuchTab(TabId),
+    OutOfRange { index: usize, count: usize },
+}
+```
+
+Por que unha xanela rexeitou un cambio. A xanela queda como estaba.
+
+- **`NoSuchTab`:** a xanela non ten esa tab, porque xa se pechou ou porque é doutra xanela.
+- **`OutOfRange`:** a posición, contada desde 0, está despois da última tab. `index` é a posición pedida, e `count`, cantas tabs hai.
+
+`Display` escribe o erro en inglés, coma as outras mensaxes de meiga: `the window has no tab 7`, `position 3 is out of range for 3 tabs` ou, cunha tab, `for 1 tab`. E implementa `std::error::Error`, o *trait* dos erros de Rust, así que pode ir xunto con outros erros, por exemplo nun `Box<dyn Error>`.
+
+## `crates/meiga-core/src/model/window.rs`
+
+A xanela e as súas tabs.
+
+### `Tab`, `Switch` e `Close`
+
+```rust
+pub struct Tab<T> {
+    id: TabId,
+    content: T,
+}
+
+pub struct Switch {
+    pub from: TabId,
+    pub to: TabId,
+}
+
+#[must_use = "the program has to close the content of the tab and show the tab that is active now"]
+pub enum Close<T> {
+    Removed {
+        content: T,
+        activated: Option<TabId>,
+    },
+    LastTab,
+}
+```
+
+- **`Tab<T>`** é unha tab: o seu identificador e o seu contido, do tipo que escolla o programa ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Os campos son privados: fóra do módulo só se len, con `id()` e `content()`. Só o modelo crea tabs, ao crear a xanela e ao abrir unha ([Abrir e pechar](#abrir-e-pechar)).
+- **`Switch`:** a tab activa cambiou, de `from` a `to`. Desde a 2.2, o programa redebuxará todo e cambiará a prioridade dos dous fíos lectores.
+- **`Close<T>`,** o que fixo pechar unha tab: `Removed`, a tab saíu da xanela, co seu contido e, se era a activa, a tab que ocupa o seu lugar (`activated`); ou `LastTab`, era a única, segue na xanela, e a xanela ten que pecharse con ela.
+- **`#[must_use]`** en `Close`, desde a revisión da 2.1: o compilador avisa se quen pecha unha tab ignora a resposta, que pode traer a sesión da tab e a tab que pasa a ser a activa, ou pedir que se peche a xanela. Por ir no tipo, avisa tamén cando o erro sae cun `?`: en `window.close(id)?;`, o `?` usa o `Result`, pero o `Close` que queda dentro ignórase, e iso si o ve o compilador.
+- `Close` deriva `PartialEq` e `Eq`, se o contido os ten: as probas comparan a resposta enteira cun `assert_eq!`.
+
+### `Window`: os datos e as consultas
+
+```rust
+pub struct Window<T> {
+    id: WindowId,
+    tabs: Vec<Tab<T>>,
+    active: usize,
+}
+```
+
+- **`tabs`:** as tabs, na orde da barra, nun vector, contiguas en memoria. Nunca está baleiro.
+- **`active`:** a posición da tab activa en `tabs`. Gárdase a posición, e non o identificador, porque o programa consultará a activa en cada tecla e en cada fotograma: así é un acceso directo ([ADR 0018](../adr/0018-o-modelo-das-tabs.md), decisión 11).
+- Os campos son privados, e ningún método deixa a xanela sen tabs nin a activa fóra delas. Son as súas **invariantes**, as regras que sempre se cumpren, e as probas compróbanas despois de cada cambio.
+
+| Método | Que fai |
+|---|---|
+| `new(content)` | Crea unha xanela cunha tab, a activa, con ese contido. |
+| `try_new_with(content)` | Igual, pero o contido faino unha función que recibe o identificador da tab; se falla, devolve o seu erro, e non hai xanela ([Abrir e pechar](#abrir-e-pechar)). |
+| `id()` | O identificador da xanela. |
+| `tabs()` | As tabs, na orde da barra, nunha *slice* para lelas. |
+| `tab_count()` | Cantas tabs ten: polo menos unha. Chámase así, e non `len`, porque Clippy pide un `is_empty` xunto a cada `len`, e unha xanela nunca está baleira. |
+| `index_of(id)` | A posición dunha tab, desde 0, ou `None` se non está. |
+| `get(id)` e `get_mut(id)` | O contido dunha tab, para lelo ou para cambialo. |
+| `active()` e `active_index()` | A tab activa, e a súa posición. |
+| `focused()` e `focused_mut()` | A tab enfocada, a que recibe o teclado, e o seu contido, para cambialo. Hoxe, a activa. |
+| `is_visible(id)` | Se unha tab se debuxa. Hoxe, só a activa. |
+
+- Buscar polo identificador (`index_of`, `get` e `get_mut`) percorre o vector ata atopala, con `position` e `find`: con decenas de tabs, uns nanosegundos.
+- `active()` le o vector na posición gardada (`&self.tabs[self.active]`), que as invariantes manteñen dentro del.
+- `focused` e `is_visible` respóndense coa activa: o modelo non garda nada máis ata a vista dividida (decisión 9). Desde a 2.2, o programa usará `focused` para o teclado e `is_visible` para saber que debuxar, aínda que hoxe dean o mesmo ca `active`.
+- Non hai un `tabs_mut`: cunha *slice* mutábel, o programa podería cambiar a orde das tabs sen que a xanela o soubese, e a posición da activa apuntaría a outra tab. O contido cámbiase con `get_mut` e `focused_mut`, que só dan o contido.
+
+### Abrir e pechar
+
+```rust
+pub fn open(&mut self, content: T) -> TabId {
+    self.push(Tab::new(content))
+}
+
+pub fn try_open_with<E>(
+    &mut self,
+    content: impl FnOnce(TabId) -> Result<T, E>,
+) -> Result<TabId, E> {
+    Ok(self.push(Tab::try_with(content)?))
+}
+
+fn push(&mut self, tab: Tab<T>) -> TabId {
+    let id = tab.id;
+    self.tabs.push(tab);
+    id
+}
+```
+
+**Abrir** pon a tab nova ao final da barra (decisión 6, decidido contigo) e devolve o seu identificador. Non a activa: o botón + activaraa despois con `activate`, e a restauración da sesión (7.2) abrirá as tabs sen activalas.
+
+```rust
+fn try_with<E>(content: impl FnOnce(TabId) -> Result<T, E>) -> Result<Self, E> {
+    let id = TabId::next();
+    Ok(Self {
+        id,
+        content: content(id)?,
+    })
+}
+```
+
+**Abrir cun contido que sabe o seu identificador,** desde a revisión da 2.1: `try_open_with` e `try_new_with`, a da xanela nova, reciben unha función que fai o contido, e `Tab::try_with` dálle o identificador da tab antes de que a tab exista. Desde a 2.2, esa función creará a sesión, cuxo fío lector enviará o identificador cos seus avisos, así que o necesita ao nacer.
+
+- `impl FnOnce(TabId) -> Result<T, E>` acepta calquera función ou *closure* que reciba un `TabId` e devolva o contido ou un erro ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). `FnOnce` chámase unha vez, así que pode levar dentro o que move ao contido. O tipo do erro, `E`, escólleo quen chama: o modelo non sabe que é unha sesión nin como falla.
+- Se a función falla, o `?` devolve o erro antes de `push`, e a xanela queda como estaba; a xanela nova non chega a existir. O identificador pérdese: o contador non o devolve, coma cando se pecha unha tab, e con 64 bits non se esgota.
+- `open` e `new` usan `Tab::new`, co contido xa feito, e as catro maneiras de crear unha tab rematan igual: só `push` e `with_tab`, a da xanela nova, poñen tabs na xanela, sempre recén creadas e co seu identificador novo.
+
+```rust
+pub fn close(&mut self, id: TabId) -> Result<Close<T>, Error> {
+    let index = self.find(id)?;
+    if self.tabs.len() == 1 {
+        return Ok(Close::LastTab);
+    }
+    let tab = self.tabs.remove(index);
+    let activated = match index.cmp(&self.active) {
+        Ordering::Less => {
+            self.active -= 1;
+            None
+        }
+        Ordering::Greater => None,
+        Ordering::Equal => {
+            self.active = index.min(self.tabs.len() - 1);
+            Some(self.tabs[self.active].id)
+        }
+    };
+    Ok(Close::Removed {
+        content: tab.content,
+        activated,
+    })
+}
+```
+
+**Pechar:**
+
+1. `find` busca a posición da tab ou, se non está, devolve `Error::NoSuchTab`; o `?` devolve o erro no momento, sen cambiar nada.
+2. Se é a única tab, non se quita: `Close::LastTab`, e a xanela pecharase con ela (decisión 4).
+3. Se non, `remove` sácaa do vector, e as que estaban á súa dereita corren un posto cara á esquerda. A posición da activa axústase comparando a da tab pechada coa da activa (`cmp`):
+   - **á esquerda da activa** (`Less`): a activa correu un posto, e a súa posición baixa un;
+   - **á dereita** (`Greater`): nada cambia;
+   - **era a activa** (`Equal`): a tab da súa dereita ocupou a súa posición e pasa a ser a activa, coma en Chrome (decisión 5, decidido contigo). Se era a última, a posición quedou despois da nova última, e `min` colle esta, a que estaba á súa esquerda.
+4. A resposta leva o contido da tab, para que o programa peche a súa sesión, e a tab activada, se cambiou.
+
+### Mover
+
+```rust
+pub fn move_tab(&mut self, id: TabId, to: usize) -> Result<(), Error> {
+    let from = self.find(id)?;
+    let count = self.tabs.len();
+    if to >= count {
+        return Err(Error::OutOfRange { index: to, count });
+    }
+    if from < to {
+        self.tabs[from..=to].rotate_left(1);
+    } else {
+        self.tabs[to..=from].rotate_right(1);
+    }
+    self.active = moved(self.active, from, to);
+    Ok(())
+}
+```
+
+- `move` é unha palabra reservada de Rust, así que o método chámase `move_tab`.
+- Unha posición despois da última devolve `Error::OutOfRange` antes de cambiar nada.
+- **Rotar** unha parte do vector move a tab sen sacala nin metela, e sen reservar memoria: cara á dereita, `rotate_left(1)` sobre as posicións de `from` a `to` leva a primeira, a tab que se move, ao final, e corre as demais un posto cara á esquerda; cara á esquerda, `rotate_right(1)` sobre as de `to` a `from` fai o contrario. Para mover unha tab á súa propia posición, a parte ten unha tab, e nada cambia.
+
+```rust
+const fn moved(index: usize, from: usize, to: usize) -> usize {
+    if index == from {
+        to
+    } else if from < index && index <= to {
+        index - 1
+    } else if to <= index && index < from {
+        index + 1
+    } else {
+        index
+    }
+}
+```
+
+**`moved`** di onde acaba a tab que estaba en `index`: a que se move, en `to`; as que estaban entre as dúas posicións, un posto á esquerda se a tab foi cara á dereita, ou á dereita se foi cara á esquerda; e as demais, onde estaban. A xanela úsaa coa posición da activa, que así segue sendo a mesma tab (decisión 7). É unha `const fn`, porque só fai contas.
+
+### Activar
+
+```rust
+pub fn activate(&mut self, id: TabId) -> Result<Option<Switch>, Error> {
+    let index = self.find(id)?;
+    Ok(self.activate_at(index))
+}
+
+#[must_use = "the program has to show the tab that is active now"]
+pub fn activate_next(&mut self) -> Option<Switch> {
+    self.activate_at((self.active + 1) % self.tabs.len())
+}
+
+#[must_use = "the program has to show the tab that is active now"]
+pub fn activate_previous(&mut self) -> Option<Switch> {
+    let count = self.tabs.len();
+    self.activate_at((self.active + count - 1) % count)
+}
+
+fn activate_at(&mut self, index: usize) -> Option<Switch> {
+    if index == self.active {
+        return None;
+    }
+    let from = self.tabs[self.active].id;
+    self.active = index;
+    Some(Switch {
+        from,
+        to: self.tabs[index].id,
+    })
+}
+```
+
+- **`activate`** activa unha tab polo seu identificador; **`activate_next`** e **`activate_previous`**, a seguinte e a anterior. O resto da división (`%`) dá a volta: desde a última, a seguinte é a primeira, e desde a primeira, a anterior é a última. Para a anterior, súmase `count` antes de restar 1, para non baixar de 0. Cunha soa tab, as dúas dan a mesma tab, e nada cambia.
+- **`activate_at`** fai o cambio e responde cun `Switch`, de que tab a que tab, ou con `None` se xa era a activa.
+- **`#[must_use]`** en `activate_next` e `activate_previous` fai que o compilador avise se quen chama ignora a resposta: desde a 2.2, quen active unha tab terá que mostrala. `activate` devolve un `Result`, que o compilador tampouco deixa ignorar enteiro; pero, se o erro sae cun `?` (`window.activate(id)?;`), o `Option<Switch>` que queda dentro pódese ignorar sen aviso. Un `#[must_use]` en `Switch` non o evitaría: o aviso dun tipo non pasa a través de `Option`. `Close` si o leva, porque se devolve sen `Option` ([`Tab`, `Switch` e `Close`](#tab-switch-e-close)). O exemplo `tabs`, que non debuxa, descarta a resposta a propósito, con `let _ =` e con `map(|_| ())`.
+
+## `crates/meiga-core/src/model/tests.rs`
+
+As probas do modelo: vinte e unha, que levan uns milisegundos.
+
+```rust
+fn check<T>(window: &Window<T>) {
+    assert!(window.tab_count() >= 1, "a window without tabs");
+    assert_eq!(window.tabs().len(), window.tab_count());
+    assert!(window.active_index() < window.tab_count());
+    let active = window.active().id();
+    assert_eq!(window.tabs()[window.active_index()].id(), active);
+    assert_eq!(window.focused().id(), active);
+    let ids: HashSet<TabId> = window.tabs().iter().map(Tab::id).collect();
+    assert_eq!(ids.len(), window.tab_count(), "a repeated identifier");
+    for (index, tab) in window.tabs().iter().enumerate() {
+        assert_eq!(window.index_of(tab.id()), Some(index));
+        assert_eq!(window.is_visible(tab.id()), tab.id() == active);
+    }
+}
+```
+
+- **`check`** comproba as invariantes: polo menos unha tab, a activa entre elas, a enfocada igual ca a activa, ningún identificador repetido, a posición de cada tab igual ca a que dá `index_of`, e só a activa visíbel. Cada proba chámaa despois de cada cambio, tamén dos que a xanela rexeita.
+- **`window(&["a", "b", "c"])`** crea unha xanela cunha tab por nome, a primeira activa, e devolve tamén os seus identificadores; tamén comproba as invariantes, ao crear a xanela e despois de abrir cada tab. **`names`** dá os contidos de esquerda a dereita, para comparalos cunha lista. **`removed`** e **`switched`** escriben as respostas de pechar e de activar.
+
+Vinte probas comproban cada regra:
+
+- unha xanela nova ten unha tab, e é a activa; unha tab ábrese ao final, e non se activa;
+- un contido pode saber o identificador da súa tab, ao crear a xanela e ao abrir unha, e un contido que non se pode facer non abre nada; un identificador volta do seu número, e o número 0, que o contador nunca dá, non atopa ningunha tab;
+- os identificadores nunca se repiten, nin noutra xanela nin despois de pechar unha tab;
+- pechar a activa activa a da dereita ou, se era a última, a da esquerda; pechar outra deixa a activa, tamén cando a pechada estaba á súa esquerda e a activa corre un posto; e a única tab queda, e a xanela péchase con ela;
+- mover corre as tabs do medio, e a activa segue sendo a mesma tab: cando se move ela, cando outra a cruza desde a esquerda ou desde a dereita, e cando outra se move sen cruzala;
+- unha posición despois da última, unha tab xa pechada e unha tab doutra xanela rexéitanse, e a xanela queda igual;
+- activar responde o cambio, ou nada se xa era a activa; a seguinte e a anterior dan a volta; e cunha soa tab non cambian nada;
+- o teclado e a pantalla seguen a activa (`focused`, `focused_mut` e `is_visible`), e `get_mut` cambia o contido doutra tab;
+- e as mensaxes dos erros.
+
+**A proba ao chou** (`random_changes_keep_the_rules_and_match_a_plain_list`) fai 500 cambios en cada unha de 20 xanelas, 10 000 en total: abrir, con `open` ou con `try_open_with`, e ás veces despois dun intento cun contido que non se pode facer; pechar; mover (ás veces a unha posición despois da última); activar unha tab, a seguinte ou a anterior; e pechar ou activar unha tab xa pechada. Os cambios saen dunha secuencia *xorshift* fixa, coma nas probas de `damage.rs` e do escáner: se falla, falla sempre igual. Fai os mesmos cambios nunha lista simple, cos contidos das tabs e o contido da activa, coas regras escritas da forma máis directa. Despois de cada cambio comproba as invariantes, que a xanela e a lista coinciden, e que as respostas son as que tocan. Ao final comproba que a barra pasou por unha tab, por dúas e por dez ou máis, para que os extremos se proben tamén.
+
+Comprobouse tamén ao revés, con catro copias do modelo estragadas a propósito: unha activa a tab da esquerda ao pechar a activa, outra non corre a activa ao pechar unha tab á súa esquerda, outra axusta mal a activa ao mover, e a última non dá a volta coa seguinte. Despois da revisión, outras dúas: unha dálle ao contido outro identificador ca o da súa tab, e outra fai mal o identificador co seu número. As seis fallan as probas.
 
 ## `crates/meiga-core/src/term/mod.rs`
 
@@ -3210,3 +3535,31 @@ Title: (none)
 Modes: alternate_scroll, show_cursor
 Answers: ␛[?6c
 ```
+
+## `crates/meiga-core/examples/tabs.rs`
+
+Desde a subfase 2.1, un exemplo de consola para probar o modelo das tabs a man, sen xanela e sen programas nas tabs: le ordes, unha por liña, e despois de cada unha mostra a barra en texto.
+
+```text
+cargo run -p meiga-core --example tabs
+```
+
+```text
+Commands: new, close TAB, move TAB POSITION, activate TAB, next, previous, help, quit.
+TAB is the name of a tab, and POSITION counts the tabs from 1.
+[a]
+> new
+a [b]
+```
+
+- Cada tab chámase cunha letra, `a`, `b`, `c`…, na orde na que se abriu, e despois de `z`, `aa`, `ab`… (`Names::fresh`). O contido de cada tab é o seu nome: a xanela é unha `Window<String>`.
+- A barra mostra a tab activa entre corchetes (`bar`).
+- As ordes van en inglés, coma as outras mensaxes de meiga:
+  - `new` abre unha tab ao final e actívaa, coma fará o botón +;
+  - `close TAB` pecha unha tab; se é a única, a xanela pecharíase, e o exemplo remata;
+  - `move TAB POSITION` move unha tab a unha posición, contada desde 1, coma na barra;
+  - `activate TAB`, `next` e `previous` activan unha tab;
+  - `help` mostra as ordes, e `quit` remata.
+- Un nome que non existe, unha posición que non o é e unha orde que non entende mostran unha mensaxe, e a xanela queda igual.
+- `run` interpreta cada orde cun `match` sobre as palabras da liña (`["move", name, position]`…) e responde que mostrar (`Outcome`).
+- Se as ordes chegan por unha tubaxe, e non desde o teclado, non mostra o indicador `> ` antes de ler, senón despois, xunto con cada orde, para que a saída se lea coma unha sesión. `IsTerminal` di se a entrada é unha consola. Así o usan os pasos de comprobación da subfase.
