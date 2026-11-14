@@ -21,12 +21,15 @@ Poñer ao día, antes de empezar coas tabs, as dependencias que avisaron mentres
 
 ## O que trae o ConPTY novo
 
-A 1.25.261109001 é a do Windows Terminal 1.25.3131.0, publicada o 11 de novembro ([notas da versión](https://github.com/microsoft/terminal/releases/tag/v1.25.3131.0)). Dos seus arranxos, dous están no ConPTY e afectan a meiga:
+A 1.25.261109001 é a do Windows Terminal 1.25.3131.0, publicada o 11 de novembro ([notas da versión](https://github.com/microsoft/terminal/releases/tag/v1.25.3131.0)), e a anterior, a 1.25.260930003, era a do 1.25.2733.0. Entre as dúas hai 17 cambios ([a comparación](https://github.com/microsoft/terminal/compare/v1.25.2733.0...v1.25.3131.0)). Cinco están na consola, que vai no `OpenConsole.exe` do paquete:
 
 - **Os desprazamentos de `ScrollConsoleScreenBuffer`.** Cando un programa da consola move unha rexión da pantalla, coma vi ao desprazar o texto ou PowerShell con `$Host.UI.RawUI.ScrollBufferContents`, o ConPTY ten que contarllo ao terminal. meiga non fai operacións rectangulares (á pregunta DA1 responde coma un VT102), así que o ConPTY le a rexión e escríbea outra vez no seu sitio. Ata agora, ese camiño escribía as filas desaliñadas se o destino quedaba en parte fóra da rexión permitida: ao subir unha rexión unha fila, as filas quedaban onde estaban e a última perdíase, na consola e na pantalla de meiga. A versión nova arránxao ([microsoft/terminal#20773](https://github.com/microsoft/terminal/issues/20773)), usa a resposta a DA1, que antes ignoraba ([microsoft/terminal#20772](https://github.com/microsoft/terminal/issues/20772)), e, cando o programa despraza a pantalla enteira, envía unhas poucas secuencias para borrar ou inserir liñas, en vez de escribila enteira ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). Compróbase no paso 7.
-- **O borrado da pantalla** (`cls` en cmd e `Clear-Host` en PowerShell): o ConPTY recoñéceo sempre, e xa non reserva a memoria de todo o búfer da súa consola ao borrala ([microsoft/terminal#19957](https://github.com/microsoft/terminal/pull/19957)).
+- **Un bloqueo.** Un programa que escribía sen secuencias VT e co axuste de liña desactivado (sen `ENABLE_VIRTUAL_TERMINAL_PROCESSING` nin `ENABLE_WRAP_AT_EOL_OUTPUT`) un carácter de dúas columnas na última columna quedaba bloqueado para sempre en `WriteConsoleW`; a consola ocupaba un núcleo enteiro, e os outros programas da mesma consola tamén quedaban bloqueados ([microsoft/terminal#20693](https://github.com/microsoft/terminal/issues/20693), arranxado en [#20862](https://github.com/microsoft/terminal/pull/20862)). Non está nas notas da versión.
+- **O modo LNM** (`ESC [ 20 h`), no que cada salto de liña volta tamén ao principio da liña: se un programa o desactivaba (`ESC [ 20 l`) xusto despois de usalo, o ConPTY podía seguir engadindo un retorno de carro aos saltos de liña seguintes, que voltaban ao principio da liña sen que o programa o pedise ([microsoft/terminal#20863](https://github.com/microsoft/terminal/pull/20863)).
+- **A xanela emerxente de cmd que pide o número dun comando do historial** (F9): se o que se escribía nela non era un número, a consola non remataba ben a lectura da liña, e cmd podía comportarse de forma inesperada ([microsoft/terminal#20779](https://github.com/microsoft/terminal/pull/20779)).
+- **O borrado da pantalla** (`cls` en cmd e `Clear-Host` en PowerShell): agora a consola tamén o fai cunha secuencia de borrado cando non hai ConPTY, máis rápido e sen reservar a memoria de todo o seu búfer ([microsoft/terminal#19957](https://github.com/microsoft/terminal/pull/19957)). Co ConPTY xa o facía así, e meiga non nota diferenza.
 
-Os outros arranxos son da interface do Windows Terminal, que meiga non usa.
+Outros tres están na biblioteca das secuencias de control que a consola comparte co Windows Terminal. Os títulos de máis de 1 000 caracteres xa non cambian o título da consola, coma no xterm ([microsoft/terminal#20839](https://github.com/microsoft/terminal/pull/20839)), pero o ConPTY pásalle igual a secuencia ao terminal, e meiga recibe o título enteiro. E hai dous arranxos do protocolo de teclado de Kitty, para os programas que o piden ([#20768](https://github.com/microsoft/terminal/pull/20768) e [#20769](https://github.com/microsoft/terminal/pull/20769)). Os outros nove son do Windows Terminal (a súa interface, a súa configuración e o seu teclado) e da súa compilación.
 
 ## Como se mediu
 
@@ -34,6 +37,7 @@ Na máquina da liña base (subfase 0.8), coa compilación da 1.10 (Rust 1.99.1 e
 
 - **Os escenarios:** o repouso, só co M1, comparado co da porta da 1.10; a saída masiva, catro veces (1.10, M1, M1, 1.10); e o *spinner*, dúas (M1 e 1.10), con `run-scenario.ps1 -Start -Maximized`. E o arranque, con `measure-startup.ps1`, catro veces (1.10, M1, 1.10, M1).
 - **Os desprazamentos:** un script de PowerShell que move unha rexión con `ScrollBufferContents`, no exemplo `conpty` de `meiga-win`, cos dous ConPTY: o exemplo grava o que escribe o ConPTY, e o exemplo `replay` de `meiga-core` dálle a gravación ao terminal de meiga e mostra a súa pantalla. O script garda tamén o que ten a súa consola. Despois, o mesmo script en meiga, coas dúas compilacións, cunha captura da xanela.
+- **O título longo:** co mesmo exemplo e os dous ConPTY, un programa que pon un título de 1 001 caracteres e despois outro de 1 000: o que lle chega ao terminal, e o título que ten a consola despois de cada un.
 
 ## Decisións e alternativas descartadas
 
@@ -196,11 +200,12 @@ Na máquina da liña base (subfase 0.8), coa compilación da 1.10 (Rust 1.99.1 e
 | `meiga.exe` | 566 272 bytes (na 1.10, 557 568): co mesmo código, o compilador novo xera un 1,75 % máis de código (`.text`, 7 456 bytes) e algo máis de datos (`.rdata`, 1 040). Importa as mesmas DLL. |
 | O ConPTY | `conpty.dll` ten o mesmo tamaño, e `OpenConsole.exe`, 40 bytes menos. Ao arrancar envía o mesmo ca a versión anterior. As probas de integración de `meiga-win` e as comprobacións da xanela, os fotogramas, o teclado, o rato e o tamaño pasan igual. |
 | Os desprazamentos | Co ConPTY anterior, ao subir unha fila as filas 3 a 7, coa rexión permitida nas mesmas filas, as filas quedaron onde estaban e a última perdeuse, na súa consola e na pantalla de meiga; co novo, subiron. |
+| O título longo | Cos dous ConPTY, os dous títulos chegan enteiros ao terminal. O novo xa non lle pon á súa consola o de 1 001 caracteres: segue co título de antes. |
 | O repouso | Coma na 1.10: 0 % de CPU, e nin meiga nin o seu OpenConsole espertan máis ca antes. |
 | A saída masiva | Igual: o tempo de imprimir e a CPU de meiga e do seu OpenConsole, cada un dentro dun 4 % entre as dúas versións. A máquina estaba ocupada, e tres das catro medicións saíron «non estábeis». |
-| O *spinner* | Igual: os mesmos ciclos por segundo, cun 3 % de diferenza, e os mesmos espertares; no seu OpenConsole, tamén. |
+| O *spinner* | Igual: meiga e o seu OpenConsole espertan as mesmas veces, e os seus ciclos por segundo cambian menos dun 4 %. |
 | O arranque | Non empeora: nas dúas roldas, a mediana do M1 saíu un 8–10 % máis baixa ca a da 1.10. Non se investigou se vén do compilador ou do ConPTY. |
-| Revisión do código | PENDENTE |
+| Revisión do código | Unha revisión independente comprobou a regra de Dependabot, o SHA-256 e o tamaño do paquete, as versións, os tamaños, o número de probas, os pasos da CI e os desprazamentos do paso 7, cos dous ConPTY. Atopou dous erros na sección «O que trae o ConPTY novo», xa corrixidos: o arranxo do borrado da pantalla só cambia a consola cando non hai ConPTY, e entre os outros arranxos hai tres máis na consola, que a primeira versión desta sección atribuía á interface do Windows Terminal. |
 | CI | PENDENTE |
 
 ## Pendente
