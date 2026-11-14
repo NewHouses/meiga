@@ -1,6 +1,6 @@
 # Código › `meiga-render`
 
-> Estado: subfase 1.7. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo. Na 1.6 chegaron ao texto a negra, a cursiva e a posición do subliñado e do riscado; o resto non cambiou desde a 1.3. Na 1.7 non cambiou o código: só as marcas, que agora se activan cunha opción.
+> Estado: mantemento M1, despois da subfase 1.10. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo. Na 1.6 chegaron ao texto a negra, a cursiva e a posición do subliñado e do riscado; o resto non cambiou desde a 1.3. Na 1.7 non cambiou o código: só as marcas, que agora se activan cunha opción. Desde entón tampouco: no M1, só a explicación de `windows-core`, que ten que ser a versión do crate `windows`.
 
 **Responsabilidade:** o renderizado por CPU. Compón no *framebuffer* só o que cambiou e presenta na xanela só os rectángulos modificados. O texto debúxase desde unha caché de glifos, que DirectWrite rasteriza unha soa vez. Ver [Arquitectura › Fotogramas](../arquitectura.md#fotogramas-do-cambio-á-pantalla) e [Arquitectura › Texto](../arquitectura.md#texto-da-cela-aos-píxeles).
 
@@ -53,7 +53,7 @@ workspace = true
 - A estrutura é a mesma que en [`meiga-core`](meiga-core.md#cratesmeiga-corecargotoml).
 - `meiga-core.workspace = true`: depende de `meiga-core`, coa ruta que define o `Cargo.toml` raíz, para usar os seus tipos: as cores, os rectángulos e as celas do texto.
 - `windows`, para DirectWrite, con tres *features*: os tipos básicos (`RECT`, `E_FAIL`), a configuración rexional do usuario (`GetUserDefaultLocaleName`) e DirectWrite. Que é e por que se usa explícase en [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows).
-- `windows-core`: o núcleo do crate `windows`, que xa chega con el. Declárase porque o código que xera a macro `#[implement]` o nomea (`::windows_core::…`), e un crate só pode nomear as súas dependencias directas.
+- `windows-core`: o núcleo do crate `windows`, que xa chega con el. Declárase porque o código que xera a macro `#[implement]` o nomea (`::windows_core::…`), e un crate só pode nomear as súas dependencias directas. Ten que ser a mesma versión que usa `windows`: por iso Dependabot só propón os seus parches (ver [Código › .github](github.md#githubdependabotyml)).
 - `windows-sys`, coa mesma versión ca en `meiga-win`, e só dúas *features*: os tipos básicos (`HWND`, `RECT`, `COLORREF`) e GDI. Que é `windows-sys` explícase en [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust).
 
 ## `crates/meiga-render/src/lib.rs`

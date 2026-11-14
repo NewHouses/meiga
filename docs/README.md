@@ -9,7 +9,7 @@ Esta documentación explica en detalle **como está feito meiga**: a arquitectur
 1. [Arquitectura](arquitectura.md): as pezas do programa, como se relacionan e por que están separadas así.
 2. [Tecnoloxías](tecnoloxias.md): que é cada tecnoloxía e ferramenta, por que a usamos, como está configurada e como preparar o contorno de desenvolvemento.
 3. [Código](codigo/README.md): explicación detallada de cada arquivo.
-4. [Subfases](subfases/README.md): o diario do proxecto. Que se fixo en cada subfase, por que e como probalo.
+4. [Subfases](subfases/README.md): o diario do proxecto. Que se fixo en cada subfase e en cada mantemento, por que e como probalo.
 5. [ADR](adr/README.md): as decisións de arquitectura, unha por documento, co seu contexto, as alternativas descartadas e as consecuencias.
 
 ## Convencións desta documentación

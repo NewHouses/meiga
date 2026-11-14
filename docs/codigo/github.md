@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 1.9.
+> Estado: mantemento M1, despois da subfase 1.10. No M1, a regra de `dependabot.yml` para `windows-core`; o *workflow* non cambia.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -345,6 +345,14 @@ updates:
     groups:
       cargo:
         patterns: ["*"]
+    ignore:
+      # The #[implement] of meiga-render needs the windows-core that windows
+      # uses. A new minor or major version of windows-core alone does not
+      # build: it is updated by hand, with windows. Patches still come.
+      - dependency-name: windows-core
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
 ```
 
 - `version: 2`: a versión do formato do arquivo, que sempre é 2.
@@ -353,6 +361,7 @@ updates:
 - `schedule.interval: weekly`: busca versións novas unha vez por semana.
 - `cooldown.default-days: 7`: só propón versións publicadas hai polo menos 7 días. Cando alguén publica unha versión maliciosa ou rota, adoita detectarse e retirarse nos primeiros días; así non chega a este repositorio.
 - `groups`: todas as actualizacións do ecosistema (`patterns: ["*"]`) van nun único PR semanal, en vez dun PR por dependencia.
+- `ignore`, desde o mantemento M1: Dependabot non propón as versións *minor* nin *major* de `windows-core`, só os seus parches. `meiga-render` declárao pola macro `#[implement]`, que ten que usar o mesmo `windows-core` ca o crate `windows` ([Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)), e unha versión nova del só, sen un `windows` que a use, non compila: pasou coa 0.100.0, no PR [#17](https://github.com/NewHouses/meiga/pull/17). Dependabot le as versións coma *major.minor.patch*, así que para el 0.62.2 → 0.100.0 é unha versión *minor*; para Cargo, nas versións 0.x, cambiar o segundo número xa é incompatíbel, e cambiar o terceiro, non. Cando saia un `windows` novo, o seu PR fallará ata subir a man `windows-core` á versión que use. As alertas de seguridade de `windows-core` seguen chegando: a regra só cambia os PR que abre Dependabot.
 
 ```yaml
   - package-ecosystem: github-actions

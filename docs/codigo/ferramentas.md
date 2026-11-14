@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 1.9. Na 1.9 chegou `check-resize.ps1`, que comproba o tamaño, o historial e o zoom de meiga, e `check-mouse.ps1` resta a franxa da barra de desprazamento ao medir as celas; os outros scripts non cambiaron.
+> Estado: mantemento M1, despois da subfase 1.10. No M1, `fetch-conpty.ps1` fixa o ConPTY 1.25.261109001; os outros scripts non cambiaron. Na 1.9 chegou `check-resize.ps1`, que comproba o tamaño, o historial e o zoom de meiga, e `check-mouse.ps1` resta a franxa da barra de desprazamento ao medir as celas.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -169,9 +169,9 @@ Desde a subfase 1.4. Descarga o ConPTY que vai con meiga ([Tecnoloxías › ConP
 A primeira vez descarga o paquete, de 1,7 MB. As seguintes, só comproba o que xa ten, sen descargar nada:
 
 ```text
-Microsoft.Windows.Console.ConPTY 1.25.260930003: the package is already in …\target\conpty.
-conpty.dll: version 1.25.2609.30003, 119608 bytes, signed by Microsoft Corporation.
-OpenConsole.exe: version 1.25.2609.30003, 1089376 bytes, signed by Microsoft Corporation.
+Microsoft.Windows.Console.ConPTY 1.25.261109001: the package is already in …\target\conpty.
+conpty.dll: version 1.25.2611.09001, 119608 bytes, signed by Microsoft Corporation.
+OpenConsole.exe: version 1.25.2611.09001, 1089336 bytes, signed by Microsoft Corporation.
 conpty.dll and OpenConsole.exe are in …\target\conpty
 ```
 
@@ -181,8 +181,8 @@ Explicación por partes:
 
 ```powershell
 $Package = 'Microsoft.Windows.Console.ConPTY'
-$Version = '1.25.260930003'
-$Sha256 = '02B07B349AF66D801159BDF9E440D4A1CE78BB951F37FC8609731665AFDAE7EE'
+$Version = '1.25.261109001'
+$Sha256 = '3D77F535DF848E44225C2A8912AC844FECB23F3057732B639F3034B587496F09'
 # The files for x64, as they are in the package.
 $Files = [ordered]@{
     'conpty.dll'      = 'runtimes/win-x64/native/conpty.dll'

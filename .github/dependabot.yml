@@ -11,6 +11,14 @@ updates:
     groups:
       cargo:
         patterns: ["*"]
+    ignore:
+      # The #[implement] of meiga-render needs the windows-core that windows
+      # uses. A new minor or major version of windows-core alone does not
+      # build: it is updated by hand, with windows. Patches still come.
+      - dependency-name: windows-core
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /

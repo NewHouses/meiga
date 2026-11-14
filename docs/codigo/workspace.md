@@ -1,6 +1,6 @@
 # Código › configuración do workspace
 
-> Estado: subfase 1.5.
+> Estado: mantemento M1, despois da subfase 1.10. No M1, a versión de Rust de `rust-toolchain.toml`.
 
 Os arquivos da raíz do repositorio configuran como se compila e se revisa todo o proxecto. Neste documento explícanse un a un.
 
@@ -57,7 +57,7 @@ Declara unha soa vez onde está cada dependencia e que versión se usa:
 - Os crates internos, polo seu cartafol (`path`). Cada crate que o necesite escribe só `meiga-core.workspace = true`.
 - As dependencias externas, coa súa versión, para que todos os crates usen a mesma. Cada crate escolle as súas *features*: por exemplo, `meiga-win` usa `windows-sys = { workspace = true, features = [...] }` (ver [Código › meiga-win](meiga-win.md#cratesmeiga-wincargotoml)).
   - `windows-sys`, desde a subfase 1.1, para Win32 e GDI (ver [Tecnoloxías › windows-sys](../tecnoloxias.md#21-windows-sys-as-apis-de-windows-desde-rust)).
-  - `windows` e `windows-core`, desde a 1.3, para DirectWrite (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). As dúas teñen a mesma versión, porque `windows` depende de `windows-core`, e comparten `windows-link` con `windows-sys`.
+  - `windows` e `windows-core`, desde a 1.3, para DirectWrite (ver [Tecnoloxías › COM e o crate `windows`](../tecnoloxias.md#28-com-e-o-crate-windows)). As dúas teñen a mesma versión, porque `windows` depende de `windows-core`, e comparten `windows-link` con `windows-sys`. Por iso Dependabot non propón as versións novas de `windows-core` soas, só os seus parches (ver [Código › .github](github.md#githubdependabotyml)).
   - `unicode-width`, desde a 1.3, para o ancho dos caracteres. `default-features = false` quita a *feature* `cjk`, as táboas para os contextos CJK, que meiga non usa (ver [Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)). Neste caso as opcións van no `Cargo.toml` raíz, porque un crate pode engadir *features* pero non quitar as que trae por defecto. Desde a 1.5, iso mesmo pasa con `alacritty_terminal`, que pide as *features* por defecto de `unicode-width`: Cargo compílao coa unión das *features* dos dous, así que `cjk` volta estar activa, e `meiga.exe` leva esas táboas, cerca de 1 KB.
   - `alacritty_terminal`, desde a 1.5, o núcleo do terminal (ver [Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). `"=0.26.0"` fixa exactamente esa versión: nas versións 0.x, calquera actualización pode cambiar a API, e só a fachada de `meiga-core` a usa, así que actualizala é unha decisión, non algo que pase só. `default-features = false` quita `serde`, para gardar a configuración, que meiga non usa.
   - `memchr`, desde a 1.5, para atopar rápido os ESC no escáner do terminal.
@@ -111,7 +111,7 @@ Xérao Cargo automaticamente e **non se edita a man**. Garda a versión exacta d
 
 ```toml
 [toolchain]
-channel = "1.99.1"
+channel = "1.100.0"
 components = ["clippy", "rustfmt"]
 profile = "minimal"
 ```
