@@ -40,8 +40,8 @@ Set-StrictMode -Version Latest
 $ProgressPreference = 'SilentlyContinue'
 
 $Package = 'Microsoft.Windows.Console.ConPTY'
-$Version = '1.25.260930003'
-$Sha256 = '02B07B349AF66D801159BDF9E440D4A1CE78BB951F37FC8609731665AFDAE7EE'
+$Version = '1.25.261109001'
+$Sha256 = '3D77F535DF848E44225C2A8912AC844FECB23F3057732B639F3034B587496F09'
 # The files for x64, as they are in the package.
 $Files = [ordered]@{
     'conpty.dll'      = 'runtimes/win-x64/native/conpty.dll'
