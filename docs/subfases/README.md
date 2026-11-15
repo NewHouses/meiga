@@ -32,6 +32,7 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 2.1 | Modelo de tabs | [PR #20](https://github.com/NewHouses/meiga/pull/20) | [2.1-modelo.md](2.1-modelo.md) |
 | 2.2 | Varias sesións e tabs en segundo plano | [PR #21](https://github.com/NewHouses/meiga/pull/21) | [2.2-sesions.md](2.2-sesions.md) |
 | 2.3 | Barra de tabs básica | [PR #22](https://github.com/NewHouses/meiga/pull/22) | [2.3-barra.md](2.3-barra.md) |
+| 2.4 | Lista e menús reutilizábeis | [PR #23](https://github.com/NewHouses/meiga/pull/23) | [2.4-menus.md](2.4-menus.md) |
 
 ## Mantemento
 

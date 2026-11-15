@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use meiga_core::color::{Palette, Rgb};
 use meiga_core::geometry::{GridSize, Point, Rect, Size};
-use meiga_core::input::{KeyEncoder, KeyEvent, focus_sequence};
+use meiga_core::input::{ControlKeys, KeyEncoder, KeyEvent, focus_sequence};
 use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, MIN_SIZE, Screen, Scroll};
 use meiga_core::text::CellChar;
 use meiga_render::{Canvas, Decorations, Font, FontStyle, FontSystem};
@@ -49,6 +49,10 @@ const VK_ESCAPE: u16 = 0x1b;
 const VK_T: u16 = 0x54;
 const VK_W: u16 = 0x57;
 const VK_TAB: u16 = 0x09;
+/// The Menu key, and F10, which with Shift opens the menu too, as in
+/// Windows.
+const VK_APPS: u16 = 0x5d;
+const VK_F10: u16 = 0x79;
 /// Page Up, Page Down, End, Home, and the up and down arrows.
 const VK_PRIOR: u16 = 0x21;
 const VK_NEXT: u16 = 0x22;
@@ -99,7 +103,9 @@ pub struct TerminalView {
     mouse: Mouse,
     /// The keys that meiga took when they went down: when they go up, the
     /// program does not get them either.
-    taken: Vec<u16>,
+    taken: Vec<DownKey>,
+    /// The keys that went down for the program and did not go up yet.
+    held: Vec<DownKey>,
     /// The characters of a run of cells, kept to avoid an allocation for
     /// each one.
     run: Vec<CellChar>,
@@ -158,6 +164,7 @@ impl TerminalView {
             caret: Caret::new(dpi, Instant::now()),
             mouse: Mouse::new(dpi, client),
             taken: Vec::new(),
+            held: Vec::new(),
             run: Vec::new(),
             answers: Vec::new(),
             encoder: KeyEncoder::new(),
@@ -306,19 +313,26 @@ impl TerminalView {
     /// A key went down or up. Ctrl+C copies the selection, if there is
     /// one; Ctrl+V pastes; Esc removes the selection, if there is one; on
     /// the primary screen, the keys of the history move its view; Ctrl and
-    /// +, - or 0 zoom; and Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab and
-    /// Ctrl+Shift+Tab are for the tabs. The rest go to the program, as the
-    /// modes that it turned on say, and a key that goes down removes the
-    /// selection and brings the view back to the screen, where the program
-    /// writes, unless it is a modifier key.
+    /// +, - or 0 zoom; and Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab,
+    /// Ctrl+Shift+Tab, the Menu key and Shift+F10 are for the tabs. The
+    /// rest go to the program, as the modes that it turned on say, and a key
+    /// that goes down removes the selection and brings the view back to the
+    /// screen, where the program writes, unless it is a modifier key.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
-        // A key that meiga took does not reach the program while it repeats,
-        // nor when it goes up. The ones that move the view, zoom or go to
-        // the next tab do it again while they repeat.
-        if let Some(taken) = self.taken.iter().position(|&key| key == event.key) {
-            if !event.down {
-                self.taken.swap_remove(taken);
-            } else if repeats(event.key) {
+        if !event.down {
+            // A key that goes up is not down any more, whoever gets it.
+            self.held.retain(|held| !held.ended_by(event));
+            // A key that meiga took does not reach the program when it goes
+            // up either.
+            let count = self.taken.len();
+            self.taken.retain(|taken| !taken.ended_by(event));
+            if self.taken.len() < count {
+                return Response::default();
+            }
+        } else if self.taken.iter().any(|taken| taken.key == event.key) {
+            // Nor while it repeats. The ones that move the view, zoom or go
+            // to the next tab do it again while they repeat.
+            if repeats(event.key) {
                 return self.shortcut(window, event).unwrap_or_default();
             }
             return Response::default();
@@ -328,9 +342,13 @@ impl TerminalView {
         {
             // With a message box, the key goes up in it.
             if !response.dialog {
-                self.taken.push(event.key);
+                self.taken.push(DownKey::of(event));
             }
             return response;
+        }
+        // For the program, which has the key down until it goes up.
+        if event.down && event.key != 0 && !self.holds_key(event.key) {
+            self.held.push(DownKey::of(event));
         }
         let mut response = Response::default();
         if event.down && !is_modifier(event.key) {
@@ -347,6 +365,24 @@ impl TerminalView {
         self.encoder.encode(event, &modes, &mut self.keys);
         input.write(&self.keys);
         response
+    }
+
+    /// meiga takes the key of `event`, which went down for something else,
+    /// such as a menu: while it repeats, and when it goes up, the program
+    /// does not get it either. A character without a key, from an IME or
+    /// the emoji panel, comes as key 0, which no key going up follows: it
+    /// is not taken.
+    pub fn take_key(&mut self, event: &KeyEvent) {
+        if event.key != 0 && !self.taken.iter().any(|taken| taken.key == event.key) {
+            self.taken.push(DownKey::of(event));
+        }
+    }
+
+    /// Whether `key` went down for the program and did not go up yet: a
+    /// menu that opens meanwhile does not take its repeats, and the program
+    /// gets it when it goes up.
+    pub fn holds_key(&self, key: u16) -> bool {
+        self.held.iter().any(|held| held.key == key)
     }
 
     /// What a key that goes down does if meiga takes it.
@@ -366,6 +402,10 @@ impl TerminalView {
             VK_W if ctrl && shift && !alt => tab(TabAction::Close),
             VK_TAB if ctrl && !alt && shift => tab(TabAction::Previous),
             VK_TAB if ctrl && !alt => tab(TabAction::Next),
+            // The menu of the tab, as the menus of Windows: the Menu key,
+            // and Shift+F10.
+            VK_APPS if !ctrl && !alt => tab(TabAction::ActiveMenu),
+            VK_F10 if shift && !ctrl && !alt => tab(TabAction::ActiveMenu),
             // Ctrl, and Shift or not, but not Alt, nor AltGr.
             VK_C if ctrl && !alt => {
                 clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW)
@@ -520,11 +560,12 @@ impl TerminalView {
     }
 
     /// A message box of the view closed. While it was open, the events of
-    /// the window did not reach the view: the keys that meiga took went up
-    /// in the box, and the mouse buttons maybe too, so none is followed
-    /// any more.
+    /// the window did not reach the view: the keys that meiga took, and the
+    /// ones that were down for the program, went up in the box, and the
+    /// mouse buttons maybe too, so none is followed any more.
     pub fn dialog_closed(&mut self, window: &Window) {
         self.taken.clear();
+        self.held.clear();
         let context = Context {
             window,
             shared: &self.shared,
@@ -532,6 +573,19 @@ impl TerminalView {
             cell: self.cell,
         };
         self.mouse.forget_buttons(&context);
+    }
+
+    /// A menu takes the mouse: no button of it is followed any more, as
+    /// when a message box closes, and the scroll bar loses the pointer.
+    pub fn forget_mouse(&mut self, window: &Window) {
+        let context = Context {
+            window,
+            shared: &self.shared,
+            input: self.input.as_ref(),
+            cell: self.cell,
+        };
+        self.mouse.forget_buttons(&context);
+        self.mouse.event(&context, &Event::MouseLeft);
     }
 
     /// The window gained or lost the focus, at `now`. With it, the cursor
@@ -542,8 +596,10 @@ impl TerminalView {
         if focused == self.caret.focused {
             return;
         }
-        // The keys that meiga took go up in another window.
+        // The keys that meiga took, and the ones that were down for the
+        // program, go up in another window.
         self.taken.clear();
+        self.held.clear();
         if focused {
             // The settings can change while meiga runs: for example, when
             // the user connects to the session through Remote Desktop.
@@ -760,6 +816,41 @@ const fn is_modifier(key: u16) -> bool {
         // Lock, Scroll Lock, and the left and right Shift, Ctrl and Alt.
         0x10..=0x12 | 0x14 | 0x2c | 0x5b | 0x5c | 0x90 | 0x91 | 0xa0..=0xa5
     )
+}
+
+/// A key that went down, in the lists of the view: its virtual-key code,
+/// and its place on the keyboard.
+#[derive(Clone, Copy, Debug)]
+struct DownKey {
+    key: u16,
+    /// The scan code, with 0x100 for the extended keys, or 0 if the event
+    /// has none, as some messages that other programs post.
+    place: u16,
+}
+
+impl DownKey {
+    fn of(event: &KeyEvent) -> Self {
+        let place = match event.scan {
+            0 => 0,
+            scan if event.controls.contains(ControlKeys::ENHANCED) => scan | 0x100,
+            scan => scan,
+        };
+        Self {
+            key: event.key,
+            place,
+        }
+    }
+
+    /// Whether `up`, a key that goes up, ends this one: it is the same key,
+    /// or it is in the same place. A character without a key waiting for
+    /// it, as the second one of a dead key and a key that do not join, has
+    /// the key of its scan code, which may not be the one that goes up:
+    /// with Num Lock on, ´ and the 2 of the keypad write ´2, and the 2
+    /// comes with the key Down.
+    fn ended_by(self, up: &KeyEvent) -> bool {
+        let up = Self::of(up);
+        self.key == up.key || (up.place != 0 && self.place == up.place)
+    }
 }
 
 /// How a cell is drawn.
@@ -1211,5 +1302,37 @@ mod tests {
         assert_eq!(dim.text, rgb.mix(palette.colors[15], DIM));
         assert_eq!(dim.background, palette.colors[15]);
         assert!(dim.hidden);
+    }
+
+    #[test]
+    fn a_key_that_goes_up_ends_the_ones_with_its_key_or_in_its_place() {
+        let event = |key, scan, controls, down| KeyEvent {
+            key,
+            scan,
+            character: 0,
+            down,
+            controls,
+            repeat: 1,
+        };
+        let keypad = ControlKeys::NUM_LOCK;
+        let extended = ControlKeys::NUM_LOCK | ControlKeys::ENHANCED;
+        // With Num Lock on, ´ and the 2 of the keypad write ´2: the ´ comes
+        // with the key of the 2, and the 2 alone, with the key of its scan
+        // code, Down. The 2 goes up with its own key, and ends both.
+        let two = DownKey::of(&event(0x62, 0x50, keypad, true));
+        let alone = DownKey::of(&event(0x28, 0x50, keypad, true));
+        let two_up = event(0x62, 0x50, keypad, false);
+        assert!(two.ended_by(&two_up) && alone.ended_by(&two_up));
+        // The arrow Down has the same scan code, but it is an extended key,
+        // somewhere else: the 2 does not end it, and its key ends both Downs.
+        let arrow = DownKey::of(&event(0x28, 0x50, extended, true));
+        let arrow_up = event(0x28, 0x50, extended, false);
+        assert!(!arrow.ended_by(&two_up) && !two.ended_by(&arrow_up));
+        assert!(arrow.ended_by(&arrow_up) && alone.ended_by(&arrow_up));
+        // Without a scan code, as in some messages that other programs post,
+        // only the key counts.
+        let posted = DownKey::of(&event(0x28, 0, extended, true));
+        assert!(!posted.ended_by(&event(0x26, 0, extended, false)));
+        assert!(posted.ended_by(&event(0x28, 0, extended, false)));
     }
 }

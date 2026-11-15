@@ -62,6 +62,18 @@ pub enum Close<T> {
     LastTab,
 }
 
+/// What closing several tabs at once did, as [`Close::Removed`] for one. It
+/// has to be looked at, for the same reasons.
+#[derive(Debug, PartialEq, Eq)]
+#[must_use = "the program has to close the contents of the tabs and show the tab that is active now"]
+pub struct Closed<T> {
+    /// The contents of the tabs that left the window, in the order of the
+    /// tab bar.
+    pub contents: Vec<T>,
+    /// If the active tab was one of them, the tab that is active now.
+    pub activated: Option<TabId>,
+}
+
 /// A window: its tabs, in the order of the tab bar, of which one is active.
 ///
 /// It always has at least one tab, and the active tab is always one of them.
@@ -220,6 +232,44 @@ impl<T> Window<T> {
         };
         Ok(Close::Removed {
             content: tab.content,
+            activated,
+        })
+    }
+
+    /// Closes all the tabs but `keep`, as "Close other tabs" in Chrome and in
+    /// Windows Terminal, and answers their contents. `keep` is the active tab
+    /// then: if it was not, it is the one that `activated` gives.
+    pub fn close_others(&mut self, keep: TabId) -> Result<Closed<T>, Error> {
+        let index = self.find(keep)?;
+        let activated = (index != self.active).then_some(keep);
+        // The tab is taken out, and put back in the same memory.
+        let kept = self.tabs.remove(index);
+        let contents = self.tabs.drain(..).map(|tab| tab.content).collect();
+        self.tabs.push(kept);
+        self.active = 0;
+        Ok(Closed {
+            contents,
+            activated,
+        })
+    }
+
+    /// Closes the tabs on the right of `id`, as "Close tabs to the right" in
+    /// Chrome and in Windows Terminal, and answers their contents. If the
+    /// active tab was one of them, `id` is the active one now: the nearest
+    /// tab that stays.
+    pub fn close_to_the_right(&mut self, id: TabId) -> Result<Closed<T>, Error> {
+        let index = self.find(id)?;
+        let contents = self
+            .tabs
+            .drain(index + 1..)
+            .map(|tab| tab.content)
+            .collect();
+        let activated = (self.active > index).then(|| {
+            self.active = index;
+            id
+        });
+        Ok(Closed {
+            contents,
             activated,
         })
     }

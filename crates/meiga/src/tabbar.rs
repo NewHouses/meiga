@@ -7,8 +7,9 @@
 //! shows a tab as soon as it goes down on it, as in Chrome. The close
 //! button and the button that opens a tab act when the left button goes up
 //! on the same button where it went down: moving away first takes the
-//! click back. The middle button closes the tab where it goes down and up.
-//! The wheel and the other clicks do nothing yet.
+//! click back. The middle button closes the tab where it goes down and up,
+//! and the right one opens its menu, where it goes up, without showing it
+//! (ADR 0021). The wheel and the other clicks do nothing yet.
 //!
 //! The bar only draws what changed: a title, the highlight of a tab or of a
 //! button, and all of it when its layout changes.
@@ -75,6 +76,8 @@ enum Press {
     New,
     /// The middle button, on a tab.
     Middle(TabId),
+    /// The right button, on a tab.
+    Right(TabId),
 }
 
 /// How a tab looks.
@@ -133,6 +136,16 @@ impl TabBar {
     /// Whether `at` is on the bar.
     pub fn contains(&self, at: Point) -> bool {
         self.layout.bar().contains_point(at)
+    }
+
+    /// The tab at `index`, as the bar draws it.
+    pub fn tab(&self, index: usize) -> Rect {
+        self.layout.tab(index)
+    }
+
+    /// The font of the titles, which the menus use too.
+    pub const fn font_mut(&mut self) -> &mut Font {
+        &mut self.font
     }
 
     /// The window is `width` pixels wide now.
@@ -196,8 +209,8 @@ impl TabBar {
 
     /// `button` went down where the pointer is. Returns what it asks of the
     /// tabs: the left button shows the tab under it at once. On a button,
-    /// or the middle one on a tab, it waits until it goes up, and the bar
-    /// gets all the events of the mouse meanwhile.
+    /// or the middle or the right one on a tab, it waits until it goes up,
+    /// and the bar gets all the events of the mouse meanwhile.
     pub fn down<T>(&mut self, tabs: &model::Window<T>, button: Button) -> Option<TabAction> {
         // Another button is already down on the bar.
         if self.pressed.is_some() {
@@ -208,6 +221,7 @@ impl TabBar {
             (Button::Left, Target::Close(id)) => Press::Close(id),
             (Button::Left, Target::New) => Press::New,
             (Button::Middle, Target::Tab(id) | Target::Close(id)) => Press::Middle(id),
+            (Button::Right, Target::Tab(id) | Target::Close(id)) => Press::Right(id),
             _ => return None,
         };
         self.pressed = Some(press);
@@ -216,10 +230,11 @@ impl TabBar {
     }
 
     /// `button` went up where the pointer is. Returns what its press asks
-    /// of the tabs, if it went down on the same place: to close a tab, or
-    /// to open one.
+    /// of the tabs, if it went down on the same place: to close a tab, to
+    /// open one, or to open the menu of a tab where the pointer is.
     pub fn up<T>(&mut self, tabs: &model::Window<T>, button: Button) -> Option<TabAction> {
         let press = self.pressed?;
+        let on_tab = |id| self.hover.is_some_and(|hover| hover.tab() == Some(id));
         let action = match (press, button) {
             (Press::Close(id), Button::Left) => {
                 (self.hover == Some(Target::Close(id))).then_some(TabAction::CloseTab(id))
@@ -227,10 +242,11 @@ impl TabBar {
             (Press::New, Button::Left) => {
                 (self.hover == Some(Target::New)).then_some(TabAction::New)
             }
-            (Press::Middle(id), Button::Middle) => self
-                .hover
-                .is_some_and(|hover| hover.tab() == Some(id))
-                .then_some(TabAction::CloseTab(id)),
+            (Press::Middle(id), Button::Middle) => on_tab(id).then_some(TabAction::CloseTab(id)),
+            (Press::Right(id), Button::Right) => self
+                .pointer
+                .filter(|_| on_tab(id))
+                .map(|at| TabAction::Menu(id, at)),
             // Another button: the press goes on.
             _ => return None,
         };
@@ -414,7 +430,7 @@ impl TabBar {
         match press {
             Press::Close(id) => self.damage_close(tabs, id),
             Press::New => self.damage(self.layout.new_tab()),
-            Press::Middle(_) => {}
+            Press::Middle(_) | Press::Right(_) => {}
         }
     }
 
@@ -547,10 +563,9 @@ mod tests {
         assert_eq!(action, Some(TabAction::Activate(id(&tabs, 1))));
         assert!(!bar.is_pressed());
         assert_eq!(bar.up(&tabs, Button::Left), None);
-        // The empty bar, and the right button, do nothing yet.
+        // The empty bar does nothing yet.
         bar.moved(&tabs, Point::new(790, 20));
         assert_eq!(bar.down(&tabs, Button::Left), None);
-        bar.moved(&tabs, Point::new(300, 20));
         assert_eq!(bar.down(&tabs, Button::Right), None);
         assert!(!bar.is_pressed());
     }
@@ -604,6 +619,37 @@ mod tests {
         // Not on the button that opens a tab.
         bar.moved(&tabs, Point::new(740, 20));
         assert_eq!(bar.down(&tabs, Button::Middle), None);
+        assert!(!bar.is_pressed());
+    }
+
+    #[test]
+    fn the_right_button_opens_the_menu_of_the_tab_where_it_goes_down_and_up() {
+        let (mut bar, tabs) = three();
+        bar.moved(&tabs, Point::new(300, 20));
+        damage(&mut bar);
+        // It does not show the tab, and draws nothing.
+        assert_eq!(bar.down(&tabs, Button::Right), None);
+        assert!(bar.is_pressed());
+        assert!(!bar.has_damage());
+        // The menu opens where the button goes up, also on the close button
+        // of the tab.
+        bar.moved(&tabs, Point::new(460, 20));
+        let action = bar.up(&tabs, Button::Right);
+        let menu = TabAction::Menu(id(&tabs, 1), Point::new(460, 20));
+        assert_eq!(action, Some(menu));
+        assert!(!bar.is_pressed());
+        // Not on another tab, nor below the bar.
+        bar.moved(&tabs, Point::new(100, 20));
+        bar.down(&tabs, Button::Right);
+        bar.moved(&tabs, Point::new(300, 20));
+        assert_eq!(bar.up(&tabs, Button::Right), None);
+        bar.moved(&tabs, Point::new(100, 20));
+        bar.down(&tabs, Button::Right);
+        bar.moved(&tabs, Point::new(100, 40));
+        assert_eq!(bar.up(&tabs, Button::Right), None);
+        // Not on the button that opens a tab.
+        bar.moved(&tabs, Point::new(740, 20));
+        assert_eq!(bar.down(&tabs, Button::Right), None);
         assert!(!bar.is_pressed());
     }
 

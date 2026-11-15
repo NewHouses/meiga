@@ -27,7 +27,7 @@ mod tests;
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub use window::{Close, Switch, Tab, Window};
+pub use window::{Close, Closed, Switch, Tab, Window};
 
 /// Identifies a tab while meiga runs. Two tabs never get the same identifier,
 /// not even in different windows, so a tab could keep its own if it moved to

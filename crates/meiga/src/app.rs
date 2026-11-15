@@ -156,11 +156,13 @@ impl Handler for App {
     fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
         match event {
             Event::Resized { size, minimized } => {
-                // A minimized window keeps its grid.
-                if let Content::Terminal(tabs) = &mut self.content
-                    && !minimized
-                {
-                    tabs.resized(size);
+                // A minimized window keeps its grid, and closes the menu.
+                if let Content::Terminal(tabs) = &mut self.content {
+                    if minimized {
+                        tabs.close_menu(window);
+                    } else {
+                        tabs.resized(window, size);
+                    }
                 }
                 self.frames
                     .resized(window, size, minimized, &mut self.content)?;
@@ -170,7 +172,7 @@ impl Handler for App {
             }
             Event::DpiChanged { dpi } => {
                 if let Content::Terminal(tabs) = &mut self.content {
-                    tabs.dpi_changed(dpi);
+                    tabs.dpi_changed(window, dpi);
                     // The new size of the window, if it changes, comes right
                     // after this event. A frame now would give the terminal
                     // and the program the grid of the new cells in the old
@@ -178,7 +180,16 @@ impl Handler for App {
                     self.frames.schedule(window)?;
                 }
             }
-            Event::SizeMoveStarted => self.frames.size_move_started(),
+            Event::SizeMoveStarted => {
+                // The menu closes as soon as the user starts moving or
+                // resizing the window.
+                if let Content::Terminal(tabs) = &mut self.content
+                    && tabs.close_menu(window)
+                {
+                    self.frames.changed(window, &mut self.content)?;
+                }
+                self.frames.size_move_started();
+            }
             Event::SizeMoveEnded => self.frames.size_move_ended(window, &mut self.content)?,
             Event::FrameTimer => {
                 if let Content::Bench(bench) = &mut self.content {
@@ -194,13 +205,13 @@ impl Handler for App {
             Event::Wake(tab) => self.wake(window, tab)?,
             Event::Focus { focused } => {
                 if let Content::Terminal(tabs) = &mut self.content {
-                    tabs.view_mut().focus(focused, Instant::now());
+                    tabs.focus(window, focused, Instant::now());
                     self.frames.changed(window, &mut self.content)?;
                 }
             }
             Event::Key(key) => {
                 if let Content::Terminal(tabs) = &mut self.content {
-                    let response = tabs.view_mut().key(window, &key);
+                    let response = tabs.key(window, &key);
                     self.respond(window, response)?;
                 }
             }

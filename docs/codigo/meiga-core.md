@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.3. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título.
+> Estado: subfase 2.4. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -18,7 +18,7 @@
 | [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda en partes, e `WheelRows`, en filas do historial; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
 | [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
 | [`src/model/mod.rs`](#cratesmeiga-coresrcmodelmodrs) | O modelo das xanelas e as súas tabs: os identificadores, `TabId` e `WindowId`, que nunca se repiten, e os erros. |
-| [`src/model/window.rs`](#cratesmeiga-coresrcmodelwindowrs) | `Window`: as tabs dunha xanela, na orde da barra, e a activa, a enfocada e as visíbeis; abrir, pechar, mover e activar. |
+| [`src/model/window.rs`](#cratesmeiga-coresrcmodelwindowrs) | `Window`: as tabs dunha xanela, na orde da barra, e a activa, a enfocada e as visíbeis; abrir, pechar, tamén varias dunha vez, mover e activar. |
 | [`src/model/tests.rs`](#cratesmeiga-coresrcmodeltestsrs) | As probas do modelo, unha delas con 10 000 cambios ao chou. |
 | [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, o cambio de tamaño, a vista do historial e a copia do que cambia, coas celas seleccionadas. |
 | [`src/term/resize.rs`](#cratesmeiga-coresrctermresizers) | O cambio de tamaño da pantalla principal, que reparte o texto e coloca a pantalla onde a pon o ConPTY, seguindo a primeira fila e o cursor cunhas marcas; e a pantalla principal á parte mentres se ve a alternativa. |
@@ -28,8 +28,9 @@
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
-| [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: polo de agora, a barra de tabs. |
+| [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: a barra de tabs e os menús; e `scale`, que leva as súas medidas ao DPI da xanela. |
 | [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e o botón que abre unha tab, ao DPI da xanela; e `Part`, a parte da barra que hai debaixo dun punto. |
+| [`src/ui/menu.rs`](#cratesmeiga-coresrcuimenurs) | `Menu`: as entradas dun menú, elementos e liñas, e o resalte, que moven o teclado e o punteiro; e `Layout`: onde van o menú e as súas entradas, ao DPI da xanela, e a entrada que hai debaixo dun punto. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
 | [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
 | [`examples/tabs.rs`](#cratesmeiga-coreexamplestabsrs) | Un exemplo de consola para probar o modelo das tabs a man. |
@@ -331,7 +332,7 @@ pub const fn contains_point(self, at: Point) -> bool {
 
 - Nun rectángulo baleiro ou invertido, as dúas condicións dalgún dos eixes non se poden cumprir á vez: non contén ningún punto, sen comprobalo á parte.
 - É `const fn`, coma `contains`, que fai o mesmo cun rectángulo enteiro.
-- Úsana a disposición da barra de tabs, para saber se un punto está na barra e se está no × dunha tab ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)), e a barra do programa, para saber se o punteiro está nela ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+- Úsana a disposición da barra de tabs, para saber se un punto está na barra e se está no × dunha tab ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)), e a barra do programa, para saber se o punteiro está nela ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)); e, desde a subfase 2.4, a disposición dos menús, para saber en que entrada está un punto ([`entry_at`](#a-entrada-debaixo-dun-punto-entry_at)), e o menú do programa, para saber se un botón baixa dentro del ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)).
 
 **Probas.** Dez, unha por propiedade: que `right` e `bottom` non se inclúen, que os rectángulos invertidos están baleiros, `from_size` (tamén co tamaño máximo), `spanning` nas dúas ordes, a intersección e a unión (tamén con rectángulos baleiros), `contains`, desde a subfase 2.3 `contains_point` (os píxeles das esquinas de dentro si, os da columna `right`, da fila `bottom` e da columna anterior a `left` non, e un rectángulo baleiro non contén ningún), que `at` e `offset` moven o rectángulo (tamén preto do máximo de `i32`), e que os lados de `border` cobren o bordo sen solaparse nin saír dun rectángulo estreito.
 
@@ -549,7 +550,7 @@ pub fn width(text: &str) -> usize {
   - os de control (`None`) e os que non teñen ancho (`Some(0)`), como os acentos que se combinan coa letra anterior, ningunha. Xuntalos co carácter anterior, nun grafema, é traballo da subfase 8.1. As letras con acento xa compostas, como `á`, son un só carácter.
 - `flat_map` converte cada carácter en cero, unha ou dúas celas. `first.into_iter().chain(second)` encadea dous `Option`, que se percorren como listas de cero ou un elementos, sen reservar memoria: quen chama decide onde gardar as celas, por exemplo nun `Vec` con `collect`.
 - `impl Iterator<Item = CellChar> + '_`: devolve un iterador sen dicir o seu tipo exacto, que toma prestado o texto (`'_`).
-- **`width`** conta as celas que ocupa un texto.
+- **`width`** conta as celas que ocupa un texto. Desde a subfase 2.4, a disposición dos menús mide con ela os textos dos seus elementos ([`Layout::new`](#facer-o-menú-layoutnew)).
 
 ```rust
 pub fn fit(text: &str, columns: usize, out: &mut Vec<CellChar>) {
@@ -568,7 +569,7 @@ pub fn fit(text: &str, columns: usize, out: &mut Vec<CellChar>) {
 }
 ```
 
-**`fit`**, desde a subfase 2.3, pon en `out` as celas de `text` que caben en `columns` columnas: todas, se caben, e se non, as primeiras e unha elipse (`…`) na última columna ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). A barra de tabs corta así o título de cada tab, coas columnas que caben no seu sitio ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)). Paso a paso:
+**`fit`**, desde a subfase 2.3, pon en `out` as celas de `text` que caben en `columns` columnas: todas, se caben, e se non, as primeiras e unha elipse (`…`) na última columna ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). A barra de tabs corta así o título de cada tab, coas columnas que caben no seu sitio ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)), e, desde a 2.4, o menú do programa, os textos dos seus elementos, que só se cortan se a xanela é máis estreita ca o menú ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)). Paso a paso:
 
 1. Baleira `out` e colle as celas do texto, como moito unha máis das que caben: abonda para saber se o texto cabe, e `take` para o iterador alí, sen percorrer o resto dun título longo.
 2. Se caben todas, xa está.
@@ -1641,7 +1642,7 @@ fn trim(text: &str) -> &str {
 
 ## `crates/meiga-core/src/model/mod.rs`
 
-Desde a subfase 2.1, o modelo das xanelas e as súas tabs: que tabs ten cada xanela, en que orde, cal está activa, e que pasa ao abrir, pechar, mover ou activar unha, sen ningunha interface ([ADR 0018](../adr/0018-o-modelo-das-tabs.md)). Na 2.1 só o usan as súas probas e o exemplo `tabs`; desde a 2.2, o programa terá unha sesión e unha vista en cada tab.
+Desde a subfase 2.1, o modelo das xanelas e as súas tabs: que tabs ten cada xanela, en que orde, cal está activa, e que pasa ao abrir, pechar, mover ou activar unha, sen ningunha interface ([ADR 0018](../adr/0018-o-modelo-das-tabs.md)). Na 2.1 só o usan as súas probas e o exemplo `tabs`; desde a 2.2, o programa terá unha sesión e unha vista en cada tab. Desde a 2.4, pecha tamén varias tabs dunha vez, para o menú dunha tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 11).
 
 ```rust
 mod window;
@@ -1649,11 +1650,11 @@ mod window;
 #[cfg(test)]
 mod tests;
 
-pub use window::{Close, Switch, Tab, Window};
+pub use window::{Close, Closed, Switch, Tab, Window};
 ```
 
 - O módulo ten dous arquivos máis: `window.rs`, coa xanela e as súas tabs, e `tests.rs`, coas probas, que só se compilan con `cargo test` (`#[cfg(test)]`).
-- `pub use` publica os tipos de `window.rs` coma se estivesen eiquí: fóra do crate úsanse coma `meiga_core::model::Window`, sen saber en que arquivo están.
+- `pub use` publica os tipos de `window.rs` coma se estivesen eiquí: fóra do crate úsanse coma `meiga_core::model::Window`, sen saber en que arquivo están. `Closed` chegou na 2.4.
 - O comentario do módulo (`//!`) explica as tres preguntas que o modelo responde por separado ([ADR 0018](../adr/0018-o-modelo-das-tabs.md), decisión 9): a tab activa, a que marca a barra (`Window::active`); a enfocada, a que recibe o teclado (`Window::focused`); e as visíbeis, as que se debuxan (`Window::is_visible`).
 
 ### `TabId` e `WindowId`
@@ -1734,7 +1735,7 @@ pub enum Close<T> {
 
 - **`Tab<T>`** é unha tab: o seu identificador e o seu contido, do tipo que escolla o programa ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Os campos son privados: fóra do módulo só se len, con `id()` e `content()`. Só o modelo crea tabs, ao crear a xanela e ao abrir unha ([Abrir e pechar](#abrir-e-pechar)).
 - **`Switch`:** a tab activa cambiou, de `from` a `to`. Desde a 2.2, o programa redebuxará todo e cambiará a prioridade dos dous fíos lectores.
-- **`Close<T>`,** o que fixo pechar unha tab: `Removed`, a tab saíu da xanela, co seu contido e, se era a activa, a tab que ocupa o seu lugar (`activated`); ou `LastTab`, era a única, segue na xanela, e a xanela ten que pecharse con ela.
+- **`Close<T>`,** o que fixo pechar unha tab: `Removed`, a tab saíu da xanela, co seu contido e, se era a activa, a tab que ocupa o seu lugar (`activated`); ou `LastTab`, era a única, segue na xanela, e a xanela ten que pecharse con ela. Ao pechar varias tabs dunha vez, desde a 2.4, a resposta é un [`Closed`](#pechar-varias-tabs-closed-close_others-e-close_to_the_right).
 - **`#[must_use]`** en `Close`, desde a revisión da 2.1: o compilador avisa se quen pecha unha tab ignora a resposta, que pode traer a sesión da tab e a tab que pasa a ser a activa, ou pedir que se peche a xanela. Por ir no tipo, avisa tamén cando o erro sae cun `?`: en `window.close(id)?;`, o `?` usa o `Result`, pero o `Close` que queda dentro ignórase, e iso si o ve o compilador.
 - `Close` deriva `PartialEq` e `Eq`, se o contido os ten: as probas comparan a resposta enteira cun `assert_eq!`.
 
@@ -1845,6 +1846,79 @@ pub fn close(&mut self, id: TabId) -> Result<Close<T>, Error> {
    - **era a activa** (`Equal`): a tab da súa dereita ocupou a súa posición e pasa a ser a activa, coma en Chrome (decisión 5, decidido contigo). Se era a última, a posición quedou despois da nova última, e `min` colle esta, a que estaba á súa esquerda.
 4. A resposta leva o contido da tab, para que o programa peche a súa sesión, e a tab activada, se cambiou.
 
+### Pechar varias tabs: `Closed`, `close_others` e `close_to_the_right`
+
+Desde a subfase 2.4, para os elementos *Close other tabs* e *Close tabs to the right* do menú dunha tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 11). Concreta o [ADR 0018](../adr/0018-o-modelo-das-tabs.md): o modelo pecha varias tabs á vez, e di cal queda activa.
+
+```rust
+#[derive(Debug, PartialEq, Eq)]
+#[must_use = "the program has to close the contents of the tabs and show the tab that is active now"]
+pub struct Closed<T> {
+    pub contents: Vec<T>,
+    pub activated: Option<TabId>,
+}
+```
+
+- **`Closed<T>`,** o que fixo pechar varias tabs dunha vez, coma `Close::Removed` para unha: `contents`, o contido das tabs que saíron da xanela, na orde da barra, para que o programa peche as súas sesións; e `activated`, se a activa era unha delas, a tab que é a activa agora.
+- Non hai un `LastTab`: estes dous métodos nunca pechan todas as tabs, porque a que reciben sempre queda.
+- **`#[must_use]`**, coma en `Close` e polas mesmas razóns: o compilador avisa se quen pecha as tabs ignora a resposta, tamén cando o erro sae cun `?` ([`Tab`, `Switch` e `Close`](#tab-switch-e-close)).
+- Os campos son públicos, coma os de `Switch`: é só unha resposta, que o programa desfai cun patrón, `Closed { contents, activated }` ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Deriva `PartialEq` e `Eq`, se o contido os ten, coma `Close`, para que as probas comparen a resposta enteira.
+
+```rust
+pub fn close_others(&mut self, keep: TabId) -> Result<Closed<T>, Error> {
+    let index = self.find(keep)?;
+    let activated = (index != self.active).then_some(keep);
+    // The tab is taken out, and put back in the same memory.
+    let kept = self.tabs.remove(index);
+    let contents = self.tabs.drain(..).map(|tab| tab.content).collect();
+    self.tabs.push(kept);
+    self.active = 0;
+    Ok(Closed {
+        contents,
+        activated,
+    })
+}
+```
+
+**Pechar as outras** pecha todas as tabs menos `keep`, tamén as da súa esquerda, coma *Close other tabs* en Chrome e no Windows Terminal. `keep` queda soa, e activa:
+
+1. `find` busca a posición da tab ou, se non está, devolve `Error::NoSuchTab` sen cambiar nada, coma en `close`.
+2. Se `keep` non era a activa, pasa a selo, e a resposta dío: `then_some` dá `Some(keep)` se a condición se cumpre e, se non, `None`.
+3. `remove` saca `keep` do vector, e `drain(..)` saca todas as demais, en orde, nun iterador: `map` quédase co contido de cada unha, e `collect` fai con eles o vector da resposta.
+4. `keep` volta ao vector, que quedou baleiro pero conserva a súa memoria: coma di o comentario, `push` non reserva nada. É a única tab, na posición 0, e a activa.
+
+Cunha soa tab, non pecha nada: `contents` vai baleiro, e `activated`, `None`. O menú tampouco o deixa escoller: cunha soa tab, *Close other tabs* está desactivado ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 2).
+
+```rust
+pub fn close_to_the_right(&mut self, id: TabId) -> Result<Closed<T>, Error> {
+    let index = self.find(id)?;
+    let contents = self
+        .tabs
+        .drain(index + 1..)
+        .map(|tab| tab.content)
+        .collect();
+    let activated = (self.active > index).then(|| {
+        self.active = index;
+        id
+    });
+    Ok(Closed {
+        contents,
+        activated,
+    })
+}
+```
+
+**Pechar as da dereita** pecha as tabs que están á dereita de `id`, coma *Close tabs to the right* en Chrome e no Windows Terminal:
+
+1. `find`, coma en `close_others`.
+2. `drain(index + 1..)` saca as tabs despois de `id`, e `collect` garda o seu contido. `id` e as da súa esquerda quedan onde estaban.
+3. Se a activa era unha das que saíron, a súa posición estaba despois de `index`: a activa pasa a ser `id`, a máis próxima das que quedan, e a resposta dío. `then` só chama a *closure*, que cambia a posición, se a condición se cumpre; `then_some`, en `close_others`, recibe o valor xa feito. Se a activa era `id` ou estaba á súa esquerda, segue sendo a mesma, na mesma posición.
+
+Desde a última tab, non pecha nada; tampouco se pode escoller: na última tab, *Close tabs to the right* está desactivado.
+
+- **Nun paso.** O modelo quita as tabs dunha vez e responde unha vez, así que o programa mostra como moito unha tab, a que queda activa, nun único fotograma completo; se a activa non cambiou, só debuxa outra vez a barra. As sesións péchanse sen esperar, cando o programa solta os contidos, coma ao pechar unha tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 11).
+- Ningún dos dous deixa a xanela sen tabs nin a activa fóra delas: as invariantes seguen ([`Window`: os datos e as consultas](#window-os-datos-e-as-consultas)).
+
 ### Mover
 
 ```rust
@@ -1922,7 +1996,7 @@ fn activate_at(&mut self, index: usize) -> Option<Switch> {
 
 ## `crates/meiga-core/src/model/tests.rs`
 
-As probas do modelo: vinte e unha, que levan uns milisegundos.
+As probas do modelo: vinte e catro, que levan uns milisegundos.
 
 ```rust
 fn check<T>(window: &Window<T>) {
@@ -1942,21 +2016,22 @@ fn check<T>(window: &Window<T>) {
 ```
 
 - **`check`** comproba as invariantes: polo menos unha tab, a activa entre elas, a enfocada igual ca a activa, ningún identificador repetido, a posición de cada tab igual ca a que dá `index_of`, e só a activa visíbel. Cada proba chámaa despois de cada cambio, tamén dos que a xanela rexeita.
-- **`window(&["a", "b", "c"])`** crea unha xanela cunha tab por nome, a primeira activa, e devolve tamén os seus identificadores; tamén comproba as invariantes, ao crear a xanela e despois de abrir cada tab. **`names`** dá os contidos de esquerda a dereita, para comparalos cunha lista. **`removed`** e **`switched`** escriben as respostas de pechar e de activar.
+- **`window(&["a", "b", "c"])`** crea unha xanela cunha tab por nome, a primeira activa, e devolve tamén os seus identificadores; tamén comproba as invariantes, ao crear a xanela e despois de abrir cada tab. **`names`** dá os contidos de esquerda a dereita, para comparalos cunha lista. **`removed`** e **`switched`** escriben as respostas de pechar e de activar, e, desde a 2.4, **`removed_tabs`**, a de pechar varias tabs.
 
-Vinte probas comproban cada regra:
+Vinte e tres probas comproban cada regra:
 
 - unha xanela nova ten unha tab, e é a activa; unha tab ábrese ao final, e non se activa;
 - un contido pode saber o identificador da súa tab, ao crear a xanela e ao abrir unha, e un contido que non se pode facer non abre nada; un identificador volta do seu número, e o número 0, que o contador nunca dá, non atopa ningunha tab;
 - os identificadores nunca se repiten, nin noutra xanela nin despois de pechar unha tab;
 - pechar a activa activa a da dereita ou, se era a última, a da esquerda; pechar outra deixa a activa, tamén cando a pechada estaba á súa esquerda e a activa corre un posto; e a única tab queda, e a xanela péchase con ela;
+- desde a 2.4, pechar varias dunha vez: pechar as outras deixa unha soa tab, que pasa a ser a activa se non o era, e responde o contido das demais, na orde da barra; pechar as da dereita activa a tab se a activa era unha delas, e deixa a activa se estaba á esquerda; e cunha soa tab, ou desde a última, non pechan nada;
 - mover corre as tabs do medio, e a activa segue sendo a mesma tab: cando se move ela, cando outra a cruza desde a esquerda ou desde a dereita, e cando outra se move sen cruzala;
-- unha posición despois da última, unha tab xa pechada e unha tab doutra xanela rexéitanse, e a xanela queda igual;
+- unha posición despois da última, unha tab xa pechada e unha tab doutra xanela rexéitanse, e a xanela queda igual; desde a 2.4, tamén unha tab xa pechada ao pechar as outras ou as da dereita;
 - activar responde o cambio, ou nada se xa era a activa; a seguinte e a anterior dan a volta; e cunha soa tab non cambian nada;
 - o teclado e a pantalla seguen a activa (`focused`, `focused_mut` e `is_visible`), e `get_mut` cambia o contido doutra tab;
 - e as mensaxes dos erros.
 
-**A proba ao chou** (`random_changes_keep_the_rules_and_match_a_plain_list`) fai 500 cambios en cada unha de 20 xanelas, 10 000 en total: abrir, con `open` ou con `try_open_with`, e ás veces despois dun intento cun contido que non se pode facer; pechar; mover (ás veces a unha posición despois da última); activar unha tab, a seguinte ou a anterior; e pechar ou activar unha tab xa pechada. Os cambios saen dunha secuencia *xorshift* fixa, coma nas probas de `damage.rs` e do escáner: se falla, falla sempre igual. Fai os mesmos cambios nunha lista simple, cos contidos das tabs e o contido da activa, coas regras escritas da forma máis directa. Despois de cada cambio comproba as invariantes, que a xanela e a lista coinciden, e que as respostas son as que tocan. Ao final comproba que a barra pasou por unha tab, por dúas e por dez ou máis, para que os extremos se proben tamén.
+**A proba ao chou** (`random_changes_keep_the_rules_and_match_a_plain_list`) fai 500 cambios en cada unha de 20 xanelas, 10 000 en total: abrir, con `open` ou con `try_open_with`, e ás veces despois dun intento cun contido que non se pode facer; pechar; mover (ás veces a unha posición despois da última); activar unha tab, a seguinte ou a anterior; pechar ou activar unha tab xa pechada; e, desde a 2.4, pechar todas as tabs menos unha, ou as da dereita dunha, cada un nun cambio de cada 64: poucas veces, para que a barra poida medrar. Os cambios saen dunha secuencia *xorshift* fixa, coma nas probas de `damage.rs` e do escáner: se falla, falla sempre igual. Fai os mesmos cambios nunha lista simple, cos contidos das tabs e o contido da activa, coas regras escritas da forma máis directa: ao pechar as outras, a lista queda só coa tab que se mantén, e ao pechar as da dereita, córtase despois dela (`split_off`). Os identificadores das tabs pechadas de varias en varias van tamén á lista das pechadas (`closed_ids`), coas que se proba despois pechar e activar unha tab xa pechada. Despois de cada cambio comproba as invariantes, que a xanela e a lista coinciden, e que as respostas son as que tocan. Ao final comproba que a barra pasou por unha tab, por dúas e por dez ou máis, para que os extremos se proben tamén.
 
 Comprobouse tamén ao revés, con catro copias do modelo estragadas a propósito: unha activa a tab da esquerda ao pechar a activa, outra non corre a activa ao pechar unha tab á súa esquerda, outra axusta mal a activa ao mover, e a última non dá a volta coa seguinte. Despois da revisión, outras dúas: unha dálle ao contido outro identificador ca o da súa tab, e outra fai mal o identificador co seu número. As seis fallan as probas.
 
@@ -3585,18 +3660,39 @@ As trinta e sete probas do terminal, nun arquivo aparte para que `mod.rs` sexa m
 
 ## `crates/meiga-core/src/ui/mod.rs`
 
-Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disposicións sen Windows: onde vai cada parte, á escala da xanela, e que parte hai debaixo dun punto ([ADR 0020](../adr/0020-a-barra-de-tabs.md)). Debuxalas e seguir o rato é traballo do programa, con `meiga-render`; eiquí só se calculan rectángulos, así que se proban con coordenadas exactas, sen xanela nin fontes (decisión 2). Polo de agora hai unha, a barra de tabs.
+Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disposicións sen Windows: onde vai cada parte, á escala da xanela, e que parte hai debaixo dun punto ([ADR 0020](../adr/0020-a-barra-de-tabs.md) e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md)). Debuxalas e seguir o rato é traballo do programa, con `meiga-render`; eiquí só se calculan rectángulos, así que se proban con coordenadas exactas, sen xanela nin fontes (ADR 0020, decisión 2). Hai dúas: a barra de tabs e, desde a 2.4, os menús, que escalan as súas medidas coas mesmas funcións.
 
 ```rust
 //! The parts of the interface that meiga draws itself, as layouts without
 //! Windows: where each part goes, at the scale of the window, and what is
 //! under a point.
 
+pub mod menu;
 pub mod tabbar;
 ```
 
 - O comentario do módulo (`//!`) di para que é, coma o parágrafo de enriba.
-- `pub mod tabbar;` declara o submódulo, que está en `src/ui/tabbar.rs`, e faino público: fóra do crate, os seus tipos úsanse co seu camiño, coma `meiga_core::ui::tabbar::Layout`. Ao contrario ca `model`, `ui` non reexporta nada con `pub use`: a disposición da barra chámase `Layout`, e lese co nome do seu módulo diante, `tabbar::Layout`.
+- `pub mod menu;` e `pub mod tabbar;` declaran os submódulos, que están en `src/ui/menu.rs`, desde a 2.4, e en `src/ui/tabbar.rs`, e fanos públicos: fóra do crate, os seus tipos úsanse co seu camiño, coma `meiga_core::ui::tabbar::Layout`. Ao contrario ca `model`, `ui` non reexporta nada con `pub use`: as dúas disposicións chámanse `Layout`, e lense co nome do seu módulo diante, `tabbar::Layout` e `menu::Layout`.
+
+### Os axudantes: `BASE_DPI`, `scale` e `coord`
+
+Desde a subfase 2.4 están eiquí, e non en `tabbar.rs`, porque os usan a barra e os menús: cada submódulo tráeos con `use super::{coord, scale};`. Son privados, pero os submódulos de `ui` venos, porque en Rust un módulo ve o que é privado nos seus antepasados; fóra de `ui`, non se ven.
+
+```rust
+const BASE_DPI: u32 = 96;
+
+fn scale(pixels: u32, dpi: u32) -> u32 {
+    (pixels.saturating_mul(dpi).saturating_add(BASE_DPI / 2) / BASE_DPI).max(1)
+}
+
+fn coord(value: u64) -> i32 {
+    i32::try_from(value).unwrap_or(i32::MAX)
+}
+```
+
+- **`BASE_DPI`**: os puntos por polgada da escala 100 %, 96, na que están en píxeles as medidas das partes.
+- **`scale`**: `pixels` a escala 100 %, a `dpi`: multiplicado por `dpi` e dividido entre 96, redondeado ao máis próximo, e polo menos 1 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2, e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). Sumar a metade de 96 antes de dividir redondea, coma en [`Rgb::mix`](#rgb): a división de enteiros só corta os decimais, e unha metade sobe. Con `max(1)`, ningunha medida desaparece, nin sequera a un DPI moi baixo; e `saturating_mul` e `saturating_add` quedan no máximo dun `u32` en vez de desbordar. A 120 DPI (125 %), os 32 do alto da barra son 40, e o trazo, 1,25, queda en 1; a 144 DPI (150 %), o trazo, 1,5, sobe a 2, e os 11 píxeles entre o resalte e o texto dun menú, 16,5, a 17.
+- **`coord`**: un número de píxeles coma unha coordenada, un `i32`, ou `i32::MAX` se non cabe. Ningunha parte da xanela chega tan lonxe, pero así as contas non desbordan: as da barra, con calquera índice de tab, e as dos menús, con calquera número de entradas.
 
 ## `crates/meiga-core/src/ui/tabbar.rs`
 
@@ -3634,7 +3730,6 @@ Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `
 ### As medidas
 
 ```rust
-const BASE_DPI: u32 = 96;
 const HEIGHT: u32 = 32;
 const MAX_TAB: u32 = 240;
 const GAP: u32 = 4;
@@ -3649,7 +3744,7 @@ const SEPARATOR: u32 = 16;
 const STROKE: u32 = 1;
 ```
 
-As medidas, en píxeles a escala 100 %, que é 96 DPI (`BASE_DPI`). [`Layout::new`](#crear-e-cambiar-new-height_at-e-resize) escálaas ao DPI da xanela.
+As medidas, en píxeles a escala 100 %, que é 96 DPI ([`BASE_DPI`](#os-axudantes-base_dpi-scale-e-coord), que desde a subfase 2.4 está en `ui/mod.rs`). [`Layout::new`](#crear-e-cambiar-new-height_at-e-resize) escálaas ao DPI da xanela.
 
 | Constante | A 100 % | Que é |
 |---|---|---|
@@ -3689,7 +3784,7 @@ A parte da barra que hai nun punto, a resposta de [`part_at`](#o-que-hai-debaixo
 | `New` | O +, en todo o alto da barra. |
 | `Empty` | A barra fóra das tabs e do +: á esquerda da primeira tab, entre a última e o +, e á dereita do +. |
 
-- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6).
+- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6): desde a subfase 2.4, o dereito abre o menú da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5).
 - É `Copy`, coma os tipos de [`mouse.rs`](#button-modifiers-wheel-e-mouseaction): uns poucos bytes, que van por valor.
 
 ### `Layout`: os campos
@@ -3789,7 +3884,7 @@ pub fn resize(&mut self, width: u32, tabs: usize) {
 }
 ```
 
-- **`new`** fai a barra de `tabs` tabs nunha xanela de `width` píxeles de ancho, a `dpi`. Escala cada medida con [`scale`](#os-axudantes-scale-coord-e-centered), a través da *closure* `size`, e despois calcula o ancho das tabs, que necesita as medidas xa escaladas: por iso `tab_width` empeza en 0, e `fit_tabs` chámase cando a disposición xa existe.
+- **`new`** fai a barra de `tabs` tabs nunha xanela de `width` píxeles de ancho, a `dpi`. Escala cada medida con [`scale`](#os-axudantes-base_dpi-scale-e-coord), a través da *closure* `size`, e despois calcula o ancho das tabs, que necesita as medidas xa escaladas: por iso `tab_width` empeza en 0, e `fit_tabs` chámase cando a disposición xa existe.
 - **O signo + ten os brazos iguais.** A barra do programa debúxao cunha liña horizontal e outra vertical de `stroke` píxeles, que se cruzan no medio dun cadrado de `plus` de lado. Os brazos, o que sobresae cada liña a cada lado da outra, miden `(plus - stroke) / 2` se esa resta é par; se é impar, un brazo tería un píxel máis ca o outro, así que o lado medra un píxel: `abs_diff` dá a diferenza sen signo, e `% 2`, 1 se é impar. A 100 %, o trazo ten 1 e o lado 10, que medra a 11, con brazos de 5; a 150 % (144 DPI), o trazo ten 2 e o lado 15, que medra a 16, con brazos de 7; e a 125 % (120 DPI), o trazo ten 1 e o lado 13, que queda.
 - **`height_at`** dá o alto da barra a un DPI sen facer a disposición: 32 a 96 DPI e 40 a 120. Polo de agora só o usan as probas.
 - **`resize`**: a barra ten agora `width` píxeles de ancho e `tabs` tabs. As medidas quedan, e só cambia o ancho das tabs. A barra do programa chámao cando cambia o ancho da xanela e cando se abre ou se pecha unha tab; cando cambia o DPI, fai outra disposición con `new`.
@@ -3841,7 +3936,7 @@ const fn tab_height(&self) -> u32 {
 }
 ```
 
-- **`tab`**: a tab en `index` como se debuxa: desde `gap` + `index` × `tab_width`, co ancho dunha tab, e desde `gap` píxeles por debaixo do bordo de arriba da barra ata o de abaixo. Para o rato, a tab ocupa tamén a separación de enriba ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)). As contas fanse en `u64`, saturando, e [`coord`](#os-axudantes-scale-coord-e-centered) convérteas en coordenadas: `tab` acepta calquera índice, tamén o da tab despois da última, onde empeza o + ([`new_tab`](#o-botón-que-abre-unha-tab-new_tab-new_highlight-e-plus)).
+- **`tab`**: a tab en `index` como se debuxa: desde `gap` + `index` × `tab_width`, co ancho dunha tab, e desde `gap` píxeles por debaixo do bordo de arriba da barra ata o de abaixo. Para o rato, a tab ocupa tamén a separación de enriba ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)). As contas fanse en `u64`, saturando, e [`coord`](#os-axudantes-base_dpi-scale-e-coord) convérteas en coordenadas: `tab` acepta calquera índice, tamén o da tab despois da última, onde empeza o + ([`new_tab`](#o-botón-que-abre-unha-tab-new_tab-new_highlight-e-plus)). Desde a 2.4, o menú que abre o teclado vai debaixo da tab que se mostra, coma a dá `tab` ([`Anchor::Below`](#onde-se-abre-anchor-e-place)).
 - **`tab_area`**: o que cambia cando a tab en `index` cambia de aspecto, porque pasa a estar activa ou resaltada, ou deixa de estalo: toda a súa columna da barra, desde o bordo de arriba, e un píxel máis á dereita, a primeira columna da tab seguinte, onde vai o separador entre as dúas, que depende tamén do aspecto desta. Recórtase á barra: na primeira tab do exemplo, (4, 0, 245, 32). A barra do programa marca así as tabs que gañan ou perden o resalte do punteiro (decisión 8).
 - **`tab_height`**, privada: o alto das tabs como se debuxan, o da barra menos a separación de enriba, 28 a 100 %. O × e os separadores céntranse nel.
 
@@ -3996,14 +4091,10 @@ No exemplo, `the_part_under_the_pointer` comproba:
 ### Os axudantes: `scale`, `coord` e `centered`
 
 ```rust
-fn scale(pixels: u32, dpi: u32) -> u32 {
-    (pixels.saturating_mul(dpi).saturating_add(BASE_DPI / 2) / BASE_DPI).max(1)
-}
+use super::{coord, scale};
+```
 
-fn coord(value: u64) -> i32 {
-    i32::try_from(value).unwrap_or(i32::MAX)
-}
-
+```rust
 fn centered(rect: Rect, side: u32) -> Rect {
     let side = coord(side.into());
     let left = rect.left + (coord(rect.width().into()) - side) / 2;
@@ -4012,8 +4103,7 @@ fn centered(rect: Rect, side: u32) -> Rect {
 }
 ```
 
-- **`scale`**: `pixels` a escala 100 %, a `dpi`: multiplicado por `dpi` e dividido entre 96, redondeado ao máis próximo, e polo menos 1 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2). Sumar a metade de 96 antes de dividir redondea, coma en [`Rgb::mix`](#rgb): a división de enteiros só corta os decimais. Con `max(1)`, ningunha medida desaparece, nin sequera a un DPI moi baixo; e `saturating_mul` e `saturating_add` quedan no máximo dun `u32` en vez de desbordar. A 120 DPI (125 %), os 32 do alto son 40, e o trazo, 1,25, queda en 1; a 144 DPI (150 %), o trazo, 1,5, sobe a 2.
-- **`coord`**: un número de píxeles coma unha coordenada, un `i32`, ou `i32::MAX` se non cabe. Ningunha barra chega tan lonxe, pero así as contas de `tab` non desbordan con ningún índice.
+- **`scale`** e **`coord`** chegan do módulo pai, `ui`, con `use super::{coord, scale};`: ata a 2.3 estaban neste arquivo, e desde a 2.4 están en `ui/mod.rs`, porque os usan tamén os menús ([Os axudantes](#os-axudantes-base_dpi-scale-e-coord)). `scale` dá as medidas da barra ao DPI da xanela, en [`new`](#crear-e-cambiar-new-height_at-e-resize) e en `height_at`; e `coord` converte en coordenadas os números de píxeles das súas contas, que así non desbordan con ningún índice de tab.
 - **`centered`**: o cadrado de `side` píxeles no medio de `rect`. Se o que sobra é impar, o píxel de máis queda á dereita e debaixo: o signo + de 11 no + de 28 deixa 8 píxeles á esquerda e por riba, e 9 á dereita e por debaixo. Úsano `close_highlight`, `cross`, `new_highlight` e `plus`.
 
 **Probas.** Cinco, con coordenadas exactas. `three` fai a barra do exemplo: tres tabs en 800 píxeles a 96 DPI.
@@ -4025,6 +4115,534 @@ fn centered(rect: Rect, side: u32) -> Rect {
 | `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button` | Na mesma barra, dez tabs miden 76 (800 − 3 × 4 − 28 = 760, entre 10), e o + vai en (768, 4, 796, 32); trinta, 25, sen ×, co título en (12, 4, 21, 32); e nunha xanela de 20 píxeles, máis estreita ca o +, as tabs miden 0, e o título da segunda está baleiro, (12, 4, 12, 32). |
 | `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 1920 píxeles con dúas tabs: a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, e a barra de 40. |
 | `the_part_under_the_pointer` | Os puntos da táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at). |
+
+## `crates/meiga-core/src/ui/menu.rs`
+
+Desde a subfase 2.4: un menú sobre a xanela, sen Windows ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), [Arquitectura › Os menús](../arquitectura.md#os-menús), [Tecnoloxías › Os menús: Windows, WinUI e Chrome](../tecnoloxias.md#56-os-menús-windows-winui-e-chrome)). Ten dúas partes:
+
+- **`Menu`**: as entradas, elementos e liñas que os agrupan, e o resalte, que moven o punteiro e o teclado;
+- **`Layout`**: onde van o menú e cada entrada, para un DPI, un tamaño das celas do texto e un sitio onde abrilo, dentro da xanela; e que entrada hai debaixo dun punto.
+
+Vale para calquera menú, cunha acción en cada elemento, do tipo que escolla quen o usa ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 1): o primeiro é o menú dunha tab, e despois virán o dos perfís (2.5) e o explorador (5.2). Coma a barra, só fai contas, e próbase só, con coordenadas exactas. O menú que se ve e se usa, `MenuView`, está no programa: debúxao con estes rectángulos, leva a el o teclado e o rato, e marca as zonas que cambian ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)); e o menú da tab, cos seus elementos e as súas accións, ábreo [`tabs.rs`](meiga.md#cratesmeigasrctabsrs).
+
+**A forma do menú**, coas medidas dos menús de WinUI (`MenuFlyout`), coma o da tab no Windows Terminal, co rato e co teclado, en píxeles a escala 100 % ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisións 1, 3 e 4):
+
+- un bordo de 1 píxel e, dentro, 2 máis por riba do primeiro elemento e por debaixo do último;
+- cada elemento, 32 de alto: o seu resalte, de 28, a 4 píxeles dos lados e a 2 de arriba e de abaixo; e o seu texto, a 11 píxeles dos lados do resalte;
+- cada liña, de 1 píxel, de lado a lado dentro do bordo, con 1 por riba e outro por debaixo: 3 de alto;
+- tan ancho coma o seu elemento máis longo, co texto contado en celas, e nunca máis ca a xanela; e tan alto coma as súas entradas, aínda que non caiba;
+- ábrese nun punto, coa súa esquina de arriba á esquerda nel, ou debaixo dunha parte da xanela, desde o lado esquerdo dela. Se non cabe por ese lado, vai ao outro, e non sae da xanela: un máis alto ca ela córtase por abaixo, e o punteiro non resalta nin escolle o que queda cortado;
+- e todas as medidas, escaladas co DPI da xanela, redondeadas e de polo menos un píxel, coma as da barra.
+
+**Un exemplo**, o das probas: o menú dunha tab, con *Close other tabs* desactivado, aberto co punteiro en (100, 50), con celas de 7 × 16 píxeles, a 96 DPI (escala 100 %), nunha xanela de 800 × 600:
+
+| Parte | Método | Rectángulo |
+|---|---|---|
+| O menú | `menu()` | (100, 50, 293, 187) |
+| O sitio de *Duplicate tab* | `entry(0)` | (101, 53, 292, 85) |
+| O seu resalte | `highlight(0)` | (105, 55, 288, 83) |
+| O sitio do seu texto | `text(0)` | (116, 55, 277, 83) |
+| O sitio da liña | `entry(1)` | (101, 85, 292, 88) |
+| A liña | `line(1)` | (101, 86, 292, 87) |
+| O sitio de *Close tab* | `entry(2)` | (101, 88, 292, 120) |
+| O de *Close other tabs* | `entry(3)` | (101, 120, 292, 152) |
+| O de *Close tabs to the right* | `entry(4)` | (101, 152, 292, 184) |
+
+Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `top`, `right`, `bottom`), sen incluír os dous últimos. O menú mide 193 × 137: de ancho, as 23 celas de 7 píxeles de *Close tabs to the right*, o texto máis longo, e 11 + 4 + 1 a cada lado, 23 × 7 + 2 × (1 + 4 + 11); e de alto, catro elementos de 32 e unha liña de 3, e 2 + 1 por riba e por debaixo, 4 × 32 + 3 + 2 × (1 + 2). A 150 % (144 DPI), con celas de 11 píxeles de ancho, o mesmo menú mide 303 × 208: 23 × 11 + 2 × (2 + 6 + 17) de ancho, e 4 × (42 + 2 × 3) + (2 + 2 × 2) + 2 × (2 + 3) de alto.
+
+### As medidas do menú
+
+```rust
+const BORDER: u32 = 1;
+const PADDING: u32 = 2;
+const ITEM: u32 = 28;
+const ITEM_SIDE: u32 = 4;
+const ITEM_GAP: u32 = 2;
+const TEXT_PADDING: u32 = 11;
+const LINE: u32 = 1;
+const LINE_GAP: u32 = 1;
+```
+
+As medidas, en píxeles a escala 100 %, as dos menús de WinUI ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). [`Layout::new`](#facer-o-menú-layoutnew) escálaas ao DPI da xanela con [`scale`](#os-axudantes-base_dpi-scale-e-coord), coma as da barra:
+
+| Constante | A 100 % (96 DPI) | A 150 % (144 DPI) | Que é |
+|---|---|---|---|
+| `BORDER` | 1 | 2 | O grosor do bordo. |
+| `PADDING` | 2 | 3 | O espazo entre o bordo e a primeira entrada, e entre a última e o bordo. |
+| `ITEM` | 28 | 42 | O alto do resalte dun elemento. |
+| `ITEM_SIDE` | 4 | 6 | O espazo entre o bordo e cada lado do resalte, que o resalte non colle. |
+| `ITEM_GAP` | 2 | 3 | O espazo por riba e por debaixo do resalte, que tamén é do elemento: o sitio dun elemento mide 28 + 2 × 2 = 32, ou 42 + 2 × 3 = 48. |
+| `TEXT_PADDING` | 11 | 17 | O espazo entre os lados do resalte e o texto. |
+| `LINE` | 1 | 2 | O grosor da liña dun separador. |
+| `LINE_GAP` | 1 | 2 | O espazo por riba e por debaixo da liña: o sitio dunha liña mide 1 + 2 × 1 = 3, ou 2 + 2 × 2 = 6. |
+
+- A 150 %, cada medida multiplícase por 1,5 e redondéase ao máis próximo, cunha metade cara arriba: o bordo, 1,5, sobe a 2, e o espazo do texto, 16,5, a 17.
+- Os elementos e as liñas non teñen ancho propio: van de lado a lado dentro do bordo, e o ancho do menú sae do texto máis longo ([`new`](#facer-o-menú-layoutnew)). O texto tampouco ten alto propio: o programa céntrao no alto do resalte.
+- Son privadas: fóra do módulo só se ven escaladas, a través de `Layout`.
+
+### `Entry`: os elementos e as liñas
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Entry<A> {
+    Item {
+        label: Cow<'static, str>,
+        action: A,
+        enabled: bool,
+    },
+    Separator,
+}
+```
+
+Unha entrada dun menú:
+
+| Variante | Que é |
+|---|---|
+| `Item` | Un elemento: o seu texto (`label`), a acción que pide cando se escolle (`action`) e se se pode escoller (`enabled`). Un elemento desactivado vese, co texto máis apagado, pero non se resalta nin se escolle ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 2). |
+| `Separator` | Unha liña entre dous grupos de elementos. |
+
+- **A acción** é do tipo `A`, o que escolla quen usa o menú: o menú dunha tab leva en cada elemento unha `TabAction` coa súa tab, e as probas, números. O menú non sabe que fai cada elemento: só di cal se escolleu ([Escoller](#escoller-action-e-chosen)).
+- **O texto** é un `Cow<'static, str>`, de `std::borrow` (*clone-on-write*), que garda ou un texto fixo do programa, un `&'static str`, coma os do menú da tab, sen copialo, ou un `String`, feito ao abrir o menú. Lese igual nos dous casos, coma un `&str`.
+- Deriva `Clone`, `Debug`, `PartialEq` e `Eq`, se a acción os ten; non `Copy`, porque o texto pode ser un `String`.
+
+```rust
+pub fn item(label: impl Into<Cow<'static, str>>, action: A, enabled: bool) -> Self {
+    Self::Item {
+        label: label.into(),
+        action,
+        enabled,
+    }
+}
+
+pub fn label(&self) -> Option<&str> {
+    match self {
+        Self::Item { label, .. } => Some(label),
+        Self::Separator => None,
+    }
+}
+
+pub const fn is_enabled(&self) -> bool {
+    matches!(self, Self::Item { enabled: true, .. })
+}
+```
+
+- **`item`** fai un elemento. `impl Into<Cow<'static, str>>` acepta un `&'static str` ou un `String`, e `into` convérteo nun `Cow`: o menú dunha tab fai así os seus, coma `Entry::item("Close tab", TabAction::CloseTab(id), true)`.
+- **`label`**: o texto dun elemento, coma un `&str`, ou `None` nunha liña. A disposición mide os textos con el, e o menú do programa debúxaos.
+- **`is_enabled`**: se é un elemento que se pode escoller; unha liña, nunca. `matches!` compara a entrada co patrón, un `Item` con `enabled` en `true`, sen movela. É unha `const fn`.
+
+**O menú dunha tab** ten cinco entradas, en inglés, coma o resto da interface: *Duplicate tab*, unha liña, *Close tab*, *Close other tabs*, que só se pode escoller con máis dunha tab, e *Close tabs to the right*, que non se pode escoller na última ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 2). Cada elemento leva unha `TabAction` coa tab do menú, coma `TabAction::Duplicate(id)` ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+
+### `Menu`: as entradas e o resalte
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Menu<A> {
+    entries: Vec<Entry<A>>,
+    highlighted: Option<usize>,
+}
+```
+
+- **`entries`**: as entradas, na orde na que se ven, de arriba abaixo. Non cambian: `Menu` non ten ningún método que as cambie.
+- **`highlighted`**: a posición do elemento resaltado, ou `None`. Sempre é un elemento que se pode escoller: só o cambian `hover` e `step`, que nunca resaltan unha liña nin un elemento desactivado, e os campos son privados.
+- Os seus métodos piden `A: Copy` (`impl<A: Copy> Menu<A>`), por [`action`](#escoller-action-e-chosen). Deriva o mesmo ca `Entry`.
+
+```rust
+pub const fn new(entries: Vec<Entry<A>>) -> Self {
+    Self {
+        entries,
+        highlighted: None,
+    }
+}
+
+pub fn entries(&self) -> &[Entry<A>] {
+    &self.entries
+}
+
+pub const fn highlighted(&self) -> Option<usize> {
+    self.highlighted
+}
+
+pub fn hover(&mut self, index: Option<usize>) -> bool {
+    let index = index.filter(|&index| self.can_choose(index));
+    self.highlight(index)
+}
+```
+
+- **`new`**: un menú sen nada resaltado, coma cando o abre o rato: ata que o punteiro pasa por un elemento, non se resalta ningún ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 6). Cando o abre o teclado, o menú do programa resalta despois o primeiro elemento, con [`step(Step::First)`](#o-teclado-step-e-step), para que Intro o escolla e as frechas se movan desde el.
+- **`entries`** e **`highlighted`** lense para debuxar o menú: cada entrada, e o resalte no elemento resaltado.
+- **`hover`**: o punteiro está sobre a entrada en `index`, ou sobre ningunha (`None`). Se é un elemento que se pode escoller, resáltase; se non, non se resalta nada: o punteiro sobre unha liña ou sobre un elemento desactivado quita o resalte, coma fóra das entradas ou fóra da xanela (decisión 8). `filter` deixa o índice só se se pode escoller. Devolve se o resalte cambiou.
+
+```rust
+fn can_choose(&self, index: usize) -> bool {
+    self.entries.get(index).is_some_and(Entry::is_enabled)
+}
+
+fn highlight(&mut self, index: Option<usize>) -> bool {
+    let changed = self.highlighted != index;
+    self.highlighted = index;
+    changed
+}
+```
+
+- **`can_choose`**, privada: se a entrada en `index` é un elemento que se pode escoller. Despois da última entrada, `get` dá `None`, e `is_some_and`, `false`: unha posición de máis non resalta nada, e non fai fallar nada.
+- **`highlight`**, privada: resalta `index` e di se cambiou. `hover` e `step` devolven esa resposta: o menú do programa só debuxa outra vez os dous elementos, o que perde o resalte e o que o gaña, cando cambia ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 12).
+
+### O teclado: `Step` e `step`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Step {
+    Next,
+    Previous,
+    First,
+    Last,
+}
+```
+
+```rust
+pub fn step(&mut self, step: Step) -> bool {
+    let count = self.entries.len();
+    let choosable = |index: &usize| self.can_choose(*index);
+    let target = match (step, self.highlighted) {
+        (Step::First, _) | (Step::Next, None) => (0..count).find(choosable),
+        (Step::Last, _) | (Step::Previous, None) => (0..count).rev().find(choosable),
+        (Step::Next, Some(current)) => (current + 1..count).chain(0..=current).find(choosable),
+        (Step::Previous, Some(current)) => (0..current)
+            .rev()
+            .chain((current..count).rev())
+            .find(choosable),
+    };
+    target.is_some() && self.highlight(target)
+}
+```
+
+**`step`** move o resalte coma pide o teclado, sen parar nas liñas nin nos elementos desactivados, e dando a volta nos extremos ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 7):
+
+| Paso | Tecla | Sen resalte | Co elemento `current` resaltado |
+|---|---|---|---|
+| `Next` | ↓ | O primeiro elemento que se pode escoller. | O seguinte ou, despois do último, o primeiro. |
+| `Previous` | ↑ | O último. | O anterior ou, antes do primeiro, o último. |
+| `First` | Inicio | O primeiro. | O primeiro. |
+| `Last` | Fin | O último. | O último. |
+
+- Cada caso percorre as posicións nunha orde, e `find` colle a primeira que se pode escoller (`choosable`):
+  - `First`, e `Next` sen resalte: desde a primeira entrada (`0..count`);
+  - `Last`, e `Previous` sen resalte: desde a última, cara atrás (`rev`);
+  - `Next`: desde a seguinte á resaltada ata o final e, despois, desde o principio ata a resaltada (`chain`);
+  - `Previous`: desde a anterior ata a primeira e, despois, desde a última ata a resaltada.
+- Os percorridos de `Next` e `Previous` acaban na resaltada: se é o único elemento que se pode escoller, atópana a ela, e nada cambia. Son rangos de enteiros encadeados, sen reservar memoria. `find` pásalle a cada posición unha referencia, e por iso a *closure* recibe un `&usize`.
+- Devolve se o resalte cambiou, coma `hover`. Sen ningún elemento que se poida escoller, `target` é `None`, e o menú segue sen nada resaltado.
+- As teclas convérteas en pasos o menú do programa ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)). `Step` é `Copy`: un byte, que vai por valor.
+
+### Escoller: `action` e `chosen`
+
+```rust
+pub fn action(&self, index: usize) -> Option<A> {
+    match self.entries.get(index) {
+        Some(Entry::Item {
+            action,
+            enabled: true,
+            ..
+        }) => Some(*action),
+        _ => None,
+    }
+}
+
+pub fn chosen(&self) -> Option<A> {
+    self.highlighted.and_then(|index| self.action(index))
+}
+```
+
+- **`action`**: a acción do elemento en `index`, se se pode escoller. O patrón só casa cun `Item` con `enabled` en `true`: unha liña, un elemento desactivado ou unha posición despois da última dan `None`. O menú do programa pídea para o elemento onde sobe o botón: un clic nun desactivado non escolle nada, e o menú segue aberto ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 8).
+- **`chosen`**: a acción do elemento resaltado, a que escollen Intro e Espazo (decisión 7); sen resalte, `None`.
+- **`*action` copia a acción**, e por iso os métodos de `Menu` piden `A: Copy`: o menú non a perde nin a presta, e quen o usa pode pechalo antes de facela. `TabAction`, a do menú da tab, é `Copy`: uns poucos bytes.
+
+### Onde se abre: `Anchor` e `place`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Anchor {
+    At(Point),
+    Below(Rect),
+}
+```
+
+| Variante | Onde se abre o menú |
+|---|---|
+| `At(punto)` | Coa súa esquina de arriba á esquerda no punto: onde está o punteiro cando o botón dereito sobe nunha tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5). |
+| `Below(rectángulo)` | Debaixo desa parte da xanela, desde o seu lado esquerdo: a tab que se mostra, coma a debuxa a barra ([`tab`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)), cando o abren a tecla de menú ou Maiús+F10 (decisión 6). O menú empeza entón no bordo de abaixo da barra. |
+
+```rust
+fn place(anchor: Anchor, size: Size, bounds: Rect) -> Point {
+    let (width, height) = (coord(size.width.into()), coord(size.height.into()));
+    let (x, y, other_x, other_y) = match anchor {
+        Anchor::At(at) => (
+            at.x,
+            at.y,
+            at.x.saturating_sub(width),
+            at.y.saturating_sub(height),
+        ),
+        Anchor::Below(part) => (
+            part.left,
+            part.bottom,
+            part.right.saturating_sub(width),
+            part.top.saturating_sub(height),
+        ),
+    };
+    let x = if x.saturating_add(width) > bounds.right {
+        other_x
+    } else {
+        x
+    };
+    let y = if y.saturating_add(height) > bounds.bottom {
+        other_y
+    } else {
+        y
+    };
+    Point::new(
+        x.min(bounds.right.saturating_sub(width)).max(bounds.left),
+        y.min(bounds.bottom.saturating_sub(height)).max(bounds.top),
+    )
+}
+```
+
+**`place`**, privada: a esquina de arriba á esquerda dun menú de `size` onde di `anchor`, dentro de `bounds`, a área cliente da xanela ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 4). Cada eixe decídese á parte:
+
+1. Cada ancla dá dous sitios, o seu e o do outro lado:
+
+   | Ancla | O seu sitio | O do outro lado |
+   |---|---|---|
+   | `At(at)` | (`at.x`, `at.y`): á dereita do punto, e por debaixo. | (`at.x` − ancho, `at.y` − alto): á esquerda e por riba, rematando no punto. |
+   | `Below(part)` | (`part.left`, `part.bottom`): debaixo da parte, desde o seu lado esquerdo. | (`part.right` − ancho, `part.top` − alto): rematando no seu lado dereito, ou por riba dela. |
+
+2. Se, desde o seu sitio, o menú pasa do lado dereito de `bounds`, vai ao outro lado; e o mesmo co bordo de abaixo. O seu sitio sempre vai cara á dereita e cara abaixo, así que só se miran eses dous lados.
+3. Despois, móvese o xusto para quedar dentro: `min` lévao cara á esquerda ou cara arriba ata que remate dentro, e `max`, cara á dereita ou cara abaixo ata que empece dentro. Se tampouco cabía no outro lado, queda o máis preto del que pode.
+4. `max` vai despois, e gaña: un menú máis alto ca a xanela empeza no seu bordo de arriba, e córtase por abaixo (decisión 1). Máis ancho ca ela non pode ser: [`new`](#facer-o-menú-layoutnew) déixao do seu ancho.
+
+- `coord` converte o tamaño en coordenadas, e `saturating_sub` e `saturating_add` quedan nos extremos dun `i32` en vez de desbordar.
+- Os casos das probas, co menú do exemplo, de 193 × 137:
+
+| Ancla | Xanela | Menú | Por que |
+|---|---|---|---|
+| `At((100, 50))` | 800 × 600 | (100, 50, 293, 187) | Cabe á dereita do punteiro e por debaixo. |
+| `At((700, 500))` | 800 × 600 | (507, 363, 700, 500) | Non cabe nin á dereita nin por debaixo: vai á esquerda e por riba, coa esquina de abaixo á dereita no punteiro. |
+| `At((120, 100))` | 250 × 150 | (0, 0, 193, 137) | Non cabe en ningún lado: desde o outro, (−73, −37), entra na xanela pola súa esquina. |
+| `At((40, 10))` | 150 × 600 | (0, 10, 150, 147) | A xanela é máis estreita ca o menú, que mide coma ela, 150, e vai desde o lado esquerdo da xanela. |
+| `At((40, 10))` | 800 × 100 | (40, 0, 233, 137) | É máis alto ca a xanela: empeza arriba, e córtase por abaixo. |
+| `Below((244, 4, 484, 32))` | 800 × 600 | (244, 32, 437, 169) | Debaixo da segunda tab da barra do [exemplo de `tabbar.rs`](#cratesmeiga-coresrcuitabbarrs), desde o seu lado esquerdo. |
+| `Below((700, 4, 790, 32))` | 800 × 600 | (597, 32, 790, 169) | Unha tab preto do lado dereito da xanela: o menú remata no lado dereito da tab. |
+
+### O sitio de cada parte: `Layout`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Layout {
+    border: u32,
+    item_side: u32,
+    item_gap: u32,
+    text_padding: u32,
+    line: u32,
+    line_gap: u32,
+    menu: Rect,
+    bounds: Rect,
+    entries: Vec<Rect>,
+}
+```
+
+Onde van as partes dun menú, na xanela:
+
+| Campo | Que é |
+|---|---|
+| De `border` a `line_gap` | As medidas que fan falta despois de facer o menú, xa escaladas ao DPI da xanela. `PADDING` e `ITEM` só se usan ao facelo, e non se gardan. |
+| `menu` | O menú enteiro, co seu bordo. |
+| `bounds` | A área cliente da xanela, que corta o menú se é máis alto ca ela. Desde a revisión do código da 2.4, [`entry_at`](#a-entrada-debaixo-dun-punto-entry_at) non dá ningunha entrada fóra dela. |
+| `entries` | O sitio de cada entrada, na súa orde: de lado a lado dentro do bordo, e do alto dun elemento ou dunha liña. |
+
+- **Todo se calcula unha vez**, ao abrir o menú, e as consultas só len rectángulos. O menú do programa garda a disposición mentres está aberto: se a xanela cambia de tamaño ou de escala, o menú péchase ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 9), e a disposición vai con el.
+- Os campos son privados: os sitios das entradas sempre corresponden ao menú.
+- Deriva `Clone`, `Debug`, `PartialEq` e `Eq`, pero non `Copy`, ao contrario ca a da barra, porque ten un vector.
+
+### Facer o menú: `Layout::new`
+
+```rust
+pub fn new<A>(
+    entries: &[Entry<A>],
+    dpi: u32,
+    cell: Size,
+    anchor: Anchor,
+    bounds: Rect,
+) -> Self {
+    let size = |pixels| scale(pixels, dpi);
+    let (border, padding, item_side, item_gap) =
+        (size(BORDER), size(PADDING), size(ITEM_SIDE), size(ITEM_GAP));
+    let (text_padding, line, line_gap) = (size(TEXT_PADDING), size(LINE), size(LINE_GAP));
+    let item = size(ITEM) + 2 * item_gap;
+    let separator = line + 2 * line_gap;
+
+    let columns = entries
+        .iter()
+        .filter_map(Entry::label)
+        .map(text::width)
+        .max()
+        .unwrap_or(0);
+    let text = u64::from(cell.width).saturating_mul(columns as u64);
+    let chrome = 2 * u64::from(border + item_side + text_padding);
+    let width = u32::try_from(text.saturating_add(chrome))
+        .unwrap_or(u32::MAX)
+        .min(bounds.width());
+    let height = entries
+        .iter()
+        .fold(2 * (border + padding), |height, entry| {
+            height.saturating_add(match entry {
+                Entry::Item { .. } => item,
+                Entry::Separator => separator,
+            })
+        });
+    let menu = Rect::at(
+        place(anchor, Size::new(width, height), bounds),
+        Size::new(width, height),
+    );
+
+    let (left, right) = (
+        menu.left + coord(border.into()),
+        menu.right - coord(border.into()),
+    );
+    let mut top = menu.top + coord((border + padding).into());
+    let entries = entries
+        .iter()
+        .map(|entry| {
+            let height = coord(
+                match entry {
+                    Entry::Item { .. } => item,
+                    Entry::Separator => separator,
+                }
+                .into(),
+            );
+            let room = Rect::new(left, top, right, top.saturating_add(height));
+            top = room.bottom;
+            room
+        })
+        .collect();
+    Self {
+        border,
+        item_side,
+        item_gap,
+        text_padding,
+        line,
+        line_gap,
+        menu,
+        bounds,
+        entries,
+    }
+}
+```
+
+**`new`** fai o menú de `entries` a `dpi`, co texto en celas de `cell` píxeles, onde di `anchor`, dentro de `bounds`, a área cliente da xanela. O menú dunha tab dálle as celas da fonte da barra, Cascadia Mono a 9 puntos, e o DPI da xanela ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). Paso a paso:
+
+1. **As medidas.** Escala cada unha con [`scale`](#os-axudantes-base_dpi-scale-e-coord), a través da *closure* `size`, coma a barra. O sitio dun elemento, `item`, é o seu resalte co espazo de enriba e o de abaixo: 32 a 100 %, e 48 a 150 %; e o dunha liña, `separator`, a liña cos seus dous espazos: 3, e 6.
+2. **O ancho.** `columns` son as celas do texto máis longo: `filter_map` salta as liñas, que non teñen texto, `text::width` conta as celas de cada un ([`text.rs`](#cratesmeiga-coresrctextrs)), e `max` colle o maior; sen elementos, 0. O texto ocupa `columns` celas de `cell.width` píxeles, e arredor del, a cada lado, van o espazo ata o resalte, o espazo ata o bordo e o bordo: `chrome`, 32 a 100 % e 50 a 150 %. Despois, `min` déixao como moito tan ancho coma a xanela: os textos que non caben córtaos con «…» o menú do programa (decisión 1).
+3. **O alto.** `fold` suma ao bordo e ao espazo de enriba e de abaixo, 6 a 100 %, o sitio de cada entrada. O alto non se recorta á xanela: un menú máis alto córtase por abaixo ([`place`](#onde-se-abre-anchor-e-place)), e o que queda cortado non o ten o punteiro ([`entry_at`](#a-entrada-debaixo-dun-punto-entry_at)).
+4. **O menú.** [`place`](#onde-se-abre-anchor-e-place) dá a súa esquina de arriba á esquerda, e `Rect::at` fai o rectángulo con ela e co tamaño.
+5. **As entradas**, unha debaixo doutra, desde o bordo e o espazo de enriba: cada sitio vai de lado a lado dentro do bordo, co alto dun elemento ou dunha liña. `top` é onde empeza a seguinte: a *closure* de `map` móveo despois de cada unha, e `collect` garda os sitios nun vector.
+
+- **Sen desbordar.** O ancho do texto calcúlase en `u64`, saturando, así que non desborda con ningún número de celas; se o ancho non cabe nun `u32`, `try_from` dá `u32::MAX`, e `min` déixao no da xanela. O alto satura en `u32`, e `coord` converte as medidas en coordenadas ([Os axudantes](#os-axudantes-base_dpi-scale-e-coord)).
+- **O texto, en celas.** O texto vai coa fonte da barra, que ten todos os caracteres do mesmo ancho: medilo é contar celas, sen DirectWrite, coma os títulos das tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4).
+- `new` é xenérica na acción, `A`, pero non a usa: só le os textos, e cales entradas son elementos e cales liñas. Por iso non pide `A: Copy`.
+
+### As partes: `menu`, `border`, `entry`, `highlight`, `text` e `line`
+
+```rust
+pub const fn menu(&self) -> Rect {
+    self.menu
+}
+
+pub const fn border(&self) -> u32 {
+    self.border
+}
+
+pub fn entry(&self, index: usize) -> Rect {
+    self.entries.get(index).copied().unwrap_or(Rect::EMPTY)
+}
+
+pub fn highlight(&self, index: usize) -> Rect {
+    inset(self.entry(index), self.item_side, self.item_gap)
+}
+
+pub fn text(&self, index: usize) -> Rect {
+    inset(self.highlight(index), self.text_padding, 0)
+}
+
+pub fn line(&self, index: usize) -> Rect {
+    let room = self.entry(index);
+    let top = room.top + coord(self.line_gap.into());
+    Rect::new(room.left, top, room.right, top + coord(self.line.into()))
+}
+```
+
+```rust
+fn inset(rect: Rect, x: u32, y: u32) -> Rect {
+    let (x, y) = (coord(x.into()), coord(y.into()));
+    let inner = Rect::new(rect.left + x, rect.top + y, rect.right - x, rect.bottom - y);
+    if inner.is_empty() { Rect::EMPTY } else { inner }
+}
+```
+
+| Método | Que dá | No exemplo |
+|---|---|---|
+| `menu()` | O menú enteiro. O programa debúxao enteiro ao abrilo, e debuxa outra vez todo o que tapaba ao pechalo ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 12). | (100, 50, 293, 187) |
+| `border()` | O grosor do bordo, que o programa debuxa por dentro do menú. | 1 |
+| `entry(i)` | O sitio da entrada `i`: de lado a lado dentro do bordo. Despois da última, `Rect::EMPTY`. | `entry(0)`: (101, 53, 292, 85) |
+| `highlight(i)` | O resalte do elemento `i`: o seu sitio sen `item_side` píxeles aos lados nin `item_gap` por riba e por debaixo. É tamén o que o programa debuxa outra vez cando o elemento gaña ou perde o resalte. | `highlight(0)`: (105, 55, 288, 83) |
+| `text(i)` | O sitio do texto do elemento `i`: o resalte sen `text_padding` píxeles aos lados, co seu alto. O programa corta o texto ás columnas que caben nel, e debúxao centrado no seu alto. | `text(0)`: (116, 55, 277, 83) |
+| `line(i)` | A liña do separador `i`: `line_gap` píxeles por debaixo do comezo do seu sitio, de lado a lado, e `line` de alto. | `line(1)`: (101, 86, 292, 87) |
+
+- **`inset`**, privada: `rect` sen `x` píxeles aos lados nin `y` por riba e por debaixo; se non queda nada, `Rect::EMPTY`. Así, o resalte dunha liña, que só mide 3, ou o texto dun menú máis estreito ca as súas marxes, dan sempre o mesmo rectángulo baleiro, e non uns lados do revés.
+- `highlight` e `text` só teñen sentido nun elemento, e `line`, nunha liña: o programa chama uns ou outro segundo a entrada.
+- `entry` dá unha copia do rectángulo (`copied`), coma `menu`: os rectángulos son `Copy`.
+
+### A entrada debaixo dun punto: `entry_at`
+
+```rust
+pub fn entry_at(&self, at: Point) -> Option<usize> {
+    if !self.bounds.contains_point(at) {
+        return None;
+    }
+    self.entries.iter().position(|room| room.contains_point(at))
+}
+```
+
+**`entry_at`** dá a entrada que ten o píxel `at`, en coordenadas da área cliente, ou `None`: no bordo, no espazo por riba da primeira entrada e por debaixo da última, fóra do menú, e fóra da xanela.
+
+- **Fóra da xanela**, desde a revisión do código da 2.4: nun menú máis alto ca ela, o que queda por debaixo do seu bordo de abaixo non se ve, e o punteiro non o resalta nin o escolle. Co rato capturado, cun botón premido no menú, o punteiro pode chegar alí, fóra da xanela ([Código › meiga › `menu_mouse`](meiga.md#o-rato-co-menú-aberto-menu_mouse)); antes, soltar o botón enriba dun elemento que non se vía escollíao. Os lados e o bordo de arriba nunca cortan o menú: o seu ancho non pasa do da xanela, e [`place`](#onde-se-abre-anchor-e-place) non o deixa saír por eles.
+- **Todo o sitio dun elemento é del**, tamén aos lados do resalte e por riba e por debaixo del: entre dous elementos non hai ningún oco onde o punteiro perda o resalte. Os sitios van seguidos e non se solapan, así que un punto está, como moito, nun ([`contains_point`](#cratesmeiga-coresrcgeometryrs)).
+- Unha liña tamén é unha entrada: o punteiro sobre ela dá a súa posición, e [`hover`](#menu-as-entradas-e-o-resalte) non resalta nada.
+- `position` percorre os sitios en orde, e dá o primeiro que contén o punto.
+- O programa usa a resposta co punteiro, para resaltar, e co botón que sobe, para escoller ([`action`](#escoller-action-e-chosen)).
+
+No exemplo, `the_pointer_is_on_an_item_anywhere_in_its_room` comproba:
+
+| Punto | Entrada | Por que |
+|---|---|---|
+| (101, 53) | 0 | O primeiro píxel do sitio de *Duplicate tab*. |
+| (102, 84) | 0 | Á esquerda do seu resalte e por debaixo del. |
+| (200, 86) | 1 | Na liña. |
+| (291, 183) | 4 | O último píxel do sitio de *Close tabs to the right*. |
+| (100, 60) | `None` | No bordo. |
+| (200, 52) e (200, 185) | `None` | No espazo por riba da primeira entrada e por debaixo da última. |
+| (99, 60) | `None` | Fóra do menú. |
+
+**Probas.** Oito, con coordenadas exactas. `entries` fai as entradas do exemplo, as do menú dunha tab, con *Close other tabs* desactivado e os números do 1 ao 4 coma accións; e `layout`, o menú do exemplo onde diga a ancla: a 96 DPI, con celas de 7 × 16 píxeles, nunha xanela de 800 × 600.
+
+| Proba | Que comproba |
+|---|---|
+| `the_menu_is_as_wide_as_its_longest_item_and_as_high_as_its_entries` | O menú do exemplo, en (100, 50, 293, 187), co bordo de 1; os sitios de *Duplicate tab*, da liña, de *Close tab* e de *Close tabs to the right*, e ningún despois do último (`Rect::EMPTY`); e o resalte e o texto de *Duplicate tab*, e a liña, coma na táboa do exemplo. |
+| `the_pointer_is_on_an_item_anywhere_in_its_room` | Os puntos da táboa de [`entry_at`](#a-entrada-debaixo-dun-punto-entry_at). |
+| `a_menu_that_does_not_fit_goes_to_the_other_side_and_stays_in_the_window` | Os casos de [`place`](#onde-se-abre-anchor-e-place) que non caben por ese lado: o punteiro en (700, 500); unha xanela de 250 × 150; unha de 150 de ancho, onde o texto de *Duplicate tab* queda en (16, 15, 134, 43); e unha de 100 de alto, onde o menú, en (40, 0, 233, 137), queda cortado: en (100, 99), por riba do bordo de abaixo da xanela, o punteiro está en *Close other tabs*, que a xanela corta, e en (100, 100), no seu sitio pero xa fóra da xanela, en ningunha entrada, nin en (100, 120), no sitio de *Close tabs to the right*, que non se ve (desde a revisión do código da 2.4). |
+| `below_a_part_of_the_window_from_its_left_side` | Os dous casos de `Below` de [`place`](#onde-se-abre-anchor-e-place). |
+| `the_sizes_follow_the_scale` | A 144 DPI (150 %), con celas de 11 × 25 nunha xanela de 1920 × 1080: o menú en (0, 0, 303, 208), o bordo de 2, o sitio de *Duplicate tab* en (2, 5, 301, 53), o seu resalte en (8, 8, 295, 50), e a liña en (2, 55, 301, 57). |
+| `the_keyboard_skips_what_cannot_be_chosen_and_goes_round` | Sen resalte, `Next` vai a *Duplicate tab*; despois salta a liña e o elemento desactivado, e do último volta ao primeiro; `Previous` volta do primeiro ao último, e despois vai a *Close tab*; `First` vai ao primeiro e, outra vez, non cambia nada; `Last` vai ao último, e `chosen` dá a súa acción; e, sen resalte, `Previous` vai ao último. |
+| `the_pointer_only_highlights_what_can_be_chosen` | O punteiro sobre *Close tab* resáltao, e `chosen` dá a súa acción; outra vez, non cambia nada; sobre a liña, quita o resalte; e sobre o elemento desactivado, e despois da última entrada, non resalta nada. `action` non dá a acción do desactivado, e si a do último. |
+| `a_menu_without_items_to_choose_highlights_nothing` | Cun elemento desactivado e unha liña, `Next` e `Last` non resaltan nada; e `label` dá o texto do elemento, e nada na liña. |
 
 ## `crates/meiga-core/tests/recordings.rs`
 

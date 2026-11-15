@@ -9,6 +9,7 @@ mod app;
 mod bench;
 mod clipboard;
 mod frames;
+mod menu;
 mod mouse;
 mod options;
 mod scrollbar;

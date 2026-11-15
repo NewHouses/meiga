@@ -22,6 +22,15 @@
 //! went down, until it goes up, and otherwise for the one under the
 //! pointer. The terminal gets the events with its own coordinates, from
 //! below the bar.
+//!
+//! The menu of a tab, which the right button opens on its tab, and the Menu
+//! key or Shift+F10 on the tab that is shown, goes over the bar and the
+//! terminal (ADR 0021). While it is open, it gets all the mouse, and the
+//! keys that go down; the ones that went down before go up for the program,
+//! which gets each key that it got go up too. What changes under it, all
+//! inside it, is not drawn until it closes. It closes when an item is
+//! chosen, and also when the window loses the focus, changes size or scale,
+//! starts moving, or is minimized.
 
 use std::convert::Infallible;
 use std::mem;
@@ -29,9 +38,11 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use meiga_core::geometry::{GridSize, Point, Rect, Size};
-use meiga_core::model::{self, Close, Switch, TabId};
+use meiga_core::input::KeyEvent;
+use meiga_core::model::{self, Close, Closed, Switch, TabId};
 use meiga_core::shell;
 use meiga_core::term::Terminal;
+use meiga_core::ui::menu::{Anchor, Entry};
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::conpty::{Priority, Pty};
 use meiga_win::event::{Event, HandlerError};
@@ -39,13 +50,15 @@ use meiga_win::window::{Pointer, Waker, Window};
 
 use crate::app::TITLE;
 use crate::frames::{self, Scene};
+use crate::menu::MenuView;
 use crate::mouse::Response;
 use crate::scrollbar::ScrollBar;
 use crate::session::{self, Shared, lock};
 use crate::tabbar::{Label, TabBar};
 use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TabTerminal, TerminalView};
 
-/// What a shortcut, or a click on the tab bar, asks for the tabs.
+/// What a shortcut, a click on the tab bar, or an item of the menu of a tab
+/// asks for the tabs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TabAction {
     /// Open a tab with the default shell at the end, and show it.
@@ -61,6 +74,21 @@ pub enum TabAction {
     Activate(TabId),
     /// Close this tab, and its session. The last one closes the window.
     CloseTab(TabId),
+    /// Open the menu of this tab, with its top-left corner at this point of
+    /// the window: the right button went up on the tab.
+    Menu(TabId, Point),
+    /// Open the menu of the tab that is shown, below its tab: the keyboard
+    /// asked for it.
+    ActiveMenu,
+    /// Open a tab with the program of this one, right after it, and show
+    /// it.
+    Duplicate(TabId),
+    /// Close all the tabs but this one, and their sessions, and show this
+    /// one.
+    CloseOthers(TabId),
+    /// Close the tabs on the right of this one, and their sessions. If the
+    /// one that is shown is one of them, this one is shown.
+    CloseToTheRight(TabId),
 }
 
 /// A tab: the terminal of its session, the session, and what the bar shows
@@ -70,6 +98,9 @@ struct Tab {
     /// It closes when the tab closes. `None` if its program could not
     /// start.
     session: Option<Pty>,
+    /// The program that its session runs, as the command line gave it, or
+    /// `None` for the default shell: a duplicate of the tab runs it too.
+    command: Option<String>,
     /// While the tab is hidden, when the synchronized update that its
     /// program has open ends, if the program does not end it first.
     sync_due: Option<Instant>,
@@ -102,6 +133,7 @@ impl Tab {
         Self {
             shared,
             session,
+            command: command.map(str::to_owned),
             sync_due: None,
             title_due: false,
             name: shell::program_name(program).to_owned(),
@@ -177,12 +209,13 @@ impl Label for Tab {
     }
 }
 
-/// The tabs of the window, the view, which shows the active one, and the
-/// tab bar.
+/// The tabs of the window, the view, which shows the active one, the tab
+/// bar, and the menu of a tab.
 pub struct Tabs {
     tabs: model::Window<Tab>,
     view: TerminalView,
     bar: TabBar,
+    menu: MenuView<TabAction>,
     /// The size of the client area of the window: the bar, and below it
     /// the terminal.
     client: Size,
@@ -220,6 +253,7 @@ impl Tabs {
             tabs,
             view,
             bar,
+            menu: MenuView::new(),
             client,
             retitled_at: None,
             answers: Vec::new(),
@@ -230,26 +264,72 @@ impl Tabs {
         &self.view
     }
 
-    pub const fn view_mut(&mut self) -> &mut TerminalView {
-        &mut self.view
-    }
-
     /// The client area of the window has `client` pixels now: the bar has
-    /// its width, and the terminal the rest.
-    pub fn resized(&mut self, client: Size) {
+    /// its width, and the terminal the rest. If it changed, the menu
+    /// closes.
+    pub fn resized(&mut self, window: &Window, client: Size) {
+        if client != self.client {
+            self.close_menu(window);
+        }
         self.client = client;
         self.bar.resize(client.width, &self.tabs);
         self.view.resized(below_bar(client, self.bar.height()));
     }
 
     /// The window moved to a monitor with `dpi`: the bar and the view are
-    /// made for it. The new size of the window, if it changes, comes next.
-    pub fn dpi_changed(&mut self, dpi: u32) {
+    /// made for it, and the menu closes. The new size of the window, if it
+    /// changes, comes next.
+    pub fn dpi_changed(&mut self, window: &Window, dpi: u32) {
+        self.close_menu(window);
         self.bar.set_dpi(dpi, &self.tabs);
         self.view.dpi_changed(dpi);
         // The bar can have another height: until the new size comes, the
         // terminal has the rest of the same window.
         self.view.resized(below_bar(self.client, self.bar.height()));
+    }
+
+    /// The window gained or lost the focus, at `now`. Without it, the menu
+    /// closes.
+    pub fn focus(&mut self, window: &Window, focused: bool, now: Instant) {
+        if !focused {
+            self.close_menu(window);
+        }
+        self.view.focus(focused, now);
+    }
+
+    /// Closes the menu, if it is open, and lets the mouse go if a button
+    /// was down in it. Returns whether it was open: a frame has to draw
+    /// what it covered.
+    pub fn close_menu(&mut self, window: &Window) -> bool {
+        if self.menu.is_pressed() {
+            window.release_mouse();
+        }
+        self.menu.close()
+    }
+
+    /// A key of the window. While the menu is open, the keys that go down
+    /// are for it, and the program does not get them, nor when they go up;
+    /// but one that was down for the program before does nothing while it
+    /// repeats, and the program gets it when it goes up.
+    pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
+        if !self.menu.is_open() || !event.down {
+            return self.view.key(window, event);
+        }
+        if self.view.holds_key(event.key) {
+            return Response::default();
+        }
+        let pressed = self.menu.is_pressed();
+        self.view.take_key(event);
+        let tab = self.menu.key(event);
+        // Closed with a button down in it: the window lets the mouse go.
+        if pressed && !self.menu.is_pressed() {
+            window.release_mouse();
+        }
+        Response {
+            redraw: self.menu.has_damage(),
+            tab,
+            ..Response::default()
+        }
     }
 
     /// The reader thread of the tab `id` woke the window up, which takes at
@@ -325,17 +405,30 @@ impl Tabs {
         self.view.dialog_closed(window);
     }
 
-    /// Does what a shortcut or a click asked for the tabs, at `now`.
-    /// Returns whether a frame has to show it: the window shows another
-    /// tab, or the bar changed.
+    /// Does what a shortcut, a click or the menu asked for the tabs, at
+    /// `now`. Returns whether a frame has to show it: the window shows
+    /// another tab, the bar changed, or the menu opened.
     pub fn act(&mut self, window: &Window, action: TabAction, now: Instant) -> bool {
         let switch = match action {
             TabAction::New => self.open(window),
+            TabAction::Duplicate(id) => self.duplicate(window, id),
             TabAction::Next => self.tabs.activate_next(),
             TabAction::Previous => self.tabs.activate_previous(),
             TabAction::Activate(id) => self.tabs.activate(id).ok().flatten(),
             TabAction::Close => return self.close(window, self.tabs.active().id(), now),
             TabAction::CloseTab(id) => return self.close(window, id, now),
+            TabAction::CloseOthers(id) => {
+                return self.close_several(window, now, |tabs| tabs.close_others(id));
+            }
+            TabAction::CloseToTheRight(id) => {
+                return self.close_several(window, now, |tabs| tabs.close_to_the_right(id));
+            }
+            TabAction::Menu(id, at) => return self.open_menu(window, id, Anchor::At(at), false),
+            TabAction::ActiveMenu => {
+                let tab = self.bar.tab(self.tabs.active_index());
+                let id = self.tabs.active().id();
+                return self.open_menu(window, id, Anchor::Below(tab), true);
+            }
         };
         match switch {
             Some(switch) => {
@@ -346,19 +439,39 @@ impl Tabs {
         }
     }
 
-    /// Opens a tab at the end, with the default shell and the grid that
-    /// fills the window, and activates it. Returns the change of the active
-    /// tab.
+    /// Opens a tab at the end, with the default shell, and activates it.
+    /// Returns the change of the active tab.
     fn open(&mut self, window: &Window) -> Option<Switch> {
+        let id = self.open_tab(window, None);
+        self.bar.tabs_changed(&self.tabs);
+        // It cannot fail: the tab was just opened.
+        self.tabs.activate(id).ok().flatten()
+    }
+
+    /// Opens a tab with the program of the tab `id`, right after it, and
+    /// activates it, as "Duplicate tab" in Chrome and in Windows Terminal.
+    /// Returns the change of the active tab.
+    fn duplicate(&mut self, window: &Window, id: TabId) -> Option<Switch> {
+        let index = self.tabs.index_of(id)?;
+        let command = self.tabs.get(id)?.command.clone();
+        let copy = self.open_tab(window, command.as_deref());
+        // It cannot fail: the copy is the last tab, after the one at
+        // `index`.
+        let _ = self.tabs.move_tab(copy, index + 1);
+        self.bar.tabs_changed(&self.tabs);
+        self.tabs.activate(copy).ok().flatten()
+    }
+
+    /// Opens a tab at the end, whose session runs `command`, or the default
+    /// shell, with the grid that fills the window. Returns its identifier.
+    fn open_tab(&mut self, window: &Window, command: Option<&str>) -> TabId {
         let grid = self.view.window_grid();
         let cell = self.view.cell();
         let waker = window.waker();
         let Ok(id) = self
             .tabs
-            .try_open_with(|id| Ok::<_, Infallible>(Tab::start(None, grid, cell, &waker, id)));
-        self.bar.tabs_changed(&self.tabs);
-        // It cannot fail: the tab was just opened.
-        self.tabs.activate(id).ok().flatten()
+            .try_open_with(|id| Ok::<_, Infallible>(Tab::start(command, grid, cell, &waker, id)));
+        id
     }
 
     /// Closes the tab `id` and its session, at `now`. The last tab closes
@@ -384,6 +497,71 @@ impl Tabs {
             // A tab that already closed.
             Err(_) => false,
         }
+    }
+
+    /// Closes the tabs that `close` closes, and their sessions, at `now`.
+    /// Returns whether a frame has to show it: the bar without them, and
+    /// another tab if the active one was one of them.
+    fn close_several(
+        &mut self,
+        window: &Window,
+        now: Instant,
+        close: impl FnOnce(&mut model::Window<Tab>) -> Result<Closed<Tab>, model::Error>,
+    ) -> bool {
+        let from = self.tabs.active().id();
+        // A tab that already closed.
+        let Ok(Closed {
+            contents,
+            activated,
+        }) = close(&mut self.tabs)
+        else {
+            return false;
+        };
+        if contents.is_empty() {
+            return false;
+        }
+        if let Some(to) = activated {
+            self.show(window, Switch { from, to }, now);
+        }
+        // Their sessions close without waiting, as in `close`.
+        drop(contents);
+        self.bar.tabs_changed(&self.tabs);
+        true
+    }
+
+    /// Opens the menu of the tab `id` where `anchor` says, with its first
+    /// item highlighted if the keyboard opens it. From now on, the mouse is
+    /// for the menu: a button that is down on the bar or on the terminal is
+    /// let go of, and they lose the pointer. Returns whether a frame has to
+    /// show it.
+    fn open_menu(&mut self, window: &Window, id: TabId, anchor: Anchor, keyboard: bool) -> bool {
+        let Some(index) = self.tabs.index_of(id) else {
+            return false;
+        };
+        let count = self.tabs.tab_count();
+        let entries = vec![
+            Entry::item("Duplicate tab", TabAction::Duplicate(id), true),
+            Entry::Separator,
+            Entry::item("Close tab", TabAction::CloseTab(id), true),
+            Entry::item("Close other tabs", TabAction::CloseOthers(id), count > 1),
+            Entry::item(
+                "Close tabs to the right",
+                TabAction::CloseToTheRight(id),
+                index + 1 < count,
+            ),
+        ];
+        if self.bar.is_pressed() {
+            self.bar.capture_lost(&self.tabs);
+            window.release_mouse();
+        }
+        self.bar.left(&self.tabs);
+        self.view.forget_mouse(window);
+        window.set_pointer(Pointer::Arrow);
+        let cell = self.bar.font_mut().cell();
+        let bounds = Rect::from_size(self.client);
+        self.menu
+            .open(entries, self.view.dpi(), cell, anchor, bounds, keyboard);
+        true
     }
 
     /// Shows the tab `switch.to`, at `now`, instead of `switch.from`, which
@@ -430,8 +608,12 @@ impl Tabs {
             .min()
     }
 
-    /// A mouse event of the window, for the bar or for the terminal.
+    /// A mouse event of the window, for the menu while it is open, and
+    /// otherwise for the bar or for the terminal.
     pub fn mouse(&mut self, window: &Window, event: &Event) -> Response {
+        if self.menu.is_open() {
+            return self.menu_mouse(window, event);
+        }
         let at = match *event {
             Event::MouseDown { at, .. }
             | Event::MouseUp { at, .. }
@@ -496,6 +678,45 @@ impl Tabs {
         response.redraw |= self.bar.has_damage();
         response
     }
+
+    /// A mouse event while the menu is open: it gets all of them, and the
+    /// window captures the mouse while a button is down in it.
+    fn menu_mouse(&mut self, window: &Window, event: &Event) -> Response {
+        let pressed = self.menu.is_pressed();
+        let mut tab = None;
+        match *event {
+            Event::MouseMoved { at, .. } => {
+                window.set_pointer(Pointer::Arrow);
+                if self.menu.moved(at) {
+                    window.track_mouse_leave();
+                }
+            }
+            Event::MouseDown { button, at, .. } => self.menu.down(button, at),
+            Event::MouseUp { button, at, .. } => tab = self.menu.up(button, at),
+            Event::MouseLeft => self.menu.left(),
+            Event::CaptureLost => self.menu.capture_lost(),
+            // The wheel does nothing.
+            _ => {}
+        }
+        match (pressed, self.menu.is_pressed()) {
+            (false, true) => window.capture_mouse(),
+            (true, false) if *event != Event::CaptureLost => {
+                window.release_mouse();
+                // Holding the mouse may have ended the tracking of its
+                // leave. If the pointer is out of the window, Windows tells
+                // it at once.
+                if self.menu.is_open() {
+                    window.track_mouse_leave();
+                }
+            }
+            _ => {}
+        }
+        Response {
+            redraw: self.menu.has_damage(),
+            tab,
+            ..Response::default()
+        }
+    }
 }
 
 impl Scene for Tabs {
@@ -506,22 +727,35 @@ impl Scene for Tabs {
         damage: &mut dyn FnMut(Rect),
     ) -> Option<Instant> {
         let top = coordinate(self.bar.height());
-        // The view gives its areas from its own top-left corner, and the
-        // whole window when it draws all of it, with the bar: when it shows
-        // another tab, or the colours of the terminal change.
+        // What changes in the bar and in the terminal under the menu, all
+        // inside it, is not drawn: it shows when the menu closes, which
+        // draws again all that it covered. The view gives its areas from
+        // its own top-left corner, and the whole window when it draws all
+        // of it, with the bar: when it shows another tab, or the colours of
+        // the terminal change.
+        let menu = &self.menu;
         let shown = self.view.update(window, now, &mut |area| {
-            damage(if area == frames::ALL {
+            let area = if area == frames::ALL {
                 area
             } else {
                 area.offset(Point::new(0, top))
-            });
+            };
+            if !menu.covers(area) {
+                damage(area);
+            }
         });
         // After the view, which may have ended a synchronized update with
         // a title in it.
         self.retitle_active(window);
         let hidden = self.end_hidden_syncs(now);
         self.retitle_hidden();
-        self.bar.take_damage(damage);
+        let menu = &self.menu;
+        self.bar.take_damage(&mut |area| {
+            if !menu.covers(area) {
+                damage(area);
+            }
+        });
+        self.menu.take_damage(damage);
         earliest(shown, hidden)
     }
 
@@ -548,15 +782,19 @@ impl Scene for Tabs {
     }
 
     fn draw(&mut self, canvas: &mut Canvas<'_>) {
-        self.bar.draw(canvas, &self.tabs, self.view.palette());
-        let terminal = Rect {
-            top: coordinate(self.bar.height()),
-            ..Rect::from_size(canvas.size())
-        };
-        let mut terminal = canvas.region(terminal);
-        if !terminal.clip().is_empty() {
-            self.view.draw(&mut terminal);
+        // Under the menu there is only the menu, which covers all of it.
+        if !self.menu.covers(canvas.clip()) {
+            self.bar.draw(canvas, &self.tabs, self.view.palette());
+            let terminal = Rect {
+                top: coordinate(self.bar.height()),
+                ..Rect::from_size(canvas.size())
+            };
+            let mut terminal = canvas.region(terminal);
+            if !terminal.clip().is_empty() {
+                self.view.draw(&mut terminal);
+            }
         }
+        self.menu.draw(canvas, self.bar.font_mut());
     }
 }
 

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::{Close, Error, Switch, Tab, TabId, Window};
+use super::{Close, Closed, Error, Switch, Tab, TabId, Window};
 
 /// A window with a tab for each name, the first one active, and the
 /// identifiers of its tabs.
@@ -172,6 +172,75 @@ fn the_only_tab_stays_and_the_window_closes_with_it() {
     assert_eq!(window.close(ids[1]), Ok(Close::LastTab));
     check(&window);
     assert_eq!(names(&window), ["b"]);
+}
+
+/// The answer to closing several tabs.
+fn removed_tabs<T>(contents: Vec<T>, activated: Option<TabId>) -> Result<Closed<T>, Error> {
+    Ok(Closed {
+        contents,
+        activated,
+    })
+}
+
+#[test]
+fn closing_the_others_leaves_one_tab_and_it_is_active() {
+    let (mut first, ids) = window(&["a", "b", "c", "d"]);
+    // The active tab is another one: the one that stays becomes active.
+    assert_eq!(
+        first.close_others(ids[2]),
+        removed_tabs(vec!["a", "b", "d"], Some(ids[2]))
+    );
+    check(&first);
+    assert_eq!(names(&first), ["c"]);
+    assert_eq!(first.active().id(), ids[2]);
+    // With a single tab, nothing closes.
+    assert_eq!(first.close_others(ids[2]), removed_tabs(vec![], None));
+    check(&first);
+    // The one that stays was already active.
+    let (mut second, ids) = window(&["a", "b"]);
+    assert_eq!(second.close_others(ids[0]), removed_tabs(vec!["b"], None));
+    check(&second);
+    assert_eq!(names(&second), ["a"]);
+}
+
+#[test]
+fn closing_the_tabs_on_the_right_activates_the_tab_if_the_active_one_closes() {
+    let (mut first, ids) = window(&["a", "b", "c", "d", "e"]);
+    assert_eq!(first.activate(ids[3]), Ok(switched(ids[0], ids[3])));
+    check(&first);
+    assert_eq!(
+        first.close_to_the_right(ids[1]),
+        removed_tabs(vec!["c", "d", "e"], Some(ids[1]))
+    );
+    check(&first);
+    assert_eq!(names(&first), ["a", "b"]);
+    assert_eq!(first.active().id(), ids[1]);
+    // An active tab on the left stays active, and the last tab closes none.
+    let (mut second, ids) = window(&["a", "b", "c"]);
+    assert_eq!(
+        second.close_to_the_right(ids[1]),
+        removed_tabs(vec!["c"], None)
+    );
+    check(&second);
+    assert_eq!(
+        second.close_to_the_right(ids[1]),
+        removed_tabs(vec![], None)
+    );
+    check(&second);
+    assert_eq!(names(&second), ["a", "b"]);
+    assert_eq!(second.active().id(), ids[0]);
+}
+
+#[test]
+fn closing_several_tabs_refuses_a_tab_that_is_not_there() {
+    let (mut window, ids) = window(&["a", "b"]);
+    assert_eq!(window.close(ids[1]), removed("b", None));
+    let gone = ids[1];
+    assert_eq!(window.close_others(gone), Err(Error::NoSuchTab(gone)));
+    check(&window);
+    assert_eq!(window.close_to_the_right(gone), Err(Error::NoSuchTab(gone)));
+    check(&window);
+    assert_eq!(names(&window), ["a"]);
 }
 
 #[test]
@@ -420,14 +489,40 @@ fn random_changes_keep_the_rules_and_match_a_plain_list() {
                     assert_eq!(answer, Ok(switch));
                     active = target;
                 }
-                _ => {
-                    if !closed.is_empty() {
-                        let gone = closed[next(closed.len())];
-                        assert_eq!(window.close(gone), Err(Error::NoSuchTab(gone)));
-                        check(&window);
-                        assert_eq!(window.activate(gone), Err(Error::NoSuchTab(gone)));
+                _ => match next(8) {
+                    // Rarely, so that the bar can grow: all the tabs but one,
+                    // or the ones on the right of one.
+                    0 => {
+                        let keep = list[next(count)];
+                        let answer = window.close_others(ids[&keep]);
+                        let others: Vec<u32> =
+                            list.iter().copied().filter(|tab| *tab != keep).collect();
+                        let activated = (active != keep).then(|| ids[&keep]);
+                        assert_eq!(answer, removed_tabs(others.clone(), activated));
+                        closed_ids(&mut closed, &ids, &others);
+                        list = vec![keep];
+                        active = keep;
                     }
-                }
+                    1 => {
+                        let index = next(count);
+                        let answer = window.close_to_the_right(ids[&list[index]]);
+                        let right = list.split_off(index + 1);
+                        let activated = right.contains(&active).then(|| {
+                            active = list[index];
+                            ids[&active]
+                        });
+                        assert_eq!(answer, removed_tabs(right.clone(), activated));
+                        closed_ids(&mut closed, &ids, &right);
+                    }
+                    _ => {
+                        if !closed.is_empty() {
+                            let gone = closed[next(closed.len())];
+                            assert_eq!(window.close(gone), Err(Error::NoSuchTab(gone)));
+                            check(&window);
+                            assert_eq!(window.activate(gone), Err(Error::NoSuchTab(gone)));
+                        }
+                    }
+                },
             }
             check(&window);
             assert_eq!(names(&window), list);
@@ -436,4 +531,9 @@ fn random_changes_keep_the_rules_and_match_a_plain_list() {
     }
     // The bar went from one tab to many: the edges were tried too.
     assert!(sizes.contains(&1) && sizes.contains(&2) && sizes.iter().any(|size| *size >= 10));
+}
+
+/// Adds to `closed` the identifiers of the tabs of `contents`.
+fn closed_ids(closed: &mut Vec<TabId>, ids: &HashMap<u32, TabId>, contents: &[u32]) {
+    closed.extend(contents.iter().map(|tab| ids[tab]));
 }

@@ -32,9 +32,10 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md) e [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) |
 | [0016](0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom | Aceptado; concretado polo [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) |
 | [0017](0017-os-fotogramas-por-escritorio-remoto.md) | 30 fotogramas por segundo por Escritorio remoto e 60 en local | Aceptado |
-| [0018](0018-o-modelo-das-tabs.md) | O modelo das tabs | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0020](0020-a-barra-de-tabs.md) |
-| [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) | Varias sesións e as tabs en segundo plano | Aceptado; concretado polo [0020](0020-a-barra-de-tabs.md) |
-| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado |
+| [0018](0018-o-modelo-das-tabs.md) | O modelo das tabs | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md) e [0021](0021-os-menus-e-o-menu-da-tab.md) |
+| [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) | Varias sesións e as tabs en segundo plano | Aceptado; concretado polos [0020](0020-a-barra-de-tabs.md) e [0021](0021-os-menus-e-o-menu-da-tab.md) |
+| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado; concretado polo [0021](0021-os-menus-e-o-menu-da-tab.md) |
+| [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado |
 
 ## Como se relacionan
 
@@ -95,6 +96,13 @@ graph TD
     A15 --> A20
     A18 --> A20
     A19 --> A20
+    A2 --> A21["0021 Os menús e o menú da tab"]
+    A8 --> A21
+    A14 --> A21
+    A15 --> A21
+    A18 --> A21
+    A19 --> A21
+    A20 --> A21
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.
