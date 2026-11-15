@@ -1,7 +1,8 @@
 //! Windows platform layer of meiga.
 //!
-//! Wraps ConPTY, shell profile discovery, the file system, the clipboard, the
-//! Win32 window and DPI handling. Every `unsafe` block in this crate must
+//! Wraps ConPTY, the discovery of the shells and the environment of their
+//! programs, the file system, the clipboard, the Win32 window and DPI
+//! handling. Every `unsafe` block in this crate must
 //! explain why it is sound in a `// SAFETY:` comment.
 
 pub mod clipboard;
@@ -9,6 +10,7 @@ pub mod conpty;
 mod error;
 pub mod event;
 mod keyboard;
+pub mod profiles;
 pub mod window;
 
 pub use error::Error;

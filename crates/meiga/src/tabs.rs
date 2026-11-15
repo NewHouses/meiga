@@ -23,9 +23,14 @@
 //! pointer. The terminal gets the events with its own coordinates, from
 //! below the bar.
 //!
+//! A new tab runs the default profile or, from the menu of the profiles, the
+//! one that the user chooses (ADR 0022). The first one runs the program of
+//! the command line of meiga, if it gives one.
+//!
 //! The menu of a tab, which the right button opens on its tab, and the Menu
 //! key or Shift+F10 on the tab that is shown, goes over the bar and the
-//! terminal (ADR 0021). While it is open, it gets all the mouse, and the
+//! terminal (ADR 0021), as the menu of the profiles, which the button next
+//! to + and Ctrl+Shift+Space open, below those buttons. While it is open, it gets all the mouse, and the
 //! keys that go down; the ones that went down before go up for the program,
 //! which gets each key that it got go up too. What changes under it, all
 //! inside it, is not drawn until it closes. It closes when an item is
@@ -40,7 +45,7 @@ use std::time::Instant;
 use meiga_core::geometry::{GridSize, Point, Rect, Size};
 use meiga_core::input::KeyEvent;
 use meiga_core::model::{self, Close, Closed, Switch, TabId};
-use meiga_core::shell;
+use meiga_core::profile::Launch;
 use meiga_core::term::Terminal;
 use meiga_core::ui::menu::{Anchor, Entry};
 use meiga_render::{Canvas, Font, FontSystem};
@@ -54,15 +59,22 @@ use crate::menu::MenuView;
 use crate::mouse::Response;
 use crate::scrollbar::ScrollBar;
 use crate::session::{self, Shared, lock};
+use crate::shells::Shells;
 use crate::tabbar::{Label, TabBar};
 use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TabTerminal, TerminalView};
 
-/// What a shortcut, a click on the tab bar, or an item of the menu of a tab
-/// asks for the tabs.
+/// What a shortcut, a click on the tab bar, or an item of a menu asks for
+/// the tabs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TabAction {
-    /// Open a tab with the default shell at the end, and show it.
+    /// Open a tab with the default profile at the end, and show it.
     New,
+    /// Open the menu of the profiles below the buttons that open a tab,
+    /// with its first item highlighted if the keyboard asked for it.
+    ProfileMenu { keyboard: bool },
+    /// Open a tab with the profile at this place of the menu of the
+    /// profiles at the end, and show it.
+    OpenProfile(usize),
     /// Show the next tab or, from the last one, the first.
     Next,
     /// Show the previous tab or, from the first one, the last.
@@ -98,32 +110,36 @@ struct Tab {
     /// It closes when the tab closes. `None` if its program could not
     /// start.
     session: Option<Pty>,
-    /// The program that its session runs, as the command line gave it, or
-    /// `None` for the default shell: a duplicate of the tab runs it too.
-    command: Option<String>,
+    /// What its session runs, and the name that the bar shows while its
+    /// program gives no title: a duplicate of the tab runs it too.
+    launch: Launch,
     /// While the tab is hidden, when the synchronized update that its
     /// program has open ends, if the program does not end it first.
     sync_due: Option<Instant>,
     /// While the tab is hidden, its program gave another title, which the
     /// next frame takes.
     title_due: bool,
-    /// The name of its program, which the bar shows while the program gives
-    /// no title.
-    name: String,
     /// The title that its program gave, as the window last took it.
     title: Option<String>,
 }
 
 impl Tab {
     /// The tab `id`: a terminal of `grid`, with cells of `cell` pixels, and
-    /// its session, which runs `command`, or the default shell, and wakes
-    /// `waker` up. If the program cannot start, the terminal shows why.
-    fn start(command: Option<&str>, grid: GridSize, cell: Size, waker: &Waker, id: TabId) -> Self {
+    /// its session, which runs what `launch` says, with the variables of
+    /// `environment`, an environment block, and wakes `waker` up. If the
+    /// program cannot start, the terminal shows why.
+    fn start(
+        launch: Launch,
+        environment: &[u16],
+        grid: GridSize,
+        cell: Size,
+        waker: &Waker,
+        id: TabId,
+    ) -> Self {
         let mut terminal = Terminal::new(grid);
         terminal.set_cell_size(cell);
         let shared = Arc::new(Mutex::new(Shared::new(terminal)));
-        let (program, started) = session::start(command, grid, &shared, waker, id);
-        let session = match started {
+        let session = match session::start(&launch, environment, grid, &shared, waker, id) {
             Ok(pty) => Some(pty),
             Err(message) => {
                 lock(&shared).terminal.feed(message.as_bytes());
@@ -133,10 +149,9 @@ impl Tab {
         Self {
             shared,
             session,
-            command: command.map(str::to_owned),
+            launch,
             sync_due: None,
             title_due: false,
-            name: shell::program_name(program).to_owned(),
             title: None,
         }
     }
@@ -205,17 +220,18 @@ impl Tab {
 
 impl Label for Tab {
     fn label(&self) -> &str {
-        self.title.as_deref().unwrap_or(&self.name)
+        self.title.as_deref().unwrap_or(&self.launch.name)
     }
 }
 
 /// The tabs of the window, the view, which shows the active one, the tab
-/// bar, and the menu of a tab.
+/// bar, the menu that may be open, and the shells that new tabs run.
 pub struct Tabs {
     tabs: model::Window<Tab>,
     view: TerminalView,
     bar: TabBar,
     menu: MenuView<TabAction>,
+    shells: Shells,
     /// The size of the client area of the window: the bar, and below it
     /// the terminal.
     client: Size,
@@ -229,9 +245,9 @@ pub struct Tabs {
 
 impl Tabs {
     /// A tab with the grid that fills `window` below the bar, whose session
-    /// runs `command`, or the default shell, the view that shows it, and
-    /// the bar.
-    pub fn new(window: &Window, command: Option<&str>) -> Result<Self, HandlerError> {
+    /// runs what `first` says, the view that shows it, and the bar. New tabs
+    /// run the profiles of `shells`.
+    pub fn new(window: &Window, first: Launch, shells: Shells) -> Result<Self, HandlerError> {
         let fonts = FontSystem::new()?;
         let dpi = window.dpi();
         let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
@@ -241,8 +257,9 @@ impl Tabs {
         let area = below_bar(client, bar.height());
         let grid = view::grid_size(area, cell, ScrollBar::width_at(dpi));
         let waker = window.waker();
+        let environment = shells.environment();
         let Ok(tabs) = model::Window::try_new_with(|id| {
-            Ok::<_, Infallible>(Tab::start(command, grid, cell, &waker, id))
+            Ok::<_, Infallible>(Tab::start(first, environment, grid, cell, &waker, id))
         });
         let first = tabs.active();
         let terminal = first.content().terminal();
@@ -254,6 +271,7 @@ impl Tabs {
             view,
             bar,
             menu: MenuView::new(),
+            shells,
             client,
             retitled_at: None,
             answers: Vec::new(),
@@ -309,13 +327,15 @@ impl Tabs {
 
     /// A key of the window. While the menu is open, the keys that go down
     /// are for it, and the program does not get them, nor when they go up;
-    /// but one that was down for the program before does nothing while it
-    /// repeats, and the program gets it when it goes up.
+    /// but one that was down before does nothing while it repeats: the
+    /// program gets it when it goes up, if it went down for the program,
+    /// and nobody does, if a shortcut took it, as the one that opened the
+    /// menu.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         if !self.menu.is_open() || !event.down {
             return self.view.key(window, event);
         }
-        if self.view.holds_key(event.key) {
+        if self.view.holds_key(event.key) || self.view.took_for_a_shortcut(event.key) {
             return Response::default();
         }
         let pressed = self.menu.is_pressed();
@@ -410,7 +430,14 @@ impl Tabs {
     /// another tab, the bar changed, or the menu opened.
     pub fn act(&mut self, window: &Window, action: TabAction, now: Instant) -> bool {
         let switch = match action {
-            TabAction::New => self.open(window),
+            TabAction::New => self.open(window, self.shells.default_launch()),
+            TabAction::OpenProfile(index) => match self.shells.launch(index) {
+                Some(launch) => self.open(window, launch),
+                None => None,
+            },
+            TabAction::ProfileMenu { keyboard } => {
+                return self.open_profile_menu(window, keyboard);
+            }
             TabAction::Duplicate(id) => self.duplicate(window, id),
             TabAction::Next => self.tabs.activate_next(),
             TabAction::Previous => self.tabs.activate_previous(),
@@ -439,10 +466,10 @@ impl Tabs {
         }
     }
 
-    /// Opens a tab at the end, with the default shell, and activates it.
-    /// Returns the change of the active tab.
-    fn open(&mut self, window: &Window) -> Option<Switch> {
-        let id = self.open_tab(window, None);
+    /// Opens a tab at the end, which runs what `launch` says, and activates
+    /// it. Returns the change of the active tab.
+    fn open(&mut self, window: &Window, launch: Launch) -> Option<Switch> {
+        let id = self.open_tab(window, launch);
         self.bar.tabs_changed(&self.tabs);
         // It cannot fail: the tab was just opened.
         self.tabs.activate(id).ok().flatten()
@@ -453,8 +480,8 @@ impl Tabs {
     /// Returns the change of the active tab.
     fn duplicate(&mut self, window: &Window, id: TabId) -> Option<Switch> {
         let index = self.tabs.index_of(id)?;
-        let command = self.tabs.get(id)?.command.clone();
-        let copy = self.open_tab(window, command.as_deref());
+        let launch = self.tabs.get(id)?.launch.clone();
+        let copy = self.open_tab(window, launch);
         // It cannot fail: the copy is the last tab, after the one at
         // `index`.
         let _ = self.tabs.move_tab(copy, index + 1);
@@ -462,15 +489,16 @@ impl Tabs {
         self.tabs.activate(copy).ok().flatten()
     }
 
-    /// Opens a tab at the end, whose session runs `command`, or the default
-    /// shell, with the grid that fills the window. Returns its identifier.
-    fn open_tab(&mut self, window: &Window, command: Option<&str>) -> TabId {
+    /// Opens a tab at the end, whose session runs what `launch` says, with
+    /// the grid that fills the window. Returns its identifier.
+    fn open_tab(&mut self, window: &Window, launch: Launch) -> TabId {
         let grid = self.view.window_grid();
         let cell = self.view.cell();
         let waker = window.waker();
-        let Ok(id) = self
-            .tabs
-            .try_open_with(|id| Ok::<_, Infallible>(Tab::start(command, grid, cell, &waker, id)));
+        let environment = self.shells.environment();
+        let Ok(id) = self.tabs.try_open_with(|id| {
+            Ok::<_, Infallible>(Tab::start(launch, environment, grid, cell, &waker, id))
+        });
         id
     }
 
@@ -530,10 +558,8 @@ impl Tabs {
     }
 
     /// Opens the menu of the tab `id` where `anchor` says, with its first
-    /// item highlighted if the keyboard opens it. From now on, the mouse is
-    /// for the menu: a button that is down on the bar or on the terminal is
-    /// let go of, and they lose the pointer. Returns whether a frame has to
-    /// show it.
+    /// item highlighted if the keyboard opens it. Returns whether a frame
+    /// has to show it.
     fn open_menu(&mut self, window: &Window, id: TabId, anchor: Anchor, keyboard: bool) -> bool {
         let Some(index) = self.tabs.index_of(id) else {
             return false;
@@ -550,6 +576,45 @@ impl Tabs {
                 index + 1 < count,
             ),
         ];
+        self.show_menu(window, entries, anchor, keyboard)
+    }
+
+    /// Opens the menu of the profiles below the buttons that open a tab,
+    /// with the shells that are installed now, and the default profile in
+    /// bold. Its first item is highlighted if the keyboard opens it.
+    /// Returns whether a frame has to show it.
+    fn open_profile_menu(&mut self, window: &Window, keyboard: bool) -> bool {
+        self.shells.refresh();
+        let profiles = self.shells.profiles();
+        let entries = profiles
+            .list()
+            .iter()
+            .enumerate()
+            .map(|(index, profile)| {
+                let item = Entry::item(profile.name.clone(), TabAction::OpenProfile(index), true);
+                if index == profiles.default_index() {
+                    item.bold()
+                } else {
+                    item
+                }
+            })
+            .collect();
+        let anchor = Anchor::Below(self.bar.buttons());
+        self.show_menu(window, entries, anchor, keyboard)
+    }
+
+    /// Opens a menu of `entries` where `anchor` says, instead of the one
+    /// that may be open, with its first item highlighted if the keyboard
+    /// opens it. From now on, the mouse is for the menu: a button that is
+    /// down on the bar or on the terminal is let go of, and they lose the
+    /// pointer. Returns whether a frame has to show it.
+    fn show_menu(
+        &mut self,
+        window: &Window,
+        entries: Vec<Entry<TabAction>>,
+        anchor: Anchor,
+        keyboard: bool,
+    ) -> bool {
         if self.bar.is_pressed() {
             self.bar.capture_lost(&self.tabs);
             window.release_mouse();

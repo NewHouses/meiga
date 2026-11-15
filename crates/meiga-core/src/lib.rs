@@ -8,14 +8,18 @@
 #![forbid(unsafe_code)]
 
 pub mod color;
+pub mod config;
 pub mod damage;
+pub mod environment;
 pub mod geometry;
 pub mod input;
 pub mod model;
 pub mod mouse;
 pub mod pacing;
 pub mod paste;
+pub mod profile;
 pub mod shell;
+pub mod sort;
 pub mod term;
 pub mod text;
 pub mod ui;

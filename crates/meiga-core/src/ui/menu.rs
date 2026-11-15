@@ -1,7 +1,7 @@
 //! A menu over the window: a list of items, which separators can group, the
 //! item that the pointer or the keyboard highlights, and where each part goes
-//! (ADR 0021). The first one is the menu of a tab; the profiles (subphase
-//! 2.5) and the explorer (subphase 5.2) come next.
+//! (ADR 0021). The first one was the menu of a tab, and the second one, the
+//! menu of the profiles (ADR 0022); the explorer (subphase 5.2) comes next.
 //!
 //! The sizes are the ones of the menus of WinUI (`MenuFlyout`), which the
 //! menu of a tab is in Windows Terminal, as they are with the mouse and the
@@ -46,11 +46,12 @@ const LINE_GAP: u32 = 1;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Entry<A> {
     /// An item, which asks for `action` when it is chosen, if it is
-    /// `enabled`.
+    /// `enabled`, with its text in bold if it is the default choice.
     Item {
         label: Cow<'static, str>,
         action: A,
         enabled: bool,
+        bold: bool,
     },
     /// A line between two groups of items.
     Separator,
@@ -63,6 +64,27 @@ impl<A> Entry<A> {
             label: label.into(),
             action,
             enabled,
+            bold: false,
+        }
+    }
+
+    /// The same entry, with its text in bold if it is an item: the default
+    /// choice, as the profile that the button + opens.
+    #[must_use]
+    pub fn bold(self) -> Self {
+        match self {
+            Self::Item {
+                label,
+                action,
+                enabled,
+                ..
+            } => Self::Item {
+                label,
+                action,
+                enabled,
+                bold: true,
+            },
+            Self::Separator => Self::Separator,
         }
     }
 
@@ -77,6 +99,11 @@ impl<A> Entry<A> {
     /// Whether it is an item that can be chosen.
     pub const fn is_enabled(&self) -> bool {
         matches!(self, Self::Item { enabled: true, .. })
+    }
+
+    /// Whether it is an item with its text in bold.
+    pub const fn is_bold(&self) -> bool {
+        matches!(self, Self::Item { bold: true, .. })
     }
 }
 

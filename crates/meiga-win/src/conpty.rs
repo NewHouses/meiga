@@ -44,12 +44,13 @@ use windows_sys::Win32::System::LibraryLoader::{
 };
 use windows_sys::Win32::System::Pipes::CreatePipe;
 use windows_sys::Win32::System::Threading::{
-    CreateEventW, CreateProcessW, DeleteProcThreadAttributeList, EXTENDED_STARTUPINFO_PRESENT,
-    GetExitCodeProcess, INFINITE, InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST,
-    OpenProcess, PROC_THREAD_ATTRIBUTE_JOB_LIST, PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
-    PROCESS_INFORMATION, PROCESS_SYNCHRONIZE, STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW,
-    SetEvent, SetThreadPriority, THREAD_PRIORITY, THREAD_PRIORITY_BELOW_NORMAL,
-    THREAD_PRIORITY_NORMAL, UpdateProcThreadAttribute, WaitForMultipleObjects, WaitForSingleObject,
+    CREATE_UNICODE_ENVIRONMENT, CreateEventW, CreateProcessW, DeleteProcThreadAttributeList,
+    EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess, INFINITE, InitializeProcThreadAttributeList,
+    LPPROC_THREAD_ATTRIBUTE_LIST, OpenProcess, PROC_THREAD_ATTRIBUTE_JOB_LIST,
+    PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, PROCESS_INFORMATION, PROCESS_SYNCHRONIZE,
+    STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, SetEvent, SetThreadPriority,
+    THREAD_PRIORITY, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL,
+    UpdateProcThreadAttribute, WaitForMultipleObjects, WaitForSingleObject,
 };
 use windows_sys::core::HRESULT;
 
@@ -215,13 +216,8 @@ impl Conpty {
         &self.source
     }
 
-    /// Runs `command_line` in a new pseudoconsole of `size`, and gives what
-    /// it shows to `output`, on a thread of the session.
-    ///
-    /// The command line is the program and its arguments, quoted as the
-    /// program expects. Windows looks for the program as `CreateProcessW`
-    /// does: in the folder of meiga, in the current folder, in the folders
-    /// of the system and in `PATH`, and adds `.exe` if it has no extension.
+    /// Runs `command` in a new pseudoconsole of `size`, and gives what it
+    /// shows to `output`, on a thread of the session.
     ///
     /// The program runs in a job of the session, as the programs that it
     /// starts, unless they ask to leave it.
@@ -229,12 +225,17 @@ impl Conpty {
     /// If it fails, `output` is never called.
     pub fn spawn<O: Output>(
         &self,
-        command_line: &str,
+        command: &Command<'_>,
         size: GridSize,
         output: O,
     ) -> Result<Pty, Error> {
         let size = coord(size, "CreatePseudoConsole")?;
-        let mut command_line = command_line_of(command_line)?;
+        let mut command_line = null_terminated(command.line, "the command line")?;
+        let folder = command
+            .folder
+            .map(|folder| null_terminated(folder, "the folder"))
+            .transpose()?;
+        let environment = command.environment.map(environment_block).transpose()?;
         let wake = event(false)?;
         let output_closed = event(true)?;
         let job = job()?;
@@ -245,7 +246,12 @@ impl Conpty {
         // pipes break when ConPTY ends, so the reader and the writer do not
         // wait for ever.
         drop((input_read, output_write));
-        let (process, process_id) = match start(&mut command_line, &console, &job) {
+        let program = Program {
+            command_line: &mut command_line,
+            folder: folder.as_deref(),
+            environment,
+        };
+        let (process, process_id) = match start(program, &console, &job) {
             Ok(started) => started,
             Err(error) => {
                 // Before Windows 11 24H2, ClosePseudoConsole waits until
@@ -775,10 +781,48 @@ fn open_to_wait(id: usize) -> Option<OwnedHandle> {
     (!handle.is_null()).then(|| unsafe { OwnedHandle::from_raw_handle(handle) })
 }
 
-/// Starts `command_line` in `console`, in `job`. Returns the handle and the
+/// What a session runs: a program, and where and with what it starts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Command<'a> {
+    /// The program and its arguments, quoted as the program expects.
+    /// Windows looks for the program as `CreateProcessW` does: in the folder
+    /// of meiga, in its current folder, in the folders of the system and in
+    /// the `PATH` of meiga, and adds `.exe` if it has no extension.
+    pub line: &'a str,
+    /// The folder where the program starts, or `None` for the current
+    /// folder of meiga.
+    pub folder: Option<&'a str>,
+    /// The environment of the program, or `None` for the one of meiga: an
+    /// environment block, a `NAME=value` string for each variable, in the
+    /// order of their names, each one ending with a null character, and
+    /// another one at the end.
+    pub environment: Option<&'a [u16]>,
+}
+
+impl<'a> Command<'a> {
+    /// `line`, in the folder and with the environment of meiga.
+    pub const fn new(line: &'a str) -> Self {
+        Self {
+            line,
+            folder: None,
+            environment: None,
+        }
+    }
+}
+
+/// A program for `CreateProcessW`: its command line, null-terminated and
+/// writable, and its folder, null-terminated, and environment block, which
+/// ends with two null characters, if they are not the ones of meiga.
+struct Program<'a> {
+    command_line: &'a mut [u16],
+    folder: Option<&'a [u16]>,
+    environment: Option<&'a [u16]>,
+}
+
+/// Starts `program` in `console`, in `job`. Returns the handle and the
 /// identifier of its process.
 fn start(
-    command_line: &mut [u16],
+    program: Program<'_>,
     console: &PseudoConsole,
     job: &OwnedHandle,
 ) -> Result<(OwnedHandle, u32), Error> {
@@ -791,20 +835,29 @@ fn start(
     startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
     startup.lpAttributeList = attributes.as_mut_ptr();
     let mut process = PROCESS_INFORMATION::default();
-    // SAFETY: the command line is null-terminated and writable, as
-    // CreateProcessW requires. With EXTENDED_STARTUPINFO_PRESENT, it reads a
-    // whole STARTUPINFOEXW, whose attribute list outlives the call. No
-    // handles are inherited.
+    let flags = if program.environment.is_some() {
+        EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT
+    } else {
+        EXTENDED_STARTUPINFO_PRESENT
+    };
+    // SAFETY: the command line is null-terminated and writable, and the
+    // folder null-terminated, as CreateProcessW requires. The environment
+    // block, in UTF-16 as the flag says, ends with two null characters:
+    // Windows reads it up to them, inside it. With
+    // EXTENDED_STARTUPINFO_PRESENT, it reads a whole STARTUPINFOEXW, whose
+    // attribute list outlives the call. No handles are inherited.
     let started = unsafe {
         CreateProcessW(
             ptr::null(),
-            command_line.as_mut_ptr(),
+            program.command_line.as_mut_ptr(),
             ptr::null(),
             ptr::null(),
             FALSE,
-            EXTENDED_STARTUPINFO_PRESENT,
-            ptr::null(),
-            ptr::null(),
+            flags,
+            program
+                .environment
+                .map_or(ptr::null(), |block| block.as_ptr().cast()),
+            program.folder.map_or(ptr::null(), <[u16]>::as_ptr),
             ptr::from_ref(&startup).cast::<STARTUPINFOW>(),
             &mut process,
         )
@@ -919,19 +972,34 @@ fn coord(size: GridSize, function: &'static str) -> Result<COORD, Error> {
     }
 }
 
-/// The command line as CreateProcessW takes it. A null character would
-/// silently cut it.
-fn command_line_of(text: &str) -> Result<Vec<u16>, Error> {
+/// `text`, which is `what` of a program, as CreateProcessW takes it: in
+/// null-terminated UTF-16. A null character would silently cut it.
+fn null_terminated(text: &str, what: &str) -> Result<Vec<u16>, Error> {
     if text.contains('\0') {
-        return Err(Error::new(
-            "CreateProcessW",
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "the command line has a null character",
-            ),
-        ));
+        return Err(invalid_input(format!("{what} has a null character")));
     }
     Ok(wide(text))
+}
+
+/// `block`, if it is an environment block that ends as CreateProcessW
+/// expects: with two null characters. Windows reads a block up to the first
+/// empty string, so it would read past the end of one without them.
+fn environment_block(block: &[u16]) -> Result<&[u16], Error> {
+    if block.ends_with(&[0, 0]) {
+        Ok(block)
+    } else {
+        Err(invalid_input(
+            "the environment block does not end with two null characters",
+        ))
+    }
+}
+
+/// An error of CreateProcessW for `message`, before calling it.
+fn invalid_input(message: impl Into<String>) -> Error {
+    Error::new(
+        "CreateProcessW",
+        io::Error::new(io::ErrorKind::InvalidInput, message.into()),
+    )
 }
 
 /// An event, not signalled. A wait that sees it resets it, unless it is
@@ -1018,8 +1086,24 @@ mod tests {
     }
 
     #[test]
-    fn command_lines_cannot_have_null_characters() {
-        assert_eq!(command_line_of("cmd").unwrap(), [99, 109, 100, 0]);
-        assert!(command_line_of("cmd\0/c").is_err());
+    fn command_lines_and_folders_cannot_have_null_characters() {
+        assert_eq!(
+            null_terminated("cmd", "the command line").unwrap(),
+            [99, 109, 100, 0]
+        );
+        let error = null_terminated("C:\\x\0y", "the folder").unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "CreateProcessW failed: the folder has a null character"
+        );
+    }
+
+    #[test]
+    fn an_environment_block_ends_with_two_null_characters() {
+        assert!(environment_block(&[0, 0]).is_ok());
+        assert!(environment_block(&[65, 61, 49, 0, 0]).is_ok());
+        assert!(environment_block(&[65, 61, 49, 0]).is_err());
+        assert!(environment_block(&[0]).is_err());
+        assert!(environment_block(&[]).is_err());
     }
 }

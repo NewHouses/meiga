@@ -18,6 +18,9 @@ meiga-core = { path = "crates/meiga-core" }
 meiga-render = { path = "crates/meiga-render" }
 meiga-win = { path = "crates/meiga-win" }
 memchr = "2.8.3"
+# The parser of config.toml, without serde: meiga takes the values that it knows
+# from the tables that it gives, with their places in the file (ADR 0022).
+toml = { version = "1.2.1", default-features = false, features = ["parse", "std"] }
 unicode-width = { version = "0.2.3", default-features = false }
 windows = "0.62.2"
 windows-core = "0.62.2"

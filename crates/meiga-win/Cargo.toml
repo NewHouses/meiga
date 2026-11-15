@@ -23,12 +23,21 @@ windows-sys = { workspace = true, features = [
     "Win32_System_Console",
     # The clipboard, and the global memory of its data.
     "Win32_System_DataExchange",
+    # The environment of meiga, which the programs of the tabs get with a few
+    # changes.
+    "Win32_System_Environment",
     "Win32_System_IO",
     # The job of the programs of each pseudoconsole.
     "Win32_System_JobObjects",
     "Win32_System_LibraryLoader",
     "Win32_System_Memory",
     "Win32_System_Pipes",
+    # The registry, where WSL keeps its distributions and Git for Windows its
+    # folder.
+    "Win32_System_Registry",
+    # GetSystemDirectoryW: the folder of cmd.exe, wsl.exe and Windows
+    # PowerShell.
+    "Win32_System_SystemInformation",
     "Win32_System_Threading",
     "Win32_UI_HiDpi",
     "Win32_UI_Input_KeyboardAndMouse",

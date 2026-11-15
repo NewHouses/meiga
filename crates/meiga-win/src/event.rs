@@ -116,6 +116,10 @@ pub enum Event {
     /// Another thread woke the window up with its
     /// [`Waker`](crate::window::Waker), with this number.
     Wake(u64),
+    /// The window is on the screen for the first time, painted: what has to
+    /// wait until the user sees it, as a message box in front of it, can
+    /// come now. [`Window::run`] gives it once, before any other event.
+    Shown,
 }
 
 /// The event of a window message, or `None` if it is not one of them. The

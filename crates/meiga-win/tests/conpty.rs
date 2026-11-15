@@ -6,12 +6,14 @@
 // of an integration test, where a panic is also how a test fails.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use std::io;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use meiga_core::geometry::GridSize;
-use meiga_win::conpty::{Conpty, Input, Output, Priority, Pty, Source};
+use meiga_win::conpty::{Command, Conpty, Input, Output, Priority, Pty, Source};
+use meiga_win::profiles;
 use windows_sys::Win32::System::Threading::{
     GetCurrentThread, GetThreadPriority, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL,
 };
@@ -133,9 +135,13 @@ impl Transcript {
 }
 
 fn spawn(conpty: &Conpty, command_line: &str) -> (Pty, Transcript) {
+    spawn_command(conpty, &Command::new(command_line))
+}
+
+fn spawn_command(conpty: &Conpty, command: &Command<'_>) -> (Pty, Transcript) {
     let (sender, events) = mpsc::channel();
     let pty = conpty
-        .spawn(command_line, GridSize::new(80, 25), Channel(sender))
+        .spawn(command, GridSize::new(80, 25), Channel(sender))
         .unwrap();
     let transcript = Transcript {
         events,
@@ -171,6 +177,48 @@ fn the_conpty_of_windows_runs_a_program_and_reads_what_it_shows() {
 }
 
 #[test]
+fn a_program_starts_in_its_folder_with_its_environment() {
+    // A short folder, which a line of the terminal holds.
+    let folder = profiles::system_folder().unwrap();
+    let mut environment = profiles::environment();
+    environment.set("MEIGA_CHECK", "ola meiga");
+    environment.remove("COMPUTERNAME");
+    let block = environment.block();
+    let command = Command {
+        line: "cmd /d /c \"cd & echo [%MEIGA_CHECK%] [%COMPUTERNAME%]\"",
+        folder: Some(&folder),
+        environment: Some(&block),
+    };
+    let (_pty, mut transcript) = spawn_command(&bundled(), &command);
+    assert_eq!(transcript.wait_for_end(), Some(0));
+    let text = transcript.text();
+    // cmd writes the folder as the disk has it: C:\Windows\System32 for
+    // C:\WINDOWS\system32.
+    let line = format!("{folder}\r\n").to_lowercase();
+    assert!(text.to_lowercase().contains(&line), "{text:?}");
+    // cmd leaves a variable that is not there as it is.
+    assert!(text.contains("[ola meiga] [%COMPUTERNAME%]"), "{text:?}");
+}
+
+#[test]
+fn a_program_does_not_start_in_a_folder_that_is_not_there() {
+    let command = Command {
+        folder: Some(r"C:\meiga\no such folder"),
+        ..Command::new("cmd /c exit")
+    };
+    let (sender, _events) = mpsc::channel();
+    let Err(error) = bundled().spawn(&command, GridSize::new(80, 25), Channel(sender)) else {
+        panic!("it started in a folder that is not there");
+    };
+    // ERROR_DIRECTORY: the directory name is invalid.
+    assert_eq!(
+        error.os_error().and_then(io::Error::raw_os_error),
+        Some(267),
+        "{error}"
+    );
+}
+
+#[test]
 fn the_session_tells_the_exit_code_of_the_program() {
     let (_pty, mut transcript) = spawn(&bundled(), "cmd /c exit 7");
     assert_eq!(transcript.wait_for_end(), Some(7));
@@ -202,7 +250,7 @@ fn the_reader_thread_can_answer_the_program() {
     // cmd reads a line and shows it twice: "olaola" only comes from cmd.
     let _pty = bundled()
         .spawn(
-            "cmd /d /v:on /c \"set /p M=& echo !M!!M!\"",
+            &Command::new("cmd /d /v:on /c \"set /p M=& echo !M!!M!\""),
             GridSize::new(80, 25),
             output,
         )
@@ -256,7 +304,11 @@ impl Output for Priorities {
 fn the_priority_of_the_reader_changes_while_the_session_runs() {
     let (sender, blocks) = mpsc::channel();
     let pty = bundled()
-        .spawn("cmd /k", GridSize::new(80, 25), Priorities(sender))
+        .spawn(
+            &Command::new("cmd /k"),
+            GridSize::new(80, 25),
+            Priorities(sender),
+        )
         .unwrap();
     // The priority of the block that brings `text`, which the program writes
     // after the line that is typed now. The words are not in the folder
