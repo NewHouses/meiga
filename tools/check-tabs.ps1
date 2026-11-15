@@ -49,11 +49,11 @@ Windows lets it blink. With the settings of Windows by default, the cursor
 changes about every half a second while it blinks, and stops blinking 5 s
 after the screen last changed.
 
-It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal,
-which is also the default shell of the new tabs. The new tabs load the
-profile of PowerShell: one that draws something seconds after the prompt
-can make the check fail. The check uses the clipboard: if it had text, the
-check puts it back at the end.
+It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
+The new tabs run the default profile of meiga, which is PowerShell 7 if
+meiga finds it, and load the profile of PowerShell: one that draws
+something seconds after the prompt can make the check fail. The check uses
+the clipboard: if it had text, the check puts it back at the end.
 
 If a check fails, the script ends meiga.exe and keeps the frame log and the
 reports of the script.

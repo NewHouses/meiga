@@ -13,6 +13,9 @@ The first -Warmup runs are not counted: they bring the executable and its
 DLLs into the file cache, so the results describe a normal start and not the
 first one after a reboot.
 
+Every run gets an empty folder as APPDATA, so that meiga has its default
+values, whatever %APPDATA%\meiga\config.toml has.
+
 Prints the lowest, median, 95th percentile and highest times, and saves every
 run as CSV in .perf\, which git ignores because the times describe this
 machine. Numbers in the CSV always use a dot as the decimal separator.

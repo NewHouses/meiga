@@ -30,7 +30,7 @@ which is too coarse for the small amounts that a terminal uses.
 
 idle runs no scenario: it measures the terminal as you leave it, for example
 with 5 tabs open, after -Delay seconds to bring it to the front. With -Start,
-it starts the terminal without a program, with its default shell.
+it starts the terminal without a program, and meiga runs its default profile.
 
 .PARAMETER Scenario
 idle, spinner, ai-stream or bigfile.
