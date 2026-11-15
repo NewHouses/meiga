@@ -13,11 +13,9 @@
 //! a gap below the top of the bar down to its bottom, so that the active
 //! tab, which has the colour of the terminal, looks joined to it.
 
+use super::{coord, scale};
 use crate::geometry::{Point, Rect};
 
-/// The dots per inch at a scale of 100 %, where the sizes below are in
-/// pixels.
-const BASE_DPI: u32 = 96;
 /// The height of the bar.
 const HEIGHT: u32 = 32;
 /// The widest tab.
@@ -287,16 +285,6 @@ impl Layout {
         let tabs = u32::try_from(self.tabs.max(1)).unwrap_or(u32::MAX);
         (room / tabs).min(self.max_tab)
     }
-}
-
-/// `pixels` at a scale of 100 %, at `dpi`: rounded, and at least one.
-fn scale(pixels: u32, dpi: u32) -> u32 {
-    (pixels.saturating_mul(dpi).saturating_add(BASE_DPI / 2) / BASE_DPI).max(1)
-}
-
-/// A coordinate, which a bar never reaches the end of.
-fn coord(value: u64) -> i32 {
-    i32::try_from(value).unwrap_or(i32::MAX)
 }
 
 /// The square of `side` pixels in the middle of `rect`.

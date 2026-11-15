@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 2.3. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 2.4. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -1181,11 +1181,11 @@ As filas que se perden non voltan. Para o anfitrión, unha fila só de espazos e
 
 **Sen aviso.** Windows envía `WM_MOUSEMOVE` mentres o punteiro se move por riba da área cliente ([§44](#44-o-rato-en-windows)), pero nada cando sae dela: salvo que teña o rato capturado, a xanela non sabe que o punteiro xa non está.
 
-**`TrackMouseEvent`.** Unha xanela pode pedir un aviso con [`TrackMouseEvent`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-trackmouseevent) e `TME_LEAVE`: cando o punteiro sae da área cliente, Windows envíalle unha vez [`WM_MOUSELEAVE`](https://learn.microsoft.com/windows/win32/inputdev/wm-mouseleave), e o seguimento remata; para a seguinte, hai que pedilo outra vez. A captura do rato tamén pode rematalo: meiga pídeo outra vez ao soltar o botón sobre a franxa da barra.
+**`TrackMouseEvent`.** Unha xanela pode pedir un aviso con [`TrackMouseEvent`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-trackmouseevent) e `TME_LEAVE`: cando o punteiro sae da área cliente, Windows envíalle unha vez [`WM_MOUSELEAVE`](https://learn.microsoft.com/windows/win32/inputdev/wm-mouseleave), e o seguimento remata; para a seguinte, hai que pedilo outra vez. A captura do rato tamén pode rematalo: meiga pídeo outra vez ao soltar o botón sobre a franxa da barra de desprazamento ou, desde a subfase 2.3, sobre a barra de tabs, e desde a 2.4, en calquera sitio, se o menú dunha tab segue aberto.
 
 **A constante.** `TrackMouseEvent` e `TME_LEAVE` están na *feature* de `windows-sys` que meiga xa usa para o teclado e o rato, pero `WM_MOUSELEAVE` (`0x02A3`) está en `Win32_UI_Controls`, que traería miles de declaracións por ela: meiga defínea no seu código, coma `CF_UNICODETEXT` ([§46](#46-o-portapapeis-de-windows)).
 
-**En meiga.** Úsao a barra de desprazamento: o polgar ensánchase cando o punteiro entra na franxa e estréitase cando sae, tamén cando sae da xanela directamente desde ela, cando non chega ningún outro `WM_MOUSEMOVE`. meiga só pide o aviso ao entrar na franxa: fóra dela, nin mensaxes nin temporizadores. Desde a subfase 2.3, tamén a barra de tabs, ao entrar o punteiro nela, para quitar o resalte da tab ou do botón cando sae da xanela desde a barra ([§55](#55-as-barras-de-tabs-chrome-e-o-windows-terminal)).
+**En meiga.** Úsao a barra de desprazamento: o polgar ensánchase cando o punteiro entra na franxa e estréitase cando sae, tamén cando sae da xanela directamente desde ela, cando non chega ningún outro `WM_MOUSEMOVE`. meiga só pide o aviso ao entrar na franxa: fóra dela, nin mensaxes nin temporizadores. Desde a subfase 2.3, tamén a barra de tabs, ao entrar o punteiro nela, para quitar o resalte da tab ou do botón cando sae da xanela desde a barra ([§55](#55-as-barras-de-tabs-chrome-e-o-windows-terminal)). E desde a 2.4, o menú dunha tab, mentres está aberto, ao entrar o punteiro na xanela, para quitar o resalte do elemento cando sae dela ([§56](#56-os-menús-windows-winui-e-chrome)).
 
 **Se o punteiro non está na xanela.** Se o punteiro de verdade non está sobre a área cliente cando a xanela pide o aviso, Windows envía `WM_MOUSELEAVE` en seguida. Pasa nas comprobacións, que publican os movementos do rato sen mover o punteiro ([§44](#44-o-rato-en-windows)): o resalte que pon un movemento publicado quítao o aviso que chega despois, así que non contan con que quede ([Código › ferramentas](codigo/ferramentas.md#toolscheck-tabbarps1)).
 
@@ -1283,3 +1283,42 @@ O botón do medio do rato pecha unha tab: o `TabViewItem` captura o punteiro ao 
 | O botón do medio pecha a tab ao soltalo enriba dela | Chrome e o Windows Terminal |
 
 O código explícase en [Código › meiga › `tabbar.rs`](codigo/meiga.md#cratesmeigasrctabbarrs) e en [Código › meiga-core › `ui/tabbar.rs`](codigo/meiga-core.md#cratesmeiga-coresrcuitabbarrs).
+
+## 56. Os menús: Windows, WinUI e Chrome
+
+**Para que mirar outros.** Un menú contextual tamén ten regras que a xente xa sabe sen pensalo: con que se abre, onde aparece, que botón escolle un elemento ou que fai un clic fóra. meiga colle as dos menús de Windows, as dos de WinUI, que son os do Windows Terminal, e o contido do menú dunha tab en Chrome ([ADR 0021](adr/0021-os-menus-e-o-menu-da-tab.md)).
+
+**Windows** pídelle o menú contextual a unha xanela coa mensaxe [`WM_CONTEXTMENU`](https://learn.microsoft.com/en-us/windows/win32/menurc/wm-contextmenu). `DefWindowProcW` envíaa cando o botón dereito sobe (`WM_RBUTTONUP`), cando se teclea Maiús+F10, e cando a tecla de menú (`VK_APPS`) baixa e sobe. Se vén do teclado, as súas coordenadas son -1, e o menú vai no sitio do que está seleccionado, e non no do punteiro. A xanela pode mostrar entón un menú de Windows con [`TrackPopupMenuEx`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-trackpopupmenuex), que escolle un elemento co botón esquerdo e, con `TPM_RIGHTBUTTON`, tamén co dereito. Mentres está aberto, Windows corre o seu propio bucle de mensaxes, coma cando se move a xanela ([§26](#26-temporizadores-e-a-espera-do-fío-da-interface)).
+
+**WinUI** debuxa os menús do Windows Terminal co control `MenuFlyout`. As súas medidas danse en píxeles a escala 100 % ([`MenuFlyout_themeresources.xaml`](https://github.com/microsoft/microsoft-ui-xaml/blob/v2.8.4/dev/CommonStyles/MenuFlyout_themeresources.xaml#L291-L298), na versión 2.8.4):
+
+| Medida | `MenuFlyout` | meiga |
+|---|---|---|
+| O bordo | 1 (`MenuFlyoutPresenterBorderThemeThickness`) | 1 |
+| Por riba do primeiro elemento e por debaixo do último | 2 (`MenuFlyoutPresenterThemePadding`) | 2 |
+| Arredor de cada elemento, fóra do seu resalte | 4 aos lados, e 2 por riba e por debaixo (`MenuFlyoutItemMargin`) | O mesmo |
+| O texto, dentro do resalte | 11 aos lados; e por riba e por debaixo, 4 e 5 co rato e co teclado (`MenuFlyoutItemThemePaddingNarrow`), e 8 e 9 co dedo (`MenuFlyoutItemThemePadding`) | 11 aos lados, e centrado nun resalte de 28 de alto |
+| A liña que separa dous grupos | 1 (`MenuFlyoutSeparatorHeight`), con 1 por riba e por debaixo (`MenuFlyoutSeparatorThemePadding`) | O mesmo, de lado a lado dentro do bordo |
+| A fonte | `ControlContentThemeFontSize`, 14 píxeles, en Segoe UI | 12: Cascadia Mono a 9 puntos, a da barra de tabs |
+
+A marxe máis estreita do texto só se usa cando o menú se abriu co rato, cun lapis ou co teclado ([o comentario do modelo](https://github.com/microsoft/microsoft-ui-xaml/blob/v2.8.4/dev/CommonStyles/MenuFlyout_themeresources.xaml#L421-L428)). Un menú de WinUI péchase cun toque ou un clic fóra del, e con Esc, sen escoller nada: é o *light dismiss* ([*Flyouts › Light dismiss behavior*](https://learn.microsoft.com/en-us/windows/apps/develop/ui/controls/dialogs-and-flyouts/flyouts#light-dismiss-behavior)). O toque que o pecha normalmente non lle chega ao que hai debaixo: se había un botón, premelo necesita outro toque. Unha aplicación pode deixar pasar ese toque a algúns elementos, pero Microsoft avisa de que os botóns destrutivos, coma pechar ou borrar, non deberían actuar con el.
+
+**O Windows Terminal** (1.25.3131.0) abre co botón dereito sobre unha tab un `MenuFlyout` con, entre outros, *Duplicate tab* e, ao final, despois dunha liña, un submenú *Close*, con *Close tabs to the right*, *Close other tabs* e *Close pane*, e *Close tab* ([`Tab.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/Tab.cpp#L1794-L1806)). *Close other tabs* vese desactivado cunha soa tab, e *Close tabs to the right*, na última ([`Tab.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/Tab.cpp#L1837-L1846)). A copia dunha tab vai ao final ou, con `newTabPosition` en `afterCurrentTab`, xusto despois da orixinal, e móstrase ([`TabManagement.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TabManagement.cpp#L278-L293)).
+
+**Chrome** (Chromium 158.0.8127.37) ten no menú dunha tab, entre outros, *Duplicate* e, ao final, despois dunha liña, *Close tab*, *Close other tabs* e *Close tabs to the right*, este último desactivado se non hai tabs á dereita ([`tab_menu_model.cc`](https://github.com/chromium/chromium/blob/158.0.8127.37/chrome/browser/ui/tabs/tab_menu_model.cc#L700-L717)). Duplicar pon a copia xusto despois da orixinal ([`browser_commands.cc`](https://github.com/chromium/chromium/blob/158.0.8127.37/chrome/browser/ui/browser_commands.cc#L1724-L1726)), e móstraa ([`browser_commands.cc`](https://github.com/chromium/chromium/blob/158.0.8127.37/chrome/browser/ui/browser_commands.cc#L385-L408)).
+
+**En meiga**, o menú debúxase dentro da xanela, no seu *framebuffer*, e non nunha xanela propia nin cun menú de Windows: así non hai outro bucle de mensaxes nin outra superficie que presentar, e o compoñente serve tamén para os perfís e o explorador. As súas regras:
+
+| Regra | De onde vén |
+|---|---|
+| O botón dereito abre o menú da tab ao soltalo enriba dela | Windows (`WM_CONTEXTMENU`) |
+| A tecla de menú e Maiús+F10 abren o da tab que se mostra, debaixo dela; meiga ábreo en canto baixa a tecla | Windows (`WM_CONTEXTMENU` desde o teclado) |
+| Co rato, coa esquina no punteiro; e se non cabe, ao outro lado | Os menús de Windows |
+| As medidas | WinUI (`MenuFlyout`) |
+| *Duplicate tab*, unha liña, e *Close tab*, *Close other tabs* e *Close tabs to the right*, sen submenú | Chrome, cos textos do Windows Terminal |
+| O que non se pode usar, desactivado | O Windows Terminal e Chrome |
+| A copia, xusto á dereita da orixinal, e mostrada | Chrome, e o Windows Terminal con `afterCurrentTab` |
+| O botón esquerdo e o dereito escollen un elemento ao soltalos enriba del | Os menús de Windows con `TPM_RIGHTBUTTON` |
+| Un clic fóra pecha o menú e non fai nada máis; Esc tamén o pecha | WinUI (*light dismiss*) |
+
+O código explícase en [Código › meiga › `menu.rs`](codigo/meiga.md#cratesmeigasrcmenurs) e en [Código › meiga-core › `ui/menu.rs`](codigo/meiga-core.md#cratesmeiga-coresrcuimenurs).
