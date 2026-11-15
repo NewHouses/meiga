@@ -1,25 +1,27 @@
 # Código › `meiga-win`
 
-> Estado: subfase 2.3. Contén a xanela, que o programa tamén pode pechar, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar, o portapapeis, as sesións de ConPTY, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, cun exemplo que as mostra e as grava, e o tipo dos erros de Windows.
+> Estado: subfase 2.5. Contén a xanela, que o programa tamén pode pechar, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, entre eles o de que a xanela xa está na pantalla e pintada, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar e a que só avisa, o portapapeis, as sesións de ConPTY, co cartafol e o contorno do seu programa, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, cun exemplo que as mostra e as grava, as shells instaladas, que atopa sen lanzar ningún proceso, o contorno de meiga e o cartafol do sistema, e o tipo dos erros de Windows. Na 2.3 e na 2.4 non cambiou o código. Na 2.5 chegaron `profiles.rs`, coas shells instaladas, o contorno de meiga e o cartafol do sistema; `Command`, co que unha sesión recibe tamén o cartafol onde empeza o seu programa e o seu contorno; `Event::Shown`, o aviso de que a xanela xa está na pantalla e pintada; e `Window::alert`, a caixa de mensaxe que só avisa.
 
-**Responsabilidade:** a capa de plataforma. Envolve todo o que é específico de Windows: ConPTY, a detección das shells instaladas, o sistema de arquivos, o portapapeis, a xanela Win32 e a xestión do DPI. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
+**Responsabilidade:** a capa de plataforma. Envolve todo o que é específico de Windows: ConPTY, a detección das shells instaladas e o contorno dos seus programas, o sistema de arquivos, o portapapeis, a xanela Win32 e a xestión do DPI. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
 | Arquivo | Contido |
 |---|---|
 | [`Cargo.toml`](#cratesmeiga-wincargotoml) | As dependencias: `meiga-core` e `windows-sys`. |
 | [`src/lib.rs`](#cratesmeiga-winsrclibrs) | A raíz do crate: os módulos, os tipos que se publican e a conversión dos textos a UTF-16. |
 | [`src/error.rs`](#cratesmeiga-winsrcerrorrs) | `Error`: unha chamada a Windows que fallou, e o erro que deu. |
-| [`src/event.rs`](#cratesmeiga-winsrceventrs) | Os eventos da xanela, tamén os do rato e o cambio de escala, e o *trait* `Handler`, que os recibe. |
+| [`src/event.rs`](#cratesmeiga-winsrceventrs) | Os eventos da xanela, tamén os do rato, o cambio de escala e o aviso de que a xanela xa está pintada, e o *trait* `Handler`, que os recibe. |
 | [`src/keyboard.rs`](#cratesmeiga-winsrckeyboardrs) | O teclado da xanela: as mensaxes das teclas e dos seus caracteres, xuntas en eventos de tecla, e as que son para Windows. |
-| [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o seu DPI, tamén cando cambia, o seu título e o seu peche desde o programa, o bucle de mensaxes, o temporizador dos fotogramas, o `Waker` que a esperta desde outro fío cun número, a captura do rato, a forma do punteiro e o aviso de cando sae da xanela, se está en primeiro plano, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta e a mensaxe de erro. |
+| [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o seu DPI, tamén cando cambia, o seu título e o seu peche desde o programa, o bucle de mensaxes, o temporizador dos fotogramas, o `Waker` que a esperta desde outro fío cun número, a captura do rato, a forma do punteiro e o aviso de cando sae da xanela, se está en primeiro plano, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta, a que só avisa e a mensaxe de erro. |
 | [`src/clipboard.rs`](#cratesmeiga-winsrcclipboardrs) | O portapapeis de Windows: ler e escribir texto. |
-| [`src/conpty.rs`](#cratesmeiga-winsrcconptyrs) | As sesións: un programa nunha pseudoconsola, cos seus fíos lector e escritor, a prioridade do lector, que se pode cambiar mentres a sesión corre, e a súa entrada, que se pode usar desde calquera fío, tamén para cambiar o tamaño da pseudoconsola. |
-| [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) | Probas de integración: programas de verdade nos dous ConPTY. |
+| [`src/conpty.rs`](#cratesmeiga-winsrcconptyrs) | As sesións: un programa nunha pseudoconsola, co cartafol onde empeza e o seu contorno, cos seus fíos lector e escritor, a prioridade do lector, que se pode cambiar mentres a sesión corre, e a súa entrada, que se pode usar desde calquera fío, tamén para cambiar o tamaño da pseudoconsola. |
+| [`src/profiles.rs`](#cratesmeiga-winsrcprofilesrs) | As shells instaladas, atopadas sen lanzar ningún proceso, nos cartafoles onde as deixan os seus instaladores e no rexistro de Windows; o contorno de meiga e o cartafol do sistema. |
+| [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) | Probas de integración: programas de verdade nos dous ConPTY, tamén nun cartafol e cun contorno. |
+| [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs) | Probas de integración: as shells do equipo onde corren e o contorno do programa da proba. |
 | [`examples/conpty.rs`](#cratesmeiga-winexamplesconptyrs) | Un programa de consola que mostra o que escribe un programa nunha pseudoconsola, e envíalle o que se teclea. |
 
-Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); o rato, en [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows); o portapapeis e a caixa que pregunta antes de pegar, en [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows) e [› Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste); o cambio de escala e a saída do punteiro, en [Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged) e [› O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent); o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos), e o cambio do tamaño dunha pseudoconsola, en [Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor); e a prioridade dos fíos, en [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority). O camiño dun clic, da xanela á selección, ao portapapeis ou ao programa, está en [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis), e o dun cambio de tamaño, da xanela ao ConPTY, en [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom). As tabs, cada unha coa súa sesión, e o que fan as que non se ven, coa prioridade do seu fío lector máis baixa, decídense no [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md).
+Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); o rato, en [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows); o portapapeis e a caixa que pregunta antes de pegar, en [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows) e [› Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste); o cambio de escala e a saída do punteiro, en [Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged) e [› O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent); o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos), e o cambio do tamaño dunha pseudoconsola, en [Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor); a prioridade dos fíos, en [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority); e as shells instaladas, o rexistro de Windows e o contorno e o cartafol dos programas, en [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows). O camiño dun clic, da xanela á selección, ao portapapeis ou ao programa, está en [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); o dun cambio de tamaño, da xanela ao ConPTY, en [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom); e o dun perfil, do arquivo de configuración e das shells instaladas á sesión dunha tab, en [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración). As tabs, cada unha coa súa sesión, e o que fan as que non se ven, coa prioridade do seu fío lector máis baixa, decídense no [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md); e os perfís, coas shells que atopa meiga e o contorno e o cartafol dos seus programas, no [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md).
 
-O crate ten 23 probas unitarias nos arquivos de `src/`, as mesmas ca na subfase 1.9, e as 10 de integración de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (9 na 1.9): `cargo test -p meiga-win` córreas todas.
+O crate ten 26 probas unitarias nos arquivos de `src/` (23 na 2.4, as mesmas ca na subfase 1.9: a 2.5 trouxo unha en `conpty.rs` e dúas en `profiles.rs`), e 14 de integración: as 12 de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (10 na 2.4 e 9 na 1.9) e as 2 de [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs), novas na 2.5. `cargo test -p meiga-win` córreas todas.
 
 ## `crates/meiga-win/Cargo.toml`
 
@@ -49,12 +51,21 @@ windows-sys = { workspace = true, features = [
     "Win32_System_Console",
     # The clipboard, and the global memory of its data.
     "Win32_System_DataExchange",
+    # The environment of meiga, which the programs of the tabs get with a few
+    # changes.
+    "Win32_System_Environment",
     "Win32_System_IO",
     # The job of the programs of each pseudoconsole.
     "Win32_System_JobObjects",
     "Win32_System_LibraryLoader",
     "Win32_System_Memory",
     "Win32_System_Pipes",
+    # The registry, where WSL keeps its distributions and Git for Windows its
+    # folder.
+    "Win32_System_Registry",
+    # GetSystemDirectoryW: the folder of cmd.exe, wsl.exe and Windows
+    # PowerShell.
+    "Win32_System_SystemInformation",
     "Win32_System_Threading",
     "Win32_UI_HiDpi",
     "Win32_UI_Input_KeyboardAndMouse",
@@ -72,33 +83,39 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 
 | *Feature* | Que trae | Que se usa |
 |---|---|---|
-| `Win32_Foundation` | Os tipos básicos. | `HWND`, `HANDLE`, `RECT`, `WPARAM`, `LPARAM`, `LRESULT`, `FALSE`, `TRUE`, `CloseHandle` e os resultados das esperas (`WAIT_OBJECT_0`, `WAIT_TIMEOUT` e `WAIT_FAILED`). Desde a subfase 1.8, tamén `POINT`, para o punto da roda, e a memoria global do portapapeis: o seu tipo, `HGLOBAL`, e `GlobalFree`. |
+| `Win32_Foundation` | Os tipos básicos. | `HWND`, `HANDLE`, `RECT`, `WPARAM`, `LPARAM`, `LRESULT`, `FALSE`, `TRUE`, `CloseHandle` e os resultados das esperas (`WAIT_OBJECT_0`, `WAIT_TIMEOUT` e `WAIT_FAILED`). Desde a subfase 1.8, tamén `POINT`, para o punto da roda, e a memoria global do portapapeis: o seu tipo, `HGLOBAL`, e `GlobalFree`. Desde a 2.5, `ERROR_SUCCESS` e `ERROR_MORE_DATA`, dous dos resultados das funcións do rexistro. |
 | `Win32_Graphics_Gdi` | GDI, a API clásica de debuxo. | `BeginPaint`, `EndPaint`, `InvalidateRect`, `ValidateRect` e `UpdateWindow`. Desde a 1.8, tamén `ScreenToClient`, que pasa o punto da roda á área cliente. |
 | `Win32_Security` | A seguridade dos obxectos de Windows. | Nada directamente: `CreateWaitableTimerExW`, `CreatePipe`, `CreateEventW`, `CreateJobObjectW` e `CreateProcessW` reciben uns `SECURITY_ATTRIBUTES`, e `windows-sys` só declara cada función se existen os tipos que usa. Por iso vai co comentario. |
-| `Win32_Storage_FileSystem` | Os arquivos e o que se le e escribe coma eles. | `ReadFile` e `WriteFile`, para as tubaxes, desde a subfase 1.4. |
+| `Win32_Storage_FileSystem` | Os arquivos e o que se le e escribe coma eles. | `ReadFile` e `WriteFile`, para as tubaxes, desde a subfase 1.4; e, desde a 2.5, `GetFileAttributesW`, `INVALID_FILE_ATTRIBUTES` e `FILE_ATTRIBUTE_DIRECTORY`, que din se un programa existe ([`is_file`](#is_file)). |
 | `Win32_System_Console` | A consola. | `CreatePseudoConsole`, `ClosePseudoConsole`, `HPCON` e `COORD`, desde a 1.4, e `ResizePseudoConsole`, desde a 1.9. |
 | `Win32_System_DataExchange` | O intercambio de datos entre programas, coma o portapapeis. | `OpenClipboard`, `CloseClipboard`, `EmptyClipboard`, `GetClipboardData` e `SetClipboardData`, desde a subfase 1.8. |
+| `Win32_System_Environment` | As variábeis de contorno. | `GetEnvironmentStringsW` e `FreeEnvironmentStringsW`, desde a subfase 2.5: o bloque co contorno de meiga ([`environment`](#environment)). |
 | `Win32_System_IO` | A E/S solapada. | Nada directamente: `ReadFile` e `WriteFile` reciben un `OVERLAPPED`, que meiga pasa nulo. O comentario de `Win32_Storage_FileSystem` explícao. |
 | `Win32_System_JobObjects` | Os *jobs*, que agrupan procesos. | `CreateJobObjectW`, `SetInformationJobObject`, `JOBOBJECT_EXTENDED_LIMIT_INFORMATION`, `JOB_OBJECT_LIMIT_BREAKAWAY_OK`, `QueryInformationJobObject`, `JOBOBJECT_BASIC_PROCESS_ID_LIST` e `TerminateJobObject`, desde a 1.4. |
 | `Win32_System_LibraryLoader` | A carga de DLL e módulos. | `GetModuleHandleW` e, desde a 1.4, `LoadLibraryExW`, `GetProcAddress` e as opcións da busca das DLL. |
 | `Win32_System_Memory` | A memoria: a global, a virtual, os *heaps*… | `GlobalAlloc`, `GlobalLock`, `GlobalSize`, `GlobalUnlock` e `GMEM_MOVEABLE`, desde a 1.8: a memoria onde vai o texto do portapapeis. |
 | `Win32_System_Pipes` | As tubaxes. | `CreatePipe`, desde a 1.4. |
-| `Win32_System_Threading` | Fíos, procesos e obxectos de sincronización. | O temporizador: `CreateWaitableTimerExW`, `SetWaitableTimer`, `CancelWaitableTimer` e `INFINITE`. Desde a 1.4, tamén os procesos e os eventos: `CreateProcessW`, `STARTUPINFOEXW`, a lista de atributos e os seus dous atributos, `OpenProcess` e `PROCESS_SYNCHRONIZE`, `CreateEventW`, `SetEvent`, as esperas e `GetExitCodeProcess`. A estrutura dos límites estendidos dos *jobs* tamén a necesita, porque leva uns `IO_COUNTERS`. Desde a 2.2, a prioridade dos fíos: `SetThreadPriority`, o tipo `THREAD_PRIORITY` e as dúas prioridades que usa meiga, `THREAD_PRIORITY_NORMAL` e `THREAD_PRIORITY_BELOW_NORMAL`, coas que cambia a do fío lector dunha sesión; e, nas probas de integración, `GetCurrentThread` e `GetThreadPriority`, coas que a le. |
+| `Win32_System_Registry` | O rexistro de Windows. | Desde a subfase 2.5, `RegOpenKeyExW`, `RegEnumKeyExW`, `RegGetValueW` e `RegCloseKey`, co tipo das chaves, `HKEY`, as dúas raíces que le meiga, `HKEY_CURRENT_USER` e `HKEY_LOCAL_MACHINE`, o dereito `KEY_ENUMERATE_SUB_KEYS` e as opcións `RRF_RT_REG_SZ` e `RRF_RT_REG_DWORD`, que din que tipo de valor se le: as distribucións de WSL e o cartafol de Git for Windows ([`profiles.rs`](#cratesmeiga-winsrcprofilesrs)). |
+| `Win32_System_SystemInformation` | A información do sistema: a súa versión, o hardware, os seus cartafoles… | `GetSystemDirectoryW`, desde a 2.5: o cartafol do sistema ([`system_folder`](#system_folder)). |
+| `Win32_System_Threading` | Fíos, procesos e obxectos de sincronización. | O temporizador: `CreateWaitableTimerExW`, `SetWaitableTimer`, `CancelWaitableTimer` e `INFINITE`. Desde a 1.4, tamén os procesos e os eventos: `CreateProcessW`, `STARTUPINFOEXW`, a lista de atributos e os seus dous atributos, `OpenProcess` e `PROCESS_SYNCHRONIZE`, `CreateEventW`, `SetEvent`, as esperas e `GetExitCodeProcess`. A estrutura dos límites estendidos dos *jobs* tamén a necesita, porque leva uns `IO_COUNTERS`. Desde a 2.2, a prioridade dos fíos: `SetThreadPriority`, o tipo `THREAD_PRIORITY` e as dúas prioridades que usa meiga, `THREAD_PRIORITY_NORMAL` e `THREAD_PRIORITY_BELOW_NORMAL`, coas que cambia a do fío lector dunha sesión; e, nas probas de integración, `GetCurrentThread` e `GetThreadPriority`, coas que a le. Desde a 2.5, `CREATE_UNICODE_ENVIRONMENT`, a opción de `CreateProcessW` para un bloque do contorno en UTF-16. |
 | `Win32_UI_HiDpi` | A escala e o DPI. | `GetDpiForWindow`, desde a subfase 1.3. |
 | `Win32_UI_Input_KeyboardAndMouse` | O teclado e o rato. | `SetCapture`, `GetCapture` e `ReleaseCapture`, que capturan o rato; desde a subfase 1.7, o teclado: `GetKeyboardState`, `ToUnicodeEx`, `GetKeyboardLayout`, `MapVirtualKeyW` e os códigos de tecla virtual (`VK_…`); desde a 1.8, `GetKeyState`, que di se Alt está premido cos eventos do rato, e `GetDoubleClickTime`; e, desde a 1.9, `TrackMouseEvent`, coa súa estrutura, `TRACKMOUSEEVENT`, e `TME_LEAVE`, que piden o aviso de cando o punteiro sae da xanela. |
 | `Win32_UI_WindowsAndMessaging` | As xanelas, as mensaxes, os temporizadores das xanelas, os cursores e as caixas de mensaxe. | O resto. |
 
 Algunhas constantes defínense no propio código en vez de activar a súa *feature*, que traería milleiros de declaracións por uns poucos números: os bits dos botóns e das teclas modificadoras nas mensaxes do rato (`MK_LBUTTON`…), de `Win32_System_SystemServices` (ver [`event.rs`](#cratesmeiga-winsrceventrs)); desde a subfase 1.8, o formato do texto no portapapeis, `CF_UNICODETEXT`, de `Win32_System_Ole` (ver [`clipboard.rs`](#cratesmeiga-winsrcclipboardrs)); e, desde a 1.9, a mensaxe que chega cando o punteiro sae da xanela, `WM_MOUSELEAVE`, de `Win32_UI_Controls` (ver [`decode`](#decode)). Outra, `WHEEL_PAGE`, o `WHEEL_PAGESCROLL` de Windows, non está en `windows-sys` (ver [`mouse_settings`](#mousesettings-e-mouse_settings)). O tipo `HRESULT` está en `windows_sys::core`, que non necesita ningunha *feature*.
 
-A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes.
+A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes. A 2.3 e a 2.4 non cambiaron o crate. A 2.5 necesitou tres, coma din os seus comentarios: `Win32_System_Environment`, para o contorno de meiga, que reciben os programas das tabs con poucos cambios; `Win32_System_Registry`, para o rexistro, onde WSL garda as súas distribucións e Git for Windows o seu cartafol; e `Win32_System_SystemInformation`, para `GetSystemDirectoryW`, o cartafol de `cmd.exe`, `wsl.exe` e Windows PowerShell. O resto xa estaba: `GetFileAttributesW`, en `Win32_Storage_FileSystem`, coma `ReadFile`; `ERROR_SUCCESS` e `ERROR_MORE_DATA`, en `Win32_Foundation`; e `CREATE_UNICODE_ENVIRONMENT`, en `Win32_System_Threading`, con `CreateProcessW`.
+
+**As DLL.** Cada función de `windows-sys` di de que DLL vén, e `meiga.exe` importa as DLL das funcións que usa. As do rexistro (`RegOpenKeyExW`, `RegEnumKeyExW`, `RegGetValueW` e `RegCloseKey`) están en `advapi32.dll`, que `meiga.exe` non importaba ata a 2.5; as outras funcións novas, `GetEnvironmentStringsW`, `FreeEnvironmentStringsW`, `GetSystemDirectoryW` e `GetFileAttributesW`, en `kernel32.dll`, coma as dos procesos e as tubaxes. Desde a 2.5, [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1) mostra `meiga.exe imports: kernel32.dll, dwrite.dll, ntdll.dll, oleaut32.dll, combase.dll, api-ms-win-core-synch-l1-2-0.dll, gdi32.dll, user32.dll, advapi32.dll`: todas son do sistema ([Código › meiga](meiga.md#comprobacións-feitas)).
 
 ## `crates/meiga-win/src/lib.rs`
 
 ```rust
 //! Windows platform layer of meiga.
 //!
-//! Wraps ConPTY, shell profile discovery, the file system, the clipboard, the
-//! Win32 window and DPI handling. Every `unsafe` block in this crate must
+//! Wraps ConPTY, the discovery of the shells and the environment of their
+//! programs, the file system, the clipboard, the Win32 window and DPI
+//! handling. Every `unsafe` block in this crate must
 //! explain why it is sound in a `// SAFETY:` comment.
 
 pub mod clipboard;
@@ -106,6 +123,7 @@ pub mod conpty;
 mod error;
 pub mod event;
 mod keyboard;
+pub mod profiles;
 pub mod window;
 
 pub use error::Error;
@@ -122,10 +140,10 @@ pub(crate) fn wide(text: &str) -> Vec<u16> {
 }
 ```
 
-- A documentación do crate lembra a súa regra principal: este é o lugar con máis código `unsafe` do proxecto, e cada bloque ten que explicar por que é seguro. Clippy compróbao (`undocumented_unsafe_blocks`, ver [Tecnoloxías › *Lints*](../tecnoloxias.md#7-lints-rustc-e-clippy)).
+- A documentación do crate lembra a súa regra principal: este é o lugar con máis código `unsafe` do proxecto, e cada bloque ten que explicar por que é seguro. Clippy compróbao (`undocumented_unsafe_blocks`, ver [Tecnoloxías › *Lints*](../tecnoloxias.md#7-lints-rustc-e-clippy)). Desde a subfase 2.5, di tamén o que fai o crate coas shells: atopalas e preparar o contorno dos seus programas.
 - `mod error;` declara o módulo `error` (`src/error.rs`) sen `pub`: é privado.
 - `pub use error::Error;` publica o tipo `Error` na raíz do crate. Os outros crates escriben `meiga_win::Error`, e non `meiga_win::error::Error`: o módulo só contén ese tipo, e non achega nada ao nome.
-- `pub mod clipboard;`, `pub mod conpty;`, `pub mod event;` e `pub mod window;` declaran os catro módulos públicos: `meiga_win::clipboard::read_text`, `meiga_win::conpty::Conpty`, `meiga_win::event::Event`, `meiga_win::window::Window`. `conpty` existe desde a subfase 1.4, e `clipboard`, desde a 1.8.
+- `pub mod clipboard;`, `pub mod conpty;`, `pub mod event;`, `pub mod profiles;` e `pub mod window;` declaran os cinco módulos públicos: `meiga_win::clipboard::read_text`, `meiga_win::conpty::Conpty`, `meiga_win::event::Event`, `meiga_win::profiles::detect`, `meiga_win::window::Window`. `conpty` existe desde a subfase 1.4; `clipboard`, desde a 1.8; e `profiles`, desde a 2.5. Os seus tipos e funcións non se publican na raíz, coma `Error`: os outros crates nómeanos co seu módulo, coma `meiga_win::conpty::Command`, desde a 2.5 o que corre unha sesión, ou `meiga_win::profiles::environment`.
 - `mod keyboard;`, desde a subfase 1.7, é privado coma `error`: só o usa a xanela, e os outros crates reciben as teclas coma eventos.
 - **`HWND` e `HDC`.** O programa (`meiga`) recibe destes tipos de `meiga-win` e pásaos a `meiga-render`, que presenta o *framebuffer* na xanela. Publicalos eiquí permite que o programa os nomee sen depender de `windows-sys`. En `windows-sys`, os dous son o mesmo tipo, `*mut c_void`, un punteiro sen tipo: copialos é seguro, e só os usan as funcións de Windows, sempre dentro dos crates que teñen `unsafe`. Por iso o programa segue con `#![forbid(unsafe_code)]`.
 - **`wide`.** As funcións de Windows que rematan en `W` (de *wide*) usan textos en UTF-16 rematados nun 0, como en C. Os textos de Rust son UTF-8 e levan a súa lonxitude, sen 0 ao final. `encode_utf16()` dá as unidades UTF-16 do texto, `.chain(Some(0))` engade o 0 ao final e `collect()` xúntaas nun `Vec<u16>`. Quen chama ten que manter o vector vivo mentres Windows usa o punteiro (`as_ptr()`). Ata a subfase 1.3 estaba en `window.rs`; desde a 1.4 está eiquí, porque tamén a usa `conpty.rs`. Con `pub(crate)`, véna todos os módulos do crate, pero non os outros crates.
@@ -212,13 +230,13 @@ As funcións de Windows non devolven un `Result`, coma as de Rust. Cada unha ind
 
 Desde a subfase 1.4, hai outras dúas maneiras de crear un `Error`, para as sesións de [ConPTY](#cratesmeiga-winsrcconptyrs):
 
-- **`new`**: un erro que non vén de `GetLastError`. Por exemplo, cando non se pode crear un fío (a biblioteca estándar devolve un `io::Error`), ou cando o propio módulo rexeita algo antes de chamar a Windows: un tamaño que non cabe, unha liña de comandos cun carácter nulo ou un arquivo que falta. O nome é o da función que fallaría, para que a mensaxe diga en que paso foi: `LoadLibraryExW failed: …\conpty.dll does not exist`.
+- **`new`**: un erro que non vén de `GetLastError`. Por exemplo, cando non se pode crear un fío (a biblioteca estándar devolve un `io::Error`), ou cando o propio módulo rexeita algo antes de chamar a Windows: un tamaño que non cabe, unha liña de comandos cun carácter nulo ou un arquivo que falta e, desde a subfase 2.5, un cartafol cun carácter nulo ou un bloque do contorno que non remata en dous nulos. O nome é o da función que fallaría, para que a mensaxe diga en que paso foi: `LoadLibraryExW failed: …\conpty.dll does not exist`.
 - **`hresult`**: as funcións que crean unha pseudoconsola e, desde a subfase 1.9, as que lle cambian o tamaño non deixan o erro en `GetLastError`, senón que devolven un **`HRESULT`**: un número de 32 bits que, se é negativo, indica un erro. Os 16 bits de abaixo son o código, e os bits 16–26, a *facility*, que di de onde vén o código. Os da *facility* 7 (`FACILITY_WIN32`) levan dentro un código de erro de Windows: `0x80070057` é o erro 87, `ERROR_INVALID_PARAMETER`, que con este formato se chama `E_INVALIDARG`.
   - `result as u32` le os mesmos 32 bits sen signo, onde as máscaras en hexadecimal son máis claras.
   - `code & 0xffff_0000 == 0x8007_0000` comproba que é un erro (o bit 31) da *facility* 7. Para eses, `from_raw_os_error` dá o mesmo texto que daría `GetLastError` co código 87.
   - Os demais móstranse como número: por exemplo, `HRESULT 0x8000FFFF` (`E_UNEXPECTED`).
 
-Desde a subfase 1.6, **`os_error`** deixa ver o erro que garda o `Error`, para que quen o recibe poida decidir segundo a causa, e non só mostrala. O programa úsao ao lanzar a shell: se PowerShell 7 non está instalado, `CreateProcessW` non atopa `pwsh` e falla co erro 2, `ERROR_FILE_NOT_FOUND`, que a biblioteca estándar clasifica como `io::ErrorKind::NotFound`; entón meiga proba con Windows PowerShell ([Código › meiga](meiga.md#cratesmeigasrcsessionrs), [Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)).
+Desde a subfase 1.6, **`os_error`** deixa ver o erro que garda o `Error`, para que quen o recibe poida decidir segundo a causa, e non só mostrala. Ata a 2.4, o programa usábao ao lanzar a shell: se PowerShell 7 non estaba instalado, `CreateProcessW` non atopaba `pwsh` e fallaba co erro 2, `ERROR_FILE_NOT_FOUND`, que a biblioteca estándar clasifica como `io::ErrorKind::NotFound`; entón meiga probaba con Windows PowerShell ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)). Desde a 2.5, meiga atopa as shells antes de lanzalas, coas súas rutas completas ([`profiles.rs`](#cratesmeiga-winsrcprofilesrs)), e se un programa non arranca, a súa tab mostra o erro ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)): o programa xa non o usa. Úsao unha proba de integración, que mira o código do erro de `CreateProcessW` cando o cartafol do programa non existe ([`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs)).
 
 - Ao contrario que os outros métodos, é `pub`: os outros crates poden ler a causa dun erro, pero seguen sen poder crear erros.
 - `as_ref()` converte o `&Option<io::Error>` do campo nun `Option<&io::Error>`: dá unha referencia ao erro, sen copialo nin sacalo do `Error`. Tampouco se podería devolver unha copia, porque `io::Error` non implementa `Clone`.
@@ -231,7 +249,7 @@ Desde a subfase 1.6, **`os_error`** deixa ver o erro que garda o `Error`, para q
 
 ## `crates/meiga-win/src/event.rs`
 
-O que lle pasa á xanela, traducido das mensaxes de Windows a tipos de Rust, e o *trait* que recibe eses eventos. Este módulo non ten `unsafe` (`#![forbid(unsafe_code)]`): só le números. Desde a subfase 1.6 define tamén [`WM_WAKE`](#wm_wake), a mensaxe coa que outro fío esperta a xanela, que desde a 2.2 leva un número; desde a 1.8, os eventos do rato teñen os tres botóns, a roda e as teclas modificadoras ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)); e desde a 1.9, hai dous eventos máis: o cambio de escala, que chega antes ca o tamaño novo da xanela ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)), e a saída do punteiro ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)).
+O que lle pasa á xanela, traducido das mensaxes de Windows a tipos de Rust, e o *trait* que recibe eses eventos. Este módulo non ten `unsafe` (`#![forbid(unsafe_code)]`): só le números. Desde a subfase 1.6 define tamén [`WM_WAKE`](#wm_wake), a mensaxe coa que outro fío esperta a xanela, que desde a 2.2 leva un número; desde a 1.8, os eventos do rato teñen os tres botóns, a roda e as teclas modificadoras ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)); e desde a 1.9, hai dous eventos máis: o cambio de escala, que chega antes ca o tamaño novo da xanela ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)), e a saída do punteiro ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)); e desde a 2.5, outro, `Shown`, cando a xanela xa está na pantalla e pintada.
 
 ### `Handler`
 
@@ -252,7 +270,7 @@ pub trait Handler {
 - Un ***trait*** é un conxunto de funcións que un tipo pode implementar, como unha interface. `meiga-win` non sabe que fai o programa: só sabe chamar a quen implemente `Handler`. No programa implementao `App` (ver [Código › meiga](meiga.md#cratesmeigasrcapprs)).
 - `&mut self`: o *handler* pode cambiar o seu estado en cada evento. `&Window`: recibe tamén a xanela, para pedirlle cousas (un temporizador, cambiar o título, capturar o rato…).
 - `HandlerError` é un **alias**, outro nome para un tipo: `Box<dyn StdError>`, calquera erro nunha caixa. `dyn StdError` significa «un valor de calquera tipo que implemente `std::error::Error`», e a caixa (`Box`) gárdao na memoria dinámica, porque cada tipo de erro ten un tamaño distinto. Así, o *handler* pode devolver erros de `meiga-win`, de `meiga-render` ou de entrada e saída, e `?` convérteos solos.
-- **Unha regra importante**, na documentación do *trait*: o *handler* non pode chamar a funcións que envían unha mensaxe á xanela e agardan a resposta, como `SetWindowPos`. A xanela chamaría ao *handler* de novo antes de que remate a primeira chamada, e Rust non permite dúas referencias `&mut` ao mesmo valor á vez; ese evento perderíase (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). [`set_title`](#windowset_title) si se pode chamar, porque a mensaxe que envía non chega ao *handler*; e, desde a subfase 2.2, [`close`](#windowclose), que publica a súa mensaxe e non agarda. Desde a subfase 1.8, o programa chama a dúas que si perden eventos, sabéndoo: [`release_mouse`](#a-captura-do-rato-e-o-repintado), cuxo aviso non lle fai falta, e a caixa de [`confirm`](#windowconfirm), despois da cal compensa o que se perdeu.
+- **Unha regra importante**, na documentación do *trait*: o *handler* non pode chamar a funcións que envían unha mensaxe á xanela e agardan a resposta, como `SetWindowPos`. A xanela chamaría ao *handler* de novo antes de que remate a primeira chamada, e Rust non permite dúas referencias `&mut` ao mesmo valor á vez; ese evento perderíase (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). [`set_title`](#windowset_title) si se pode chamar, porque a mensaxe que envía non chega ao *handler*; e, desde a subfase 2.2, [`close`](#windowclose), que publica a súa mensaxe e non agarda. Desde a subfase 1.8, o programa chama a algunhas que si perden eventos, sabéndoo: [`release_mouse`](#a-captura-do-rato-e-o-repintado), cuxo aviso non lle fai falta, e a caixa de [`confirm`](#windowconfirm) e, desde a 2.5, a de [`alert`](#windowalert), despois das que compensa o que se perdeu.
 
 ### `Event` e `mouse::Button`
 
@@ -291,6 +309,7 @@ pub enum Event {
     Focus { focused: bool },
     FrameTimer,
     Wake(u64),
+    Shown,
 }
 ```
 
@@ -310,6 +329,7 @@ Un `enum` de Rust é un tipo que pode ser **unha** de varias variantes, e cada v
 | `Focus` | `WM_SETFOCUS` e `WM_KILLFOCUS` | Desde a subfase 1.6. A xanela gañou o foco do teclado (`focused: true`) ou perdeuno (`false`): por exemplo, ao facer clic nela ou noutra xanela, ou con Alt+Tab. |
 | `FrameTimer` | — | Venceu o temporizador dos fotogramas (ver [o temporizador](#o-temporizador-dos-fotogramas)). |
 | `Wake` | `WM_WAKE` | Desde a 1.6. Outro fío espertou a xanela co seu [`Waker`](#windowwaker-e-waker). Desde a 2.2, co número que lle deu ao avisar. |
+| `Shown` | — | Desde a subfase 2.5. A xanela está na pantalla por primeira vez, pintada: unha vez, ao empezar [`run`](#windowrun). |
 
 - **O tamaño e a escala.** Desde a subfase 1.9, o programa calcula con `Resized` a grella que enche a área cliente, sen a franxa da barra de desprazamento, e dálla ao terminal e ao programa da sesión, como moito unha vez por intervalo dos fotogramas; e con `DpiChanged` crea a fonte, a barra de desprazamento e o cursor para a escala nova ([Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom), [Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). `DpiChanged` non o dá `decode`, senón o [*window procedure*](#window_proc), antes de que a xanela colla o tamaño que suxire Windows: así a fonte nova xa está lista cando chega o `Resized`, e a grella cambia unha soa vez ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)).
 - **Os botóns e as teclas modificadoras** son, desde a subfase 1.8, tipos de `meiga-core`, que o programa usa tamén para contar os clics e escribir os informes do rato ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)): `Button`, o esquerdo (`Left`), o do medio (`Middle`) ou o dereito (`Right`), e `Modifiers`, se estaban premidos Maiús (`shift`), Alt (`alt`) e Ctrl (`ctrl`). Ata a 1.7, o botón era `MouseButton`, deste módulo, só co esquerdo e o dereito, e os eventos non levaban as teclas.
@@ -320,6 +340,7 @@ Un `enum` de Rust é un tipo que pode ser **unha** de varias variantes, e cada v
 - Os tipos derivan `Clone`, `Copy`, `Debug`, `PartialEq` e `Eq`: son pequenos, cópianse ao pasalos, móstranse nas mensaxes de diagnóstico e compáranse nas probas.
 - **O foco.** O programa úsao para o cursor do terminal, coma o Windows Terminal: só pestanexa coa xanela enfocada, e sen o foco é un rectángulo baleiro. Ao recuperalo, volta ler os [axustes do cursor](#caretsettings-e-caret_settings), que poden cambiar mentres meiga corre ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela), [Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a subfase 1.7, tamén lle avisa ao programa da sesión, se o pediu (`ESC [ ? 1004 h`). Desde a 1.8, ao recuperalo le tamén os [axustes do rato](#mousesettings-e-mouse_settings); e, antes de deixar que un programa copie ao portapapeis, mira ademais se a xanela está en primeiro plano ([`is_foreground`](#windowis_foreground)), porque o foco non abonda.
 - **`Wake` só leva un número.** Di «mira o que cambiou» e, desde a subfase 2.2, quen o di: o número que lle pasou ao [`Waker`](#windowwaker-e-waker) quen avisa. O que cambiou non vai no evento: gárdao quen avisa nun lugar que comparte co *handler*, baixo un *lock*. No programa, o fío lector de cada sesión garda así se cambiaron a pantalla ou o título e, desde a subfase 1.8, se o programa copiou texto ao portapapeis con OSC 52 ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Deste xeito, moitos cambios seguidos caben nun só aviso, e o evento segue sendo pequeno e `Copy`, coma os outros. Ata a subfase 2.1, `Wake` non levaba datos: había unha soa sesión, e o aviso sempre era do seu terminal. Desde a 2.2, cada tab ten a súa sesión, e o seu fío lector avisa co número do identificador da tab ([`TabId::get`](meiga-core.md#tabid-e-windowid)): a xanela volta facer o identificador co número e mira só o terminal desa tab ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Para `meiga-win`, o número é só un `u64`: non sabe que é unha tab, e quen avisa escolle que significa.
+- **`Shown`**, desde a subfase 2.5, non vén de ningunha mensaxe, nin o dá `decode`: dáo [`run`](#windowrun), unha vez, en canto `UpdateWindow` pinta a xanela por primeira vez, antes de empezar o bucle de mensaxes. Di que o usuario xa ve a xanela: o que ten que esperar por iso, coma unha caixa de mensaxe diante dela, pode vir agora. O programa mostra entón os erros do arquivo de configuración, se os hai, coa caixa de [`alert`](#windowalert) ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 8, [Código › meiga](meiga.md#cratesmeigasrcapprs)); antes, a caixa podería aparecer sen a xanela detrás, ou diante dunha xanela aínda sen pintar. A súa documentación di que chega antes ca calquera outro evento. Chega antes ca os do bucle de mensaxes; pero os das mensaxes que lle envía á xanela `ShowWindow` ao mostrala, coma un `Resized` se cambia o tamaño ou o `Focus` de cando se activa, chegan antes ca el ([`run`](#windowrun)).
 
 ### `decode`
 
@@ -889,7 +910,7 @@ Co Windows de verdade compróbao [`tools/check-keyboard.ps1`](ferramentas.md#too
 
 ## `crates/meiga-win/src/window.rs`
 
-A xanela de meiga, o bucle de mensaxes, o temporizador dos fotogramas e unha mensaxe de erro. Desde a subfase 1.6, tamén o seu título, o aviso que a esperta desde outro fío e os axustes do cursor de Windows; desde a 1.7, as mensaxes do teclado van ao [teclado da xanela](#cratesmeiga-winsrckeyboardrs); desde a 1.8, o rato: a súa captura, a forma do punteiro, o punto da roda e os axustes do rato de Windows, xunto coa caixa de mensaxe que pregunta antes de pegar e se a xanela está en primeiro plano; desde a 1.9, o cambio de escala, que o *handler* coñece antes ca o tamaño novo, e o aviso de cando o punteiro sae da área cliente; e desde a 2.2, o número que leva cada aviso doutro fío e o peche da xanela desde o programa. Os fragmentos de código desta sección son extractos: omiten os comentarios `// SAFETY:`, que no arquivo van antes de cada bloque `unsafe`, e algún outro comentario.
+A xanela de meiga, o bucle de mensaxes, o temporizador dos fotogramas e unha mensaxe de erro. Desde a subfase 1.6, tamén o seu título, o aviso que a esperta desde outro fío e os axustes do cursor de Windows; desde a 1.7, as mensaxes do teclado van ao [teclado da xanela](#cratesmeiga-winsrckeyboardrs); desde a 1.8, o rato: a súa captura, a forma do punteiro, o punto da roda e os axustes do rato de Windows, xunto coa caixa de mensaxe que pregunta antes de pegar e se a xanela está en primeiro plano; desde a 1.9, o cambio de escala, que o *handler* coñece antes ca o tamaño novo, e o aviso de cando o punteiro sae da área cliente; desde a 2.2, o número que leva cada aviso doutro fío e o peche da xanela desde o programa; e desde a 2.5, o aviso de que a xanela xa está na pantalla e pintada, e unha caixa de mensaxe que só avisa, para os erros da configuración. Os fragmentos de código desta sección son extractos: omiten os comentarios `// SAFETY:`, que no arquivo van antes de cada bloque `unsafe`, e algún outro comentario.
 
 Así vive a xanela, desde que se crea ata que a pecha o usuario ou, desde a subfase 2.2, o programa:
 
@@ -904,6 +925,7 @@ sequenceDiagram
     W->>S: ShowWindow e UpdateWindow
     S->>W: WM_PAINT
     W->>M: app.paint (copia o framebuffer á xanela)
+    W->>M: app.event(Shown), desde a 2.5, coa xanela xa pintada
     loop ata WM_QUIT
         W->>S: PeekMessageW: trata as mensaxes que haxa
         W->>S: MsgWaitForMultipleObjectsEx (o fío dorme)
@@ -1101,6 +1123,7 @@ pub fn run(&self, handler: &mut dyn Handler) -> Result<(), HandlerError> {
     let result = if unsafe { UpdateWindow(self.handle) } == 0 {
         Err(Error::last("UpdateWindow"))
     } else {
+        state.dispatch(Event::Shown);
         self.pump(&state)
     };
     if let Some(failure) = state.failure.take() {
@@ -1110,12 +1133,16 @@ pub fn run(&self, handler: &mut dyn Handler) -> Result<(), HandlerError> {
 }
 ```
 
-Mostra a xanela, píntaa e entrega os seus eventos ao *handler* ata que se pecha.
+Mostra a xanela, píntaa, avisa ao *handler* con `Event::Shown` e entrégalle os seus eventos ata que se pecha.
 
 - `&mut dyn Handler`: unha referencia a calquera valor que implemente `Handler`. `dyn` significa que o tipo concreto se coñece ao executar, non ao compilar: `meiga-win` non sabe nada de `App`.
 - `State` e `Installed` (ver [máis abaixo](#state-e-installed-o-handler-dentro-do-window-procedure)) gardan na xanela o necesario para que o *window procedure* chegue ao *handler*. `_installed` vive ata o final da función; o guión baixo do nome di que non se usa, pero, ao contrario que `_` só, non se destrúe no momento.
 - `SW_SHOWDEFAULT` mostra a xanela como pediu quen lanzou meiga: por exemplo, maximizada se o acceso directo di «Executar: maximizada». O valor que devolve `ShowWindow` é a visibilidade anterior, non un erro, así que non se comproba. Se o tamaño cambia, `ShowWindow` envía `WM_SIZE`, que xa chega ao *handler*.
 - `UpdateWindow` envía `WM_PAINT` no momento, se hai algo que pintar, e non volta ata que a xanela está pintada. Así, cando empeza o bucle de mensaxes, o primeiro fotograma xa está feito. Por iso `measure-startup.ps1` mide ata ese punto (ver [Código › medición](perf.md#toolsperfmeasure-startupps1)).
+- **`Shown`.** Desde a subfase 2.5, en canto `UpdateWindow` volta coa xanela pintada, `state.dispatch(Event::Shown)` dálle ao *handler* o evento [`Shown`](#event-e-mousebutton), unha vez, antes do bucle de mensaxes: é o primeiro momento no que o usuario ve a xanela. O programa mostra entón os erros do arquivo de configuración, se os hai, nunha caixa de mensaxe diante dela ([`alert`](#windowalert), [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 8); se non os hai, non fai nada, e o bucle empeza coma antes. Desde a 2.5, `measure-startup.ps1` lanza meiga cun cartafol baleiro en `APPDATA`, sen `config.toml`: o arranque que mide é o dos valores por defecto, que non abre ningunha caixa.
+  - `dispatch` entrega `Shown` coma calquera outro evento: se o *handler* xa fallou antes, por exemplo ao pintar, non lle chega; e se devolve un erro, a xanela destrúese, e o bucle remata no seu primeiro `WM_QUIT` (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)).
+  - Os eventos das mensaxes que lle envía `ShowWindow` á xanela mentres a mostra, coma un `WM_SIZE` se cambia o tamaño ou o `WM_SETFOCUS` de cando a activa, chegan ao *handler* antes ca `Shown`.
+  - Se `UpdateWindow` falla, non hai `Shown`: `run` devolve o erro.
 - `pump` é o bucle de mensaxes. Cando remata, se o *handler* fallou nalgún momento, devólvese o seu erro, que é a causa de todo. Se non, o do bucle, convertido en `HandlerError` con `map_err(Into::into)`.
 
 ### O bucle de mensaxes: `pump`
@@ -1280,7 +1307,7 @@ fn start_window_timer(&self, delay: Duration) -> Result<(), Error> {
 - Se `SetTimer` falla, o fotograma agarda ao final do bucle modal: non é motivo para parar meiga.
 - Os temporizadores de xanela só disparan nos tics do reloxo, así que durante un bucle modal hai uns 21 fotogramas por segundo en vez de 30. Mentres se move unha xanela, non se nota.
 - Desde a subfase 1.9, mentres se arrastra o bordo da xanela, a grella cambia ao ritmo dos fotogramas: o último tamaño, se chega antes de que pase un intervalo desde o cambio anterior, espera por este temporizador de xanela ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)).
-- A caixa de [`confirm`](#windowconfirm), desde a subfase 1.8, tamén ten o seu bucle modal, pero o temporizador non se substitúe: o *handler* está esperando pola caixa e, se o substituíse un temporizador de xanela, ao vencer `frame_timer_due` daría o fotograma por entregado e `FrameTimer` perderíase (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). O fotograma pendente chega cando se pecha a caixa e `pump` volta esperar.
+- A caixa de [`confirm`](#windowconfirm), desde a subfase 1.8, e a de [`alert`](#windowalert), desde a 2.5, tamén teñen o seu bucle modal, pero o temporizador non se substitúe: o *handler* está esperando pola caixa e, se o substituíse un temporizador de xanela, ao vencer `frame_timer_due` daría o fotograma por entregado e `FrameTimer` perderíase (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). O fotograma pendente chega cando se pecha a caixa e `pump` volta esperar.
 
 ### `WM_PAINT`: `paint`
 
@@ -1453,6 +1480,36 @@ Desde a subfase 1.8. Pregúntalle ao usuario, nunha caixa de mensaxe de Windows,
 - **A resposta.** `MessageBoxW` devolve o botón escollido, `IDOK` ou `IDCANCEL`; Esc e o botón de pechar da caixa tamén dan `IDCANCEL`. Se falla, devolve 0. `confirm` só devolve `true` con `IDOK`.
 - **O seu bucle de mensaxes.** `MessageBoxW` non volta ata que se pecha a caixa, e mentres tanto o seu propio bucle de mensaxes reparte tamén as da xanela. Os seus eventos non chegan ao *handler*, que está esperando por esta chamada: pérdense, coma di a documentación da función. Cales son, e como o compensa o programa, explícase en [`State`](#state-e-installed-o-handler-dentro-do-window-procedure).
 - Os textos van en UTF-16 rematado en 0 (ver [`lib.rs`](#cratesmeiga-winsrclibrs)), e viven ata o final da función, despois da chamada.
+
+### `Window::alert`
+
+```rust
+pub fn alert(&self, title: &str, text: &str) {
+    let title = wide(title);
+    let text = wide(text);
+    unsafe {
+        MessageBoxW(
+            self.handle,
+            text.as_ptr(),
+            title.as_ptr(),
+            MB_OK | MB_ICONWARNING,
+        )
+    };
+}
+```
+
+Desde a subfase 2.5. Mostra un texto nunha caixa de mensaxe de Windows co botón *OK*, diante da xanela, e non volta ata que o usuario a pecha. O programa úsaa unha vez, ao recibir [`Shown`](#event-e-mousebutton), para os erros do arquivo de configuración, se os hai: co título «meiga», a ruta do arquivo, unha liña por erro, como moito 20 e despois cantos quedan, e o que fixo meiga con eles ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 8, [Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)).
+
+| Opción | Que fai |
+|---|---|
+| `MB_OK` | Un só botón, *OK*, no idioma de Windows. |
+| `MB_ICONWARNING` | A icona de aviso, coma na de `confirm`: meiga segue, pero ignorou o que estaba mal. |
+
+- **Coma `confirm`.** É a mesma chamada, con outros botóns e sen resposta. A caixa ten dona, a xanela: vai diante dela, e o usuario ten que pechala antes de seguir na xanela. O comentario `// SAFETY:` do bloque `unsafe`, que o extracto omite, é tamén o mesmo: a xanela é deste fío, e os dous textos rematan en 0 e viven ata despois da chamada.
+- **O seu bucle de mensaxes.** Mentres está aberta, os eventos da xanela non chegan ao *handler*, que está esperando por esta chamada, coma di a documentación da función e coma coa caixa de `confirm`. Ao pecharse, o programa compénsao igual: a xanela pinta todo outra vez, e mostra o que escribiu mentres tanto o programa da primeira tab, que xa corre ([`State`](#state-e-installed-o-handler-dentro-do-window-procedure), [Código › meiga › `respond`](meiga.md#respond-o-que-pide-a-vista)).
+- **Non devolve nada.** Só hai un botón, e o programa segue igual se a caixa se pecha con el, con Esc ou co botón de pechar da caixa, ou se `MessageBoxW` falla e devolve 0.
+- **O botón é `IDCANCEL`.** Nunha caixa só con *OK*, Windows dálle ao botón o identificador 2, `IDCANCEL`, e non o 1, `IDOK`: así a pecha tamén Esc, que lle envía á caixa un `WM_COMMAND` con `IDCANCEL`, e `MessageBoxW` devolve igual `IDOK`. Un `WM_COMMAND` con `IDOK` non fai nada. Atopouno unha comprobación a man, que pechaba a caixa enviándolle `IDOK`: a caixa seguía aberta, e meiga parecía bloqueada, porque o seu fío estaba no bucle da caixa. [`tools/check-profiles.ps1`](ferramentas.md#toolscheck-profilesps1) preme o botón co identificador que ten (`GetDlgCtrlID`).
+- **E `show_error`.** A caixa de [`show_error`](#is_remote_session-e-show_error) tamén ten só *OK*, pero coa icona de erro e sen dona, porque se pode mostrar sen a xanela: meiga non segue. A de `alert` é un aviso, cunha xanela que segue funcionando detrás.
 
 ### `Window::waker` e `Waker`
 
@@ -1693,14 +1750,14 @@ fn check(&self, result: Result<(), HandlerError>) {
 ```
 
 - **Mensaxes dentro doutras.** Algunhas funcións de Windows envían mensaxes á xanela e esperan a resposta: `ReleaseCapture`, `SetWindowPos`, `DestroyWindow`… Se o *handler* chama a unha delas, o *window procedure* recibe a nova mensaxe **mentres o *handler* aínda está a traballar**. Darlle outra referencia `&mut` ao *handler* nese momento sería un erro de memoria que Rust prohíbe. `try_borrow_mut` detecta o caso, e esa mensaxe non se entrega. Por iso o *trait* `Handler` advirte de que non se chamen esas funcións desde o *handler*. Pódese facer cando ese evento non fai falta: desde a subfase 1.8, o programa solta o rato desde o *handler* ([`release_mouse`](#a-captura-do-rato-e-o-repintado)), e o `WM_CAPTURECHANGED` que envía `ReleaseCapture` pérdese así. Deste xeito, `CaptureLost` só chega cando a captura remata fóra das chamadas ao *handler*: por exemplo, cando outra xanela colle o rato.
-- **Unha caixa de mensaxe dentro do *handler*.** Desde a subfase 1.8, o *handler* tamén abre a caixa que pregunta antes de pegar ([`confirm`](#windowconfirm)), e `MessageBoxW` non volta ata que se pecha. Mentres tanto, a xanela segue recibindo mensaxes, as que lle envía Windows e as da cola, que reparte o bucle de mensaxes da caixa: o *window procedure* recíbeas dentro da chamada ao *handler*, `try_borrow_mut` falla, e os seus eventos pérdense. Así, o *handler* non recibe:
+- **Unha caixa de mensaxe dentro do *handler*.** Desde a subfase 1.8, o *handler* tamén abre a caixa que pregunta antes de pegar ([`confirm`](#windowconfirm)) e, desde a 2.5, a que mostra os erros da configuración ([`alert`](#windowalert)), e `MessageBoxW` non volta ata que se pecha. Mentres tanto, a xanela segue recibindo mensaxes, as que lle envía Windows e as da cola, que reparte o bucle de mensaxes da caixa: o *window procedure* recíbeas dentro da chamada ao *handler*, `try_borrow_mut` falla, e os seus eventos pérdense. Así, o *handler* non recibe:
   - as teclas nin os botóns do rato que soben coa caixa aberta, coma a tecla ou o botón que a abriu: van á caixa ou, se chegan á xanela, pérdense;
   - `WM_KILLFOCUS` nin `WM_SETFOCUS`: a caixa colle o foco e, ao pecharse, devólvello á xanela, así que os dous avisos pérdense xuntos;
   - `WM_CAPTURECHANGED`: ao abrirse a caixa, Windows envíalle á xanela `WM_CANCELMODE`, e `DefWindowProcW` solta a captura do rato;
   - os avisos do [`Waker`](#windowwaker-e-waker), desde a subfase 2.2 os de todas as tabs, nin os `WM_PAINT`, que `BeginPaint` dá por pintados igual;
   - `WM_SIZE` nin `WM_DPICHANGED`: se a xanela cambia de tamaño ou de escala, por exemplo porque outro programa a redimensiona ou porque cambia a escala do monitor. A xanela colle igual o tamaño que suxire o cambio de escala, porque o aplica o *window procedure*, pero o *handler* non o sabe. A propia xanela non se pode mover nin redimensionar co rato, porque a caixa a desactiva.
 
-  O programa compénsao cando se pecha a caixa: esquece as teclas que collera e os botóns do rato, o programa da sesión recibe a soltura dos botóns cuxa pulsación recibira, unha selección que se estaba a arrastrar remata onde estaba e cópiase, desde a revisión do código da subfase 1.9 a vista colle a escala e o tamaño que ten entón a xanela, e a xanela redebúxase enteira e le o que cambiou mentres tanto, desde a subfase 2.2 en todas as tabs ([Código › meiga › `respond`](meiga.md#respond-o-que-pide-a-vista), [Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). `check-mouse.ps1` compróbao publicando mensaxes na xanela coa caixa aberta, e `check-resize.ps1` cambiando o seu tamaño ([Código › ferramentas › `check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) e [`check-resize.ps1`](ferramentas.md#toolscheck-resizeps1)).
+  O programa compénsao cando se pecha a caixa: esquece as teclas que collera e os botóns do rato, o programa da sesión recibe a soltura dos botóns cuxa pulsación recibira, unha selección que se estaba a arrastrar remata onde estaba e cópiase, desde a revisión do código da subfase 1.9 a vista colle a escala e o tamaño que ten entón a xanela, e a xanela redebúxase enteira e le o que cambiou mentres tanto, desde a subfase 2.2 en todas as tabs ([Código › meiga › `respond`](meiga.md#respond-o-que-pide-a-vista), [Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)). Desde a 2.5, fai o mesmo cando se pecha a caixa de [`alert`](#windowalert), que se abre con [`Shown`](#event-e-mousebutton) mentres a primeira tab xa corre ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 8). `check-mouse.ps1` compróbao publicando mensaxes na xanela coa caixa aberta, e `check-resize.ps1` cambiando o seu tamaño ([Código › ferramentas › `check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) e [`check-resize.ps1`](ferramentas.md#toolscheck-resizeps1)).
 - `let Ok(…) = … else { return … };` é un ***let-else***: se o valor non encaixa no patrón, execútase o `else`, que ten que saír da función.
 - `&mut **handler`: `handler` é unha referencia que garda o `RefCell` (un `RefMut`), que apunta a outra referencia (`&mut dyn Handler`); os dous `*` chegan ao *handler*.
 - `impl FnOnce(…)`: calquera función ou *closure* que se poida chamar unha vez con eses argumentos. `dispatch` pásalle `handler.event(window, event)`, e `paint`, `handler.paint(window, dc, area)`.
@@ -1993,7 +2050,7 @@ Desde a subfase 1.9, unha das probas crea unha xanela de verdade, para comprobar
 - **A única que crea unha xanela.** Cargo compila as probas unitarias dun crate nun só programa, que as corre en varios fíos, e a clase de xanela só se pode rexistrar unha vez por proceso ([`create`](#windowcreate)): unha segunda xanela fallaría en `RegisterClassExW`.
 - **A única comprobación automática da orde.** As comprobacións de `tools/` publican as mensaxes das teclas e do rato na xanela de meiga desde outro programa, pero `WM_DPICHANGED` leva un punteiro, e non se pode publicar. O resto dun cambio de escala, a fonte, a barra e o cursor novos e a grella coas súas celas, compróbase a man ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)).
 
-O resto deste arquivo necesita a xanela de meiga funcionando, co seu bucle de mensaxes. Compróbano `tools/check-window.ps1` e `tools/check-present.ps1` co `meiga.exe` de *release* (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Desde a subfase 1.6, [`check-window.ps1`](ferramentas.md#toolscheck-windowps1) comproba tamén que o título da xanela pasa a ser o que pon `cmd` no terminal, o que proba o `Waker` e `set_title`; e `check-present.ps1` cambia a pantalla escribindo no terminal, así que eses cambios chegan á xanela cun `Wake`. `caret_settings` depende da configuración de cada Windows, e non ten probas eiquí: as decisións que se toman cos seus valores próbanse no programa, con axustes escritos a man ([Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a 1.7, [`check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) publica as mensaxes das teclas na xanela, e comproba que as do teclado chegan ao *handler* e, a través del, ao programa do terminal. Desde a 1.8, [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) publica tamén as do rato, algunhas coa caixa de [`confirm`](#windowconfirm) aberta, e comproba o que len os programas do terminal e o que queda no portapapeis: os clics, os movementos, os arrastres e a roda, cun punto da pantalla que ten que chegar á cela debaixo del; a captura que se perde, por outra xanela ou pola caixa; as liñas por parte da roda, as das preferencias do rato; e o primeiro plano: se a xanela o está, un programa pode copiar ao portapapeis, e se non, non. `mouse_settings`, coma `caret_settings`, depende da configuración de cada Windows, e non ten probas eiquí. Desde a 1.9, [`check-resize.ps1`](ferramentas.md#toolscheck-resizeps1) cambia o tamaño da xanela e comproba que o programa do terminal recibe a grella que a enche, sen a franxa da barra de desprazamento, e que a pantalla de meiga ten as mesmas filas ca a consola do ConPTY, o que proba `Resized` e o cambio de tamaño da pseudoconsola, tamén cando o tamaño cambia coa caixa de [`confirm`](#windowconfirm) aberta; e despois, que a roda, as teclas e a barra de desprazamento moven a vista do historial, e que o zoom cambia a grella. A saída do punteiro ([`track_mouse_leave`](#windowtrack_mouse_leave)) compróbase a man, coma o resto do cambio de escala. Desde a 2.2, `tools/check-tabs.ps1` abre, mostra e pecha tabs cos seus atallos, e comproba que a saída dunha tab que non se ve non debuxa nada, para o que cada aviso ten que levar o número da súa tab, e que pechar a última tab pecha a xanela e meiga remata co código 0, o que proba [`close`](#windowclose).
+O resto deste arquivo necesita a xanela de meiga funcionando, co seu bucle de mensaxes. Compróbano `tools/check-window.ps1` e `tools/check-present.ps1` co `meiga.exe` de *release* (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Desde a subfase 1.6, [`check-window.ps1`](ferramentas.md#toolscheck-windowps1) comproba tamén que o título da xanela pasa a ser o que pon `cmd` no terminal, o que proba o `Waker` e `set_title`; e `check-present.ps1` cambia a pantalla escribindo no terminal, así que eses cambios chegan á xanela cun `Wake`. `caret_settings` depende da configuración de cada Windows, e non ten probas eiquí: as decisións que se toman cos seus valores próbanse no programa, con axustes escritos a man ([Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a 1.7, [`check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) publica as mensaxes das teclas na xanela, e comproba que as do teclado chegan ao *handler* e, a través del, ao programa do terminal. Desde a 1.8, [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) publica tamén as do rato, algunhas coa caixa de [`confirm`](#windowconfirm) aberta, e comproba o que len os programas do terminal e o que queda no portapapeis: os clics, os movementos, os arrastres e a roda, cun punto da pantalla que ten que chegar á cela debaixo del; a captura que se perde, por outra xanela ou pola caixa; as liñas por parte da roda, as das preferencias do rato; e o primeiro plano: se a xanela o está, un programa pode copiar ao portapapeis, e se non, non. `mouse_settings`, coma `caret_settings`, depende da configuración de cada Windows, e non ten probas eiquí. Desde a 1.9, [`check-resize.ps1`](ferramentas.md#toolscheck-resizeps1) cambia o tamaño da xanela e comproba que o programa do terminal recibe a grella que a enche, sen a franxa da barra de desprazamento, e que a pantalla de meiga ten as mesmas filas ca a consola do ConPTY, o que proba `Resized` e o cambio de tamaño da pseudoconsola, tamén cando o tamaño cambia coa caixa de [`confirm`](#windowconfirm) aberta; e despois, que a roda, as teclas e a barra de desprazamento moven a vista do historial, e que o zoom cambia a grella. A saída do punteiro ([`track_mouse_leave`](#windowtrack_mouse_leave)) compróbase a man, coma o resto do cambio de escala. Desde a 2.2, `tools/check-tabs.ps1` abre, mostra e pecha tabs cos seus atallos, e comproba que a saída dunha tab que non se ve non debuxa nada, para o que cada aviso ten que levar o número da súa tab, e que pechar a última tab pecha a xanela e meiga remata co código 0, o que proba [`close`](#windowclose). Desde a 2.5, [`check-profiles.ps1`](ferramentas.md#toolscheck-profilesps1) comproba [`Shown`](#event-e-mousebutton) e [`alert`](#windowalert): cun `config.toml` con erros, cando a xanela xa está na pantalla e pintada, aparece unha caixa de mensaxe diante dela, coa xanela como dona, co título «meiga» e un só botón, mentres o programa da primeira tab xa corre; e, ao pecharse a caixa, a xanela pinta todo outra vez.
 
 ## `crates/meiga-win/src/clipboard.rs`
 
@@ -2181,13 +2238,13 @@ impl Drop for Global {
 
 ## `crates/meiga-win/src/conpty.rs`
 
-Desde a subfase 1.4. As **sesións**: un programa, normalmente unha shell, que corre nunha pseudoconsola e fala con meiga por dúas tubaxes ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). meiga le da tubaxe de saída o que mostra o programa, texto UTF-8 con secuencias VT, e escribe na tubaxe de entrada as respostas ás preguntas que fai o programa e, desde a subfase 1.7, as teclas. Desde a 1.9, o tamaño da pseudoconsola cambia co da grella do terminal ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)). Cada sesión ten dous fíos, que dormen mentres non hai nada que facer ([ADR 0005](../adr/0005-fios-e-fotogramas.md)), e pódese pechar en calquera momento sen esperar. Desde a subfase 2.2, a prioridade do fío lector pódese baixar e voltar subir mentres a sesión corre: meiga báixaa mentres non se ve a tab da sesión, agás os momentos nos que a xanela ten o *lock* do seu terminal ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)). O programa, e os que este arranque, corren nun *job* da sesión, para poder rematalos todos se a sesión se bloquea ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). O seu sitio na arquitectura explícase en [Arquitectura › Sesións](../arquitectura.md#sesións-a-shell-o-conpty-e-os-dous-fíos).
+Desde a subfase 1.4. As **sesións**: un programa, normalmente unha shell, que corre nunha pseudoconsola e fala con meiga por dúas tubaxes ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). meiga le da tubaxe de saída o que mostra o programa, texto UTF-8 con secuencias VT, e escribe na tubaxe de entrada as respostas ás preguntas que fai o programa e, desde a subfase 1.7, as teclas. Desde a 1.9, o tamaño da pseudoconsola cambia co da grella do terminal ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)). Cada sesión ten dous fíos, que dormen mentres non hai nada que facer ([ADR 0005](../adr/0005-fios-e-fotogramas.md)), e pódese pechar en calquera momento sen esperar. Desde a subfase 2.2, a prioridade do fío lector pódese baixar e voltar subir mentres a sesión corre: meiga báixaa mentres non se ve a tab da sesión, agás os momentos nos que a xanela ten o *lock* do seu terminal ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)). Desde a subfase 2.5, a sesión recibe nun [`Command`](#command), ademais da liña de comandos do programa, o cartafol onde empeza e o seu contorno, que meiga fai para os programas das súas tabs ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 9 e 10). O programa, e os que este arranque, corren nun *job* da sesión, para poder rematalos todos se a sesión se bloquea ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). O seu sitio na arquitectura explícase en [Arquitectura › Sesións](../arquitectura.md#sesións-a-shell-o-conpty-e-os-dous-fíos).
 
 Así se usa:
 
 ```rust
 use meiga_core::geometry::GridSize;
-use meiga_win::conpty::{Conpty, Input, Output, Priority};
+use meiga_win::conpty::{Command, Conpty, Input, Output, Priority};
 
 struct Screen;
 
@@ -2202,7 +2259,12 @@ impl Output for Screen {
     }
 }
 
-let pty = Conpty::load().spawn("pwsh -NoLogo", GridSize::new(120, 30), Screen)?;
+// In this folder, with the environment of meiga.
+let command = Command {
+    folder: Some(r"C:\src"),
+    ..Command::new("pwsh -NoLogo")
+};
+let pty = Conpty::load().spawn(&command, GridSize::new(120, 30), Screen)?;
 pty.write(b"dir\r");
 pty.resize(GridSize::new(100, 40))?; // The grid changed size.
 pty.set_reader_priority(Priority::BelowNormal)?; // Its tab is hidden.
@@ -2210,7 +2272,7 @@ let input = pty.input(); // To write from elsewhere, also from another thread.
 drop(pty); // Closes the session, without waiting.
 ```
 
-Desde a subfase 1.6, o `Output` de meiga dálle a saída ao núcleo do terminal, respóndelle ao programa e avisa á xanela ([Código › meiga](meiga.md#cratesmeigasrcsessionrs)); desde a 1.9, a vista do terminal cambia o tamaño da pseudoconsola cando cambia a grella ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)); e desde a 2.2, cada tab ten a súa sesión, e o programa cambia a prioridade do seu fío lector cando a tab se oculta ou se mostra, e mentres colle o *lock* do terminal dunha tab oculta ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Tamén usan as sesións as [probas](#cratesmeiga-wintestsconptyrs) e o [exemplo](#cratesmeiga-winexamplesconptyrs).
+Desde a subfase 1.6, o `Output` de meiga dálle a saída ao núcleo do terminal, respóndelle ao programa e avisa á xanela ([Código › meiga](meiga.md#cratesmeigasrcsessionrs)); desde a 1.9, a vista do terminal cambia o tamaño da pseudoconsola cando cambia a grella ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)); e desde a 2.2, cada tab ten a súa sesión, e o programa cambia a prioridade do seu fío lector cando a tab se oculta ou se mostra, e mentres colle o *lock* do terminal dunha tab oculta ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)); e desde a 2.5, o `Command` de cada tab leva a liña de comandos do seu perfil, o seu cartafol e o bloque do contorno que fai meiga ao arrancar ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Tamén usan as sesións as [probas](#cratesmeiga-wintestsconptyrs) e o [exemplo](#cratesmeiga-winexamplesconptyrs).
 
 Unha sesión, de principio a fin:
 
@@ -2401,12 +2463,17 @@ As funcións de `kernel32`, desde a subfase 1.9 tamén `ResizePseudoConsole`, xa
 ```rust
 pub fn spawn<O: Output>(
     &self,
-    command_line: &str,
+    command: &Command<'_>,
     size: GridSize,
     output: O,
 ) -> Result<Pty, Error> {
     let size = coord(size, "CreatePseudoConsole")?;
-    let mut command_line = command_line_of(command_line)?;
+    let mut command_line = null_terminated(command.line, "the command line")?;
+    let folder = command
+        .folder
+        .map(|folder| null_terminated(folder, "the folder"))
+        .transpose()?;
+    let environment = command.environment.map(environment_block).transpose()?;
     let wake = event(false)?;
     let output_closed = event(true)?;
     let job = job()?;
@@ -2417,7 +2484,12 @@ pub fn spawn<O: Output>(
     // pipes break when ConPTY ends, so the reader and the writer do not
     // wait for ever.
     drop((input_read, output_write));
-    let (process, process_id) = match start(&mut command_line, &console, &job) {
+    let program = Program {
+        command_line: &mut command_line,
+        folder: folder.as_deref(),
+        environment,
+    };
+    let (process, process_id) = match start(program, &console, &job) {
         Ok(started) => started,
         Err(error) => {
             // Before Windows 11 24H2, ClosePseudoConsole waits until
@@ -2485,17 +2557,17 @@ pub fn spawn<O: Output>(
 
 Lanza o programa e crea a súa sesión, nesta orde:
 
-1. Comproba o tamaño e a liña de comandos antes de crear nada ([os axudantes](#os-axudantes-coord-command_line_of-event-job-e-pipe)).
+1. Comproba o tamaño e o que vai correr antes de crear nada ([os axudantes](#os-axudantes-coord-null_terminated-environment_block-invalid_input-event-job-e-pipe)): a liña de comandos e, desde a subfase 2.5, o cartafol e o bloque do contorno, se os leva o [`Command`](#command). A liña de comandos e o cartafol pasan a UTF-16 rematado en 0, coma os quere `CreateProcessW`; o bloque, que xa vén en UTF-16, só se comproba, e non se copia. `command.folder` é un `Option<&str>`: `map` convérteo nun `Option<Result<…>>`, e `transpose`, nun `Result<Option<…>>`, que `?` devolve se é un erro. Así, un cartafol mal detén `spawn`, e sen cartafol queda `None`. O bloque fai o mesmo con `environment_block`.
 2. Crea os dous eventos e o *job*: todo o que pode fallar antes de que arranque o programa. Despois, as dúas tubaxes: a de entrada, co tamaño que escolla Windows (0), porque o que se envía, o que se teclea e as respostas ao programa, é pouco, e a de saída, con 64 KiB.
 3. Crea a pseudoconsola, que le do extremo de lectura da entrada e escribe no de escritura da saída. O ConPTY fai as súas propias copias deles, así que meiga pecha as súas no momento: se non, cando rematase o ConPTY as tubaxes non romperían, e os fíos lector e escritor esperarían para sempre.
-4. Lanza o programa na pseudoconsola e no *job* ([`start`](#start-e-attributes)). Se falla, pecha a pseudoconsola, pero antes a tubaxe de saída: antes de Windows 11 24H2, `ClosePseudoConsole` espera ata que remata o ConPTY, e o ConPTY podería estar esperando a escribir unha saída que xa ninguén lería.
+4. Lanza o programa na pseudoconsola e no *job*, desde a 2.5 co seu cartafol e o seu contorno, que lle pasa nun `Program` ([`start`](#start-e-attributes)). Se falla, pecha a pseudoconsola, pero antes a tubaxe de saída: antes de Windows 11 24H2, `ClosePseudoConsole` espera ata que remata o ConPTY, e o ConPTY podería estar esperando a escribir unha saída que xa ninguén lería.
 5. Garda no `Shared` os eventos, o proceso, o *job* e a pseudoconsola, que queda alí ata que a colle o fío escritor.
 6. Crea os dous fíos, co identificador do proceso no nome (`conpty writer 1234`), que se ve nos depuradores e nos perfís; desde a subfase 2.2, `tools/check-tabs.ps1` atopa así o fío lector de cada sesión, para mirar a súa prioridade. Entre os dous crea a entrada da sesión ([`Input`](#input)), e o fío lector recibe outra referencia ao estado (`Arc::clone`), coa que fará a súa propia entrada.
 7. Xunta no [`Pty`](#pty) a entrada, o identificador do proceso e o `JoinHandle` do fío lector, que garda desde a subfase 2.2 para cambiarlle a prioridade ([`set_reader_priority`](#a-prioridade-do-fío-lector-priority-e-set_reader_priority)). Por iso o `Pty` créase ao final, cando o fío lector xa existe. Ata a 2.1 creábase entre os dous fíos, e o `JoinHandle` do lector descartábase (`Ok(_)`).
 
 O fío escritor créase primeiro, porque é o que pecha a sesión. Se non se pode crear, `spawn` fai o que faría el, nunha orde que nunca bloquea: remata os programas do *job*, pecha a tubaxe de saída e, por último, a pseudoconsola. Pechala antes, mentres o programa aínda se pode estar a conectar a ela, podería deixar o ConPTY e o programa esperando ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Se o que non se pode crear é o lector, `spawn` remata os programas, avisa ao escritor de que non espere pola saída, que xa ninguén le, e pecha a sesión con [`Input::close`](#input), coma o `Drop` dun `Pty`: o escritor pecha a pseudoconsola como se a pechase meiga, e a súa espera remata axiña, porque xa ten o aviso de que se pechou a saída, e os programas xa se están a rematar. Ata a subfase 2.1, o `Pty` xa existía nese momento, e era o seu `Drop`, ao devolver o erro, o que pechaba a sesión; desde a 2.2 aínda non existe, porque necesita o fío lector, e `spawn` pecha a sesión ela mesma. En ningún dos dous casos se chama a `output`, que se destrúe coa función do fío que non se creou.
 
-Windows busca o programa como fai sempre `CreateProcessW` ([Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos)), e a liña de comandos leva os argumentos con comiñas, como os espera o programa: `spawn` non os toca. Se non o atopa, `spawn` devolve o erro de `CreateProcessW`, de tipo `NotFound`, que [`os_error`](#cratesmeiga-winsrcerrorrs) deixa ver: así sabe meiga que ten que probar con outra shell.
+Windows busca o programa como fai sempre `CreateProcessW` ([Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos)), e a liña de comandos leva os argumentos con comiñas, como os espera o programa: `spawn` non os toca. Se non o atopa, `spawn` devolve o erro de `CreateProcessW`, de tipo `NotFound`, que [`os_error`](#cratesmeiga-winsrcerrorrs) deixa ver. Ata a subfase 2.4, meiga sabía así que tiña que probar con outra shell: se non atopaba `pwsh`, lanzaba Windows PowerShell. Desde a 2.5, as shells dos perfís xa se atoparon antes, coas súas rutas completas ([`profiles.rs`](#cratesmeiga-winsrcprofilesrs)), e se un programa non arranca, a súa tab mostra no terminal que programa, en que cartafol e por que ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Un cartafol que non existe tamén é un erro de `CreateProcessW`, que `spawn` non comproba antes: o 267, `ERROR_DIRECTORY`, que nun Windows en inglés dá `CreateProcessW failed: The directory name is invalid. (os error 267)`, coma comproba unha das [probas de integración](#cratesmeiga-wintestsconptyrs).
 
 ### `Output`
 
@@ -2668,7 +2740,7 @@ Desde a subfase 1.9, **`resize`** cambia o tamaño da pseudoconsola ([Tecnoloxí
 - **Non espera polo ConPTY.** A función do ConPTY só escribe o tamaño novo na súa tubaxe de sinais, e volta: o ConPTY aplícao cando le a mensaxe. Por iso se pode chamar desde o fío da interface, e mesmo co *lock* do terminal collido: meiga cambia primeiro o tamaño do terminal e despois o da pseudoconsola, sen soltar ese *lock*, para que ningunha saída do programa da sesión chegue entre os dous ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), [Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
 - **Co `Mutex` do estado.** A pseudoconsola está no estado da sesión ata que o fío escritor a colle para pechala, co mesmo `Mutex` ([`write_input`](#o-fío-escritor-write_input-e-write_all)). `resize` chama a función mentres ten ese `Mutex`, así que a pseudoconsola segue aberta durante a chamada. Como a función non espera, o `Mutex` está collido pouco tempo, e quen escribe desde outro fío non queda esperando polo ConPTY. `as_ref` dá unha referencia á pseudoconsola, sen sacala do estado.
 - **Cando non fai nada.** Se a sesión se está a pechar (`closing`), ou se xa rematou e o fío escritor colleu a pseudoconsola para pechala, `resize` non fai nada, coma `write`, e devolve `Ok`: xa non hai a quen avisar. `filter` dá `None` se a sesión se está a pechar, e entón o *let-else* volta sen erro.
-- **Os erros.** Primeiro, [`coord`](#os-axudantes-coord-command_line_of-event-job-e-pipe) comproba que o tamaño cabe nun `COORD`, co nome `ResizePseudoConsole` para a mensaxe. Despois, un `HRESULT` negativo é un erro, coma ao crear a pseudoconsola ([`Error::hresult`](#cratesmeiga-winsrcerrorrs)). meiga non fai nada co erro: o programa da sesión queda co tamaño de antes, e o seu texto pode verse mal ata o seguinte cambio.
+- **Os erros.** Primeiro, [`coord`](#os-axudantes-coord-null_terminated-environment_block-invalid_input-event-job-e-pipe) comproba que o tamaño cabe nun `COORD`, co nome `ResizePseudoConsole` para a mensaxe. Despois, un `HRESULT` negativo é un erro, coma ao crear a pseudoconsola ([`Error::hresult`](#cratesmeiga-winsrcerrorrs)). meiga non fai nada co erro: o programa da sesión queda co tamaño de antes, e o seu texto pode verse mal ata o seguinte cambio.
 
 Desde a subfase 2.2, **`close`** pecha a sesión sen esperar: marca `closing` e esperta o fío escritor, que pecha a pseudoconsola ([`write_input`](#o-fío-escritor-write_input-e-write_all)). Era o código do `Drop` do [`Pty`](#pty), e pasou eiquí porque tamén o necesita [`spawn`](#conptyspawn), cando non pode crear o fío lector e aínda non ten un `Pty` que destruír.
 
@@ -2949,11 +3021,58 @@ Os dous axudan a `wait_for_end` a contar os programas que remataron:
 - `open_to_wait` abre un proceso polo seu identificador, pedindo só o dereito `SYNCHRONIZE`, o de esperar por el, e sen que o herden os procesos novos (`FALSE`). Se o proceso xa non existe, devolve `None`, e non conta. Mentres o *handle* estea aberto, Windows non reutiliza o identificador, así que o proceso polo que se espera é sempre o mesmo.
 - A lista do *job* dá os identificadores como `usize`, pero os dos procesos son de 32 bits: `u32::try_from` descarta un que non caiba, que Windows nunca dá.
 
+### `Command`
+
+```rust
+/// What a session runs: a program, and where and with what it starts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Command<'a> {
+    /// The program and its arguments, quoted as the program expects.
+    /// Windows looks for the program as `CreateProcessW` does: in the folder
+    /// of meiga, in its current folder, in the folders of the system and in
+    /// the `PATH` of meiga, and adds `.exe` if it has no extension.
+    pub line: &'a str,
+    /// The folder where the program starts, or `None` for the current
+    /// folder of meiga.
+    pub folder: Option<&'a str>,
+    /// The environment of the program, or `None` for the one of meiga: an
+    /// environment block, a `NAME=value` string for each variable, in the
+    /// order of their names, each one ending with a null character, and
+    /// another one at the end.
+    pub environment: Option<&'a [u16]>,
+}
+
+impl<'a> Command<'a> {
+    /// `line`, in the folder and with the environment of meiga.
+    pub const fn new(line: &'a str) -> Self {
+        Self {
+            line,
+            folder: None,
+            environment: None,
+        }
+    }
+}
+```
+
+Desde a subfase 2.5. O que corre unha sesión, que recibe [`spawn`](#conptyspawn): ata a 2.4, `spawn` recibía só a liña de comandos (`command_line: &str`), e o programa empezaba sempre no cartafol actual de meiga, co seu contorno. Agora as tabs dos perfís empezan no cartafol persoal do usuario, ou no do seu perfil, e todas reciben o contorno que fai meiga para os seus programas ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 9 e 10, [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)).
+
+- **`line`**, a liña de comandos, coma antes: o programa e os seus argumentos, coas comiñas que espera o programa. A súa documentación, que ata a 2.4 estaba na de `spawn`, di onde busca Windows o programa ([Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos)). Os perfís que atopa meiga levan a ruta completa do programa ([`detect`](#detect)), e Windows non o busca.
+- **`folder`**, o cartafol onde empeza o programa, ou `None` para o cartafol actual de meiga. Vai ao argumento `lpCurrentDirectory` de `CreateProcessW`.
+- **`environment`**, o contorno do programa coma un **bloque**: unha cadea `NOME=valor` por variábel, ordenadas polo nome, cada unha rematada nun carácter nulo, e outro nulo ao final; ou `None` para o contorno de meiga. Vai en UTF-16 (`[u16]`), coma o dá Windows e coma o fai `Environment::block`, de `meiga-core` ([Código › meiga-core › `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs)). meiga faino unha vez, ao arrancar, e dálle o mesmo bloque a todas as tabs ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)).
+- **Prestado.** O `Command` só leva referencias, `&'a str` e `&'a [u16]`, que viven polo menos o tempo de vida `'a`: o texto e o bloque son de quen chama. `spawn` copia a liña de comandos e o cartafol ao convertelos a UTF-16, pero non o bloque: `CreateProcessW` leo de onde está, e cópiao no proceso novo. Por iso o `Command` é `Copy`: copialo só copia as referencias.
+- **`new`** é o caso de antes: só a liña de comandos, no cartafol e co contorno de meiga. Úsano as probas, o [exemplo](#cratesmeiga-winexamplesconptyrs) e o `Command` da [proba](#cratesmeiga-wintestsconptyrs) dun cartafol que non existe, que nomea só o cartafol e completa o resto con `..Command::new(…)`. É `const fn`, así que tamén se pode usar nunha constante.
+
 ### `start` e `Attributes`
 
 ```rust
+struct Program<'a> {
+    command_line: &'a mut [u16],
+    folder: Option<&'a [u16]>,
+    environment: Option<&'a [u16]>,
+}
+
 fn start(
-    command_line: &mut [u16],
+    program: Program<'_>,
     console: &PseudoConsole,
     job: &OwnedHandle,
 ) -> Result<(OwnedHandle, u32), Error> {
@@ -2966,16 +3085,23 @@ fn start(
     startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
     startup.lpAttributeList = attributes.as_mut_ptr();
     let mut process = PROCESS_INFORMATION::default();
+    let flags = if program.environment.is_some() {
+        EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT
+    } else {
+        EXTENDED_STARTUPINFO_PRESENT
+    };
     let started = unsafe {
         CreateProcessW(
             ptr::null(),
-            command_line.as_mut_ptr(),
+            program.command_line.as_mut_ptr(),
             ptr::null(),
             ptr::null(),
             FALSE,
-            EXTENDED_STARTUPINFO_PRESENT,
-            ptr::null(),
-            ptr::null(),
+            flags,
+            program
+                .environment
+                .map_or(ptr::null(), |block| block.as_ptr().cast()),
+            program.folder.map_or(ptr::null(), <[u16]>::as_ptr),
             ptr::from_ref(&startup).cast::<STARTUPINFOW>(),
             &mut process,
         )
@@ -2996,6 +3122,7 @@ fn start(
 
 Lanza o programa na pseudoconsola e no *job* ([Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos)):
 
+- **`Program`**, desde a subfase 2.5, é o que recibe `start`: a liña de comandos, en UTF-16, rematada en 0 e escribíbel, e o cartafol, tamén rematado en 0, e o bloque do contorno, se non son os de meiga. Prepárao [`spawn`](#conptyspawn) co [`Command`](#command). É privado: os outros crates usan `Command`. Ata a 2.4, `start` recibía só a liña de comandos (`command_line: &mut [u16]`).
 - `jobs` é a lista de *jobs* do programa: só o da sesión. Declárase antes ca `attributes`, porque a lista de atributos apunta a ela, e en Rust as variábeis destrúense na orde contraria á que se declaran: así, `jobs` dura máis ca a lista.
 - `STARTUPINFOEXW::default()` énchea de ceros, e `cb` di o seu tamaño: o da estrutura ampliada.
 - `STARTF_USESTDHANDLES`, cos *handles* estándar nulos: o programa usa os da pseudoconsola, e nunca os de meiga.
@@ -3003,7 +3130,10 @@ Lanza o programa na pseudoconsola e no *job* ([Tecnoloxías › Procesos, tubaxe
 - O primeiro argumento de `CreateProcessW`, o nome do programa, vai nulo: Windows sácao da liña de comandos, e búscao. A liña de comandos ten que ser escribíbel (`&mut [u16]`), porque Windows pode modificala.
 - `FALSE`: o programa non herda ningún *handle* de meiga.
 - `EXTENDED_STARTUPINFO_PRESENT`: a estrutura é a ampliada. `CreateProcessW` declara un punteiro a `STARTUPINFOW`, e `cast` convérteo: a ampliada empeza por ela.
-- As variábeis de contorno e o cartafol actual, nulos, son os de meiga.
+- **O contorno**, desde a 2.5: o bloque do `Command`, se o leva, coa opción `CREATE_UNICODE_ENVIRONMENT`, que lle di a Windows que o bloque está en UTF-16; sen ela, leríao coma texto ANSI, cun byte por carácter. `map_or` dá o punteiro nulo se non hai bloque, e `cast` converte o `*const u16` no punteiro sen tipo que declara `CreateProcessW`.
+- **O cartafol**, desde a 2.5: o do `Command`, ou nulo. `<[u16]>::as_ptr` é o método `as_ptr` dos *slices* de `u16`, nomeado coma unha función para pasarllo a `map_or`.
+- Cos dous nulos, o programa recibe o contorno e o cartafol actual de meiga: así empezaban todos ata a 2.4, e así empezan os de `Command::new`.
+- **O comentario `// SAFETY:`** da chamada, que o extracto omite, di desde a 2.5 por que son seguros os tres punteiros: a liña de comandos remata en 0 e é escribíbel, e o cartafol remata en 0, coma pide `CreateProcessW`; e o bloque, en UTF-16 coma di a opción, remata en dous nulos, así que Windows, que o le ata eles, non sae del. Iso compróbao [`environment_block`](#os-axudantes-coord-null_terminated-environment_block-invalid_input-event-job-e-pipe) en `spawn`, antes de crear nada.
 - Devolve o *handle* do proceso, que se pecha só (`OwnedHandle`), e o seu identificador. O do primeiro fío do programa non fai falta, e péchase no momento.
 
 ```rust
@@ -3074,7 +3204,7 @@ impl Drop for Attributes<'_> {
 - O valor de `PROC_THREAD_ATTRIBUTE_JOB_LIST` si é un punteiro: á lista de *jobs*, cos seus bytes (`size_of_val`, o tamaño dun *handle* por cada *job*). Microsoft pide que o valor dure ata que se borre a lista (`DeleteProcThreadAttributeList`), é dicir, tanto coma o `Attributes`. Iso é o que di o tempo de vida `'a`: o `Attributes` toma prestada a lista de *jobs*, e o compilador non deixa que se destrúa antes. `PhantomData` é un campo sen tamaño que só serve para levar ese préstamo.
 - Mover o `Vec` ao `Attributes` non move a súa memoria, así que o punteiro `list` segue valendo.
 
-### Os axudantes: `coord`, `command_line_of`, `event`, `job` e `pipe`
+### Os axudantes: `coord`, `null_terminated`, `environment_block`, `invalid_input`, `event`, `job` e `pipe`
 
 ```rust
 fn coord(size: GridSize, function: &'static str) -> Result<COORD, Error> {
@@ -3098,7 +3228,39 @@ fn coord(size: GridSize, function: &'static str) -> Result<COORD, Error> {
 - `columns @ 1..` é un patrón: acepta o valor se é 1 ou máis, e gárdao en `columns`.
 - `function`, desde a subfase 1.9, é o nome da función para a mensaxe de erro: `CreatePseudoConsole` en [`spawn`](#conptyspawn), e `ResizePseudoConsole` en [`Input::resize`](#input). Así, o erro di en que paso foi: por exemplo, `ResizePseudoConsole failed: 80 x 0 cells is not a valid size`.
 
-`command_line_of` rexeita un carácter nulo, que cortaría a liña de comandos sen avisar, e convértea a UTF-16 con [`wide`](#cratesmeiga-winsrclibrs). `event` crea un evento sen sinalar e sen nome, de reinicio automático ou, se se lle pide, manual. `pipe` crea unha tubaxe co tamaño pedido e sen `SECURITY_ATTRIBUTES`, así que os seus *handles* non se herdan. Os *handles* novos van nun `OwnedHandle` desde o momento en que se crean, para que sempre se pechen.
+```rust
+fn null_terminated(text: &str, what: &str) -> Result<Vec<u16>, Error> {
+    if text.contains('\0') {
+        return Err(invalid_input(format!("{what} has a null character")));
+    }
+    Ok(wide(text))
+}
+
+fn environment_block(block: &[u16]) -> Result<&[u16], Error> {
+    if block.ends_with(&[0, 0]) {
+        Ok(block)
+    } else {
+        Err(invalid_input(
+            "the environment block does not end with two null characters",
+        ))
+    }
+}
+
+fn invalid_input(message: impl Into<String>) -> Error {
+    Error::new(
+        "CreateProcessW",
+        io::Error::new(io::ErrorKind::InvalidInput, message.into()),
+    )
+}
+```
+
+Desde a subfase 2.5, os tres preparan para `CreateProcessW` o que lle pasa [`spawn`](#conptyspawn), e rexeitan o que non lle serve, antes de crear nada:
+
+- **`null_terminated`**, o `command_line_of` de ata a 2.4, agora tamén para o cartafol: rexeita un carácter nulo, que cortaría o texto sen avisar, porque Windows le cada texto ata o primeiro nulo, e converte o texto a UTF-16 con [`wide`](#cratesmeiga-winsrclibrs). `what` di que texto é, para a mensaxe de erro: `CreateProcessW failed: the command line has a null character`, a mensaxe de antes, ou `CreateProcessW failed: the folder has a null character`.
+- **`environment_block`** comproba que o bloque do contorno remata en dous nulos: o da última variábel e o que remata o bloque, ou os dous dun bloque baleiro. Windows le un bloque ata a primeira cadea baleira e, sen eles, seguiría lendo despois do final do bloque, na memoria que vén detrás. Esta comprobación é a que fai seguro o bloque `unsafe` de [`start`](#start-e-attributes). Non mira o resto do bloque, coma a orde das variábeis, que non afecta á memoria: ordénaas `Environment::block` ([Código › meiga-core › `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs)). Devolve o mesmo *slice*, sen copialo.
+- **`invalid_input`** fai o erro dun dato que se rexeita antes de chamar a Windows: co nome da función que fallaría, `CreateProcessW`, coma `coord` co da súa, e o tipo `InvalidInput` ([`Error::new`](#cratesmeiga-winsrcerrorrs)). `impl Into<String>` acepta un texto fixo, coma o de `environment_block`, ou un feito con `format!`, coma o de `null_terminated`.
+
+`event` crea un evento sen sinalar e sen nome, de reinicio automático ou, se se lle pide, manual. `pipe` crea unha tubaxe co tamaño pedido e sen `SECURITY_ATTRIBUTES`, así que os seus *handles* non se herdan. Os *handles* novos van nun `OwnedHandle` desde o momento en que se crean, para que sempre se pechen.
 
 ```rust
 fn job() -> Result<OwnedHandle, Error> {
@@ -3136,13 +3298,594 @@ fn job() -> Result<OwnedHandle, Error> {
 | Proba | Que comproba |
 |---|---|
 | `sizes_must_fit_in_a_coord` | 80 × 25 dá o mesmo `COORD`; 32 767 columnas valen; 32 768 columnas, ou 0 filas, non. Desde a subfase 1.9, o erro leva o nome da función que recibe `coord`: con `ResizePseudoConsole`, a súa mensaxe empeza por `ResizePseudoConsole`. |
-| `command_lines_cannot_have_null_characters` | `cmd` convértese en `[99, 109, 100, 0]`, rematado en 0, e unha liña de comandos cun carácter nulo é un erro. |
+| `command_lines_and_folders_cannot_have_null_characters` | Ata a subfase 2.4, `command_lines_cannot_have_null_characters`. `cmd` convértese en `[99, 109, 100, 0]`, rematado en 0; e, desde a 2.5, un cartafol cun carácter nulo é un erro, coa mensaxe `CreateProcessW failed: the folder has a null character`. Ata a 2.4, o erro era o dunha liña de comandos cun carácter nulo. |
+| `an_environment_block_ends_with_two_null_characters` | Desde a 2.5. Valen un bloque baleiro, `[0, 0]`, e un con `A=1` e os seus dous nulos; non valen un que remata nun só nulo, un nulo só nin un bloque sen nada. |
 
 O resto do módulo necesita programas de verdade: compróbano as [probas de integración](#cratesmeiga-wintestsconptyrs).
 
+## `crates/meiga-win/src/profiles.rs`
+
+Desde a subfase 2.5. As **shells instaladas**, das que meiga fai os seus perfís: `detect` atópaas sen lanzar ningún programa, mirando se están nos cartafoles onde as deixan os seus instaladores, e lendo no rexistro de Windows as distribucións de WSL e o cartafol de Git for Windows ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4, [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). O módulo dá tamén dúas cousas que necesitan os perfís e que só sabe Windows: o contorno de meiga, `environment`, e o cartafol do sistema, `system_folder`. O programa chama ás tres ao arrancar, e a `detect` outra vez cada vez que se abre o menú dos perfís, para mostrar as shells que se instalaron mentres tanto ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). O resto, xuntar os perfís co arquivo de configuración, escoller o perfil por defecto e facer a liña de comandos de cada tab, está en `meiga-core`, sen chamar a Windows ([Código › meiga-core › `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers)); e o camiño enteiro, do arquivo e das shells á sesión dunha tab, explícase en [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración). Os fragmentos de código levan os comentarios `// SAFETY:`, coma os do [portapapeis](#cratesmeiga-winsrcclipboardrs): explican que memoria le e escribe Windows en cada chamada.
+
+### O módulo e as súas constantes
+
+```rust
+//! The shells that are installed, found without starting any program (ADR
+//! 0022): in the folders where their installers put them, and in the
+//! registry, where WSL keeps its distributions and Git for Windows its
+//! folder. Also the environment of meiga, and the folder of the system,
+//! which the profiles need.
+//!
+//! The profiles are, in this order, when their programs are there:
+//!
+//! - PowerShell: the `pwsh.exe` of the newest version that has one in
+//!   `%ProgramFiles%\PowerShell`, the one of the Microsoft Store, the one of
+//!   scoop, the global tool of .NET, the newest preview in
+//!   `%ProgramFiles%\PowerShell`, and the preview of the Microsoft Store;
+//! - Windows PowerShell and Command Prompt, in the folder of the system;
+//! - each distribution of WSL, the default one first and then the others
+//!   by name, if the folder of the system has `wsl.exe`;
+//! - Git Bash, in the folder of Git for Windows, or in the one of scoop.
+//!
+//! A file is there if `GetFileAttributesW` finds it: the programs of the
+//! Microsoft Store are aliases, links that only Windows can open.
+```
+
+A documentación do módulo resume o que fai: que perfís atopa, en que orde e onde. Cada parte explícase máis abaixo, coa súa función.
+
+**Sen lanzar ningún proceso.** Un terminal pode saber que shells hai lanzando programas: VS Code, por exemplo, lanza `wsl.exe -l -q` para listar as distribucións de WSL. Pero lanzar `wsl.exe` pode arrancar o servizo de WSL e tardar segundos, e o Windows Terminal deixou de facelo en 2022 por iso, e porque enchía o rexistro de eventos de Windows ([`WslDistroGenerator.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/WslDistroGenerator.cpp#L231-L236)). meiga fai coma el: mira se existen uns poucos arquivos e le unhas poucas chaves do rexistro, sen arrancar nada ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4). Por iso pode buscar as shells outra vez cada vez que se abre o menú dos perfís; en repouso, non fai nada.
+
+**Rutas completas.** Cada perfil que atopa `detect` leva a ruta enteira do seu programa, e non só o seu nome, coma `pwsh`: Windows non o busca no `PATH`, que depende de cada equipo e de cada sesión, e un programa co mesmo nome noutro cartafol non pode pasar pola shell ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), alternativas consideradas). O Windows Terminal fai o mesmo con `wsl.exe`, para que ninguén o suplante desde o `PATH` ([`WslDistroGenerator.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/WslDistroGenerator.cpp#L62-L83)).
+
+```rust
+/// The key of the distributions of WSL, under the one of the user.
+const LXSS: &str = r"Software\Microsoft\Windows\CurrentVersion\Lxss";
+
+/// The state of a distribution that is installed, and not being installed
+/// or removed.
+const INSTALLED: u32 = 1;
+
+/// The distributions of WSL that run the engines of Docker Desktop and of
+/// Rancher Desktop, not shells, as Windows Terminal leaves out.
+const ENGINES: [&str; 2] = ["docker-desktop", "rancher-desktop"];
+
+/// The longest name of a key of the registry, with its null character.
+const KEY_NAME: usize = 256;
+```
+
+- **`LXSS`**: a chave das distribucións de WSL, baixo a do usuario, `HKEY_CURRENT_USER`: cada usuario ten as súas. `r"…"` é un literal *raw*, no que as barras invertidas quedan tal cal.
+- **`INSTALLED`**: o `State` dunha distribución instalada, 1. Mentres se instala é 3, e mentres se desinstala, 4: esas aínda non se poden abrir, ou xa non.
+- **`ENGINES`**: o principio dos nomes das distribucións de Docker Desktop e de Rancher Desktop, coma `docker-desktop` ou `docker-desktop-data`. Son os motores deses programas, e non shells: o Windows Terminal tampouco as mostra ([`WslDistroGenerator.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/WslDistroGenerator.cpp#L92-L105)).
+- **`KEY_NAME`**: o nome dunha chave do rexistro ten como moito 255 caracteres, e 256 co nulo do final. É o tamaño do búfer de [`subkeys`](#key-e-subkeys).
+
+### `environment`
+
+```rust
+pub fn environment() -> Environment {
+    // SAFETY: it has no preconditions, and returns null if it fails.
+    let block = unsafe { GetEnvironmentStringsW() };
+    if block.is_null() {
+        return Environment::default();
+    }
+    // The block is a series of null-terminated strings that ends with an
+    // empty one.
+    let mut end = 0;
+    // SAFETY: each string ends with a null character, and the block with an
+    // empty string, so the reads stop at its last character.
+    unsafe {
+        while *block.add(end) != 0 {
+            while *block.add(end) != 0 {
+                end += 1;
+            }
+            end += 1;
+        }
+    }
+    // SAFETY: `end` is the last character of the block, which stays valid
+    // until it is freed below.
+    let environment = Environment::from_block(unsafe { slice::from_raw_parts(block, end + 1) });
+    // SAFETY: the block came from GetEnvironmentStringsW, and is not used
+    // after this.
+    unsafe { FreeEnvironmentStringsW(block) };
+    environment
+}
+```
+
+O contorno de meiga: o mesmo que recibiría un programa que meiga lanzase sen darlle outro ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 9). Paso a paso:
+
+1. **O bloque.** `GetEnvironmentStringsW` dá o contorno do proceso coma un **bloque**: as variábeis, `NOME=valor`, unha detrás doutra, cada unha rematada nun nulo, e outro nulo ao final ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Non ten condicións, coma di o primeiro `// SAFETY:`, e devolve nulo se falla: entón, un contorno baleiro.
+2. **O seu final.** Windows dá un punteiro ao principio do bloque, pero non o seu tamaño. Os dous `while` percórreno: o de dentro avanza ata o nulo dunha variábel, e `end += 1` sáltao; o de fóra para cando a seguinte variábel empeza nun nulo, a cadea baleira do final. Así, con `A=1␀B=2␀␀`, `end` acaba en 8, a posición do último nulo. `block.add(end)` avanza o punteiro `end` unidades UTF-16, e `*` le a unidade. O segundo `// SAFETY:` di por que as lecturas non saen do bloque: cada cadea remata nun nulo, e o bloque nunha cadea baleira, así que o bucle para no seu último carácter.
+3. **As variábeis.** `slice::from_raw_parts(block, end + 1)` fai un *slice* de Rust sobre o bloque enteiro, cos seus dous nulos do final, sen copialo. Pódese, coma di o terceiro `// SAFETY:`, porque `end` é o último carácter do bloque, que segue vivo ata que se libera, despois. `Environment::from_block`, de `meiga-core`, copia del as variábeis, tal cal, en UTF-16 ([Código › meiga-core › `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs)).
+4. **Liberalo.** `FreeEnvironmentStringsW` libera o bloque, que Windows reservou para esta chamada. O último `// SAFETY:` lembra que o bloque veu de `GetEnvironmentStringsW`, e que o *slice* xa non se usa: o `Environment` ten a súa copia.
+
+- **Por que eiquí.** `meiga-core` non chama a Windows: non ten código `unsafe` (`#![forbid(unsafe_code)]`) nin APIs da plataforma. `meiga-win` le o bloque, e `meiga-core` le as variábeis del e fai o bloque dos programas das tabs, cunhas probas que non necesitan Windows.
+- **Unha vez.** O programa le o contorno ao arrancar ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). As tabs reciben o que tiña meiga entón, con `TERM_PROGRAM`, `TERM_PROGRAM_VERSION` e `COLORTERM`, e sen as variábeis do Windows Terminal: un `PATH` cambiado despois non o ven ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 9). O mesmo contorno dálle a [`detect`](#detect) os cartafoles do usuario e dos programas, e ao arquivo de configuración, as variábeis `%NOME%` dos seus perfís.
+
+### `system_folder`
+
+```rust
+pub fn system_folder() -> Option<String> {
+    let mut buffer = [0_u16; 261];
+    // SAFETY: the buffer has room for the number of characters that it says.
+    let length = unsafe { GetSystemDirectoryW(buffer.as_mut_ptr(), buffer.len() as u32) };
+    // 0 if it fails, and more than the buffer if it does not fit, which no
+    // folder of the system needs.
+    let length = usize::try_from(length).ok()?;
+    (1..buffer.len())
+        .contains(&length)
+        .then(|| String::from_utf16_lossy(&buffer[..length]))
+}
+```
+
+O cartafol do sistema, coma `C:\WINDOWS\system32`: onde están `cmd.exe`, `wsl.exe` e Windows PowerShell.
+
+- **O búfer.** `GetSystemDirectoryW` escribe o cartafol no búfer, de 261 unidades, na pila, e recibe o seu tamaño: coma di o `// SAFETY:`, Windows non escribe máis do que lle din.
+- **O que devolve**, coma di o comentario: o número de caracteres que escribiu, sen o nulo; se o cartafol non cabe, o tamaño que necesitaría, co nulo, que é maior ca o búfer; e 0 se falla. `(1..buffer.len()).contains(&length)` só acepta de 1 a 260, un cartafol que se escribiu enteiro, e o cartafol do sistema é sempre moito máis curto. Con 0 ou con máis, `None`.
+- `usize::try_from(length).ok()?` pasa o `u32` ao tipo dos índices: en x64 nunca falla, pero `try_from` evita un `as`. `then` dá `Some` co texto se a condición é certa, e `None` se non; e `String::from_utf16_lossy` convérteo de UTF-16 a un texto de Rust.
+- **Para que.** Os perfís de Windows PowerShell, de Command Prompt e de WSL levan os seus programas neste cartafol ([`detect`](#detect)); e `meiga-core` recoñece con el o `wsl.exe` dun perfil, ao que lle pasa o cartafol onde empeza con `--cd` ([Código › meiga-core › `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers)). Se fallase, o programa usa `%SystemRoot%\System32` ou, sen esa variábel, `C:\Windows\System32` ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)).
+
+### `detect`
+
+```rust
+pub fn detect(environment: &Environment, system: &str) -> Vec<Profile> {
+    let mut profiles: Vec<Profile> = Vec::new();
+    let mut add = |name: &str, program: &str, args: &[&str]| {
+        if profiles.iter().any(|profile| profile.name == name) {
+            return;
+        }
+        // Only a program with a quote has no command line, and no file
+        // has one.
+        if let Some(command) = shell::command_line(program, args) {
+            profiles.push(Profile {
+                name: name.to_owned(),
+                command,
+                folder: Folder::Home,
+            });
+        }
+    };
+    if let Some(pwsh) = powershell(environment) {
+        add(POWERSHELL, &pwsh, &[]);
+    }
+    let windows_powershell = format!(r"{system}\WindowsPowerShell\v1.0\powershell.exe");
+    if is_file(&windows_powershell) {
+        add(WINDOWS_POWERSHELL, &windows_powershell, &[]);
+    }
+    let cmd = format!(r"{system}\cmd.exe");
+    if is_file(&cmd) {
+        add(COMMAND_PROMPT, &cmd, &[]);
+    }
+    let wsl = format!(r"{system}\wsl.exe");
+    if is_file(&wsl) {
+        for name in distributions() {
+            add(&name, &wsl, &["-d", &name]);
+        }
+    }
+    if let Some(bash) = git_bash(environment) {
+        add(GIT_BASH, &bash, &["-i", "-l"]);
+    }
+    profiles
+}
+```
+
+Os perfís das shells instaladas, na orde do menú, cos nomes que lles dá `meiga-core` (`POWERSHELL` é «PowerShell»…), co contorno de meiga para os cartafoles do usuario e dos programas, e co cartafol do sistema:
+
+| Perfil | Programa | Argumentos |
+|---|---|---|
+| PowerShell | O primeiro `pwsh.exe` que atopa [`powershell`](#powershell-newest_first-e-subfolders) | — |
+| Windows PowerShell | `WindowsPowerShell\v1.0\powershell.exe`, no cartafol do sistema | — |
+| Command Prompt | `cmd.exe`, no cartafol do sistema | — |
+| Cada distribución de WSL, co seu nome | `wsl.exe`, no cartafol do sistema | `-d <nome>` |
+| Git Bash | O primeiro `bash.exe` que atopa [`git_bash`](#git-bash-git_bash) | `-i -l` |
+
+- **A orde** é a da decisión 4 do [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md): primeiro PowerShell, que é tamén o perfil por defecto se está (decisión 5); despois as dúas shells que trae Windows; as distribucións de WSL, a por defecto primeiro; e Git Bash. As distribucións só se buscan se o cartafol do sistema ten `wsl.exe`: sen el non se poderían abrir, aínda que o rexistro as teña.
+- **`add`** é un *closure* que engade un perfil. É `mut` porque cambia `profiles`, que ten prestado mentres vive: por iso `detect` pode devolver `profiles` só despois do último `add`. Se xa hai un perfil con ese nome, non engade nada: cada nome só unha vez, coma di a documentación de `detect`, porque o arquivo de configuración e o menú nomean os perfís polo nome. Pode pasar cunha distribución de WSL que se chame «PowerShell»: vai despois do perfil de PowerShell 7, se está, e queda fóra. Os outros nomes levan espazos, que os das distribucións non poden levar.
+- **A liña de comandos** faina `shell::command_line`, de `meiga-core`: o programa, entre comiñas se ten espazos, coma `"C:\Program Files\PowerShell\7\pwsh.exe"`, e os argumentos coas comiñas que len os programas ([Código › meiga-core › `shell.rs`](meiga-core.md#cratesmeiga-coresrcshellrs), [Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)). Só devolve `None` se o programa ten unha comiña, coma di o comentario, e ningún nome de arquivo a pode ter: cos programas que atopa `detect`, nunca pasa.
+- **O cartafol** de todos é `Folder::Home`, o persoal. Cal é, decídeo `Profile::launch`, de `meiga-core`, ao abrir a tab: `%USERPROFILE%`, coma no Windows Terminal, e nas distribucións de WSL, o persoal de Linux, co `--cd "~"` de `wsl.exe` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 10, [Código › meiga-core › `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers)).
+- **Os argumentos.** `-d <nome>` abre a distribución dese nome. Git Bash vai con `-i -l`, interactiva e de inicio de sesión, coma no perfil do Windows Terminal que escribe o instalador de Git for Windows. `&["-d", &name]` é un *array* de dous textos, que `add` recibe coma *slice* (`&[&str]`), e `&[]`, ningún.
+- `format!(r"{system}\cmd.exe")` fai a ruta dun programa no cartafol do sistema, e [`is_file`](#is_file) mira se existe.
+
+### `powershell`, `newest_first` e `subfolders`
+
+```rust
+fn powershell(environment: &Environment) -> Option<String> {
+    let installed = environment
+        .get("ProgramFiles")
+        .map(|folder| format!(r"{folder}\PowerShell"));
+    let versions = installed.as_deref().map(subfolders).unwrap_or_default();
+    let in_versions = |preview| {
+        let installed = installed.as_deref().unwrap_or_default();
+        newest_first(&versions, preview)
+            .into_iter()
+            .map(move |version| format!(r"{installed}\{version}\pwsh.exe"))
+    };
+    let local = environment.get("LOCALAPPDATA");
+    let store = |package: &str| {
+        local
+            .as_deref()
+            .map(|local| format!(r"{local}\Microsoft\WindowsApps\{package}\pwsh.exe"))
+    };
+    let user = environment.get("USERPROFILE");
+    let in_user = |path: &str| user.as_deref().map(|user| format!(r"{user}\{path}"));
+    in_versions(false)
+        .chain(store("Microsoft.PowerShell_8wekyb3d8bbwe"))
+        .chain(in_user(r"scoop\apps\pwsh\current\pwsh.exe"))
+        .chain(in_user(r".dotnet\tools\pwsh.exe"))
+        .chain(in_versions(true))
+        .chain(store("Microsoft.PowerShellPreview_8wekyb3d8bbwe"))
+        .find(|path| is_file(path))
+}
+```
+
+PowerShell 7, un só: o primeiro destes `pwsh.exe` que existe, nesta orde ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)):
+
+| Ruta | Quen o deixa alí |
+|---|---|
+| `%ProgramFiles%\PowerShell\<versión>\pwsh.exe`, da versión máis alta á máis baixa | O MSI e o ZIP de PowerShell. |
+| `%LOCALAPPDATA%\Microsoft\WindowsApps\Microsoft.PowerShell_8wekyb3d8bbwe\pwsh.exe` | A Microsoft Store: un alias de execución ([`is_file`](#is_file)), no cartafol do seu paquete. |
+| `%USERPROFILE%\scoop\apps\pwsh\current\pwsh.exe` | scoop, no cartafol da versión actual. |
+| `%USERPROFILE%\.dotnet\tools\pwsh.exe` | .NET, coma ferramenta global. |
+| `%ProgramFiles%\PowerShell\<versión>-preview\pwsh.exe`, da máis alta á máis baixa | As versións *preview* do MSI e do ZIP. |
+| `%LOCALAPPDATA%\Microsoft\WindowsApps\Microsoft.PowerShellPreview_8wekyb3d8bbwe\pwsh.exe` | A *preview* da Microsoft Store. |
+
+- **Un só.** Un perfil para cada PowerShell instalado, coma fai o Windows Terminal, enchería o menú de versións; meiga ofrece o primeiro, e os outros pódense engadir no arquivo de configuración ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4 e alternativas consideradas). As estábeis van antes ca as *preview*. Non se busca no rexistro, onde só escribía o MSI, que desde a 7.7 xa non existe, nin no `PATH`.
+- **Os cartafoles, do contorno.** `ProgramFiles`, `LOCALAPPDATA` e `USERPROFILE` saen do contorno de meiga (`Environment::get`), e non se escriben no código: cada usuario e cada Windows pode telos noutro sitio. Nun programa de 64 bits coma meiga, `ProgramFiles` é o cartafol dos programas de 64 bits. Se falta unha variábel, os seus sitios non se miran: `map` sobre un `None` dá `None`.
+- **`in_versions`** é un *closure* que dá as rutas dos `pwsh.exe` das versións, da máis alta á máis baixa: as estábeis, ou as *preview* se `preview` é certo. As versións saen de [`subfolders`](#powershell-newest_first-e-subfolders), que le o cartafol de PowerShell unha soa vez, antes, para as dúas listas. O *closure* de dentro leva `installed` consigo (`move`), porque o iterador que devolve `in_versions` o segue usando despois de que este volte.
+- **`store`** e **`in_user`** fan unha ruta, ou `None` se falta a súa variábel. Un `Option` é tamén un iterador, dun elemento ou de ningún, e `chain` xúntao cos outros.
+- **Unha a unha.** `chain` xunta os iteradores sen calcular nada, e `find` vai pedindo as rutas na orde e para na primeira que existe: as seguintes nin se fan nin se miran. Así, cun PowerShell en `%ProgramFiles%`, `detect` mira un só arquivo para el.
+- **Unha versión sen `pwsh.exe`**, coma un cartafol que quedou ao desinstalala, non conta: `find` segue coa seguinte. Por iso o que atopa é o `pwsh.exe` da versión máis alta que o ten.
+
+```rust
+fn newest_first(folders: &[String], preview: bool) -> Vec<&str> {
+    let mut versions: Vec<(u32, &str)> = folders
+        .iter()
+        .filter_map(|folder| {
+            let number = if preview {
+                folder.strip_suffix("-preview")?
+            } else {
+                folder
+            };
+            let all_digits = !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit());
+            all_digits
+                .then(|| number.parse().ok())
+                .flatten()
+                .map(|version| (version, folder.as_str()))
+        })
+        .collect();
+    insertion_sort_by(&mut versions, |a, b| b.cmp(a));
+    versions.into_iter().map(|(_, folder)| folder).collect()
+}
+
+fn subfolders(folder: &str) -> Vec<String> {
+    let Ok(entries) = fs::read_dir(folder) else {
+        return Vec::new();
+    };
+    entries
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .collect()
+}
+```
+
+- **`newest_first`** escolle os cartafoles das versións, coma os nomean os instaladores de PowerShell: un número, coma `7`, ou, se `preview`, un número e `-preview`, coma `7-preview`. `strip_suffix` quita o `-preview`, ou dá `None`, e o `?` deixa fóra o cartafol que non o ten. O que queda ten que ser só díxitos, polo menos un: `7.1`, `x` ou un nome baleiro quedan fóra. `parse` convérteo nun número, ou falla se non cabe nun `u32`, e `then(…).flatten()` xunta as dúas condicións nun só `Option`.
+- **A orde.** `insertion_sort_by`, a ordenación por inserción de `meiga-core` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 12, [Código › meiga-core › `sort.rs`](meiga-core.md#cratesmeiga-coresrcsortrs)), ordena os pares de número e nome do maior ao menor: `b.cmp(a)` é a orde de `a.cmp(b)` ao revés. Os pares compáranse primeiro polo número e, co mesmo número, coma `7` e `07`, polo nome. Coma números, `10` vai antes ca `7`; coma textos, iría despois, porque o `1` vai antes ca o `7`.
+- **`subfolders`** dá os nomes dos cartafoles que hai dentro doutro, ou ningún se non se pode ler, por exemplo porque non existe. `fs::read_dir`, da biblioteca estándar, lista o cartafol; `filter_map(Result::ok)` salta as entradas que dan erro; `file_type()` deixa só os cartafoles; e `into_string()`, os nomes que son Unicode válido, coma os das versións. Non chama a Windows directamente, e non ten `unsafe`.
+
+### As distribucións de WSL: `Distribution`, `distributions` e `in_order`
+
+```rust
+/// A distribution of WSL, as the registry has it.
+struct Distribution {
+    /// Its key, a GUID, which the default one is named by.
+    key: String,
+    name: String,
+    state: u32,
+}
+
+fn distributions() -> Vec<String> {
+    let default = string_value(HKEY_CURRENT_USER, LXSS, "DefaultDistribution");
+    let found = subkeys(HKEY_CURRENT_USER, LXSS)
+        .into_iter()
+        .filter_map(|key| {
+            let path = format!(r"{LXSS}\{key}");
+            let name = string_value(HKEY_CURRENT_USER, &path, "DistributionName")?;
+            let state = dword_value(HKEY_CURRENT_USER, &path, "State")?;
+            Some(Distribution { key, name, state })
+        })
+        .collect();
+    in_order(found, default.as_deref())
+}
+```
+
+WSL garda as distribucións de cada usuario no seu rexistro, en `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Lxss`: unha chave por distribución, que se chama cun GUID, co seu nome en `DistributionName`, un texto, e o seu estado en `State`, un número; e na propia `Lxss`, o GUID da distribución por defecto, en `DefaultDistribution` ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)).
+
+- **`distributions`** le o GUID da por defecto, se o hai, e despois, para cada subchave de `Lxss` ([`subkeys`](#key-e-subkeys)), o seu nome e o seu estado ([`string_value` e `dword_value`](#string_value-e-dword_value)). Dentro do `filter_map`, cada `?` deixa fóra unha chave sen nome ou sen estado, que non é unha distribución que se poida abrir. Sen WSL, `Lxss` non existe, e non hai ningunha.
+- **`Distribution`** garda o que fai falta para ordenalas: a chave, o GUID co que a nomea `DefaultDistribution`; o nome, que é tamén o do perfil e o argumento de `wsl.exe -d`; e o estado.
+
+```rust
+fn in_order(mut distributions: Vec<Distribution>, default: Option<&str>) -> Vec<String> {
+    distributions.retain(|distribution| {
+        distribution.state == INSTALLED
+            && !ENGINES.iter().any(|engine| {
+                distribution
+                    .name
+                    .get(..engine.len())
+                    .is_some_and(|start| start.eq_ignore_ascii_case(engine))
+            })
+    });
+    let is_default = |distribution: &Distribution| {
+        default.is_some_and(|key| key.eq_ignore_ascii_case(&distribution.key))
+    };
+    fn lowercase(name: &str) -> impl Iterator<Item = char> + '_ {
+        name.chars().flat_map(char::to_lowercase)
+    }
+    insertion_sort_by(&mut distributions, |a, b| {
+        is_default(b)
+            .cmp(&is_default(a))
+            .then_with(|| lowercase(&a.name).cmp(lowercase(&b.name)))
+    });
+    distributions
+        .into_iter()
+        .map(|distribution| distribution.name)
+        .collect()
+}
+```
+
+Os nomes das distribucións, na orde do menú. `in_order` está á parte de `distributions`, sen chamar a Windows, para poder probala:
+
+1. **Só as que se poden abrir.** `retain` deixa as instaladas, co `State` 1, e quita as dos motores de Docker Desktop e de Rancher Desktop. Mirar o estado é unha diferenza co Windows Terminal, que mostra tamén as que se están instalando ou desinstalando, que non se poden abrir ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), alternativas consideradas). Para os motores, `name.get(..engine.len())` colle o principio do nome, cos bytes do nome do motor, ou dá `None` se o nome é máis curto ou se ese corte parte un carácter: ao contrario que `&name[..]`, `get` nunca para o programa. `eq_ignore_ascii_case` compara sen distinguir maiúsculas: `Docker-Desktop-Data` tamén queda fóra.
+2. **A por defecto, primeiro.** `is_default` di se a chave dunha distribución é a de `DefaultDistribution`, sen distinguir maiúsculas, coma os nomes das chaves do rexistro. É a que abre `wsl.exe` sen `-d`, a que escolleu o usuario.
+3. **As outras, polo nome.** As chaves son GUID, e a orde na que as dá o rexistro non lle di nada ao usuario. `lowercase` dá os caracteres dun nome en minúsculas, coas regras de Unicode (`char::to_lowercase`, que pode dar varios caracteres por un), e `Iterator::cmp` compara as dúas secuencias coma textos. Así, `kali` vai entre `Debian` e `Ubuntu`, e non despois das dúas, coma comparando os bytes, onde as maiúsculas van antes ca as minúsculas. `fn lowercase` é unha función dentro doutra, que só ve `in_order`, e devolve un iterador que ten prestado o nome (`impl Iterator<Item = char> + '_`).
+
+- **A comparación** de `insertion_sort_by` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 12) mira primeiro se son a por defecto: nos `bool`, `false` vai antes ca `true`, e comparar a de `b` coa de `a`, ao revés, pon a por defecto diante. Se as dúas son iguais niso, `then_with` compara os nomes. A ordenación é estábel: dous nomes iguais sen distinguir maiúsculas quedan na orde do rexistro.
+- Ao final, `map` deixa só os nomes, que é o que necesita [`detect`](#detect).
+
+### Git Bash: `git_bash`
+
+```rust
+fn git_bash(environment: &Environment) -> Option<String> {
+    [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER]
+        .into_iter()
+        .filter_map(|root| string_value(root, r"SOFTWARE\GitForWindows", "InstallPath"))
+        .map(|folder| format!(r"{}\bin\bash.exe", folder.trim_end_matches('\\')))
+        .chain(
+            environment
+                .get("USERPROFILE")
+                .map(|user| format!(r"{user}\scoop\apps\git\current\bin\bash.exe")),
+        )
+        .find(|path| is_file(path))
+}
+```
+
+O `bash.exe` de Git for Windows: o primeiro destes que existe ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)):
+
+1. o do cartafol que garda o instalador de Git for Windows no valor `InstallPath` da chave `SOFTWARE\GitForWindows` de `HKEY_LOCAL_MACHINE`, se se instalou para todos os usuarios;
+2. o do mesmo valor en `HKEY_CURRENT_USER`, se se instalou só para o usuario;
+3. o de scoop, en `%USERPROFILE%\scoop\apps\git\current`.
+
+- **`bin\bash.exe`**, o mesmo que usa o perfil do Windows Terminal que escribe o instalador, con `-i -l` ([`detect`](#detect)). `trim_end_matches('\\')` quita a barra do final do cartafol, se a ten, para non poñer dúas.
+- **Unha a unha**, coma en `powershell`: se o de `HKEY_LOCAL_MACHINE` existe, `find` non pide máis, e o rexistro do usuario nin se le.
+- **A vista de 64 bits.** meiga é un programa de 64 bits, e Windows dálle a vista de 64 bits de `HKEY_LOCAL_MACHINE\SOFTWARE`. Un Git for Windows de 32 bits instalado para todos os usuarios garda o seu cartafol na de 32 bits (`WOW6432Node`), e meiga non o atopa; `HKEY_CURRENT_USER\Software` é o mesmo para os dous.
+
+### `is_file`
+
+```rust
+fn is_file(path: &str) -> bool {
+    let path = wide(path);
+    // SAFETY: the path is null-terminated.
+    let attributes = unsafe { GetFileAttributesW(path.as_ptr()) };
+    attributes != INVALID_FILE_ATTRIBUTES && attributes & FILE_ATTRIBUTE_DIRECTORY == 0
+}
+```
+
+Se hai un arquivo nunha ruta: o único que mira `detect` dos programas.
+
+- **Os atributos.** `GetFileAttributesW` dá os atributos dun arquivo ou dun cartafol, uns bits que garda con el o sistema de arquivos, e lelos abonda para saber se existe. Devolve `INVALID_FILE_ATTRIBUTES` se non o atopa, e os cartafoles teñen o bit `FILE_ATTRIBUTE_DIRECTORY` (`0x10`): o resto son arquivos. A única condición da chamada, coma di o `// SAFETY:`, é que a ruta remate en 0, e `wide` pono.
+- **Os alias da Microsoft Store.** Os programas da Store, coma o seu PowerShell, están en `%LOCALAPPDATA%\Microsoft\WindowsApps` coma **alias de execución**: arquivos especiais, *reparse points*, que só Windows sabe abrir, ao lanzar o programa ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Os seus atributos son `0x420`, *archive* (`0x20`) e *reparse point* (`0x400`), sen o bit dos cartafoles: `is_file` cóntaos coma arquivos, e `CreateProcessW` sabe lanzalos. Abrilos coma un arquivo calquera fallaría, pero os seus atributos Windows dáos sen abrilos, coma di a documentación do módulo.
+
+### `string_value` e `dword_value`
+
+```rust
+fn string_value(root: HKEY, path: &str, value: &str) -> Option<String> {
+    let (path, value) = (wide(path), wide(value));
+    let mut buffer: Vec<u16> = Vec::new();
+    // The first time asks for the size, and the others read it: again if the
+    // value grew meanwhile, or is longer once its variables are expanded.
+    for _ in 0..4 {
+        let mut size = u32::try_from(buffer.len() * 2).ok()?;
+        let data = if buffer.is_empty() {
+            ptr::null_mut()
+        } else {
+            buffer.as_mut_ptr().cast()
+        };
+        // SAFETY: both names are null-terminated, and `data` is null, to ask
+        // for the size, or has the `size` bytes of `buffer`. RRF_RT_REG_SZ
+        // also takes the values with variables, expanded.
+        let result = unsafe {
+            RegGetValueW(
+                root,
+                path.as_ptr(),
+                value.as_ptr(),
+                RRF_RT_REG_SZ,
+                ptr::null_mut(),
+                data,
+                &mut size,
+            )
+        };
+        match result {
+            ERROR_SUCCESS if !buffer.is_empty() => {
+                let text = &buffer[..(size as usize / 2).min(buffer.len())];
+                let end = text
+                    .iter()
+                    .position(|&unit| unit == 0)
+                    .unwrap_or(text.len());
+                return Some(String::from_utf16_lossy(&text[..end]));
+            }
+            ERROR_SUCCESS | ERROR_MORE_DATA => buffer = vec![0; (size as usize).div_ceil(2).max(1)],
+            _ => return None,
+        }
+    }
+    None
+}
+```
+
+O texto dun valor do rexistro: o nome dunha distribución, o GUID da por defecto ou o cartafol de Git for Windows.
+
+- **`RegGetValueW`** abre ela mesma a chave `path` baixo a raíz `root`, le o valor `value` e pecha a chave: non quedan *handles* que pechar. As dúas rutas van en UTF-16 rematado en 0, con `wide`, coma pide o `// SAFETY:`. A opción `RRF_RT_REG_SZ` só acepta un texto: cun valor doutro tipo, falla. Coma lembra o mesmo comentario, acepta tamén os textos con variábeis, os `REG_EXPAND_SZ`, que devolve xa expandidos.
+- **Primeiro, o tamaño.** Co búfer baleiro, `data` vai nulo, e `RegGetValueW` só di en `size` cantos bytes ocupa o valor, e devolve `ERROR_SUCCESS`. A segunda rama do `match` fai entón un búfer dese tamaño, en unidades UTF-16: `div_ceil(2)` divide os bytes entre dous, redondeando cara arriba, e `max(1)` evita un búfer baleiro, que na volta seguinte sería outra pregunta.
+- **Despois, o texto.** Co búfer, `data` apunta a el, e `size` di os seus bytes: coma di o `// SAFETY:`, Windows non escribe máis. Se o valor cabe, devolve `ERROR_SUCCESS`, e `size` di os bytes que escribiu, co nulo do final, que `RegGetValueW` engade se o valor non o tiña. O texto remata no primeiro nulo, que busca `position`, coma no [portapapeis](#read_text); e `min(buffer.len())` non deixa ler fóra do búfer, aínda que `size` dixese máis.
+- **Se non cabe.** O valor pode medrar entre a pregunta e a lectura, se outro programa o cambia, e un texto con variábeis pode ocupar máis despois de expandilas, coma di o primeiro comentario. Entón `RegGetValueW` devolve `ERROR_MORE_DATA` e o tamaño novo, e o bucle volta tentalo cun búfer maior. Son catro voltas como moito, a pregunta e tres lecturas: se o valor segue cambiando, `None`.
+- **Os erros.** Calquera outro resultado dá `None`: a chave ou o valor non existen, ou o valor non é un texto. Para meiga, ese valor non está.
+- `u32::try_from(buffer.len() * 2).ok()?` dá o tamaño do búfer en bytes, que `RegGetValueW` recibe nun `u32`: nunca é tan grande, pero `try_from` evita un `as` que o cortaría.
+
+```rust
+fn dword_value(root: HKEY, path: &str, value: &str) -> Option<u32> {
+    let (path, value) = (wide(path), wide(value));
+    let mut data = 0_u32;
+    let mut size = size_of::<u32>() as u32;
+    // SAFETY: both names are null-terminated, and `data` has the `size`
+    // bytes of a REG_DWORD.
+    let result = unsafe {
+        RegGetValueW(
+            root,
+            path.as_ptr(),
+            value.as_ptr(),
+            RRF_RT_REG_DWORD,
+            ptr::null_mut(),
+            (&raw mut data).cast(),
+            &mut size,
+        )
+    };
+    (result == ERROR_SUCCESS).then_some(data)
+}
+```
+
+- **`dword_value`** le un número, un `REG_DWORD` de 32 bits, coma o `State` dunha distribución. Abonda unha chamada: o número ocupa sempre 4 bytes, `size_of::<u32>()`, os que ten `data`, coma di o `// SAFETY:`. A opción `RRF_RT_REG_DWORD` só acepta ese tipo.
+- `&raw mut data` fai un punteiro a `data` sen pasar por unha referencia, e `cast` convérteo no punteiro sen tipo que recibe `RegGetValueW`.
+- Nas dúas funcións, o tipo do valor (`pdwType`) vai nulo: a opción xa di cal ten que ser.
+
+### `Key` e `subkeys`
+
+```rust
+/// An open key of the registry, which closes when it is dropped.
+struct Key(HKEY);
+
+impl Drop for Key {
+    fn drop(&mut self) {
+        // SAFETY: the key was opened by RegOpenKeyExW, and is closed only
+        // here.
+        unsafe { RegCloseKey(self.0) };
+    }
+}
+
+fn subkeys(root: HKEY, path: &str) -> Vec<String> {
+    let path = wide(path);
+    let mut handle: HKEY = ptr::null_mut();
+    // SAFETY: the name is null-terminated, and `handle` is valid for the
+    // function to fill in.
+    let opened =
+        unsafe { RegOpenKeyExW(root, path.as_ptr(), 0, KEY_ENUMERATE_SUB_KEYS, &mut handle) };
+    if opened != ERROR_SUCCESS {
+        return Vec::new();
+    }
+    let key = Key(handle);
+    let mut names = Vec::new();
+    let mut name = [0_u16; KEY_NAME];
+    for index in 0..u32::MAX {
+        let mut length = KEY_NAME as u32;
+        // SAFETY: the key is open, and `name` has room for the `length`
+        // characters that it says, as the longest name of a key needs.
+        let result = unsafe {
+            RegEnumKeyExW(
+                key.0,
+                index,
+                name.as_mut_ptr(),
+                &mut length,
+                ptr::null(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        };
+        match result {
+            ERROR_SUCCESS => {
+                let length = (length as usize).min(KEY_NAME);
+                names.push(String::from_utf16_lossy(&name[..length]));
+            }
+            // ERROR_NO_MORE_ITEMS, or a key that changed meanwhile: what
+            // was read is enough.
+            _ => break,
+        }
+    }
+    names
+}
+```
+
+Os nomes das subchaves dunha chave: os GUID das distribucións de WSL, en `Lxss`.
+
+- **Abrir a chave.** `RegOpenKeyExW` abre a chave `path` baixo `root`, só co dereito de listar as súas subchaves, `KEY_ENUMERATE_SUB_KEYS`: o mínimo que fai falta. O `0` son as opcións, ningunha. Escribe o *handle* da chave en `handle`, unha variábel válida para iso, coma di o `// SAFETY:`. Se non a pode abrir, por exemplo porque non existe, ningún nome.
+- **`Key`** é a chave aberta: outro *guard*, coma [`Open`](#open-e-global) no portapapeis. O seu `Drop` pecha a chave con `RegCloseKey` cando se destrúe, ao final da función; o seu `// SAFETY:` di que a abriu `RegOpenKeyExW`, e que só se pecha eiquí.
+- **Os nomes.** `RegEnumKeyExW` dá o nome da subchave número `index`, e a función pídeas 0, 1, 2… ata que falla. `length` entra co tamaño do búfer, en caracteres co nulo, e sae co do nome, sen el; `min(KEY_NAME)` non deixa ler fóra do búfer. O búfer, `name`, está na pila e vale para todos os nomes: ten sitio para o máis longo dunha chave, coma di o `// SAFETY:`. Os catro punteiros nulos do final son un parámetro reservado, que ten que ir nulo, e a clase da chave, o seu tamaño e a data do seu último cambio, que non fan falta.
+- **O final.** Cando non quedan subchaves, `RegEnumKeyExW` devolve `ERROR_NO_MORE_ITEMS`, e outro erro se a chave cambiou mentres tanto. Nos dous casos, o que leu abonda, coma di o comentario: o menú volta buscalas a próxima vez que se abra. `for index in 0..u32::MAX` só conta os números, ata que o corta o `break`.
+
+### Probas
+
+```rust
+#[test]
+fn the_newest_version_of_powershell_comes_first() {
+    let folders = [
+        "6",
+        "7",
+        "7-preview",
+        "10",
+        "8-preview",
+        "-preview",
+        "7.1",
+        "x",
+        "",
+    ]
+    .map(String::from);
+    assert_eq!(newest_first(&folders, false), ["10", "7", "6"]);
+    assert_eq!(newest_first(&folders, true), ["8-preview", "7-preview"]);
+}
+
+#[test]
+fn the_default_distribution_comes_first_and_the_others_by_name() {
+    let distribution = |key: &str, name: &str, state| Distribution {
+        key: key.to_owned(),
+        name: name.to_owned(),
+        state,
+    };
+    let found = || {
+        vec![
+            distribution("{a}", "kali", INSTALLED),
+            distribution("{b}", "Ubuntu", INSTALLED),
+            distribution("{c}", "Docker-Desktop-Data", INSTALLED),
+            distribution("{d}", "Debian", INSTALLED),
+            distribution("{e}", "rancher-desktop", INSTALLED),
+            distribution("{f}", "Arch", 3),
+        ]
+    };
+    assert_eq!(in_order(found(), Some("{B}")), ["Ubuntu", "Debian", "kali"]);
+    assert_eq!(in_order(found(), None), ["Debian", "kali", "Ubuntu"]);
+    // A default one that is not installed, or not there.
+    assert_eq!(in_order(found(), Some("{f}")), ["Debian", "kali", "Ubuntu"]);
+}
+```
+
+| Proba | Que comproba |
+|---|---|
+| `the_newest_version_of_powershell_comes_first` | Entre nove cartafoles, `newest_first` dá as versións estábeis da máis alta á máis baixa, `10`, `7` e `6`, coma números e non coma textos, e as *preview*, `8-preview` e `7-preview`. `-preview`, sen número, `7.1`, `x` e o nome baleiro quedan fóra. |
+| `the_default_distribution_comes_first_and_the_others_by_name` | Entre seis distribucións, `in_order` dá primeiro `Ubuntu`, a por defecto, cuxa chave é `{b}` e que `DefaultDistribution` nomea `{B}`; e despois `Debian` e `kali`, polo nome. Quedan fóra os motores, `Docker-Desktop-Data` e `rancher-desktop`, e `Arch`, que se está a instalar (`State` 3). Sen por defecto, as tres van polo nome; e cunha por defecto que non está instalada, `{f}`, tamén. |
+
+- `.map(String::from)` converte o *array* de textos nun de `String`, coma os que dá `subfolders`.
+- `distribution` e `found` son *closures* que fan os datos da proba: `found` fai a lista outra vez para cada chamada a `in_order`, que a consome.
+- **Sen distinguir maiúsculas.** `kali` vai en minúsculas: comparando os bytes, a orde sería `Debian`, `Ubuntu` e `kali`, e a proba fallaría sen `lowercase`. E a por defecto nómease `{B}`, para que falle tamén sen `eq_ignore_ascii_case`.
+
+O resto do módulo necesita o Windows de verdade, co seu rexistro e os seus arquivos: compróbano as [probas de integración](#cratesmeiga-wintestsprofilesrs) e a comprobación [`tools/check-profiles.ps1`](ferramentas.md#toolscheck-profilesps1), que atopa as shells coma meiga, nos cartafoles dos seus instaladores e no rexistro, e comproba que o menú dos perfís as mostra, e que cada unha se abre coa liña de comandos que espera, no cartafol persoal do usuario: as de WSL, con `--cd "~"`, no de Linux.
+
 ## `crates/meiga-win/tests/conpty.rs`
 
-Probas de integración: Cargo compila cada arquivo de `tests/` como un programa á parte, que usa o crate como calquera outro, só pola súa API pública. Estas lanzan `cmd` nos dous ConPTY.
+Probas de integración: Cargo compila cada arquivo de `tests/` como un programa á parte, que usa o crate como calquera outro, só pola súa API pública. Estas lanzan `cmd` nos dous ConPTY e, desde a subfase 2.5, tamén nun cartafol e cun contorno.
 
 ```rust
 fn bundled() -> Conpty {
@@ -3161,13 +3904,16 @@ fn bundled() -> Conpty {
 - `Answering`, desde a 1.6, é coma `Channel`, pero co primeiro bloque que mostra o programa escribe unha liña coa entrada que recibe, desde o fío lector, como fai un terminal ao responder unha pregunta. `Option::take` dálle a liña a primeira vez, e deixa `None` para as seguintes.
 - `Priorities`, desde a subfase 2.2, é outro `Output`: con cada bloque, envíalle á proba a prioridade do fío lector e o bloque. Explícase coa súa proba, despois da táboa.
 - `Transcript` garda o que mostrou a sesión. `wait_for` espera ata que a saída contén un texto, e `wait_for_end`, ata o fin da sesión, e devolve o código de saída. Cada espera ten un límite de 60 s: se se superase, a proba fallaría mostrando a saída que levaba, en vez de quedar colgada.
+- `spawn` lanza unha sesión cunha pseudoconsola de 80 × 25 e un `Channel`, e devolve o `Pty` e o seu `Transcript`. Desde a subfase 2.5, recibe a liña de comandos e pásalla a `spawn_command` cun [`Command::new`](#command), no cartafol e co contorno do programa da proba, coma antes; e `spawn_command` lanza calquera `Command`.
 - O arquivo empeza por `#![allow(clippy::unwrap_used, clippy::expect_used)]`: [`clippy.toml`](workspace.md#clippytoml) permite `unwrap` e `expect` nas funcións de proba, pero non nas auxiliares, como `bundled`.
-- **As importacións.** Desde a subfase 2.2, o arquivo importa tamén `Priority`, de `meiga_win::conpty`, e catro nomes de `windows_sys::Win32::System::Threading`, cos que `Priorities` le a prioridade do fío lector: `GetCurrentThread`, `GetThreadPriority`, `THREAD_PRIORITY_BELOW_NORMAL` e `THREAD_PRIORITY_NORMAL`. `windows-sys` é unha dependencia do propio crate, e as probas de integración poden usar as dependencias do seu paquete, tamén as normais; a *feature* que trae eses nomes, `Win32_System_Threading`, xa estaba activada ([`Cargo.toml`](#cratesmeiga-wincargotoml)).
+- **As importacións.** Desde a subfase 2.2, o arquivo importa tamén `Priority`, de `meiga_win::conpty`, e catro nomes de `windows_sys::Win32::System::Threading`, cos que `Priorities` le a prioridade do fío lector: `GetCurrentThread`, `GetThreadPriority`, `THREAD_PRIORITY_BELOW_NORMAL` e `THREAD_PRIORITY_NORMAL`. `windows-sys` é unha dependencia do propio crate, e as probas de integración poden usar as dependencias do seu paquete, tamén as normais; a *feature* que trae eses nomes, `Win32_System_Threading`, xa estaba activada ([`Cargo.toml`](#cratesmeiga-wincargotoml)). Desde a 2.5, importa ademais `Command`, de `meiga_win::conpty`; o módulo `meiga_win::profiles`, para o cartafol do sistema e o contorno da proba do cartafol; e `std::io`, para ler o código dun erro de Windows.
 
 | Proba | Que comproba |
 |---|---|
 | `the_bundled_conpty_runs_a_program_and_reads_what_it_shows` | `cmd /c echo ola`, no ConPTY empaquetado, mostra `ola` e un salto de liña (`\r\n`), e remata co código 0. |
 | `the_conpty_of_windows_runs_a_program_and_reads_what_it_shows` | O mesmo, co ConPTY de Windows. |
+| `a_program_starts_in_its_folder_with_its_environment` | Desde a subfase 2.5. `cmd` empeza no cartafol do `Command`, o do sistema, e co seu contorno: o do programa da proba cunha variábel máis, `MEIGA_CHECK`, e unha menos, `COMPUTERNAME`. Escribe o seu cartafol actual e as dúas variábeis, a que non ten tal cal, e remata co código 0. |
+| `a_program_does_not_start_in_a_folder_that_is_not_there` | Desde a 2.5. Cun cartafol que non existe, `spawn` falla co erro 267 de Windows, `ERROR_DIRECTORY`. |
 | `the_session_tells_the_exit_code_of_the_program` | `cmd /c exit 7` remata co código 7. |
 | `what_is_written_reaches_the_program` | Despois do *prompt* de `cmd /k`, escribe `set M=ola`, `echo %M%%M%` e `exit 5`, cada un cun `\r`. A saída contén `olaola`, que só pode vir de `cmd`, porque non está no que se escribe, e o código é 5. |
 | `the_reader_thread_can_answer_the_program` | Desde a subfase 1.6. `cmd /d /v:on /c "set /p M=& echo !M!!M!"` le unha liña e móstraa dúas veces. `Answering` escribe `ola\r` desde o fío lector, co primeiro bloque que mostra a sesión. A saída contén `olaola`, e o código é 0: o que escribe o fío lector, dentro de `received`, chega ao programa, e escribir non o bloquea. |
@@ -3176,6 +3922,57 @@ fn bundled() -> Conpty {
 | `dropping_a_session_closes_it_without_waiting` | Destruír o `Pty` despois do *prompt* leva menos de 100 ms, e `cmd` remata co código `0xC000013A`: porque se pechou a súa consola, non porque o rematase meiga. |
 | `a_session_dropped_while_its_program_starts_ends_too` | Destruír o `Pty` xusto despois de `spawn`, mentres `cmd` se está a conectar á consola, tamén remata a sesión: co código `0xC000013A`; `1`, se o tivo que rematar o fío escritor; ou `0xC0000142`, se a consola se pechou antes de que se conectase. |
 | `sessions_dropped_while_the_shell_of_a_launcher_starts_end_too` | O mesmo cando o que se está a conectar é o `cmd /k` que arranca `cmd /c`. Como ese momento é moi curto, 20 fíos lanzan unha sesión cada un e destrúena 10, 12, 14… ata 48 ms despois. Todas teñen que rematar, cos mesmos códigos. Rematando só o programa da sesión, como facía a primeira versión, algunhas quedan bloqueadas, e a proba falla aos 60 s. |
+
+As dúas probas do cartafol e do contorno, desde a subfase 2.5:
+
+```rust
+#[test]
+fn a_program_starts_in_its_folder_with_its_environment() {
+    // A short folder, which a line of the terminal holds.
+    let folder = profiles::system_folder().unwrap();
+    let mut environment = profiles::environment();
+    environment.set("MEIGA_CHECK", "ola meiga");
+    environment.remove("COMPUTERNAME");
+    let block = environment.block();
+    let command = Command {
+        line: "cmd /d /c \"cd & echo [%MEIGA_CHECK%] [%COMPUTERNAME%]\"",
+        folder: Some(&folder),
+        environment: Some(&block),
+    };
+    let (_pty, mut transcript) = spawn_command(&bundled(), &command);
+    assert_eq!(transcript.wait_for_end(), Some(0));
+    let text = transcript.text();
+    // cmd writes the folder as the disk has it: C:\Windows\System32 for
+    // C:\WINDOWS\system32.
+    let line = format!("{folder}\r\n").to_lowercase();
+    assert!(text.to_lowercase().contains(&line), "{text:?}");
+    // cmd leaves a variable that is not there as it is.
+    assert!(text.contains("[ola meiga] [%COMPUTERNAME%]"), "{text:?}");
+}
+
+#[test]
+fn a_program_does_not_start_in_a_folder_that_is_not_there() {
+    let command = Command {
+        folder: Some(r"C:\meiga\no such folder"),
+        ..Command::new("cmd /c exit")
+    };
+    let (sender, _events) = mpsc::channel();
+    let Err(error) = bundled().spawn(&command, GridSize::new(80, 25), Channel(sender)) else {
+        panic!("it started in a folder that is not there");
+    };
+    // ERROR_DIRECTORY: the directory name is invalid.
+    assert_eq!(
+        error.os_error().and_then(io::Error::raw_os_error),
+        Some(267),
+        "{error}"
+    );
+}
+```
+
+- **O cartafol.** A primeira lanza `cmd` no cartafol do sistema, que dá [`system_folder`](#system_folder): un cartafol que existe en calquera Windows e que, coma di o comentario, é curto, e cabe nunha liña do terminal de 80 columnas sen partirse. `cd`, sen argumentos, escribe o cartafol actual de `cmd`, que ten que ser ese. Pero `cmd` escríbeo coma o garda o disco, `C:\Windows\System32`, e `GetSystemDirectoryW` pode dalo con outras maiúsculas, `C:\WINDOWS\system32`: a proba compara os dous en minúsculas, co salto de liña do final, para que sexa a liña enteira.
+- **O contorno.** O bloque é o do programa da proba, que dá [`environment`](#environment), cunha variábel máis, `MEIGA_CHECK`, e unha menos, `COMPUTERNAME`, que está en calquera Windows; `block()` faino coma o espera `CreateProcessW`, ordenado e cos dous nulos do final ([Código › meiga-core › `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs)). `echo` escribe as dúas variábeis entre corchetes: `cmd` substitúe `%MEIGA_CHECK%` polo seu valor, e deixa tal cal `%COMPUTERNAME%`, que xa non existe, coma di o último comentario. Así, `[ola meiga] [%COMPUTERNAME%]` só pode saír se o programa recibiu o bloque, e non o contorno do programa da proba, que ten `COMPUTERNAME` e non `MEIGA_CHECK`.
+- **A liña de comandos.** `/d` desactiva os comandos `AutoRun` do rexistro, coma na proba do fío lector, máis abaixo; `/c` executa o resto e remata; e `&` encadea o `cd` e o `echo`. As comiñas que van dentro da liña escríbense `\"` no texto de Rust.
+- **Un cartafol que non existe.** A segunda lanza `cmd /c exit` en `C:\meiga\no such folder`. O `Command` nomea só o cartafol, e `..Command::new(…)` completa o resto: a liña de comandos e, sen bloque, o contorno do programa da proba. `spawn` ten que fallar, e o seu erro, deixar ver o de Windows ([`os_error`](#cratesmeiga-winsrcerrorrs)): o 267, `ERROR_DIRECTORY`, «The directory name is invalid». `and_then(io::Error::raw_os_error)` dá o número do código, se o hai. Se `spawn` lanzase o programa, o `let … else` faría fallar a proba coa súa mensaxe. Ninguén escoita a canle (`_events`): cando `spawn` falla, nunca chama ao `Output`.
 
 A liña de comandos de `the_reader_thread_can_answer_the_program` fai todo nun só `cmd`, sen esperar polo *prompt*:
 
@@ -3208,7 +4005,11 @@ impl Output for Priorities {
 fn the_priority_of_the_reader_changes_while_the_session_runs() {
     let (sender, blocks) = mpsc::channel();
     let pty = bundled()
-        .spawn("cmd /k", GridSize::new(80, 25), Priorities(sender))
+        .spawn(
+            &Command::new("cmd /k"),
+            GridSize::new(80, 25),
+            Priorities(sender),
+        )
         .unwrap();
     // The priority of the block that brings `text`, which the program writes
     // after the line that is typed now. The words are not in the folder
@@ -3255,6 +4056,77 @@ fn the_priority_of_the_reader_changes_while_the_session_runs() {
 
 Cargo corre as probas en paralelo, cada unha coa súa sesión. A última leva uns 10 s, e ás veces 20: con tantas sesións arrancando á vez, case sempre se bloquea algunha, e o fío escritor remata os seus programas cando pasan 10 s sen que remate ningún. Por iso cada espera das probas chega a 60 s.
 
+## `crates/meiga-win/tests/profiles.rs`
+
+Desde a subfase 2.5. Probas de integración de [`profiles.rs`](#cratesmeiga-winsrcprofilesrs), coma as de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs): usan o crate só pola súa API pública, co Windows de verdade, sen ConPTY. Non poden saber que shells ten o equipo onde corren, así que comproban o que ten calquera Windows e as regras que valen sempre.
+
+```rust
+//! Finds the shells of this computer, as the menu of the profiles does, and
+//! reads the environment of this program, as the tabs get it.
+
+// Clippy allows them in test functions (clippy.toml), but not in the helpers
+// of an integration test, where a panic is also how a test fails.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+use meiga_core::profile::{COMMAND_PROMPT, GIT_BASH, POWERSHELL, WINDOWS_POWERSHELL};
+use meiga_win::profiles;
+
+#[test]
+fn the_shells_of_windows_are_in_the_folder_of_the_system() {
+    let environment = profiles::environment();
+    let system = profiles::system_folder().unwrap();
+    let found = profiles::detect(&environment, &system);
+    let command = |name: &str| {
+        found
+            .iter()
+            .find(|profile| profile.name == name)
+            .map(|profile| profile.command.clone())
+    };
+    assert_eq!(command(COMMAND_PROMPT), Some(format!(r"{system}\cmd.exe")));
+    assert_eq!(
+        command(WINDOWS_POWERSHELL),
+        Some(format!(r"{system}\WindowsPowerShell\v1.0\powershell.exe"))
+    );
+    if let Some(pwsh) = command(POWERSHELL) {
+        assert!(pwsh.trim_end_matches('"').ends_with(r"\pwsh.exe"), "{pwsh}");
+    }
+    // In the order of the menu, and each name once.
+    let places: Vec<usize> = [POWERSHELL, WINDOWS_POWERSHELL, COMMAND_PROMPT, GIT_BASH]
+        .iter()
+        .filter_map(|name| found.iter().position(|profile| profile.name == *name))
+        .collect();
+    assert!(places.is_sorted(), "{found:?}");
+    let mut names: Vec<&str> = found.iter().map(|profile| profile.name.as_str()).collect();
+    names.sort_unstable();
+    names.dedup();
+    assert_eq!(names.len(), found.len(), "{found:?}");
+}
+
+#[test]
+fn the_environment_is_the_one_of_this_program() {
+    let environment = profiles::environment();
+    for name in ["PATH", "SystemRoot", "USERPROFILE"] {
+        assert_eq!(environment.get(name), std::env::var(name).ok(), "{name}");
+    }
+    // The names do not distinguish case, as in Windows.
+    assert_eq!(environment.get("path"), std::env::var("PATH").ok());
+}
+```
+
+| Proba | Que comproba |
+|---|---|
+| `the_shells_of_windows_are_in_the_folder_of_the_system` | `detect`, co contorno e o cartafol do sistema do programa da proba, dá Command Prompt e Windows PowerShell cos seus programas no cartafol do sistema e, se atopa PowerShell 7, un `pwsh.exe`; os perfís de nome fixo que atopa, na orde do menú; e cada nome unha vez. |
+| `the_environment_is_the_one_of_this_program` | `environment` dá o mesmo `PATH`, `SystemRoot` e `USERPROFILE` ca a biblioteca estándar, e o nome `path`, en minúsculas, dá o valor de `PATH`. |
+
+- **As importacións.** Os nomes dos perfís, de `meiga-core` (`POWERSHELL`, «PowerShell»…), e o módulo `profiles`. O `#![allow(…)]` e o seu comentario son os de `tests/conpty.rs`.
+- **As shells de Windows.** Command Prompt e Windows PowerShell están en calquera Windows, e a liña de comandos de cada un ten que ser exactamente a ruta do seu programa no cartafol do sistema: sen comiñas, porque o cartafol do sistema non ten espazos, e sen argumentos. `command` é un *closure* que dá a liña de comandos do perfil dun nome, se o hai.
+- **PowerShell 7**, se o atopa, remata en `\pwsh.exe`, ou en `\pwsh.exe"` se vai entre comiñas: a ruta de `%ProgramFiles%` ten un espazo. `trim_end_matches('"')` quita a comiña do final. Nun equipo sen el, a proba non o mira.
+- **A orde.** `places` garda onde están os perfís de nome fixo que atopou, na orde do menú, e `is_sorted` comproba que van nesa orde. As distribucións de WSL, que van entre Command Prompt e Git Bash, teñen os nomes de cada equipo, e non se miran.
+- **Cada nome unha vez.** Ordenar os nomes e quitar os repetidos ten que deixar tantos coma perfís. `dedup` só quita os repetidos que van seguidos: por iso, antes, `sort_unstable`. Se falla, a mensaxe mostra os perfís que atopou (`{found:?}`).
+- **O contorno.** `environment` le o bloque enteiro con `GetEnvironmentStringsW`, e a biblioteca estándar pregunta por cada variábel (`std::env::var`): os dous camiños teñen que dar o mesmo valor para tres variábeis que ten calquera sesión de Windows. `ok()` converte o `Result` de `std::env::var` nun `Option`, coma o que dá `get`. E `get("path")` dá o valor de `PATH`: os nomes non distinguen maiúsculas, coma en Windows ([Código › meiga-core › `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs)).
+
+O que atopa `detect` en cada equipo, as distribucións de WSL e Git Bash, e o que fai meiga con eles, compróbao [`tools/check-profiles.ps1`](ferramentas.md#toolscheck-profilesps1), que atopa as shells coma meiga e abre cada unha desde o menú dos perfís (ver [`profiles.rs`](#cratesmeiga-winsrcprofilesrs)).
+
 ## `crates/meiga-win/examples/conpty.rs`
 
 Un exemplo: Cargo compila cada arquivo de `examples/` como un programa que usa o crate. Este lanza un programa nunha pseudoconsola e mostra o que escribe, bloque a bloque e cos caracteres de control á vista, e envíalle cada liña que se escribe na consola. Serve para ver o que envía de verdade o ConPTY ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)), antes de que meiga o interprete.
@@ -3296,6 +4168,7 @@ Con `--record`, ao final engade unha liña coa gravación: `Recorded 6 blocks, 5
 - `visible` mostra cada carácter de control (de 0 a 31) co seu símbolo de Unicode, que está na mesma posición a partir de `U+2400`: ␛ é ESC, ␍ é CR, ␊ é LF e ␇ é BEL. DEL móstrase como ␡. `utf8_chunks` separa os anacos de UTF-8 válido dos bytes que non o son, que se mostran como `\xNN`: así se ve un carácter partido entre dous bloques.
 - `ended` mostra o código de saída, en decimal e en hexadecimal, e remata o exemplo con ese código (`process::exit`), desde o fío lector. En PowerShell, `$LASTEXITCODE` móstrao como un número con signo: `0xC000013A` é `-1073741510`. Antes, remata a gravación con `finish`: `process::exit` non destrúe nada, así que o que quedase no búfer da gravación perderíase.
 - `options` le as opcións mentres os argumentos empezan por `--` (`next_if`, dun iterador `Peekable`, que mira o seguinte sen consumilo se non cumpre a condición). O resto é a liña de comandos, cos argumentos xuntos con espazos. Unha opción que non existe mostra o uso e remata co código 2.
+- Desde a subfase 2.5, o exemplo pásalle a liña de comandos a `spawn` nun [`Command::new`](#command), que importa de `meiga_win::conpty`: o programa empeza no cartafol e co contorno do exemplo, coma antes.
 - O fío principal le as liñas da consola e envíaas co `\r` de Intro. Ctrl+Z e Intro, o fin da entrada en Windows, pechan a sesión (`drop(pty)`). Despois, o fío principal espera (`thread::park`, nun bucle, porque pode voltar sen motivo) a que o fío lector remate o exemplo.
 - Se a entrada estándar xa está pechada ao arrancar, por exemplo con `< nul`, o exemplo pecha a sesión no primeiro instante, mentres o programa aínda se conecta á consola: é o caso no que o fío escritor remata o programa, cando pasan 10 s sen que remate ningún, ou no que o programa remata só co código `0xC0000142`.
 - `bundled` busca o ConPTY coma as probas, desde `target\debug\examples\`. Se non o atopa, o exemplo remata co código 2 e unha mensaxe que pide executar `fetch-conpty.ps1` ou usar `--system`.

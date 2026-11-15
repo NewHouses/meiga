@@ -1,6 +1,6 @@
 # Código › configuración do workspace
 
-> Estado: mantemento M1, despois da subfase 1.10. No M1, a versión de Rust de `rust-toolchain.toml`.
+> Estado: subfase 2.5. Na 2.5 chegou a dependencia `toml`, que le o `config.toml`, cos seus crates no `Cargo.lock`. No mantemento M1, a versión de Rust de `rust-toolchain.toml`.
 
 Os arquivos da raíz do repositorio configuran como se compila e se revisa todo o proxecto. Neste documento explícanse un a un.
 
@@ -46,6 +46,9 @@ meiga-core = { path = "crates/meiga-core" }
 meiga-render = { path = "crates/meiga-render" }
 meiga-win = { path = "crates/meiga-win" }
 memchr = "2.8.3"
+# The parser of config.toml, without serde: meiga takes the values that it knows
+# from the tables that it gives, with their places in the file (ADR 0022).
+toml = { version = "1.2.1", default-features = false, features = ["parse", "std"] }
 unicode-width = { version = "0.2.3", default-features = false }
 windows = "0.62.2"
 windows-core = "0.62.2"
@@ -61,6 +64,7 @@ Declara unha soa vez onde está cada dependencia e que versión se usa:
   - `unicode-width`, desde a 1.3, para o ancho dos caracteres. `default-features = false` quita a *feature* `cjk`, as táboas para os contextos CJK, que meiga non usa (ver [Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)). Neste caso as opcións van no `Cargo.toml` raíz, porque un crate pode engadir *features* pero non quitar as que trae por defecto. Desde a 1.5, iso mesmo pasa con `alacritty_terminal`, que pide as *features* por defecto de `unicode-width`: Cargo compílao coa unión das *features* dos dous, así que `cjk` volta estar activa, e `meiga.exe` leva esas táboas, cerca de 1 KB.
   - `alacritty_terminal`, desde a 1.5, o núcleo do terminal (ver [Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). `"=0.26.0"` fixa exactamente esa versión: nas versións 0.x, calquera actualización pode cambiar a API, e só a fachada de `meiga-core` a usa, así que actualizala é unha decisión, non algo que pase só. `default-features = false` quita `serde`, para gardar a configuración, que meiga non usa.
   - `memchr`, desde a 1.5, para atopar rápido os ESC no escáner do terminal.
+  - `toml`, desde a 2.5, para ler o arquivo de configuración, `%APPDATA%\meiga\config.toml` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 1). Sen serde: `default-features = false` quita as *features* por defecto, entre elas `serde`, que pasa o TOML aos tipos dun programa, e `display`, que escribe TOML, e meiga só pide `parse`, o parser, e `std`, a biblioteca estándar de Rust. O parser dá as táboas do arquivo, con cada chave e cada valor e o seu sitio nel, e meiga colle a man os valores que coñece; con ese sitio, di a liña e a columna de cada erro, e segue cos outros ([Código › meiga-core › `config.rs`](meiga-core.md#cratesmeiga-coresrcconfigrs)). Con serde e as estruturas feitas con `derive`, a lectura pararía no primeiro erro, e ocuparía máis: nun programa de proba co perfil *release* de meiga, o parser sumou uns 116 KB, e con serde e `derive`, 193 KB ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Coma en `unicode-width`, `default-features = false` vai no `Cargo.toml` raíz.
 - `"0.61.2"` significa «0.61.2 ou unha versión compatíbel posterior»: nas versións 0.x, as 0.61.*. A versión exacta que se usa é a do `Cargo.lock`. O `=` de `"=0.26.0"` só admite esa.
 
 ```toml
@@ -99,13 +103,14 @@ debug = "limited"
 
 ## `Cargo.lock`
 
-Xérao Cargo automaticamente e **non se edita a man**. Garda a versión exacta de cada crate do workspace e de cada dependencia, coa súa suma de comprobación (*checksum*). Súbese ao repositorio para que as compilacións sexan reproducíbeis. Agora contén os catro crates propios e 63 dependencias:
+Xérao Cargo automaticamente e **non se edita a man**. Garda a versión exacta de cada crate do workspace e de cada dependencia, coa súa suma de comprobación (*checksum*). Súbese ao repositorio para que as compilacións sexan reproducíbeis. Agora contén os catro crates propios e 75 dependencias:
 
 - `windows-sys` e `windows-link`, desde a subfase 1.1;
 - desde a 1.3, `unicode-width` e o crate `windows` cos seus: `windows-core`, `windows-collections`, `windows-future`, `windows-implement`, `windows-interface`, `windows-numerics`, `windows-result`, `windows-strings` e `windows-threading`, máis catro que só se usan ao compilar as macros (`proc-macro2`, `quote`, `syn` e `unicode-ident`);
 - desde a 1.5, `memchr`, `alacritty_terminal` e 44 máis que trae este. Para Windows x64 compílanse 29 deles: `vte`; `base64` (para OSC 52), `bitflags` e `log`, que usa o terminal; `regex-automata` e `aho-corasick`, para a súa busca de texto; e os do PTY e do bucle de eventos propios do Alacritty, como `polling`, `piper`, `miow` ou `parking_lot`, que meiga non usa, e o ligador elimina o seu código. Os outros 15 son para outros sistemas, como `rustix` e `signal-hook`, para Linux e macOS, ou as variantes de `windows-targets` para outras arquitecturas: o `Cargo.lock` garda as dependencias de todas as plataformas.
+- desde a 2.5, `toml` e 11 máis que trae este. Coas *features* de meiga, para Windows x64 compílanse só `toml` e catro deles: `toml_parser`, o parser; `winnow`, a biblioteca de parsers coa que está feito; `toml_datetime`, as datas de TOML; e `serde_spanned`, o `Spanned`, que garda o sitio de cada valor no arquivo e que, sen as súas *features*, non usa serde. Os outros sete son das *features* que meiga non activa, e non se compilan: `serde_core`, de `serde`; `toml_writer`, de `display`; `indexmap`, con `equivalent` e `hashbrown`, de `preserve_order`, que gardaría as chaves na orde do arquivo; e `serde_derive`, con `syn` 3.0.10, que `serde_core` nomea só para que as súas versións vaian xuntas, nunha condición que non se cumpre nunca (`cfg(any())`). En `THIRD-PARTY-NOTICES.txt` ([Código › ferramentas](ferramentas.md#toolsthird-party-noticesps1)) só van os cinco que se compilan, todos coa licenza MIT ou Apache-2.0, que xa permitían `deny.toml` e `about.toml`.
 
-`alacritty_terminal` usa `windows-sys` 0.59, e meiga a 0.61, así que agora hai dúas versións: `cargo deny check` avisa diso, sen fallar (ver [Tecnoloxías › cargo-deny](../tecnoloxias.md#9-cargo-deny)).
+`alacritty_terminal` usa `windows-sys` 0.59, e meiga a 0.61, así que agora hai dúas versións: `cargo deny check` avisa diso, sen fallar (ver [Tecnoloxías › cargo-deny](../tecnoloxias.md#9-cargo-deny)). Desde a 2.5, o `Cargo.lock` ten tamén dúas versións de `syn`, a 2 e a 3.0.10, pero esta só a trae `serde_derive`, que non se compila: `cargo deny check`, que só mira as dependencias que se compilan para Windows x64 (ver [`deny.toml`](#denytoml)), segue dando un só aviso, o de `windows-sys`.
 
 ## `rust-toolchain.toml`
 

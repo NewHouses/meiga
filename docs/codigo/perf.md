@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 1.10. Na 1.10 os scripts non cambiaron: só chegou a ligazón ao ADR 0017.
+> Estado: subfase 2.5. Na 2.5, `measure-startup.ps1` arranca meiga cun `APPDATA` baleiro, para que o `config.toml` de quen mide non cambie o resultado; os outros scripts non cambiaron. Na 1.10 os scripts non cambiaron: só chegou a ligazón ao ADR 0017.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -675,7 +675,7 @@ A CI executa esta proba en cada PR (ver [Código › .github](github.md#comproba
 
 ## `tools/perf/measure-startup.ps1`
 
-Mide canto tarda meiga en abrir a súa xanela: desde que se crea o proceso ata que a xanela está pintada e meiga agarda mensaxes. É o **tempo ata o primeiro fotograma** (ver [Tecnoloxías › Tempo ata o primeiro fotograma](../tecnoloxias.md#tempo-ata-o-primeiro-fotograma)). Desde a subfase 1.6, meiga lanza a súa shell por defecto antes do primeiro fotograma ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), así que o tempo inclúe tamén lanzar a sesión: non se pode comparar directamente co das subfases anteriores.
+Mide canto tarda meiga en abrir a súa xanela: desde que se crea o proceso ata que a xanela está pintada e meiga agarda mensaxes. É o **tempo ata o primeiro fotograma** (ver [Tecnoloxías › Tempo ata o primeiro fotograma](../tecnoloxias.md#tempo-ata-o-primeiro-fotograma)). Desde a subfase 1.6, meiga lanza a súa shell por defecto antes do primeiro fotograma ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), así que o tempo inclúe tamén lanzar a sesión: non se pode comparar directamente co das subfases anteriores. Desde a 2.5, a sesión corre o perfil por defecto, e antes de lanzala meiga busca o seu `config.toml` e atopa os perfís, sen lanzar ningún proceso ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 1, 4 e 5): o tempo inclúe tamén iso. Para que o `config.toml` de quen mide non o cambie, o script arranca meiga cun `APPDATA` baleiro.
 
 ```powershell
 .\tools\perf\measure-startup.ps1                            # 2 + 20 arranques de target\release\meiga.exe
@@ -713,6 +713,7 @@ Explicación por partes:
 function Measure-Start {
     $info = [Diagnostics.ProcessStartInfo]::new($Path)
     $info.UseShellExecute = $false
+    $info.Environment['APPDATA'] = $appdata
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $process = [Diagnostics.Process]::Start($info)
     try {
@@ -720,7 +721,8 @@ function Measure-Start {
         $clock.Stop()
 ```
 
-- `Stopwatch` é o cronómetro de alta resolución de .NET. Ponse en marcha xusto antes de crear o proceso, así que o tempo inclúe todo o arranque: que Windows cree o proceso e cargue `meiga.exe` e as súas DLL, e que meiga rexistre a clase, cree a xanela, lance a súa sesión e pinte a xanela. Lanzar a sesión, desde a subfase 1.6, é crear a pseudoconsola e arrancar nela a shell por defecto: PowerShell 7 ou, se non está, Windows PowerShell.
+- `Environment` é o contorno do proceso novo: unha copia do de PowerShell, na que o script só cambia `APPDATA`, sen tocar o seu. Desde a 2.5, meiga busca a súa configuración en `%APPDATA%\meiga\config.toml` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 1), e no cartafol baleiro de `$appdata` non a atopa: arranca cos seus valores por defecto, teña o que teña quen mide no seu. Así o `config.toml` non cambia o que se mide: nin o perfil por defecto, que é o programa que se lanza, nin unha caixa de mensaxe cos seus erros.
+- `Stopwatch` é o cronómetro de alta resolución de .NET. Ponse en marcha xusto antes de crear o proceso, así que o tempo inclúe todo o arranque: que Windows cree o proceso e cargue `meiga.exe` e as súas DLL, e que meiga rexistre a clase, cree a xanela, busque a configuración e atope os perfís, lance a súa sesión e pinte a xanela. Lanzar a sesión, desde a subfase 1.6, é crear a pseudoconsola e arrancar nela a shell por defecto: ata a 2.4, PowerShell 7 ou, se non está, Windows PowerShell; desde a 2.5, o perfil por defecto, que sen `config.toml` é o mesmo ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5). Atopar os perfís só mira uns poucos cartafoles e arquivos e le unhas claves do rexistro ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4).
 - `WaitForInputIdle` volta cando meiga quedou esperando mensaxes coa xanela xa pintada, como en [`check-window.ps1`](ferramentas.md#toolscheck-windowps1), e o cronómetro párase.
 - O que non se conta: despois, o DWM compón a pantalla co fotograma novo e, por Escritorio remoto, envíao. Iso pasa fóra de meiga e mídeo `measure.ps1` cos grupos `dwm` e `termservice`. Tampouco se conta o que tarda a shell en arrancar e escribir o seu *prompt*: lanzala é rápido, pero ela tarda moito máis en escribir, e o que escribe chega a meiga despois do primeiro fotograma, coma calquera outra saída.
 
@@ -752,15 +754,27 @@ function Measure-Start {
 - A última liña devolve os milisegundos: en PowerShell, o valor dunha expresión solta é o resultado da función.
 
 ```powershell
-for ($run = 1; $run -le $Warmup; $run++) {
-    $null = Measure-Start
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "meiga-measure-startup-$PID-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
+try {
+    Write-Host "Starting $exe $Warmup + $Runs times..."
+    for ($run = 1; $run -le $Warmup; $run++) {
+        $null = Measure-Start
+    }
+    $start = Get-Date
+    $times = for ($run = 1; $run -le $Runs; $run++) {
+        [pscustomobject]@{ run = $run; ms = Measure-Start }
+    }
 }
-$start = Get-Date
-$times = for ($run = 1; $run -le $Runs; $run++) {
-    [pscustomobject]@{ run = $run; ms = Measure-Start }
+finally {
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
 }
 ```
 
+- **O `APPDATA` baleiro**, desde a 2.5: un cartafol novo no cartafol temporal de Windows, co número do proceso de PowerShell (`$PID`) no nome, para que dúas medicións á vez non compartan cartafol. Créase unha vez, antes dos arranques, e úsano todos. `$appdata` defínese despois da función, pero antes de chamala: `Measure-Start` le a variábel cando se executa, e atópaa entón no script.
+- O `finally` borra o cartafol ao rematar os arranques, e tamén se un falla ou se se cancela o script con Ctrl+C. `-Recurse` borra tamén o que haxa dentro. `-ErrorAction SilentlyContinue` fai que, se non se pode borrar, o script siga: co `$ErrorActionPreference = 'Stop'` do principio, un erro ao borralo pararía o script antes de mostrar o resultado.
 - O **quecemento**: o primeiro arranque despois de compilar ou de reiniciar le o executábel do disco, e o antivirus analiza o arquivo novo. Os seguintes atópano xa na memoria (a caché de arquivos de Windows). Os arranques de quecemento fanse pero non contan.
 - `$times` recolle un obxecto por arranque.
 
@@ -869,6 +883,7 @@ function Measure-Mode([string]$Bench) {
 - **Maximizada**, para medir sempre co tamaño da pantalla, que é o peor caso dos fotogramas completos.
 - `UseShellExecute = $true`: Windows abre o programa como desde o Explorador ou un acceso directo, co modo de xanela de `WindowStyle`. meiga úsao ao mostrar a xanela (`SW_SHOWDEFAULT`, ver [Código › meiga-win](meiga-win.md#windowrun)).
 - Os argumentos van nun só texto, e a ruta do rexistro entre comiñas, por se ten espazos.
+- Ao contrario ca [`measure-startup.ps1`](#toolsperfmeasure-startupps1), non lle cambia o `APPDATA`: nos modos de medición, meiga non le o `config.toml` nin lanza ningún programa.
 
 ```powershell
         $idle = try { $process.WaitForInputIdle(10000) } catch { $false }
