@@ -6606,7 +6606,7 @@ A CI executa este script en cada PR, despois de `check-tabbar.ps1`, no paso *Che
 
 ## `tools/check-profiles.ps1`
 
-Desde a subfase 2.5. Comproba os perfís e a configuración de `meiga.exe` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md); [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)). Os erros do `config.toml`: unha caixa de mensaxe da xanela de meiga, co título meiga e un só botón, ábrese cando a xanela xa está na pantalla e pintada, e di cada erro coa súa liña e a súa columna, e que meiga os ignorou; mentres está aberta, o programa da primeira tab xa corre, e, cando se pecha, a xanela pinta todo outra vez e debuxa o que escribiu el. E, cun `config.toml` que non é TOML, a caixa di onde está mal, e que meiga ignorou o arquivo enteiro. A primeira tab: corre o perfil por defecto do arquivo, Probe, un perfil que engade o propio arquivo, coas variábeis da súa liña de comandos e do seu cartafol expandidas, e no seu cartafol, que leva no nome unha letra que non é ASCII; e, co arquivo ignorado, a shell por defecto, no cartafol persoal. O contorno do seu programa: `TERM_PROGRAM=meiga`, `TERM_PROGRAM_VERSION` coa versión de meiga e `COLORTERM=truecolor`, en vez dos valores que tiña meiga; un `WSLENV` que garda os nomes que xa tiña, coas súas opcións, menos os do Windows Terminal, e leva ao final os que faltaban; e nin `WT_SESSION` nin `WT_PROFILE_ID`. O menú dos perfís: Ctrl+Maiús+Espazo ábreo debaixo do botón + e do botón dos perfís, o ▾, e só debuxa o menú, cos perfís que atopa meiga, menos o que oculta o arquivo, e Probe ao final; as repeticións do Espazo non abren nada; e o programa non recibe as teclas que colle o menú, pero si Ctrl e Maiús, que baixaron para el. O ▾ co rato: o punteiro e o botón que baixa só debuxan o botón, e, cando o botón sobe, ábrese o menú e a xanela solta o rato; un clic en Probe abre unha tab con el. Os perfís que atopa meiga: cada un ábrese desde o menú nunha tab que corre a liña de comandos que espera a comprobación, no cartafol persoal, e os de WSL, co `--cd "~"`. O botón + abre unha tab co perfil por defecto, e *Duplicate tab* cópiaa, coa mesma liña de comandos e no mesmo cartafol. E meiga sae co código 0 cando se pecha a súa xanela, e os programas das súas tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs), en [Código › meiga-core › `config.rs`](meiga-core.md#cratesmeiga-coresrcconfigrs), [› `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers) e [› `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs), e en [Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa, nun cartafol propio e cun `APPDATA` propio, co `config.toml` que escribe a comprobación; na súa primeira tab, Probe corre un script de PowerShell que di nun arquivo o número do seu proceso e as súas variábeis, e despois fai un paso cada vez que llo di a comprobación, coma en [`check-menu.ps1`](#toolscheck-menups1). A comprobación atopa as shells instaladas coma meiga, sen lanzar ningún proceso, para saber que perfís ten que mostrar o menú e que liña de comandos ten que correr cada un; e le a liña de comandos de cada programa en WMI, e o seu cartafol, na memoria do seu proceso. Publica as mensaxes do rato e das teclas co fío da xanela suspendido, coma `check-menu.ps1`, nos sitios da barra e do menú, que calcula coma meiga: só o ancho do menú, que depende da fonte, sae do fotograma que o abre. Leva uns 30 s, boa parte deles abrindo e pechando as shells que atopa meiga, unha por unha: máis se tardan en arrancar.
+Desde a subfase 2.5. Comproba os perfís e a configuración de `meiga.exe` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md); [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)). Os erros do `config.toml`: unha caixa de mensaxe da xanela de meiga, co título meiga e un só botón, ábrese cando a xanela xa está na pantalla e pintada, e di cada erro coa súa liña e a súa columna, e que meiga os ignorou; mentres está aberta, o programa da primeira tab xa corre, e, cando se pecha, a xanela pinta todo outra vez e debuxa o que escribiu el, só no terminal e, se deu un título, na súa tab. E, cun `config.toml` que non é TOML, a caixa di onde está mal, e que meiga ignorou o arquivo enteiro. A primeira tab: corre o perfil por defecto do arquivo, Probe, un perfil que engade o propio arquivo, coas variábeis da súa liña de comandos e do seu cartafol expandidas, e no seu cartafol, que leva no nome unha letra que non é ASCII; e, co arquivo ignorado, a shell por defecto, no cartafol persoal. O contorno do seu programa: `TERM_PROGRAM=meiga`, `TERM_PROGRAM_VERSION` coa versión de meiga e `COLORTERM=truecolor`, en vez dos valores que tiña meiga; un `WSLENV` que garda os nomes que xa tiña, coas súas opcións, menos os do Windows Terminal, e leva ao final os que faltaban; e nin `WT_SESSION` nin `WT_PROFILE_ID`. O menú dos perfís: Ctrl+Maiús+Espazo ábreo debaixo do botón + e do botón dos perfís, o ▾, e só debuxa o menú, cos perfís que atopa meiga, menos o que oculta o arquivo, e Probe ao final; as repeticións do Espazo non abren nada; e o programa non recibe as teclas que colle o menú, pero si Ctrl e Maiús, que baixaron para el. O ▾ co rato: o punteiro e o botón que baixa só debuxan o botón, e, cando o botón sobe, ábrese o menú e a xanela solta o rato; un clic en Probe abre unha tab con el. Os perfís que atopa meiga: cada un ábrese desde o menú nunha tab que corre a liña de comandos que espera a comprobación, no cartafol persoal, e os de WSL, co `--cd "~"`. O botón + abre unha tab co perfil por defecto, e *Duplicate tab* cópiaa, coa mesma liña de comandos e no mesmo cartafol. E meiga sae co código 0 cando se pecha a súa xanela, e os programas das súas tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs), en [Código › meiga-core › `config.rs`](meiga-core.md#cratesmeiga-coresrcconfigrs), [› `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers) e [› `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs), e en [Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa, nun cartafol propio e cun `APPDATA` propio, co `config.toml` que escribe a comprobación; na súa primeira tab, Probe corre un script de PowerShell que di nun arquivo o número do seu proceso e as súas variábeis, e despois fai un paso cada vez que llo di a comprobación, coma en [`check-menu.ps1`](#toolscheck-menups1). A comprobación atopa as shells instaladas coma meiga, sen lanzar ningún proceso, para saber que perfís ten que mostrar o menú e que liña de comandos ten que correr cada un; e le a liña de comandos de cada programa en WMI, e o seu cartafol, na memoria do seu proceso. Publica as mensaxes do rato e das teclas co fío da xanela suspendido, coma `check-menu.ps1`, nos sitios da barra e do menú, que calcula coma meiga: só o ancho do menú, que depende da fonte, sae do fotograma que o abre. Leva uns 30 s, boa parte deles abrindo e pechando as shells que atopa meiga, unha por unha: máis se tardan en arrancar.
 
 ```powershell
 .\tools\check-profiles.ps1                                  # comproba target\release\meiga.exe
@@ -6632,6 +6632,7 @@ OK: with a config.toml that is not TOML, the message box tells where it is wrong
 ```
 
 - **A versión** da segunda liña é a de meiga, a de `[workspace.package]` en `Cargo.toml`: a que pon meiga en `TERM_PROGRAM_VERSION`.
+- **O título** da primeira tab: se o seu programa deu un mentres a caixa estaba aberta, ou despois, a primeira liña remata con `; its tab shows the title that the program gave, '…'`. Pásalle a PowerShell cando corre como administrador, coma no *runner* da CI: ao arrancar, pon `Administrator: ` diante do título da súa consola, que é a ruta de `pwsh.exe` ([`ConsoleHostRawUserInterface.cs`](https://github.com/PowerShell/PowerShell/blob/v7.7.0/src/Microsoft.PowerShell.ConsoleHost/host/msh/ConsoleHostRawUserInterface.cs#L40-L56), v7.7.0), coma cmd en [`check-window.ps1`](#toolscheck-windowps1). Nunha consola sen permisos de administrador, a liña remata en `and what it writes then.`
 - **Os perfís** da terceira e da quinta liña son os que atopa meiga nesa máquina, na orde do menú ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4): PowerShell, se atopa PowerShell 7; Windows PowerShell; as distribucións de WSL instaladas, a por defecto primeiro; e Git Bash, se está. Command Prompt non sae, porque o oculta o `config.toml` da comprobación. Na terceira, Probe vai ao final; na quinta, non, porque Probe ábreno os pasos 4 e 6. Nun equipo con PowerShell 7 e só as shells de Windows, a terceira di `PowerShell, Windows PowerShell, Probe`, e a quinta, `PowerShell, Windows PowerShell`.
 - **As medidas do menú,** na terceira: o seu ancho e o seu alto, e o ancho das celas do seu texto, en píxeles. Coma en [`check-menu.ps1`](#toolscheck-menups1), dependen da escala da pantalla e, eiquí, tamén dos perfís. O alto son o bordo e o espazo, arriba e abaixo, e un elemento por perfil: ao 100 %, coma no *runner* da CI, 6 píxeles e 32 por perfil, e ao 150 %, 10 e 48 por perfil. O ancho son as celas do nome máis longo e os lados do menú: 32 píxeles ao 100 %, e 50 ao 150 %. Co menú do equipo de enriba, o nome máis longo é *Windows PowerShell*, de 18 caracteres, e, ao 150 %, con celas de 11 píxeles, coma en `check-menu.ps1`, o menú mide 248 × 154 píxeles.
 - **A shell por defecto** da última liña é PowerShell, se meiga atopa PowerShell 7, e se non, Windows PowerShell (decisión 5).
@@ -6714,7 +6715,9 @@ depends on the font, comes from the frame that opens it. It checks that:
   the file, each with its line and its column, and that meiga ignored them;
   meanwhile, the program of the first tab runs. When the box closes, the
   window paints all of it again, and draws what the program wrote meanwhile,
-  and what it writes then;
+  and what it writes then: only in the terminal and, if the program gave a
+  title, in the first tab. PowerShell gives one while it starts as an
+  administrator: it puts "Administrator: " before the title of its console;
 - the first tab runs Probe, with the variables of its command line and of
   its folder expanded, in its folder. Its program gets TERM_PROGRAM=meiga,
   TERM_PROGRAM_VERSION with the version of meiga, and COLORTERM=truecolor,
@@ -7654,6 +7657,28 @@ function Assert-Inside([int]$From, $Rect, [string]$What) {
 }
 
 # Waits until meiga stops drawing, and checks that the frames after the first
+# $From lines of the log, which have to be some, drew only inside the
+# terminal, where the program of the first tab writes; and inside the first
+# tab too, if the window no longer has the title $Title: then the program
+# gave one, as PowerShell does while it starts as an administrator, which
+# puts "Administrator: " before the title of its console. Otherwise throws
+# $What.
+function Assert-Written([int]$From, [string]$Title, [string]$What) {
+    Wait-Quiet 400
+    $frames = @(Get-Frames $From)
+    # After the frames: the window already has the title that they drew.
+    $allowed = @($terminal)
+    if ($api::TextOf($window) -cne $Title) { $allowed += $bar.FirstTab }
+    $outside = @(foreach ($area in @(Get-Areas $frames)) {
+            if (@($allowed | Where-Object { Test-Inside $area $_ }).Count -eq 0) { $area }
+        })
+    if ($frames.Count -eq 0 -or $outside.Count -gt 0) {
+        Show-Lines $frames
+        throw "$What`: the window did not draw only inside $(($allowed | ForEach-Object { Show-Rect $_ }) -join ' and ')."
+    }
+}
+
+# Waits until meiga stops drawing, and checks that the frames after the first
 # $From lines of the log presented $Rect, and nothing else; otherwise throws
 # $What.
 function Assert-Only([int]$From, $Rect, [string]$What) {
@@ -7686,7 +7711,7 @@ function Wait-Menu([int]$From, $Menu, [string]$What) {
 }
 ```
 
-**O que debuxa cada cambio.** `Assert-Inside`, `Assert-Only` e `Assert-OneFull` son os de `check-menu.ps1` (ver *O que debuxa cada cambio*). **`Wait-Menu`** é nova: agarda a que un fotograma presente unha zona que conteña o menú, sen agardar a que meiga deixe de debuxar. Abonda para saber que a xanela xa tratou as teclas ou o botón que o abriron, e que a comprobación pode cambiar o estado das teclas (ver *Unha tecla cada vez* en `check-menu.ps1`).
+**O que debuxa cada cambio.** `Assert-Inside`, `Assert-Only` e `Assert-OneFull` son os de `check-menu.ps1` (ver *O que debuxa cada cambio*). **`Assert-Written`** é nova, para o paso 1: coma `Assert-Inside` co terminal, `$terminal`, onde escribe o programa da primeira tab; pero, se a xanela xa non ten o título `$Title`, o que tiña antes de pecharse a caixa, deixa debuxar tamén na primeira tab, `$bar.FirstTab`. Entón o programa deu un título, e meiga dállo á xanela e á tab no mesmo fotograma ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)): PowerShell dá un cando arranca como administrador, coma no *runner* da CI. Le o título da xanela despois de ler os fotogramas, e meiga pono antes de compoñer e presentar o fotograma que o debuxa, e de escribir a súa liña: se os fotogramas que le debuxaron un título, a xanela xa o ten, e a comprobación non pode fallar polo momento en que chega. Se falla, a mensaxe di os rectángulos onde se podía debuxar, un ou os dous. **`Wait-Menu`** é nova: agarda a que un fotograma presente unha zona que conteña o menú, sen agardar a que meiga deixe de debuxar. Abonda para saber que a xanela xa tratou as teclas ou o botón que o abriron, e que a comprobación pode cambiar o estado das teclas (ver *Unha tecla cada vez* en `check-menu.ps1`).
 
 ```powershell
 # The reports of the script of the first tab.
@@ -7926,11 +7951,12 @@ function Get-Scaled([int]$Pixels) {
 }
 
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs): its height, the button + after the
-# last tab, the one of the profiles joined to it, and both of them, which
-# the menu of the profiles opens below.
+# crates/meiga-core/src/ui/tabbar.rs): its height, the first tab, the button
+# + after the last tab, the one of the profiles joined to it, and both of
+# them, which the menu of the profiles opens below.
 function Get-Bar([int]$Count) {
     $client = Get-Client
+    $height = Get-Scaled 32
     $gap = Get-Scaled 4
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
@@ -7939,7 +7965,8 @@ function Get-Bar([int]$Count) {
     $new = New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
     $profiles = New-Rect $new.Right $new.Top ($new.Right + $profilesSide) $new.Bottom
     [pscustomobject]@{
-        Height = Get-Scaled 32
+        Height = $height
+        FirstTab = New-Rect $gap $gap ($gap + $width) $height
         New = $new
         Profiles = $profiles
         Buttons = Get-Union @($new, $profiles)
@@ -7950,6 +7977,7 @@ function Get-Bar([int]$Count) {
 **A barra, coma a calcula meiga: `Get-Bar`.** `Move-Pointer`, `Get-Client` e `Get-Scaled` son os de `check-menu.ps1` (ver *A barra, coma a calcula meiga*). `Get-Bar` é novo, e calcula só o que necesita esta comprobación, coas regras do *layout* da barra ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)):
 
 - **O ancho das tabs,** coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1): 240 píxeles ao 100 %, ou menos, se non caben, repartindo entre as tabs a área cliente sen tres espazos de 4, o + e o ▾.
+- **`FirstTab`,** a primeira tab, desde un espazo de 4 á esquerda e arriba ata o fondo da barra: ao 100 %, de (4, 4) a (244, 32), coma `tab(0)` en `Layout`. O título da tab vai dentro dela, e o paso 1 déixaa debuxar se o programa deu un.
 - **O +,** `New`, un cadrado de 28 ao 100 %, despois da última tab e dun espazo, e a 4 do bordo de arriba; e **o ▾,** `Profiles`, pegado á súa dereita, do mesmo alto e 24 de ancho ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
 - **`Buttons`,** os dous xuntos, con `Get-Union`: o menú dos perfís ábrese debaixo deles.
 - **`Height`,** o alto da barra, 32 ao 100 %: o terminal empeza debaixo.
@@ -8407,7 +8435,7 @@ try {
 
 | Paso | Que fai a comprobación | Que ten que pasar |
 |---|---|---|
-| 1 | Abre meiga, e agarda a súa xanela e a caixa de mensaxe. Agarda a que o programa da primeira tab escriba, e pecha a caixa co seu botón. O programa escribe outra vez. | A caixa ábrese coa xanela xa na pantalla e pintada; é da xanela, co título meiga e un botón, e di os dous erros e que meiga os ignorou. O programa escribe mentres está aberta. Cando se pecha, a xanela pinta todo, e os fotogramas só debuxan no terminal, tamén o que escribe o programa despois. |
+| 1 | Abre meiga, e agarda a súa xanela e a caixa de mensaxe. Agarda a que o programa da primeira tab escriba, e pecha a caixa co seu botón. O programa escribe outra vez. | A caixa ábrese coa xanela xa na pantalla e pintada; é da xanela, co título meiga e un botón, e di os dous erros e que meiga os ignorou. O programa escribe mentres está aberta. Cando se pecha, a xanela pinta todo, e os fotogramas só debuxan no terminal e, se o programa deu un título, na primeira tab; tamén cando o programa escribe despois. |
 | 2 | Le o informe do programa da primeira tab. | A primeira tab é a única, e corre Probe, no seu cartafol; o seu programa recibe o contorno dun terminal, e a súa tab móstrase. |
 | 3 | Ctrl+Maiús+Espazo, co Espazo repetido. Maiús e Ctrl soben. ↓, Esc e Z, e o script le as teclas. | O fotograma presenta só o menú, debaixo do + e do ▾, cun elemento por perfil e o ancho do nome máis longo; non se abre ningunha tab. ↓ só debuxa dentro dos resaltes dos dous primeiros elementos, e Esc pecha o menú. O programa recibe Ctrl e Maiús, ao baixar e ao subir, e Z, e ningunha tecla máis. |
 | 4 | O punteiro no ▾, e o botón esquerdo baixa; o botón sobe. O punteiro no segundo elemento. Un clic en Probe. Ctrl+Maiús+W. | O punteiro e o botón que baixa só debuxan o ▾, e a xanela captura o rato. Cando sobe, ábrese o menú, só se debuxan o ▾ e o menú, e a xanela solta o rato. O punteiro no elemento só debuxa o seu resalte. O clic abre unha tab con Probe, no seu cartafol, que se mostra cun só fotograma completo. Ctrl+Maiús+W pecha a tab, e o seu programa remata. |
@@ -8446,16 +8474,20 @@ try {
     $bar = Get-Bar 1
     $terminal = New-Rect 0 $bar.Height $client.Right $client.Bottom
     Move-Pointer
+    # The title of the window, which does not change while the box is open.
+    $titleBefore = $api::TextOf($window)
     $start = @(Get-Log).Count
     Close-Dialog $dialog
     Wait-For { @(Get-Log | Select-Object -Skip $start | Where-Object { $_.kind -eq 'paint' -and (Test-Full $_) }).Count -gt 0 } {
         'When the message box closed, the window did not paint all of it.'
     }
-    $null = Assert-Inside $start $terminal 'When the message box closed, what the program wrote meanwhile'
+    Assert-Written $start $titleBefore 'When the message box closed, what the program wrote meanwhile'
     $start = @(Get-Log).Count
     $null = Invoke-Step 'write after the message box'
-    $null = Assert-Inside $start $terminal 'What the program wrote after the message box'
-    Write-Host "OK: once the window is on the screen and painted, a message box owned by it, with the title meiga and one button, tells the $($problems.Count) errors of config.toml, each with its line and its column, and that meiga ignored them; when it closes, the window paints all of it again, and draws what the program of the first tab wrote meanwhile, and what it writes then."
+    Assert-Written $start $titleBefore 'What the program wrote after the message box'
+    $titleNow = $api::TextOf($window)
+    $titled = if ($titleNow -cne $titleBefore) { "; its tab shows the title that the program gave, '$titleNow'" } else { '' }
+    Write-Host "OK: once the window is on the screen and painted, a message box owned by it, with the title meiga and one button, tells the $($problems.Count) errors of config.toml, each with its line and its column, and that meiga ignored them; when it closes, the window paints all of it again, and draws what the program of the first tab wrote meanwhile, and what it writes then$titled."
 ```
 
 **1. A caixa de mensaxe.**
@@ -8464,9 +8496,10 @@ try {
 - **Cando xa está na pantalla e pintada** (decisión 8). Atopada a caixa, a xanela ten que ser visíbel (`IsWindowVisible`), e o rexistro ten que ter polo menos unha liña `paint`: meiga mostra a xanela e píntaa, e só despois abre a caixa ([Código › meiga › Os eventos](meiga.md#os-eventos)). Mentres a caixa está aberta, o seu bucle de mensaxes repártelle á xanela as súas, coma en [`check-mouse.ps1`](#toolscheck-mouseps1), tamén `WM_PAINT`; pero o código de meiga está ocupado agardando pola caixa, e non pinta nin escribe no rexistro ([Código › meiga-win › `Handler`](meiga-win.md#handler)). Unha liña `paint` é, logo, dun pintado de antes.
 - **O texto, exacto:** `There are errors in`, a ruta do `config.toml`, e os dous erros de `$problems`, un por liña, entre liñas baleiras; e, ao final, `meiga ignored them, and uses its default values instead.` ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). Se non, a mensaxe di o que di a caixa e o que tiña que dicir.
 - **O programa xa corre.** Coa caixa aberta, o script de Probe ten que escribir `ready` no arquivo dos informes: escribiu na súa pantalla (decisión 2, un erro non para nada). Despois, medio segundo, para que o lector da tab lea o que escribiu.
-- **A barra e o terminal.** `$dpi`, a escala da xanela, para `Get-Scaled`; `Get-Bar 1`, a barra cunha tab; e `$terminal`, o resto da área cliente, debaixo da barra. `Move-Pointer` aparta o punteiro, se estaba enriba da xanela: cando se peche a caixa, resaltaría o que tivese debaixo.
-- **Ao pecharse a caixa** (`Close-Dialog`), a xanela ten que pintarse enteira: unha liña `paint` que cubra a xanela (`Test-Full`). E os fotogramas, polo menos un, só poden debuxar no terminal (`Assert-Inside`): o que escribiu o programa mentres estaba aberta. meiga ponse ao día coma despois da caixa que pregunta antes de pegar ([Código › meiga › `respond`](meiga.md#respond-o-que-pide-a-vista)).
-- **E despois,** o paso 1 do script escribe na terceira fila, e os seus fotogramas tamén só poden debuxar no terminal.
+- **A barra e o terminal.** `$dpi`, a escala da xanela, para `Get-Scaled`; `Get-Bar 1`, a barra cunha tab; e `$terminal`, o resto da área cliente, debaixo da barra. `Move-Pointer` aparta o punteiro, se estaba enriba da xanela: cando se peche a caixa, resaltaría o que tivese debaixo. E `$titleBefore`, o título da xanela, que non cambia mentres a caixa está aberta: meiga colle os títulos no fotograma, e non hai fotogramas.
+- **Ao pecharse a caixa** (`Close-Dialog`), a xanela ten que pintarse enteira: unha liña `paint` que cubra a xanela (`Test-Full`). E os fotogramas, polo menos un, só poden debuxar no terminal (`Assert-Written`): o que escribiu o programa mentres estaba aberta. meiga ponse ao día coma despois da caixa que pregunta antes de pegar ([Código › meiga › `respond`](meiga.md#respond-o-que-pide-a-vista)). Se o programa deu un título mentres tanto, poden debuxar tamén na primeira tab, que o mostra. Pásalle a PowerShell no *runner* da CI, que corre como administrador: ao arrancar, coa caixa aberta, pon `Administrator: ` diante do título da súa consola.
+- **E despois,** o paso 1 do script escribe na terceira fila, e os seus fotogramas tamén só poden debuxar no terminal; e na primeira tab, se o título xa non é `$titleBefore`. PowerShell pon o prefixo nun fío aparte, sen agardar por el, e podería chegar despois de pecharse a caixa.
+- **A liña `OK:`** remata co título que mostra agora a tab, se non é `$titleBefore` (`$titled`). Se non, en `and what it writes then.`
 
 ```powershell
     # 2. The first tab runs Probe, in its folder, with the environment of a

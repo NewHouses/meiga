@@ -29,7 +29,9 @@ depends on the font, comes from the frame that opens it. It checks that:
   the file, each with its line and its column, and that meiga ignored them;
   meanwhile, the program of the first tab runs. When the box closes, the
   window paints all of it again, and draws what the program wrote meanwhile,
-  and what it writes then;
+  and what it writes then: only in the terminal and, if the program gave a
+  title, in the first tab. PowerShell gives one while it starts as an
+  administrator: it puts "Administrator: " before the title of its console;
 - the first tab runs Probe, with the variables of its command line and of
   its folder expanded, in its folder. Its program gets TERM_PROGRAM=meiga,
   TERM_PROGRAM_VERSION with the version of meiga, and COLORTERM=truecolor,
@@ -784,6 +786,28 @@ function Assert-Inside([int]$From, $Rect, [string]$What) {
 }
 
 # Waits until meiga stops drawing, and checks that the frames after the first
+# $From lines of the log, which have to be some, drew only inside the
+# terminal, where the program of the first tab writes; and inside the first
+# tab too, if the window no longer has the title $Title: then the program
+# gave one, as PowerShell does while it starts as an administrator, which
+# puts "Administrator: " before the title of its console. Otherwise throws
+# $What.
+function Assert-Written([int]$From, [string]$Title, [string]$What) {
+    Wait-Quiet 400
+    $frames = @(Get-Frames $From)
+    # After the frames: the window already has the title that they drew.
+    $allowed = @($terminal)
+    if ($api::TextOf($window) -cne $Title) { $allowed += $bar.FirstTab }
+    $outside = @(foreach ($area in @(Get-Areas $frames)) {
+            if (@($allowed | Where-Object { Test-Inside $area $_ }).Count -eq 0) { $area }
+        })
+    if ($frames.Count -eq 0 -or $outside.Count -gt 0) {
+        Show-Lines $frames
+        throw "$What`: the window did not draw only inside $(($allowed | ForEach-Object { Show-Rect $_ }) -join ' and ')."
+    }
+}
+
+# Waits until meiga stops drawing, and checks that the frames after the first
 # $From lines of the log presented $Rect, and nothing else; otherwise throws
 # $What.
 function Assert-Only([int]$From, $Rect, [string]$What) {
@@ -1025,11 +1049,12 @@ function Get-Scaled([int]$Pixels) {
 }
 
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs): its height, the button + after the
-# last tab, the one of the profiles joined to it, and both of them, which
-# the menu of the profiles opens below.
+# crates/meiga-core/src/ui/tabbar.rs): its height, the first tab, the button
+# + after the last tab, the one of the profiles joined to it, and both of
+# them, which the menu of the profiles opens below.
 function Get-Bar([int]$Count) {
     $client = Get-Client
+    $height = Get-Scaled 32
     $gap = Get-Scaled 4
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
@@ -1038,7 +1063,8 @@ function Get-Bar([int]$Count) {
     $new = New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
     $profiles = New-Rect $new.Right $new.Top ($new.Right + $profilesSide) $new.Bottom
     [pscustomobject]@{
-        Height = Get-Scaled 32
+        Height = $height
+        FirstTab = New-Rect $gap $gap ($gap + $width) $height
         New = $new
         Profiles = $profiles
         Buttons = Get-Union @($new, $profiles)
@@ -1466,16 +1492,20 @@ try {
     $bar = Get-Bar 1
     $terminal = New-Rect 0 $bar.Height $client.Right $client.Bottom
     Move-Pointer
+    # The title of the window, which does not change while the box is open.
+    $titleBefore = $api::TextOf($window)
     $start = @(Get-Log).Count
     Close-Dialog $dialog
     Wait-For { @(Get-Log | Select-Object -Skip $start | Where-Object { $_.kind -eq 'paint' -and (Test-Full $_) }).Count -gt 0 } {
         'When the message box closed, the window did not paint all of it.'
     }
-    $null = Assert-Inside $start $terminal 'When the message box closed, what the program wrote meanwhile'
+    Assert-Written $start $titleBefore 'When the message box closed, what the program wrote meanwhile'
     $start = @(Get-Log).Count
     $null = Invoke-Step 'write after the message box'
-    $null = Assert-Inside $start $terminal 'What the program wrote after the message box'
-    Write-Host "OK: once the window is on the screen and painted, a message box owned by it, with the title meiga and one button, tells the $($problems.Count) errors of config.toml, each with its line and its column, and that meiga ignored them; when it closes, the window paints all of it again, and draws what the program of the first tab wrote meanwhile, and what it writes then."
+    Assert-Written $start $titleBefore 'What the program wrote after the message box'
+    $titleNow = $api::TextOf($window)
+    $titled = if ($titleNow -cne $titleBefore) { "; its tab shows the title that the program gave, '$titleNow'" } else { '' }
+    Write-Host "OK: once the window is on the screen and painted, a message box owned by it, with the title meiga and one button, tells the $($problems.Count) errors of config.toml, each with its line and its column, and that meiga ignored them; when it closes, the window paints all of it again, and draws what the program of the first tab wrote meanwhile, and what it writes then$titled."
 
     # 2. The first tab runs Probe, in its folder, with the environment of a
     # terminal.
