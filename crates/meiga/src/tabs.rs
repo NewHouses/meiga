@@ -30,12 +30,12 @@
 //! The menu of a tab, which the right button opens on its tab, and the Menu
 //! key or Shift+F10 on the tab that is shown, goes over the bar and the
 //! terminal (ADR 0021), as the menu of the profiles, which the button next
-//! to + and Ctrl+Shift+Space open, below those buttons. While it is open, it gets all the mouse, and the
-//! keys that go down; the ones that went down before go up for the program,
-//! which gets each key that it got go up too. What changes under it, all
-//! inside it, is not drawn until it closes. It closes when an item is
-//! chosen, and also when the window loses the focus, changes size or scale,
-//! starts moving, or is minimized.
+//! to + and Ctrl+Shift+Space open, below those buttons. While it is open, it
+//! gets all the mouse, and the keys that go down; the ones that went down
+//! before go up for the program, which gets each key that it got go up too.
+//! What changes under it, all inside it, is not drawn until it closes. It
+//! closes when an item is chosen, and also when the window loses the focus,
+//! changes size or scale, starts moving, or is minimized.
 
 use std::convert::Infallible;
 use std::mem;

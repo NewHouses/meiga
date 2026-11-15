@@ -23,7 +23,8 @@ const HEIGHT: u32 = 32;
 /// The widest tab.
 const MAX_TAB: u32 = 240;
 /// The space above the tabs, on the left of the first one, between the last
-/// one and the button that opens a tab, and on the right of that button.
+/// one and the button that opens a tab, and on the right of the button of
+/// the profiles, which is joined to that one.
 const GAP: u32 = 4;
 /// The space between the left side of a tab and its title.
 const PADDING: u32 = 8;

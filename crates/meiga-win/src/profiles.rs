@@ -6,7 +6,7 @@
 //!
 //! The profiles are, in this order, when their programs are there:
 //!
-//! - PowerShell: the first `pwsh.exe` of the newest version in
+//! - PowerShell: the `pwsh.exe` of the newest version that has one in
 //!   `%ProgramFiles%\PowerShell`, the one of the Microsoft Store, the one of
 //!   scoop, the global tool of .NET, the newest preview in
 //!   `%ProgramFiles%\PowerShell`, and the preview of the Microsoft Store;

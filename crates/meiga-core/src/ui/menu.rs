@@ -100,11 +100,6 @@ impl<A> Entry<A> {
     pub const fn is_enabled(&self) -> bool {
         matches!(self, Self::Item { enabled: true, .. })
     }
-
-    /// Whether it is an item with its text in bold.
-    pub const fn is_bold(&self) -> bool {
-        matches!(self, Self::Item { bold: true, .. })
-    }
 }
 
 /// Where the keyboard moves the highlight.

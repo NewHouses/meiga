@@ -118,7 +118,9 @@ pub enum Event {
     Wake(u64),
     /// The window is on the screen for the first time, painted: what has to
     /// wait until the user sees it, as a message box in front of it, can
-    /// come now. [`Window::run`] gives it once, before any other event.
+    /// come now. [`Window::run`] gives it once, after the events of the
+    /// messages that showing the window sends, as its size and the focus,
+    /// and before the others.
     Shown,
 }
 
