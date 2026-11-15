@@ -152,6 +152,11 @@ impl Rect {
                 && self.bottom >= other.bottom)
     }
 
+    /// Whether the pixel `at` is in the rectangle.
+    pub const fn contains_point(self, at: Point) -> bool {
+        self.left <= at.x && at.x < self.right && self.top <= at.y && at.y < self.bottom
+    }
+
     /// The same rectangle, moved by `by`.
     pub const fn offset(self, by: Point) -> Rect {
         Rect::new(
@@ -292,6 +297,17 @@ mod tests {
         assert!(outer.contains(Rect::new(10, 10, 100, 100)));
         assert!(!outer.contains(Rect::new(10, 10, 101, 100)));
         assert!(outer.contains(Rect::EMPTY));
+    }
+
+    #[test]
+    fn contains_the_pixels_but_not_the_right_and_bottom_edges() {
+        let rect = Rect::new(10, 20, 30, 25);
+        assert!(rect.contains_point(Point::new(10, 20)));
+        assert!(rect.contains_point(Point::new(29, 24)));
+        assert!(!rect.contains_point(Point::new(30, 24)));
+        assert!(!rect.contains_point(Point::new(29, 25)));
+        assert!(!rect.contains_point(Point::new(9, 22)));
+        assert!(!Rect::EMPTY.contains_point(Point::new(0, 0)));
     }
 
     #[test]

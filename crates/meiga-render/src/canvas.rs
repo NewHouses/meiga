@@ -151,6 +151,32 @@ impl<'a> Canvas<'a> {
         }
     }
 
+    /// The pixels of `rect` that are in the canvas, as a canvas of their
+    /// own: what is drawn at (0, 0) goes to their top-left corner. Its clip
+    /// is the part of this clip that is in them.
+    pub fn region(&mut self, rect: Rect) -> Canvas<'_> {
+        let area = rect.intersection(Rect::from_size(self.size));
+        if area.is_empty() {
+            return Canvas {
+                pixels: Default::default(),
+                stride: 0,
+                size: Size::default(),
+                clip: Rect::EMPTY,
+            };
+        }
+        // The area is inside the canvas: its coordinates are not negative,
+        // and its rows fit in the pixels after its first one, as the rows of
+        // the canvas fit in all of them.
+        let start = area.top as usize * self.stride + area.left as usize;
+        let corner = Point::new(-area.left, -area.top);
+        Canvas {
+            pixels: &mut self.pixels[start..],
+            stride: self.stride,
+            size: area.size(),
+            clip: self.clip.intersection(area).offset(corner),
+        }
+    }
+
     /// Fills `rect` with `color`.
     pub fn fill(&mut self, rect: Rect, color: Rgb) {
         let area = rect.intersection(self.clip);
@@ -279,6 +305,31 @@ mod tests {
         assert_eq!(painted, 9);
         assert_eq!(pixels[4 * 10 + 4], pixel(RED));
         assert_eq!(pixels[2 * 10 + 2], pixel(BLUE));
+    }
+
+    #[test]
+    fn regions_draw_from_their_own_corner_and_keep_the_clip() {
+        let mut pixels = [0; 6 * 5];
+        let mut canvas = Canvas::new(&mut pixels, Size::new(5, 5), 6).unwrap();
+        let mut clipped = canvas.clipped(Rect::new(0, 0, 5, 4));
+        // Columns 1 to 3, from row 2 to the bottom, of which the clip keeps
+        // two rows.
+        let mut region = clipped.region(Rect::new(1, 2, 4, 10));
+        assert_eq!(region.size(), Size::new(3, 3));
+        assert_eq!(region.clip(), Rect::new(0, 0, 3, 2));
+        region.fill(Rect::new(-1, 0, 100, 100), RED);
+        assert_eq!(region.get(0, 0), Some(pixel(RED)));
+        assert_eq!(region.get(2, 2), Some(0));
+        assert_eq!(region.get(3, 0), None);
+        assert_eq!(canvas.get(1, 2), Some(pixel(RED)));
+        assert_eq!(canvas.get(3, 3), Some(pixel(RED)));
+        assert_eq!(canvas.get(0, 2), Some(0));
+        assert_eq!(canvas.get(4, 3), Some(0));
+        assert_eq!(canvas.get(1, 4), Some(0));
+        let mut outside = canvas.region(Rect::new(0, 7, 5, 9));
+        assert_eq!(outside.size(), Size::default());
+        outside.fill(Rect::new(0, 0, 10, 10), BLUE);
+        assert_eq!(pixels.iter().filter(|&&p| p != 0).count(), 6);
     }
 
     #[test]

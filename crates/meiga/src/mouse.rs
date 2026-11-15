@@ -90,6 +90,10 @@ pub struct Mouse {
     /// While a selection grows with the pointer above or below the grid,
     /// the view moves on its own.
     autoscroll: Option<AutoScroll>,
+    /// The view captured the mouse, for a button that is down for the
+    /// terminal. The tab bar captures it too, for its own buttons: the view
+    /// only lets go of its own capture.
+    captured: bool,
     /// The dots per inch of the window.
     dpi: u32,
 }
@@ -124,6 +128,7 @@ impl Mouse {
             bytes: Vec::new(),
             bar: ScrollBar::new(dpi, client),
             autoscroll: None,
+            captured: false,
             dpi,
         }
     }
@@ -202,7 +207,7 @@ impl Mouse {
                 self.bar.press(at, &mut shared.terminal, Instant::now());
                 drop(shared);
                 if self.bar.is_pressed() {
-                    context.window.capture_mouse();
+                    self.capture(context);
                 }
             }
             return Response::REDRAW;
@@ -215,7 +220,7 @@ impl Mouse {
             self.report(context, MouseAction::Press(button), cell, modifiers, &modes);
             self.reported[index(button)] = true;
             self.reported_at = Some(cell);
-            context.window.capture_mouse();
+            self.capture(context);
             return Response::default();
         }
         match button {
@@ -231,7 +236,7 @@ impl Mouse {
                     };
                 shared.terminal.select(kind, cell, side);
                 self.selecting = Some((cell, side));
-                context.window.capture_mouse();
+                self.capture(context);
                 Response::REDRAW
             }
             // As in Windows Terminal with `copyOnSelect`: the selection
@@ -604,11 +609,28 @@ impl Mouse {
         }
     }
 
-    /// Lets the mouse go, if no button needs it any more.
-    fn release(&self, context: &Context<'_>) {
-        if self.selecting.is_none() && !self.reported.contains(&true) && !self.bar.is_pressed() {
+    /// Captures the mouse for a button that went down for the terminal:
+    /// the window gets its events until it goes up, also outside it.
+    fn capture(&mut self, context: &Context<'_>) {
+        self.captured = true;
+        context.window.capture_mouse();
+    }
+
+    /// Lets the mouse go, if the view captured it and no button needs it
+    /// any more. A capture of the tab bar stays: for example, while a
+    /// shortcut shows another tab with a button down on the bar.
+    fn release(&mut self, context: &Context<'_>) {
+        if self.captured && !self.is_busy() {
+            self.captured = false;
             context.window.release_mouse();
         }
+    }
+
+    /// Whether a button is down for the terminal: selecting text, held by
+    /// the program, or on the scroll bar. Until it goes up, the terminal
+    /// gets all the events of the mouse, also over the tab bar.
+    pub fn is_busy(&self) -> bool {
+        self.selecting.is_some() || self.reported.contains(&true) || self.bar.is_pressed()
     }
 }
 

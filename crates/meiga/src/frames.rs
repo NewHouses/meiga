@@ -19,23 +19,33 @@ use crate::trace::{Cause, Kind, Record, Trace};
 const MARK_COLOR: Rgb = Rgb::new(0xff, 0x00, 0xff);
 const MARK_THICKNESS: u32 = 1;
 
+/// The area that a scene gives when all of it changed: the whole window,
+/// whatever its size.
+pub const ALL: Rect = Rect::new(0, 0, i32::MAX, i32::MAX);
+
 /// What the window shows.
 pub trait Scene {
     /// Brings the scene up to date before a frame, at `now`: gives `damage`
-    /// the areas that changed. Returns when it has to be brought up to date
-    /// again, even if nothing else changes, if it has to: for example, when
-    /// the cursor blinks.
-    fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
-        let _ = (now, damage);
+    /// the areas that changed, and `window` what else it shows, such as its
+    /// title. Returns when it has to be brought up to date again, even if
+    /// nothing else changes, if it has to: for example, when the cursor
+    /// blinks.
+    fn update(
+        &mut self,
+        window: &Window,
+        now: Instant,
+        damage: &mut dyn FnMut(Rect),
+    ) -> Option<Instant> {
+        let _ = (window, now, damage);
         None
     }
 
     /// While the window is minimized nothing is drawn, and the scene is not
     /// brought up to date: does at `now` only what cannot wait until the
-    /// window is restored, such as answering the program. Returns when it has
-    /// to do it again, if it has to.
-    fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
-        let _ = now;
+    /// window is restored, such as answering the program, or giving `window`
+    /// its title. Returns when it has to do it again, if it has to.
+    fn update_hidden(&mut self, window: &Window, now: Instant) -> Option<Instant> {
+        let _ = (window, now);
         None
     }
 
@@ -52,7 +62,8 @@ pub trait Scene {
 /// changed, and the next frame composes them and presents them. The frames
 /// follow the pacer: at most one per interval, and the first change after a
 /// pause at once. Each frame first brings the scene up to date
-/// ([`Scene::update`]), which adds the areas that changed in it.
+/// ([`Scene::update`]), which adds the areas that changed in it, and it
+/// counts for the pacer even if none did.
 pub struct Frames {
     surface: Surface,
     damage: Damage,
@@ -91,7 +102,7 @@ impl Frames {
             marks: marks.then(Vec::new),
             trace,
         };
-        frames.compose_all(scene)?;
+        frames.compose_all(window, scene)?;
         // The first paint of the window copies all of it.
         frames.damage.clear();
         frames.wait_for_scene(window)?;
@@ -188,7 +199,7 @@ impl Frames {
             Fit::Exact
         };
         self.surface.resize(size, fit)?;
-        self.compose_all(scene)?;
+        self.compose_all(window, scene)?;
         if restored {
             // The whole window is painted again from the framebuffer, which
             // is up to date: there is nothing else to present. Windows
@@ -226,7 +237,7 @@ impl Frames {
             // New memory, without the pixels: compose it again. The window
             // already shows the same thing, except what changed in the scene
             // meanwhile, which the next frame presents.
-            self.compose_all(scene)?;
+            self.compose_all(window, scene)?;
             return self.request(window, scene);
         }
         Ok(())
@@ -270,9 +281,13 @@ impl Frames {
             return Ok(());
         }
         let start = Instant::now();
-        self.update(scene, start);
+        self.update(window, scene, start);
+        // The frame counts even if nothing changed: otherwise, output that
+        // changes nothing on the screen, such as the same title again and
+        // again, would bring the scene up to date each time that it wakes
+        // the window up, without the interval in between.
+        self.pacer.updated(start);
         if self.damage.is_empty() {
-            self.pacer.cancel();
             return self.wait_for_scene(window);
         }
 
@@ -318,17 +333,16 @@ impl Frames {
             },
         )?;
         self.damage.clear();
-        self.pacer.drawn(start);
         self.wait_for_scene(window)
     }
 
     /// Brings `scene` up to date at `now`, and adds to `damage` the areas
     /// that changed in it.
-    fn update(&mut self, scene: &mut dyn Scene, now: Instant) {
+    fn update(&mut self, window: &Window, scene: &mut dyn Scene, now: Instant) {
         self.changed = false;
         let bounds = Rect::from_size(self.surface.size());
         let damage = &mut self.damage;
-        self.due = scene.update(now, &mut |area| {
+        self.due = scene.update(window, now, &mut |area| {
             let area = area.intersection(bounds);
             if !area.is_empty() {
                 damage.add(area);
@@ -341,7 +355,7 @@ impl Frames {
     /// without drawing anything.
     fn hidden(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
         let now = Instant::now();
-        match scene.update_hidden(now) {
+        match scene.update_hidden(window, now) {
             Some(due) => Ok(window.start_frame_timer(due.saturating_duration_since(now))?),
             None => {
                 window.stop_frame_timer();
@@ -366,9 +380,9 @@ impl Frames {
 
     /// Composes the whole framebuffer, with the scene up to date, without
     /// presenting it.
-    fn compose_all(&mut self, scene: &mut dyn Scene) -> Result<(), HandlerError> {
+    fn compose_all(&mut self, window: &Window, scene: &mut dyn Scene) -> Result<(), HandlerError> {
         let start = Instant::now();
-        self.update(scene, start);
+        self.update(window, scene, start);
         scene.draw(&mut self.surface.canvas());
         let compose = start.elapsed();
         let size = self.surface.size();

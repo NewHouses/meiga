@@ -13,19 +13,17 @@ use std::time::Instant;
 use meiga_core::color::{Palette, Rgb};
 use meiga_core::geometry::{GridSize, Point, Rect, Size};
 use meiga_core::input::{KeyEncoder, KeyEvent, focus_sequence};
-use meiga_core::model::TabId;
 use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, MIN_SIZE, Screen, Scroll};
 use meiga_core::text::CellChar;
 use meiga_render::{Canvas, Decorations, Font, FontStyle, FontSystem};
 use meiga_win::conpty::Input;
 use meiga_win::event::Event;
-use meiga_win::window::{self, CaretSettings, Waker, Window};
+use meiga_win::window::{self, CaretSettings, Window};
 
-use crate::app::TITLE;
 use crate::clipboard;
-use crate::frames::{self, Scene};
+use crate::frames;
 use crate::mouse::{Context, Mouse, Response};
-use crate::session::{Shared, lock};
+use crate::session::{Shared, lock, store_title};
 use crate::tabs::TabAction;
 
 /// The font: the first of these families that is installed, at 12 points,
@@ -70,15 +68,11 @@ const VK_OEM_MINUS: u16 = 0xbd;
 
 /// The terminal of the tab that the window shows, as the window shows it.
 pub struct TerminalView {
-    /// The tab that the view shows. Its reader thread wakes the window up
-    /// with its identifier, and so does the view, for its title.
-    tab: TabId,
     shared: Arc<Mutex<Shared>>,
     /// Sends to the program the keys, and the answers that the window finds
     /// when it ends a synchronized update, and tells it the size of the
     /// grid. `None` if the program did not start.
     input: Option<Input>,
-    waker: Waker,
     /// The fonts of the system, for a new font when the zoom or the scale
     /// changes.
     fonts: FontSystem,
@@ -88,7 +82,8 @@ pub struct TerminalView {
     points: u16,
     dpi: u32,
     cell: Size,
-    /// The size of the client area of the window.
+    /// The size of its area of the window: the client area below the tab
+    /// bar.
     client: Size,
     /// The grid of the terminal and of the program.
     grid: GridSize,
@@ -118,31 +113,37 @@ pub struct TerminalView {
 
 /// The terminal of a tab, as the view needs it to show it.
 pub struct TabTerminal {
-    pub id: TabId,
     pub shared: Arc<Mutex<Shared>>,
     /// What sends input to its program, or `None` if the program did not
     /// start.
     pub input: Option<Input>,
 }
 
+/// What a wake-up of the tab that the view shows changed, of what the
+/// window shows.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Woken {
+    /// The screen changed: a frame has to show it.
+    pub screen: bool,
+    /// The program changed the title, which the next frame takes.
+    pub title: bool,
+}
+
 impl TerminalView {
     /// The view of the terminal of a tab, drawn with `font`, of `fonts`, in
-    /// a window of `client` pixels at `dpi`.
+    /// an area of `client` pixels of a window at `dpi`.
     pub fn new(
         terminal: TabTerminal,
-        waker: Waker,
         fonts: FontSystem,
         font: Font,
         dpi: u32,
         client: Size,
     ) -> Self {
-        let TabTerminal { id, shared, input } = terminal;
+        let TabTerminal { shared, input } = terminal;
         let grid = lock(&shared).terminal.size();
         Self {
-            tab: id,
             shared,
             input,
-            waker,
             fonts,
             cell: font.cell(),
             font,
@@ -168,6 +169,17 @@ impl TerminalView {
         self.caret.focused
     }
 
+    /// Whether a button of the mouse is down for the terminal: until it goes
+    /// up, the view gets all the events of the mouse.
+    pub fn holds_mouse(&self) -> bool {
+        self.mouse.is_busy()
+    }
+
+    /// The colours of the terminal, as the last update copied them.
+    pub const fn palette(&self) -> &Palette {
+        self.screen.palette()
+    }
+
     /// The dots per inch for which the view draws.
     pub const fn dpi(&self) -> u32 {
         self.dpi
@@ -178,7 +190,7 @@ impl TerminalView {
         self.cell
     }
 
-    /// The grid that fills the window: the one of a new tab.
+    /// The grid that fills the view: the one of a new tab.
     pub fn window_grid(&self) -> GridSize {
         grid_size(self.client, self.cell, self.mouse.bar().width())
     }
@@ -186,44 +198,63 @@ impl TerminalView {
     /// The reader thread of the tab that the view shows woke the window up:
     /// its title, its screen, the clipboard, or more than one, changed, or
     /// its program left a synchronized update open. The window takes the
-    /// title, and the text for the clipboard if it can. Returns whether the
-    /// screen changed, which a frame has to show: the next update also
-    /// learns when the synchronized update ends, even with the window
-    /// minimized.
-    pub fn wake(&self, window: &Window) -> bool {
-        let (title, clipboard, screen) = {
+    /// text for the clipboard, if it can, and leaves the title to the next
+    /// frame (ADR 0020). The next update also learns when the synchronized
+    /// update ends, even with the window minimized.
+    pub fn wake(&self, window: &Window) -> Woken {
+        let (clipboard, screen, title) = {
             let mut shared = lock(&self.shared);
-            let title = mem::take(&mut shared.title_changed)
-                .then(|| shared.terminal.title().map(str::to_owned));
-            let clipboard = mem::take(&mut shared.clipboard_changed)
-                .then(|| shared.terminal.take_clipboard())
-                .flatten();
-            (title, clipboard, shared.screen_changed)
+            (
+                shared.take_clipboard(),
+                shared.screen_changed,
+                shared.title_changed,
+            )
         };
-        if let Some(title) = title {
-            window.set_title(title.as_deref().unwrap_or(TITLE));
-        }
-        // A program cannot change the clipboard from a window that the user
-        // is not using: the window needs the focus, and to be the foreground
-        // window. If another program keeps the clipboard open, the text is
-        // lost, as in Windows Terminal.
-        if let Some(text) = clipboard
+        self.copy_for_program(window, clipboard);
+        Woken { screen, title }
+    }
+
+    /// Puts `text`, which the program copied (OSC 52), in the clipboard, if
+    /// it can. A program cannot change the clipboard from a window that the
+    /// user is not using: the window needs the focus, and to be the
+    /// foreground window. If another program keeps the clipboard open, the
+    /// text is lost, as in Windows Terminal.
+    fn copy_for_program(&self, window: &Window, text: Option<String>) {
+        if let Some(text) = text
             && self.is_focused()
             && window.is_foreground()
         {
             let _ = meiga_win::clipboard::write_text(window, &text);
         }
-        screen
+    }
+
+    /// Takes the title of the terminal into `title`, if its program changed
+    /// it since the window last took it. Returns whether it is another one.
+    pub fn take_title(&self, title: &mut Option<String>) -> bool {
+        lock(&self.shared).take_title(title)
+    }
+
+    /// Whether the program changed its title since the window last took it.
+    pub fn title_pending(&self) -> bool {
+        lock(&self.shared).title_changed
     }
 
     /// Shows the terminal of another tab, from `now`. What the mouse was
     /// doing with the old one ends, and both programs learn that the focus
-    /// moved, if the window has it and they asked. The next update copies
-    /// all the screen of the new one, once, and gives it the grid that
-    /// fills the window, if it changed while the tab was hidden. The window
-    /// takes its title; what its program copied to the clipboard while it
-    /// was hidden is dropped (ADR 0019).
-    pub fn show(&mut self, window: &Window, terminal: TabTerminal, now: Instant) {
+    /// moved, if the window has it and they asked. A synchronized update
+    /// that the program of the new one left open ends now. The next update
+    /// copies all the screen of the new one, once, and gives it the grid
+    /// that fills the view, if it changed while the tab was hidden. Its
+    /// title goes into `title`; what its program copied to the clipboard
+    /// while it was hidden, also in that update, is dropped (ADR 0019 and
+    /// ADR 0020).
+    pub fn show(
+        &mut self,
+        window: &Window,
+        terminal: TabTerminal,
+        now: Instant,
+        title: &mut Option<String>,
+    ) {
         let context = Context {
             window,
             shared: &self.shared,
@@ -235,27 +266,29 @@ impl TerminalView {
         if focused {
             self.tell_focus(false);
         }
-        let TabTerminal { id, shared, input } = terminal;
-        self.tab = id;
+        let TabTerminal { shared, input } = terminal;
         self.shared = shared;
         self.input = input;
         if focused {
             self.tell_focus(true);
         }
-        let (title, grid) = {
+        let grid = {
             let mut shared = lock(&self.shared);
             // The zoom, or the scale of the window, may have changed the
             // cells while the tab was hidden.
             shared.terminal.set_cell_size(self.cell);
+            // What the program wrote while the tab was hidden counts as
+            // hidden, also in a synchronized update that it has not ended
+            // yet: the update ends now, and the text that it copied to the
+            // clipboard in it is dropped with the rest (ADR 0020).
+            shared.end_sync(&mut self.answers);
             shared.title_changed = false;
+            store_title(title, shared.terminal.title());
             shared.clipboard_changed = false;
             let _ = shared.terminal.take_clipboard();
-            (
-                shared.terminal.title().map(str::to_owned),
-                shared.terminal.size(),
-            )
+            shared.terminal.size()
         };
-        window.set_title(title.as_deref().unwrap_or(TITLE));
+        self.send();
         // The next copy takes the whole screen, in the same memory, and the
         // frame draws the whole window, its margins too.
         self.screen.forget();
@@ -433,9 +466,9 @@ impl TerminalView {
         self.resized(self.client);
     }
 
-    /// The client area of the window has `client` pixels now: the grid
-    /// that fills it is for the terminal and the program, at most once per
-    /// frame interval.
+    /// The view has `client` pixels of the window now: the grid that fills
+    /// them is for the terminal and the program, at most once per frame
+    /// interval.
     pub fn resized(&mut self, client: Size) {
         self.client = client;
         self.mouse.bar_mut().set_client(client);
@@ -531,18 +564,14 @@ impl TerminalView {
         }
     }
 
-    /// Sends the program the answers that ending a synchronized update gave,
-    /// and wakes the window up for the title, if it changed.
-    fn send(&mut self, title: bool) {
+    /// Sends the program the answers that ending a synchronized update
+    /// gave.
+    fn send(&mut self) {
         if !self.answers.is_empty() {
             if let Some(input) = &self.input {
                 input.write(&self.answers);
             }
             self.answers.clear();
-        }
-        if title {
-            // The window takes the title when it wakes up.
-            self.waker.wake(self.tab.get());
         }
     }
 
@@ -556,24 +585,35 @@ impl TerminalView {
             (i32::from(row) + 1) * height,
         )
     }
-}
 
-impl Scene for TerminalView {
-    fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
+    /// Brings the view up to date before a frame, at `now`, in `window`:
+    /// gives `damage` the areas that changed, from its top-left corner, or
+    /// [`frames::ALL`] when all of it did. Returns when it has to be brought
+    /// up to date again, if it has to.
+    pub fn update(
+        &mut self,
+        window: &Window,
+        now: Instant,
+        damage: &mut dyn FnMut(Rect),
+    ) -> Option<Instant> {
         let resize = self.resize_grid(now);
-        let (sync, title, tick, history) = {
+        let (sync, clipboard, tick, history) = {
             let mut shared = lock(&self.shared);
             // The view moves on its own while the left button holds the
             // scroll bar, or a selection outside the grid.
             let tick = self.mouse.tick(&mut shared.terminal, now, self.cell);
             // If the program did not end its synchronized update in time, it
-            // is shown as it is.
-            let (sync, title) = shared.end_late_sync(now, &mut self.answers);
+            // is shown as it is. The text that it copied for the clipboard
+            // meanwhile goes there now, since nothing wakes the window up for
+            // it; its title, after the view (ADR 0020).
+            let sync = shared.end_late_sync(now, &mut self.answers);
+            let clipboard = shared.take_clipboard();
             shared.terminal.copy_damage(&mut self.screen);
             shared.screen_changed = false;
-            (sync, title, tick, shared.terminal.history())
+            (sync, clipboard, tick, shared.terminal.history())
         };
-        self.send(title);
+        self.send();
+        self.copy_for_program(window, clipboard);
 
         // What the program shows is activity: the cursor blinks again from
         // the start, shown.
@@ -590,8 +630,9 @@ impl Scene for TerminalView {
             damage(area);
         }
         if mem::take(&mut self.redraw) || self.screen.all_changed() {
-            // Also the margins, which have the colour of the background.
-            damage(Rect::new(0, 0, i32::MAX, i32::MAX));
+            // Also the margins, which have the colour of the background, and
+            // the tab bar, whose active tab has it too.
+            damage(frames::ALL);
         } else {
             for (row, columns) in self.screen.changes() {
                 damage(self.area(row, columns));
@@ -601,16 +642,25 @@ impl Scene for TerminalView {
         [sync, blink, resize, tick].into_iter().flatten().min()
     }
 
-    fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
-        // Only the synchronized update: the screen is copied when the
-        // window is restored, and the cursor does not blink in a window
-        // that is not shown.
-        let (sync, title) = lock(&self.shared).end_late_sync(now, &mut self.answers);
-        self.send(title);
+    /// While the window is minimized: ends at `now` the synchronized update
+    /// that the program left open, if its time is up, as
+    /// [`TerminalView::update`] does, in `window`. The screen is copied when
+    /// the window is restored, and the cursor does not blink in a window
+    /// that is not shown. Returns when the update ends.
+    pub fn update_hidden(&mut self, window: &Window, now: Instant) -> Option<Instant> {
+        let (sync, clipboard) = {
+            let mut shared = lock(&self.shared);
+            let sync = shared.end_late_sync(now, &mut self.answers);
+            (sync, shared.take_clipboard())
+        };
+        self.send();
+        self.copy_for_program(window, clipboard);
         sync
     }
 
-    fn draw(&mut self, canvas: &mut Canvas<'_>) {
+    /// Draws what is inside the clip of `canvas`, whose top-left corner is
+    /// the one of the view.
+    pub fn draw(&mut self, canvas: &mut Canvas<'_>) {
         let Self {
             font,
             cell,

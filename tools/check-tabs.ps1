@@ -20,11 +20,15 @@ closes the tab that is shown. It checks that:
   program still gets the answers to its questions, also when it leaves a
   synchronized update (DECSET 2026) open: the window ends it at its
   deadline;
-- the title of a hidden tab, and the text that it copies to the clipboard
-  (OSC 52), do not reach the window; the title does when the tab is shown,
-  and the text never, while the text that the tab copies once shown does. A
-  program only copies text while the window is in the foreground, as in the
-  CI: when it is not, the check only shows that no tab copies any;
+- the title of a hidden tab does not reach the window, only its tab in the
+  bar (check-tabbar.ps1 checks what that draws), until the tab is shown;
+  the text that it copies to the clipboard (OSC 52) never does, also in a
+  synchronized update that its program keeps open until the tab is shown,
+  while the text that the tab copies once shown does, also in a
+  synchronized update that the program leaves open, which the window ends
+  at its deadline. A program only copies text while the window is in the
+  foreground, as in the CI: when it is not, the check only shows that no
+  tab copies any;
 - a hidden tab keeps its grid while the window changes size, and gets the
   one of the window when it is shown;
 - Ctrl+Tab and Ctrl+Shift+Tab go round the tabs;
@@ -296,6 +300,7 @@ function Read-Answer([char]$Last, [int]$Milliseconds) {
     '{0} {1}' -f ($answer -replace $e, '\e'), $watch.ElapsedMilliseconds
 }
 $hidden = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('meiga-tabs-hidden'))
+$open = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('meiga-tabs-open'))
 $shown = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('meiga-tabs-shown'))
 $steps = @(
     # Hide the cursor, so that it never blinks, give the tab a title, and
@@ -307,14 +312,28 @@ $steps = @(
     { $out.Write("$e[?2026h$e[c"); "sync $(Read-Answer 'c' 5000)" },
     # A title, and text for the clipboard.
     { $out.Write("$e]0;meiga-tabs-hidden$e\$e]52;c;$hidden$e\"); 'title' },
-    # The size, which it also writes on its screen, twice.
+    # The size, which it also writes on its screen.
     { $size = Get-Size; $out.Write("$e[1;1Hsize $size"); "size $size" },
+    # Other text for the clipboard, in a synchronized update that it keeps
+    # open until the next step.
+    { $out.Write("$e[?2026h$e]52;c;$open$e\"); $script:extend = $true; 'open' },
+    # The size again.
     { $size = Get-Size; $out.Write("$e[1;1Hsize $size"); "size $size" },
-    # Other text for the clipboard.
-    { $out.Write("$e]52;c;$shown$e\"); 'copy' }
+    # Other text for the clipboard, in a synchronized update that is never
+    # ended: the window takes it when it ends the update, at its deadline.
+    { $out.Write("$e[?2026h$e]52;c;$shown$e\"); 'copy' }
 )
+$extend = $false
 foreach ($step in $steps) {
-    if (-not $go.WaitOne(60000)) { exit 1 }
+    # While it keeps its synchronized update open, it starts it again every
+    # 20 ms: each ESC[?2026h puts the deadline of the update 150 ms later.
+    $wait = if ($extend) { 20 } else { 60000 }
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    while (-not $go.WaitOne($wait)) {
+        if (-not $extend -or $watch.ElapsedMilliseconds -ge 60000) { exit 1 }
+        $out.Write("$e[?2026h")
+    }
+    $extend = $false
     [IO.File]::AppendAllText($Log, "$(& $step)`n")
     $null = $done.Set()
 }
@@ -614,7 +633,12 @@ try {
         throw "A hidden tab got another grid while the window changed size: $hiddenSize instead of $firstSize."
     }
 
-    # 8. Ctrl+Tab: the first tab again.
+    # 8. Ctrl+Tab: the first tab again. Its program has text for the
+    # clipboard in a synchronized update that it keeps open meanwhile, so
+    # the window has not seen the text yet.
+    $null = Invoke-Step 'open a synchronized update while it is hidden'
+    # Longer than the deadline of the update, which the program moves.
+    Start-Sleep -Milliseconds 300
     $start = @(Get-Log).Count
     Send-Key 'Ctrl+Tab'
     Wait-Shown $first @($second) 'After Ctrl+Tab'
@@ -638,14 +662,19 @@ try {
     if ($shownSize -eq $firstSize) {
         throw "Once shown, the tab still has the grid that it had before the window changed size: $shownSize."
     }
-    # What it writes now wakes the window up for it, which would take the
-    # text for the clipboard, if it were still waiting.
-    Start-Sleep -Milliseconds 300
+    # The program no longer keeps its synchronized update open: if the
+    # window had not ended it when it showed the tab, it would end it now,
+    # at its deadline, and take the text in it for the clipboard. What the
+    # program writes now also wakes the window up for it, which would take
+    # the text for the clipboard, if it were still waiting.
+    Start-Sleep -Milliseconds 400
     if ((Get-Text) -cne $sentinel) {
         throw "The text that a tab copied to the clipboard while it was hidden reached it once it was shown: '$(Get-Text)'."
     }
     # The text that it copies now does, if the window can take it: then the
-    # window could have taken the other one too.
+    # window could have taken the other one too. The program leaves it in a
+    # synchronized update that it never ends, which the window ends at its
+    # deadline: nothing else wakes the window up for the text.
     $null = Invoke-Step 'copy text once it is shown'
     if ($foreground) {
         Wait-For { (Get-Text) -ceq 'meiga-tabs-shown' } `
@@ -659,7 +688,7 @@ try {
     }
     Write-Host "OK: Ctrl+Tab shows the other tab with one full frame and gives it the grid of the window ($firstSize -> $shownSize), which it did not get while it was hidden."
     if ($foreground) {
-        Write-Host 'OK: the title of a hidden tab reaches the window once the tab is shown; the text that it copied to the clipboard never does, and the text that it copies once shown does.'
+        Write-Host 'OK: the title of a hidden tab reaches the window once the tab is shown; the text that it copied to the clipboard never does, also in a synchronized update still open then, and the text that it copies once shown does, also in a synchronized update that the window ends.'
     }
     else {
         Write-Host 'OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.'

@@ -1,6 +1,6 @@
 # ADR 0018 · O modelo das tabs
 
-- **Estado:** Aceptado; concretado polo [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md)
+- **Estado:** Aceptado; concretado polos [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [ADR 0020](0020-a-barra-de-tabs.md)
 - **Data:** 2026-11-14
 - **Relacionados:** [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0011](0011-fin-e-peche-das-sesions.md)
 

@@ -33,6 +33,32 @@ pub fn command_line<S: AsRef<str>>(program: &str, args: &[S]) -> Option<String> 
     Some(line)
 }
 
+/// The name of the program of `command_line`, as a tab shows it until the
+/// program gives a title: the file name of its first argument, without its
+/// folder and without `.exe`. The first argument ends at the first space or
+/// tab, or, if it starts with a quote, at the next quote, as
+/// `CreateProcessW` reads it.
+pub fn program_name(command_line: &str) -> &str {
+    let line = command_line.trim_start_matches([' ', '\t']);
+    let program = match line.strip_prefix('"') {
+        Some(quoted) => quoted
+            .split_once('"')
+            .map_or(quoted, |(program, _)| program),
+        None => line
+            .split_once([' ', '\t'])
+            .map_or(line, |(program, _)| program),
+    };
+    let file = program
+        .rsplit_once(['\\', '/'])
+        .map_or(program, |(_, file)| file);
+    match file.len().checked_sub(4) {
+        Some(stem) if file.is_char_boundary(stem) && file[stem..].eq_ignore_ascii_case(".exe") => {
+            &file[..stem]
+        }
+        _ => file,
+    }
+}
+
 fn needs_quotes(arg: &str) -> bool {
     arg.contains([' ', '\t'])
 }
@@ -106,5 +132,22 @@ mod tests {
     fn a_program_cannot_have_quotes() {
         assert_eq!(command_line::<&str>(r#"a"b"#, &[]), None);
         assert_eq!(command_line::<&str>("", &[]).as_deref(), Some("\"\""));
+    }
+
+    #[test]
+    fn the_name_of_a_program_is_its_file_without_the_folder_and_exe() {
+        assert_eq!(program_name("pwsh"), "pwsh");
+        assert_eq!(program_name("cmd /c echo ola"), "cmd");
+        assert_eq!(program_name("  wsl.EXE\t-e bash"), "wsl");
+        assert_eq!(
+            program_name(r#""C:\Program Files\PowerShell\7\pwsh.exe" -NoProfile"#),
+            "pwsh"
+        );
+        assert_eq!(program_name(r"C:\tools\build.cmd x"), "build.cmd");
+        assert_eq!(program_name("tools/x.exe"), "x");
+        // Only a quote, or nothing.
+        assert_eq!(program_name(r#""a b"#), "a b");
+        assert_eq!(program_name(""), "");
+        assert_eq!(program_name("ñ.exe"), "ñ");
     }
 }
