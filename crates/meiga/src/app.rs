@@ -28,16 +28,21 @@ enum Content {
 }
 
 impl Scene for Content {
-    fn update(&mut self, now: Instant, damage: &mut dyn FnMut(Rect)) -> Option<Instant> {
+    fn update(
+        &mut self,
+        window: &Window,
+        now: Instant,
+        damage: &mut dyn FnMut(Rect),
+    ) -> Option<Instant> {
         match self {
-            Content::Terminal(tabs) => tabs.update(now, damage),
+            Content::Terminal(tabs) => tabs.update(window, now, damage),
             Content::Bench(_) => None,
         }
     }
 
-    fn update_hidden(&mut self, now: Instant) -> Option<Instant> {
+    fn update_hidden(&mut self, window: &Window, now: Instant) -> Option<Instant> {
         match self {
-            Content::Terminal(tabs) => tabs.update_hidden(now),
+            Content::Terminal(tabs) => tabs.update_hidden(window, now),
             Content::Bench(_) => None,
         }
     }
@@ -109,7 +114,7 @@ impl App {
         let mut changed = response.redraw;
         if response.dialog {
             if let Content::Terminal(tabs) = &mut self.content {
-                tabs.view_mut().dialog_closed(window);
+                tabs.dialog_closed(window);
             }
             self.catch_up(window)?;
             // While the message box was open, the window lost its wake-ups,
@@ -155,7 +160,7 @@ impl Handler for App {
                 if let Content::Terminal(tabs) = &mut self.content
                     && !minimized
                 {
-                    tabs.view_mut().resized(size);
+                    tabs.resized(size);
                 }
                 self.frames
                     .resized(window, size, minimized, &mut self.content)?;
@@ -165,7 +170,7 @@ impl Handler for App {
             }
             Event::DpiChanged { dpi } => {
                 if let Content::Terminal(tabs) = &mut self.content {
-                    tabs.view_mut().dpi_changed(dpi);
+                    tabs.dpi_changed(dpi);
                     // The new size of the window, if it changes, comes right
                     // after this event. A frame now would give the terminal
                     // and the program the grid of the new cells in the old
@@ -206,7 +211,7 @@ impl Handler for App {
             | Event::CaptureLost
             | Event::MouseLeft => {
                 if let Content::Terminal(tabs) = &mut self.content {
-                    let response = tabs.view_mut().mouse(window, &event);
+                    let response = tabs.mouse(window, &event);
                     self.respond(window, response)?;
                 }
             }

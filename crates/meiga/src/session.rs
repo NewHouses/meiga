@@ -27,9 +27,10 @@ const DEFAULT_SHELLS: [&str; 2] = ["pwsh", "powershell"];
 /// for a synchronized update, until the window knows when it ends. While
 /// the window is minimized, or the tab is hidden, the window does not copy
 /// the screen, so the output does not wake it up again, except to end a
-/// synchronized update in time. The title of a hidden tab waits until the
-/// tab is shown, and what it copied to the clipboard meanwhile is dropped
-/// then (ADR 0019).
+/// synchronized update in time, and for the title, which the tab bar shows
+/// for every tab (ADR 0020). What a hidden tab copied to the clipboard
+/// waits until the tab is shown, and is dropped then (ADR 0019), also in a
+/// synchronized update that its program has not ended yet (ADR 0020).
 pub struct Shared {
     pub terminal: Terminal,
     /// The screen may have changed since the window last copied it.
@@ -77,31 +78,68 @@ impl Shared {
     }
 
     /// Ends the synchronized update that the program has open if its time is
-    /// up at `now`: what it wrote meanwhile is shown as it is, and its
-    /// answers go to `answers`. Returns when the update that is still open
-    /// ends, which the window knows from now on, and whether the window has
-    /// to be woken up for the title or the clipboard.
-    pub fn end_late_sync(
-        &mut self,
-        now: Instant,
-        answers: &mut Vec<u8>,
-    ) -> (Option<Instant>, bool) {
-        let mut wake = false;
+    /// up at `now`, as [`Shared::end_sync`] does. Returns when the update
+    /// that is still open ends, which the window knows from now on.
+    pub fn end_late_sync(&mut self, now: Instant, answers: &mut Vec<u8>) -> Option<Instant> {
         if self
             .terminal
             .sync_deadline()
             .is_some_and(|deadline| deadline <= now)
         {
+            self.end_sync(answers);
+        }
+        let deadline = self.terminal.sync_deadline();
+        self.sync_noted = deadline.is_some();
+        deadline
+    }
+
+    /// Ends the synchronized update that the program has open, if it has
+    /// one: what it wrote meanwhile is shown as it is, and its answers go to
+    /// `answers`. A title, or text for the clipboard, that it gave meanwhile
+    /// waits for the window to take it, without waking it up: the window is
+    /// the one that ends the update. None is left open, so the next one
+    /// that the program leaves open wakes the window up again.
+    pub fn end_sync(&mut self, answers: &mut Vec<u8>) {
+        if self.terminal.sync_deadline().is_some() {
             let changes = self.terminal.end_sync();
             if changes.responses {
                 self.terminal.take_responses(answers);
             }
-            wake = self.note_others(changes);
+            self.note_others(changes);
         }
-        let deadline = self.terminal.sync_deadline();
-        self.sync_noted = deadline.is_some();
-        (deadline, wake)
+        self.sync_noted = false;
     }
+
+    /// Takes the title of the terminal into `title`, if it changed since the
+    /// window last took it. Returns whether it is another one.
+    pub fn take_title(&mut self, title: &mut Option<String>) -> bool {
+        mem::take(&mut self.title_changed) && store_title(title, self.terminal.title())
+    }
+
+    /// Takes the text that the program copied to the clipboard (OSC 52), if
+    /// it copied some since the window last took it.
+    pub fn take_clipboard(&mut self) -> Option<String> {
+        mem::take(&mut self.clipboard_changed)
+            .then(|| self.terminal.take_clipboard())
+            .flatten()
+    }
+}
+
+/// Puts `new` in `title`, in the same memory if it can. Returns whether it
+/// is another one.
+pub fn store_title(title: &mut Option<String>, new: Option<&str>) -> bool {
+    if title.as_deref() == new {
+        return false;
+    }
+    match new {
+        Some(new) => {
+            let title = title.get_or_insert_with(String::new);
+            title.clear();
+            title.push_str(new);
+        }
+        None => *title = None,
+    }
+    true
 }
 
 /// Locks what the reader thread and the window share. Neither of them
@@ -112,17 +150,18 @@ pub fn lock(shared: &Mutex<Shared>) -> MutexGuard<'_, Shared> {
 
 /// Runs `command`, or else the default shell, in a session of `size`, whose
 /// output goes to the terminal of `shared`. Its reader thread wakes `waker`
-/// up with the identifier of the tab of the session, `tab`.
+/// up with the identifier of the tab of the session, `tab`. Returns the
+/// command line that it ran, or tried last, and the session.
 ///
 /// If the program cannot start, the error is what the terminal shows: which
 /// program, and why.
-pub fn start(
-    command: Option<&str>,
+pub fn start<'a>(
+    command: Option<&'a str>,
     size: GridSize,
     shared: &Arc<Mutex<Shared>>,
     waker: &Waker,
     tab: TabId,
-) -> Result<Pty, String> {
+) -> (&'a str, Result<Pty, String>) {
     let conpty = Conpty::load();
     let reader = || Reader {
         shared: Arc::clone(shared),
@@ -142,7 +181,10 @@ pub fn start(
             }
         }
     };
-    started.map_err(|error| start_error(program, &error))
+    (
+        program,
+        started.map_err(|error| start_error(program, &error)),
+    )
 }
 
 /// Whether the program of a session could not start because it does not
@@ -261,18 +303,36 @@ mod tests {
         let deadline = shared.terminal.sync_deadline().unwrap();
         let mut answers = Vec::new();
         let early = deadline - Duration::from_millis(1);
-        assert_eq!(
-            shared.end_late_sync(early, &mut answers),
-            (Some(deadline), false)
-        );
+        assert_eq!(shared.end_late_sync(early, &mut answers), Some(deadline));
         assert!(answers.is_empty());
         // At its deadline, the title and the answer to the question come
-        // out, and there is nothing left to wait for.
-        assert_eq!(shared.end_late_sync(deadline, &mut answers), (None, true));
+        // out, and there is nothing left to wait for. The title waits for
+        // the window, which ended the update.
+        assert_eq!(shared.end_late_sync(deadline, &mut answers), None);
         assert_eq!(answers, b"\x1b[?6c");
         assert_eq!(shared.terminal.title(), Some("sync"));
         assert!(shared.title_changed);
 
+        // The next update wakes the window up again.
+        let changes = shared.terminal.feed(b"\x1b[?2026h");
+        assert!(shared.note(changes));
+    }
+
+    #[test]
+    fn a_synchronized_update_can_end_before_its_deadline() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(10, 2)));
+        shared.screen_changed = true;
+        let changes = shared.terminal.feed(b"\x1b[?2026h\x1b]52;c;b2xh\x07\x1b[c");
+        assert!(!changes.clipboard && !changes.responses);
+        assert!(shared.note(changes));
+        // As when its tab is shown: the text for the clipboard and the
+        // answer to the question come out now, and the window, which ended
+        // the update, takes the text.
+        let mut answers = Vec::new();
+        shared.end_sync(&mut answers);
+        assert_eq!(answers, b"\x1b[?6c");
+        assert_eq!(shared.terminal.sync_deadline(), None);
+        assert_eq!(shared.take_clipboard().as_deref(), Some("ola"));
         // The next update wakes the window up again.
         let changes = shared.terminal.feed(b"\x1b[?2026h");
         assert!(shared.note(changes));
@@ -316,6 +376,31 @@ mod tests {
         assert!(shared.note(changes));
         assert!(!shared.note(changes));
         assert!(shared.clipboard_changed);
-        assert_eq!(shared.terminal.take_clipboard().as_deref(), Some("ola"));
+        assert_eq!(shared.take_clipboard().as_deref(), Some("ola"));
+        assert!(!shared.clipboard_changed);
+        assert_eq!(shared.take_clipboard(), None);
+    }
+
+    #[test]
+    fn the_title_is_taken_once_and_only_another_one_counts() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(10, 2)));
+        let mut title = None;
+        assert!(!shared.take_title(&mut title));
+        let changes = shared.terminal.feed(b"\x1b]0;ola\x07");
+        assert!(shared.note(changes));
+        assert!(shared.take_title(&mut title));
+        assert_eq!(title.as_deref(), Some("ola"));
+        assert!(!shared.title_changed);
+        assert!(!shared.take_title(&mut title));
+        // The same title again is taken, but it is not another one.
+        let changes = shared.terminal.feed(b"\x1b]0;ola\x07");
+        shared.note(changes);
+        assert!(!shared.take_title(&mut title));
+        assert!(!shared.title_changed);
+        // An empty title is no title.
+        let changes = shared.terminal.feed(b"\x1b]0;\x07");
+        shared.note(changes);
+        assert!(shared.take_title(&mut title));
+        assert_eq!(title, None);
     }
 }

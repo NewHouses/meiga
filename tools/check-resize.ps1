@@ -10,14 +10,15 @@ the ones of the user. The window does not need the focus.
 1. Resizing. The script writes lines of many lengths, which wrap. The check
    makes the window narrower and shorter, wider, and narrower and taller.
    Each time, the program has to get the grid that fills the window without
-   the strip of the scroll bar, and the screen of meiga has to show the
-   same rows as the buffer of the console, which ConPTY reflows too: the
-   check selects the whole screen, and compares the text that reaches the
-   clipboard with the rows that the script reads from the console. Then it
-   types a key, which the script writes where its cursor is, and compares
-   again. On the alternate screen, the primary one gets the new size when
-   the program goes back to it, as in the console. And if the window changes
-   size while the message box that asks before pasting is open, the program
+   the tab bar and the strip of the scroll bar, and the screen of meiga has
+   to show the same rows as the buffer of the console, which ConPTY reflows
+   too: the check selects the whole screen, and compares the text that
+   reaches the clipboard with the rows that the script reads from the
+   console. Then it types a key, which the script writes where its cursor
+   is, and compares again. On the alternate screen, the primary one gets the
+   new size when the program goes back to it, as in the console. And if the
+   window changes size while the message box that asks before pasting is
+   open, the program
    gets the new grid when the box closes.
 2. The history. The script writes 100 short lines. The check moves the view
    with the wheel; with Shift+Page Up, Ctrl+Shift+Up, Ctrl+Shift+Home and
@@ -428,15 +429,18 @@ function Wait-Screen([int]$Before, [string]$What, [int]$Columns = 0, [int]$Rows 
 }
 
 # The size of the cells, from the first size of the grid that the script
-# wrote: the grid fills the client area of the window but for the strip of
-# the scroll bar, 12 pixels at a scale of 100 %, and less than a cell.
+# wrote: the grid fills the client area of the window below the tab bar, 32
+# pixels high at a scale of 100 %, but for the strip of the scroll bar, 12
+# pixels, and less than a cell.
 function Measure-Cells {
     $size = @(Get-Lines)[0] -split ' '
     $client = Get-Client
-    $script:strip = [Math]::Max(1, [Math]::Floor((12 * $api::GetDpiForWindow($window) + 48) / 96))
+    $dpi = $api::GetDpiForWindow($window)
+    $script:strip = [Math]::Max(1, [Math]::Floor((12 * $dpi + 48) / 96))
+    $script:bar = [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
     $script:cell = [pscustomobject]@{
         Width = [Math]::Floor(($client.Right - $strip) / [int]$size[1])
-        Height = [Math]::Floor($client.Bottom / [int]$size[2])
+        Height = [Math]::Floor(($client.Bottom - $bar) / [int]$size[2])
     }
 }
 
@@ -455,7 +459,7 @@ function Resize-Window([int]$Columns, [int]$Rows) {
     $outer = [Meiga.Tools.ResizeCheck+RECT]::new()
     $null = $api::GetWindowRect($window, [ref]$outer)
     $width = $Columns * $cell.Width + $strip + [Math]::Floor($cell.Width / 2) + ($outer.Right - $outer.Left - $client.Right)
-    $height = $Rows * $cell.Height + [Math]::Floor($cell.Height / 2) + ($outer.Bottom - $outer.Top - $client.Bottom)
+    $height = $Rows * $cell.Height + $bar + [Math]::Floor($cell.Height / 2) + ($outer.Bottom - $outer.Top - $client.Bottom)
     if (-not $api::SetWindowPos($window, [IntPtr]::Zero, 0, 0, $width, $height, $SWP_NOMOVE -bor $SWP_NOZORDER -bor $SWP_NOACTIVATE)) {
         throw "SetWindowPos failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
     }
@@ -498,7 +502,7 @@ function Get-X([int]$Column, [string]$Side = 'Middle') {
         default { $Column * $cell.Width + [Math]::Floor($cell.Width / 2) }
     }
 }
-function Get-Y([int]$Row) { $Row * $cell.Height + [Math]::Floor($cell.Height / 2) }
+function Get-Y([int]$Row) { $bar + $Row * $cell.Height + [Math]::Floor($cell.Height / 2) }
 
 # Posts messages to the window at once: see PostAll.
 function Send-Messages([long[]]$Messages) {
@@ -569,7 +573,7 @@ function Send-ProgramKey([string]$Key) {
 function Copy-Cells([int]$FromColumn, [int]$FromRow, [int]$ToColumn, [int]$ToRow, [string]$What) {
     Wait-For { $api::ClearClipboard() } { 'Could not empty the clipboard.' }
     $script:presses++
-    $from = if ($presses % 2) { $FromRow * $cell.Height + 2 } else { ($FromRow + 1) * $cell.Height - 3 }
+    $from = $bar + $(if ($presses % 2) { $FromRow * $cell.Height + 2 } else { ($FromRow + 1) * $cell.Height - 3 })
     $x = Get-X $ToColumn 'Right'
     $y = Get-Y $ToRow
     Send-Messages @(
@@ -731,6 +735,7 @@ $grid = $null
 $cell = $null
 $presses = 0
 $strip = 0
+$bar = 0
 $passed = $false
 $saved = Get-Text
 try {

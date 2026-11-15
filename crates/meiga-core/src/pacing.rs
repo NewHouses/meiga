@@ -24,7 +24,8 @@ pub enum Pace {
 }
 
 /// Decides when to draw, so that there is at most one frame per interval and
-/// the first change after a pause is drawn at once.
+/// the first change after a pause is drawn at once. A frame counts even if
+/// it finds nothing to draw.
 #[derive(Clone, Debug, Default)]
 pub struct FramePacer {
     last_frame: Option<Instant>,
@@ -72,8 +73,9 @@ impl FramePacer {
         self.due = None;
     }
 
-    /// A frame was drawn at `now`.
-    pub fn drawn(&mut self, now: Instant) {
+    /// A frame brought the scene up to date at `now`, whether it drew
+    /// something or not: the next one waits for the interval.
+    pub fn updated(&mut self, now: Instant) {
         self.last_frame = Some(now);
         self.due = None;
     }
@@ -99,7 +101,7 @@ mod tests {
     fn a_change_inside_the_interval_waits_for_the_rest_of_it() {
         let start = Instant::now();
         let mut pacer = FramePacer::new();
-        pacer.drawn(start);
+        pacer.updated(start);
         assert_eq!(pacer.request(start + ms(10), INTERVAL), Pace::After(ms(23)));
         assert!(pacer.is_scheduled());
         assert_eq!(pacer.request(start + ms(20), INTERVAL), Pace::Scheduled);
@@ -109,7 +111,7 @@ mod tests {
     fn a_change_after_the_interval_is_drawn_at_once() {
         let start = Instant::now();
         let mut pacer = FramePacer::new();
-        pacer.drawn(start);
+        pacer.updated(start);
         assert_eq!(pacer.request(start + ms(33), INTERVAL), Pace::Now);
         assert_eq!(pacer.request(start + ms(500), INTERVAL), Pace::Now);
     }
@@ -118,21 +120,21 @@ mod tests {
     fn a_late_timer_does_not_delay_the_frame() {
         let start = Instant::now();
         let mut pacer = FramePacer::new();
-        pacer.drawn(start);
+        pacer.updated(start);
         assert_eq!(pacer.request(start + ms(1), INTERVAL), Pace::After(ms(32)));
         assert_eq!(pacer.request(start + ms(34), INTERVAL), Pace::Now);
     }
 
     #[test]
-    fn drawing_and_cancelling_end_the_wait() {
+    fn updating_and_cancelling_end_the_wait() {
         let start = Instant::now();
         let mut pacer = FramePacer::new();
-        pacer.drawn(start);
+        pacer.updated(start);
         pacer.request(start + ms(1), INTERVAL);
         pacer.cancel();
         assert!(!pacer.is_scheduled());
         pacer.request(start + ms(2), INTERVAL);
-        pacer.drawn(start + ms(33));
+        pacer.updated(start + ms(33));
         assert!(!pacer.is_scheduled());
         assert_eq!(pacer.request(start + ms(40), INTERVAL), Pace::After(ms(26)));
     }

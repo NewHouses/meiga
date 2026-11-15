@@ -1,6 +1,6 @@
 # Código › `meiga-render`
 
-> Estado: mantemento M1, despois da subfase 1.10. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo. Na 1.6 chegaron ao texto a negra, a cursiva e a posición do subliñado e do riscado; o resto non cambiou desde a 1.3. Na 1.7 non cambiou o código: só as marcas, que agora se activan cunha opción. Desde entón tampouco: no M1, só a explicación de `windows-core`, que ten que ser a versión do crate `windows`.
+> Estado: subfase 2.3. Contén o *framebuffer*, o lenzo co que se debuxa nel e a súa presentación na xanela con GDI, e o texto: as fontes con DirectWrite, a caché de glifos e a mestura co fondo. Na 1.6 chegaron ao texto a negra, a cursiva e a posición do subliñado e do riscado; o resto non cambiou desde a 1.3. Na 1.7 non cambiou o código: só as marcas, que agora se activan cunha opción. Desde entón tampouco: no M1, só a explicación de `windows-core`, que ten que ser a versión do crate `windows`, e na 2.1 e na 2.2, nada. Na 2.3 chegaron as rexións do lenzo (`Canvas::region`), coas súas propias coordenadas: o programa debuxa o terminal nunha delas, debaixo da barra de tabs.
 
 **Responsabilidade:** o renderizado por CPU. Compón no *framebuffer* só o que cambiou e presenta na xanela só os rectángulos modificados. O texto debúxase desde unha caché de glifos, que DirectWrite rasteriza unha soa vez. Ver [Arquitectura › Fotogramas](../arquitectura.md#fotogramas-do-cambio-á-pantalla) e [Arquitectura › Texto](../arquitectura.md#texto-da-cela-aos-píxeles).
 
@@ -8,7 +8,7 @@
 |---|---|
 | [`Cargo.toml`](#cratesmeiga-rendercargotoml) | As dependencias: `meiga-core`, `windows`, `windows-core` e `windows-sys`. |
 | [`src/lib.rs`](#cratesmeiga-rendersrclibrs) | A raíz do crate: os módulos e o que se publica. |
-| [`src/canvas.rs`](#cratesmeiga-rendersrccanvasrs) | `Canvas`, o lenzo: debuxar en píxeles en memoria, sen saír nunca deles; e `Shades`, os tons do texto. |
+| [`src/canvas.rs`](#cratesmeiga-rendersrccanvasrs) | `Canvas`, o lenzo: debuxar en píxeles en memoria, sen saír nunca deles, enteiro, recortado ou, desde a subfase 2.3, nunha rexión coas súas propias coordenadas; e `Shades`, os tons do texto. |
 | [`src/error.rs`](#cratesmeiga-rendersrcerrorrs) | `Error`: unha chamada a GDI ou a DirectWrite que fallou, ou fontes que non están instaladas. |
 | [`src/gdi.rs`](#cratesmeiga-rendersrcgdirs) | `Surface`, o *framebuffer* nunha *DIB section*, e a súa presentación con `BitBlt`. |
 | [`src/dwrite.rs`](#cratesmeiga-rendersrcdwriters) | `FontSystem` e `Typeface`: as fontes con DirectWrite, normais, negras e cursivas; o tamaño da cela, onde van o subliñado e o riscado (`Decorations`) e a cobertura de cada glifo. |
@@ -157,6 +157,42 @@ pub fn clipped(&mut self, rect: Rect) -> Canvas<'_> {
 - **`clipped`** dá un lenzo sobre os mesmos píxeles, cun recorte máis pequeno: a intersección do actual con `rect`. É o que fai que debuxar só o que cambiou sexa sinxelo: a escena debúxase enteira, sen saber que cambiou, sobre un lenzo recortado ao rectángulo que cambiou, e só se tocan os seus píxeles. `&mut *self.pixels` presta de novo os píxeles (*reborrow*): mentres viva o lenzo novo, o orixinal non se pode usar.
 
 ```rust
+pub fn region(&mut self, rect: Rect) -> Canvas<'_> {
+    let area = rect.intersection(Rect::from_size(self.size));
+    if area.is_empty() {
+        return Canvas {
+            pixels: Default::default(),
+            stride: 0,
+            size: Size::default(),
+            clip: Rect::EMPTY,
+        };
+    }
+    // The area is inside the canvas: its coordinates are not negative,
+    // and its rows fit in the pixels after its first one, as the rows of
+    // the canvas fit in all of them.
+    let start = area.top as usize * self.stride + area.left as usize;
+    let corner = Point::new(-area.left, -area.top);
+    Canvas {
+        pixels: &mut self.pixels[start..],
+        stride: self.stride,
+        size: area.size(),
+        clip: self.clip.intersection(area).offset(corner),
+    }
+}
+```
+
+**`region`**, desde a subfase 2.3, dá un lenzo sobre unha parte dos píxeles, coas súas propias coordenadas: o que se debuxa en (0, 0) vai á esquina superior esquerda de `rect`. Desde esa subfase, a xanela ten a barra de tabs enriba e o terminal debaixo: as tabs debuxan a barra no lenzo enteiro, e dánlle á vista do terminal a rexión de debaixo da barra. A vista debuxa a grella, as marxes e a barra de desprazamento desde (0, 0), coma antes, sen saber que a barra existe ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 1; [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Paso a paso:
+
+1. **A área**: a parte de `rect` que está no lenzo. Conta o tamaño do lenzo, non o seu recorte.
+2. **Sen área**, un lenzo baleiro, coma o de `empty`: sen píxeles, porque `Default::default()` dá unha porción mutábel baleira, e cun recorte baleiro, así que nada se debuxa nel.
+3. **Con área**, un lenzo que empeza no primeiro píxel dela (`start`, na fila `top` e na columna `left`), coa mesma distancia entre filas e o tamaño da área. O seu recorte é a parte do recorte actual que está na área, movida coa área (`offset(corner)`) para que a súa esquina sexa (0, 0).
+
+- **Por que non pasa por `new`.** O comentario explícao: a área está dentro do lenzo, así que as súas coordenadas non son negativas, e os `as usize` non perden nada; e as súas filas caben nos píxeles que van desde o primeiro dela, porque as do lenzo caben en todos, coma comprobou `new` ao crealo. O lenzo novo xa cumpre a regra de `new`, sen comprobala outra vez.
+- **O recorte segue.** Se o lenzo xa está recortado á zona que cambiou, a rexión só debuxa a parte desa zona que cae nela: o fotograma recorta o lenzo enteiro, e o terminal só toca os píxeles que cambiaron. Se a zona é só da barra, o recorte da rexión queda baleiro, e as tabs nin sequera debuxan o terminal.
+- **Ao contrario ca `clipped`**, que deixa a orixe e o tamaño, e só reduce o recorte, `region` cambia a orixe e o tamaño: o que se debuxe fóra da área, tamén á esquerda ou por riba de (0, 0), recórtase.
+- `&mut self.pixels[start..]` presta de novo os píxeles, desde o primeiro da área ata o final: mentres viva a rexión, o lenzo orixinal non se pode usar, coma con `clipped`.
+
+```rust
 pub fn fill(&mut self, rect: Rect, color: Rgb) {
     let area = rect.intersection(self.clip);
     if area.is_empty() {
@@ -291,6 +327,7 @@ Calcular a táboa leva 768 potencias. Faise unha vez por par de cores, e [`Font`
 | `rows_must_fit_in_the_memory` | `Canvas::new` acepta as filas que caben, tamén cun `stride` maior có ancho, e rexeita as que non. |
 | `fill_is_cut_to_the_canvas_and_respects_the_stride` | Un rectángulo que sae polos lados enche só a parte de dentro, e os píxeles que sobran ao final de cada fila non se tocan. |
 | `clipped_canvases_only_draw_inside_the_clip` | Un lenzo recortado, e outro recortado sobre el, só pintan os píxeles da intersección. |
+| `regions_draw_from_their_own_corner_and_keep_the_clip` | Desde a subfase 2.3. Nun lenzo de 5 × 5, cun `stride` de 6 e recortado ás catro primeiras filas, a rexión das columnas 1 a 3 desde a fila 2 ata máis aló do final mide 3 × 3, e o seu recorte son as dúas filas que deixa o do lenzo, (0, 0, 3, 2). Enchela enteira, desde fóra dela, pinta só eses seis píxeles, desde a súa esquina: (0, 0) na rexión é (1, 2) no lenzo. A terceira fila da rexión, fóra do recorte, e os píxeles de arredor quedan como estaban, e fóra da rexión `get` non dá nada. Unha rexión fóra do lenzo mide 0 × 0, e non pinta nada. |
 | `outline_draws_only_the_border` | `outline` pinta os 12 píxeles do bordo dun cadrado de 4 × 4, e nada dentro nin fóra. |
 | `an_empty_canvas_draws_nothing` | O lenzo baleiro non pinta nada. |
 | `shades_go_from_the_background_to_the_text` | Os extremos da táboa son as dúas cores e, cunha mestura lineal, a cobertura 51 (o 20 %) dá o 20 % do camiño entre o azul e o branco: `(51, 51, 255)`. |

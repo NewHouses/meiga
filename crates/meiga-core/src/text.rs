@@ -47,6 +47,25 @@ pub fn width(text: &str) -> usize {
     cells(text).count()
 }
 
+/// Puts in `out` the cells of `text` that fit in `columns`: all of them, if
+/// they fit, and otherwise the first ones and an ellipsis (`…`) in the last
+/// cell. A wide character whose two halves do not both fit before the
+/// ellipsis is left out.
+pub fn fit(text: &str, columns: usize, out: &mut Vec<CellChar>) {
+    out.clear();
+    out.extend(cells(text).take(columns.saturating_add(1)));
+    if out.len() <= columns {
+        return;
+    }
+    out.truncate(columns.saturating_sub(1));
+    if matches!(out.last(), Some(CellChar::WideLeft(_))) {
+        out.pop();
+    }
+    if columns > 0 {
+        out.push(CellChar::Narrow('…'));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -92,5 +111,28 @@ mod tests {
             [CellChar::Narrow('e'), CellChar::Narrow('x'),]
         );
         assert_eq!(width(""), 0);
+    }
+
+    fn fitted(text: &str, columns: usize) -> Vec<CellChar> {
+        let mut out = vec![CellChar::Narrow('z')];
+        fit(text, columns, &mut out);
+        out
+    }
+
+    #[test]
+    fn text_that_fits_keeps_all_its_cells() {
+        assert_eq!(fitted("pwsh", 4), layout("pwsh"));
+        assert_eq!(fitted("pwsh", 10), layout("pwsh"));
+        assert_eq!(fitted("", 3), []);
+    }
+
+    #[test]
+    fn longer_text_ends_with_an_ellipsis_in_its_last_cell() {
+        assert_eq!(fitted("meiga-tabs", 5), layout("meig…"));
+        assert_eq!(fitted("ab", 1), layout("…"));
+        assert_eq!(fitted("ab", 0), []);
+        // A wide character that would lose its right half is left out.
+        assert_eq!(fitted("a中文", 4), layout("a中…"));
+        assert_eq!(fitted("a中文", 3), layout("a…"));
     }
 }

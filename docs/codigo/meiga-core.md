@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.2. Contén o modelo das xanelas e as súas tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, a liña de comandos dun programa, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`.
+> Estado: subfase 2.3. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -12,8 +12,8 @@
 | [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; `GridSize`, o tamaño da grella en celas; e `GridPoint`, unha cela da grella. |
 | [`src/damage.rs`](#cratesmeiga-coresrcdamagers) | `Damage`: as zonas da xanela que cambiaron desde o último fotograma. |
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
-| [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella. |
-| [`src/shell.rs`](#cratesmeiga-coresrcshellrs) | `command_line`: a liña de comandos dun programa cos seus argumentos, entre comiñas segundo as regras de Windows. |
+| [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella; e `fit`, as celas dun texto que caben nunhas columnas, cortado con «…». |
+| [`src/shell.rs`](#cratesmeiga-coresrcshellrs) | `command_line`: a liña de comandos dun programa cos seus argumentos, entre comiñas segundo as regras de Windows; e `program_name`, o nome do programa dunha liña de comandos, o que mostra unha tab sen título. |
 | [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
 | [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda en partes, e `WheelRows`, en filas do historial; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
 | [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
@@ -28,6 +28,8 @@
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
+| [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: polo de agora, a barra de tabs. |
+| [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e o botón que abre unha tab, ao DPI da xanela; e `Part`, a parte da barra que hai debaixo dun punto. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
 | [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
 | [`examples/tabs.rs`](#cratesmeiga-coreexamplestabsrs) | Un exemplo de consola para probar o modelo das tabs a man. |
@@ -91,12 +93,13 @@ pub mod paste;
 pub mod shell;
 pub mod term;
 pub mod text;
+pub mod ui;
 ```
 
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, `mouse` e `paste`, na 1.8, e `model`, na 2.1. `term`, desde a 1.5, e `model` teñen submódulos, así que van en cartafoles: os módulos están en `src/term/mod.rs` e en `src/model/mod.rs`.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, `mouse` e `paste`, na 1.8, `model`, na 2.1, e `ui`, na 2.3. `term`, desde a 1.5, `model` e `ui` teñen submódulos, así que van en cartafoles: os módulos están en `src/term/mod.rs`, en `src/model/mod.rs` e en `src/ui/mod.rs`.
 - As dependencias, como `alacritty_terminal`, poden ter `unsafe` dentro: `forbid` só se aplica ao código deste crate.
 
 ## `crates/meiga-core/src/color.rs`
@@ -298,6 +301,7 @@ pub struct Rect {
 | `intersection` | Os píxeles que están nos dous. Se non hai ningún, `EMPTY`. |
 | `union` | O rectángulo máis pequeno que contén os dous. Un rectángulo baleiro non engade nada. |
 | `intersects` e `contains` | Se teñen píxeles en común, e se un está enteiro dentro do outro. Un rectángulo baleiro está dentro de calquera. |
+| `contains_point(at)` | Desde a subfase 2.3: se o píxel `at` está no rectángulo (máis abaixo). Un rectángulo baleiro non ten ningún. |
 | `border(thickness)` | Os catro lados dun bordo de `thickness` píxeles, por dentro: arriba, abaixo, esquerda e dereita. Non se solapan, e un lado queda baleiro se o rectángulo é demasiado pequeno para el. |
 
 Algúns detalles:
@@ -317,7 +321,19 @@ const fn saturate(value: u32) -> i32 {
 - `spanning` suma 1 co `saturating_add`, que queda no máximo en vez de desbordar.
 - Moitas funcións son `const fn`, que se poden usar en constantes, como `Rect::EMPTY`.
 
-**Probas.** Nove, unha por propiedade: que `right` e `bottom` non se inclúen, que os rectángulos invertidos están baleiros, `from_size` (tamén co tamaño máximo), `spanning` nas dúas ordes, a intersección e a unión (tamén con rectángulos baleiros), `contains`, que `at` e `offset` moven o rectángulo (tamén preto do máximo de `i32`), e que os lados de `border` cobren o bordo sen solaparse nin saír dun rectángulo estreito.
+```rust
+pub const fn contains_point(self, at: Point) -> bool {
+    self.left <= at.x && at.x < self.right && self.top <= at.y && at.y < self.bottom
+}
+```
+
+**`contains_point`**, desde a subfase 2.3, di se o píxel `at` está no rectángulo, cos bordos de sempre: `left` e `top` inclúense, e `right` e `bottom` non. Así, un píxel nunca está en dous rectángulos que só comparten un lado, coma dúas tabs seguidas da barra.
+
+- Nun rectángulo baleiro ou invertido, as dúas condicións dalgún dos eixes non se poden cumprir á vez: non contén ningún punto, sen comprobalo á parte.
+- É `const fn`, coma `contains`, que fai o mesmo cun rectángulo enteiro.
+- Úsana a disposición da barra de tabs, para saber se un punto está na barra e se está no × dunha tab ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)), e a barra do programa, para saber se o punteiro está nela ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+
+**Probas.** Dez, unha por propiedade: que `right` e `bottom` non se inclúen, que os rectángulos invertidos están baleiros, `from_size` (tamén co tamaño máximo), `spanning` nas dúas ordes, a intersección e a unión (tamén con rectángulos baleiros), `contains`, desde a subfase 2.3 `contains_point` (os píxeles das esquinas de dentro si, os da columna `right`, da fila `bottom` e da columna anterior a `left` non, e un rectángulo baleiro non contén ningún), que `at` e `offset` moven o rectángulo (tamén preto do máximo de `i32`), e que os lados de `border` cobren o bordo sen solaparse nin saír dun rectángulo estreito.
 
 ### `GridSize`
 
@@ -428,7 +444,7 @@ O algoritmo para engadir un rectángulo:
 
 ## `crates/meiga-core/src/pacing.rs`
 
-**Cando** debuxar o seguinte fotograma: como moito un por intervalo, e o primeiro cambio despois dunha pausa, no momento ([ADR 0005](../adr/0005-fios-e-fotogramas.md)).
+**Cando** debuxar o seguinte fotograma: como moito un por intervalo, e o primeiro cambio despois dunha pausa, no momento ([ADR 0005](../adr/0005-fios-e-fotogramas.md)). Desde a subfase 2.3, conta tamén un fotograma que non atopa nada que debuxar ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 5).
 
 ```rust
 pub const fn auto_interval(remote: bool) -> Duration {
@@ -479,13 +495,13 @@ Algo cambiou no instante `now`: cando se debuxa?
 4. Se non, prográmase para cando remate o intervalo: `After` co tempo que falta.
 
 - `now` vén de fóra, en vez de ler o reloxo dentro: así as probas usan instantes inventados e dan sempre o mesmo resultado.
-- `is_scheduled()` di se hai un fotograma programado, `cancel()` esquéceo (por exemplo, ao minimizar a xanela) e `drawn(now)` anota que se debuxou un fotograma en `now`.
+- `is_scheduled()` di se hai un fotograma programado, `cancel()` esquéceo (por exemplo, ao minimizar a xanela) e `updated(now)` anota que un fotograma puxo ao día a escena en `now`, debuxase algo ou non: o seguinte agarda o intervalo. Ata a 2.3 chamábase `drawn`, e o programa só o chamaba se o fotograma debuxaba algo. Un fotograma sen nada que debuxar cancelaba o programado, e o seguinte cambio voltaba ser `Now`: a saída que non cambia nada na pantalla, coma o mesmo título unha e outra vez, espertaba a interface con cada bloque, e non como moito unha vez por intervalo. Atopouno a revisión do código da 2.3 ([Código › meiga › `frames.rs`](meiga.md#cratesmeigasrcframesrs)).
 
-**Probas.** Seis: o primeiro cambio debúxase no momento; un cambio dentro do intervalo espera o que falta (23 ms dun intervalo de 33 se pasaron 10), e os seguintes xa están programados; despois do intervalo, no momento; un temporizador que vai tarde non atrasa o fotograma; `drawn` e `cancel` rematan a espera; e `auto` dá 33 333 333 ns en remoto e 16 666 666 ns en local.
+**Probas.** Seis: o primeiro cambio debúxase no momento; un cambio dentro do intervalo espera o que falta (23 ms dun intervalo de 33 se pasaron 10), e os seguintes xa están programados; despois do intervalo, no momento; un temporizador que vai tarde non atrasa o fotograma; `updated` e `cancel` rematan a espera (`updating_and_cancelling_end_the_wait`, que ata a 2.3 se chamaba `drawing_and_cancelling_end_the_wait`); e `auto` dá 33 333 333 ns en remoto e 16 666 666 ns en local.
 
 ## `crates/meiga-core/src/text.rs`
 
-O texto como celas dunha grella: que caracteres ocupan unha cela, cales dúas e cales ningunha ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)).
+O texto como celas dunha grella: que caracteres ocupan unha cela, cales dúas e cales ningunha ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)). Desde a subfase 2.3, tamén como cortar un texto, con «…», para que caiba nunhas columnas: os títulos das tabs.
 
 ```rust
 pub enum CellChar {
@@ -535,13 +551,48 @@ pub fn width(text: &str) -> usize {
 - `impl Iterator<Item = CellChar> + '_`: devolve un iterador sen dicir o seu tipo exacto, que toma prestado o texto (`'_`).
 - **`width`** conta as celas que ocupa un texto.
 
-**Probas.** Tres: as letras, `ñ` e `€` ocupan unha cela, e o espazo é unha cela en branco; `中` e `😀` ocupan dúas cada un, e `日本語 abc`, dez; e os caracteres de control (o tabulador) e os que non teñen ancho (un acento que se combina e o espazo de ancho cero) non ocupan ningunha.
+```rust
+pub fn fit(text: &str, columns: usize, out: &mut Vec<CellChar>) {
+    out.clear();
+    out.extend(cells(text).take(columns.saturating_add(1)));
+    if out.len() <= columns {
+        return;
+    }
+    out.truncate(columns.saturating_sub(1));
+    if matches!(out.last(), Some(CellChar::WideLeft(_))) {
+        out.pop();
+    }
+    if columns > 0 {
+        out.push(CellChar::Narrow('…'));
+    }
+}
+```
+
+**`fit`**, desde a subfase 2.3, pon en `out` as celas de `text` que caben en `columns` columnas: todas, se caben, e se non, as primeiras e unha elipse (`…`) na última columna ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). A barra de tabs corta así o título de cada tab, coas columnas que caben no seu sitio ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)). Paso a paso:
+
+1. Baleira `out` e colle as celas do texto, como moito unha máis das que caben: abonda para saber se o texto cabe, e `take` para o iterador alí, sen percorrer o resto dun título longo.
+2. Se caben todas, xa está.
+3. Se non, deixa as `columns - 1` primeiras: a última columna é para a elipse.
+4. Se a última que queda é a metade esquerda dun carácter ancho, porque a súa metade dereita quedou fóra, quítaa tamén: medio carácter non se pode debuxar. Entón o texto ocupa unha columna menos das que hai.
+5. Pon a elipse, un carácter dunha cela, se hai polo menos unha columna. Sen columnas, non queda nada.
+
+- Por exemplo: `meiga-tabs` en 5 columnas é `meig…`; `ab` nunha columna, `…`, e en ningunha, nada; e `a中文` en 4 columnas, `a中…`, e en 3, `a…`, porque `中` xa non cabe enteiro antes da elipse.
+- **Por que contar celas.** A barra escribe os títulos coa fonte do terminal, que ten todos os caracteres do mesmo ancho: cortar un título é contar celas, sen medilo con DirectWrite ([ADR 0020 › Alternativas consideradas](../adr/0020-a-barra-de-tabs.md#alternativas-consideradas)).
+- **Sen reservar memoria.** Quen chama garda `out` entre un texto e outro, coma a barra, que usa o mesmo `Vec` para todos os títulos: `clear` baleirao sen soltar a súa memoria, e só se reserva máis cando un título ocupa máis celas ca os anteriores.
+- `saturating_add` e `saturating_sub` evitan desbordar nos extremos: con `usize::MAX` columnas, e sen ningunha. `matches!` compara a última cela co patrón sen movela.
+
+**Probas.** Cinco: as letras, `ñ` e `€` ocupan unha cela, e o espazo é unha cela en branco; `中` e `😀` ocupan dúas cada un, e `日本語 abc`, dez; os caracteres de control (o tabulador) e os que non teñen ancho (un acento que se combina e o espazo de ancho cero) non ocupan ningunha; e, desde a subfase 2.3, dúas de `fit`. Nelas, `fitted` empeza cun `out` que xa ten unha cela, para comprobar tamén que `fit` o baleira:
+
+| Proba | Que comproba |
+|---|---|
+| `text_that_fits_keeps_all_its_cells` | `pwsh` en 4 columnas e en 10 queda enteiro, e un texto baleiro non ten ningunha cela. |
+| `longer_text_ends_with_an_ellipsis_in_its_last_cell` | `meiga-tabs` en 5 columnas é `meig…`; `ab` en 1, `…`, e en 0, nada; e un carácter ancho que perdería a súa metade dereita queda fóra: `a中文` en 4 columnas é `a中…`, e en 3, `a…`. |
 
 ## `crates/meiga-core/src/shell.rs`
 
 Desde a subfase 1.6: a liña de comandos dun programa. `meiga.exe` recibe o programa que ten que lanzar e os seus argumentos xa divididos (`meiga [opcións] [--] [programa [argumentos]]`), pero a sesión lánzao con `CreateProcessW`, que recibe un só texto: hai que xuntalos outra vez, de forma que o programa os divida igual ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows), [ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Úsao `Options::parse` ([Código › meiga › `options.rs`](meiga.md#cratesmeigasrcoptionsrs)).
 
-Está en `meiga-core`, e non nun crate de Windows, aínda que as regras son as de Windows: só traballa con texto, sen chamar a ningunha API, así que se proba sen lanzar ningún programa. O módulo é para as shells e as súas liñas de comandos; polo de agora ten unha soa función.
+Está en `meiga-core`, e non nun crate de Windows, aínda que as regras son as de Windows: só traballa con texto, sen chamar a ningunha API, así que se proba sen lanzar ningún programa. O módulo é para as shells e as súas liñas de comandos; desde a subfase 2.3 ten dúas funcións: `command_line` e `program_name`, o nome do programa dunha liña de comandos.
 
 ```rust
 pub fn command_line<S: AsRef<str>>(program: &str, args: &[S]) -> Option<String> {
@@ -624,7 +675,41 @@ fn push_argument(line: &mut String, arg: &str) {
 - `std::iter::repeat_n('\\', n)` dá o mesmo carácter `n` veces, e `extend` engádeos todos ao texto.
 - **`cmd.exe` é a excepción**: le o resto da súa liña coas súas propias regras, e non coas do *runtime* de C ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)).
 
-**Probas.** Catro:
+```rust
+pub fn program_name(command_line: &str) -> &str {
+    let line = command_line.trim_start_matches([' ', '\t']);
+    let program = match line.strip_prefix('"') {
+        Some(quoted) => quoted
+            .split_once('"')
+            .map_or(quoted, |(program, _)| program),
+        None => line
+            .split_once([' ', '\t'])
+            .map_or(line, |(program, _)| program),
+    };
+    let file = program
+        .rsplit_once(['\\', '/'])
+        .map_or(program, |(_, file)| file);
+    match file.len().checked_sub(4) {
+        Some(stem) if file.is_char_boundary(stem) && file[stem..].eq_ignore_ascii_case(".exe") => {
+            &file[..stem]
+        }
+        _ => file,
+    }
+}
+```
+
+**`program_name`**, desde a subfase 2.3, dá o nome do programa dunha liña de comandos: o que mostra unha tab mentres o seu programa non lle dá un título, coma `pwsh` ou `cmd` ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). Cada tab cólleo ao abrirse, da liña de comandos que lanzou a súa sesión, ou que intentou lanzar por última vez, que lle devolve `session::start`: a do programa que se lle deu a `meiga.exe`, na primeira tab, ou a da shell por defecto ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs) e [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Paso a paso:
+
+1. Salta os espazos e os tabuladores do principio.
+2. Colle o primeiro argumento coma o le `CreateProcessW`, o mesmo que escribe `command_line`: se empeza por comiñas, ata as seguintes, ou ata o final se non as hai; se non, ata o primeiro espazo ou tabulador. Sen ningunha barra invertida especial.
+3. Del, o nome do arquivo: o que vai despois da última barra, `\` ou `/`, sen o cartafol.
+4. Sen `.exe`, en maiúsculas ou en minúsculas (`eq_ignore_ascii_case`): `wsl.EXE` é `wsl`. As outras extensións quedan: `build.cmd` segue sendo `build.cmd`.
+
+- Devolve un anaco do mesmo texto (`&str`), sen copialo: a tab cópiao unha vez, con `to_owned`.
+- `strip_prefix` dá o texto sen as comiñas do principio, se as ten. `split_once` e `rsplit_once` parten o texto na primeira ou na última aparición dun patrón, e `map_or` dá o texto enteiro se non aparece. Coma en `command_line`, un *array* de caracteres é un patrón que busca calquera deles.
+- **`checked_sub` e `is_char_boundary`.** `.exe` son catro bytes, e `checked_sub` dá `None` cos nomes máis curtos, que non o poden levar. `file[stem..]` corta o texto nun byte, e Rust para o programa (*panic*) se ese byte está no medio dun carácter de varios: en `中文`, de seis bytes, o corte caería no medio de `中`. A garda comproba primeiro que o byte empeza un carácter; se non, o nome non remata en `.exe`, e queda enteiro.
+
+**Probas.** Cinco:
 
 | Proba | Que comproba |
 |---|---|
@@ -632,6 +717,7 @@ fn push_argument(line: &mut String, arg: &str) {
 | `spaces_tabs_and_empty_arguments_go_in_quotes` | O programa `C:\Program Files\PowerShell\7\pwsh.exe` vai entre comiñas, e tamén un argumento con espazos, un baleiro e un cun tabulador. |
 | `quotes_and_the_backslashes_before_them_are_escaped` | As comiñas dentro dun argumento, as barras antes delas, as que non van antes de ningunhas, e as do final dun argumento con e sen comiñas: os exemplos da táboa. |
 | `a_program_cannot_have_quotes` | Un programa con comiñas dá `None`, e un baleiro, `""`. |
+| `the_name_of_a_program_is_its_file_without_the_folder_and_exe` | Desde a subfase 2.3: `pwsh` é `pwsh`; `cmd /c echo ola`, `cmd`; `  wsl.EXE\t-e bash`, `wsl`, sen os brancos do principio; `"C:\Program Files\PowerShell\7\pwsh.exe" -NoProfile`, `pwsh`; `C:\tools\build.cmd x`, `build.cmd`; e `tools/x.exe`, `x`. Cunhas comiñas que non se pechan, `"a b`, o nome chega ata o final, `a b`; unha liña baleira dá un nome baleiro; e `ñ.exe`, `ñ`. |
 
 ## `crates/meiga-core/src/input.rs`
 
@@ -1706,7 +1792,7 @@ fn push(&mut self, tab: Tab<T>) -> TabId {
 }
 ```
 
-**Abrir** pon a tab nova ao final da barra (decisión 6, decidido contigo) e devolve o seu identificador. Non a activa: o botón + activaraa despois con `activate`, e a restauración da sesión (7.2) abrirá as tabs sen activalas.
+**Abrir** pon a tab nova ao final da barra (decisión 6, decidido contigo) e devolve o seu identificador. Non a activa: o botón + e Ctrl+Maiús+T actívana despois con `activate`, e a restauración da sesión (7.2) abrirá as tabs sen activalas.
 
 ```rust
 fn try_with<E>(content: impl FnOnce(TabId) -> Result<T, E>) -> Result<Self, E> {
@@ -1956,7 +2042,7 @@ Mentres le a saída, `alacritty_terminal` avisa do que pasa chamando a `send_eve
 | `PtyWrite` | Unha resposta para o programa: os atributos do dispositivo (DA1 e DA2), o estado e a posición do cursor (DSR), o tamaño en celas… Engádese a `responses`. |
 | `ColorRequest(index, answer)` | Desde a subfase 1.6: unha pregunta por unha cor (OSC 4, 10, 11 ou 12 con `?`). Anótase en `questions` (`Question::Color`), coa posición na que irá a súa resposta: o final de `responses` nese momento. |
 | `TextAreaSizeRequest` | Desde a 1.6: unha pregunta polo tamaño da grella en píxeles (`CSI 14 t`). Anótase igual (`Question::TextAreaSize`). |
-| `Title` | O título que lle dá o programa á xanela (OSC 0 e 2). Un título baleiro é como non ter ningún: a tab mostrará o seu. |
+| `Title` | O título que lle dá o programa á xanela (OSC 0 e 2). Un título baleiro é como non ter ningún: desde a subfase 2.3, a tab mostra o nome do seu programa ([`program_name`](#cratesmeiga-coresrcshellrs)). |
 | `ResetTitle` | O programa recuperou un título gardado (`ESC [ 23 t`) que era ningún. |
 | `Bell` | A campá (BEL). |
 | `ClipboardStore(Clipboard, …)` | Texto para o portapapeis (OSC 52). Windows non ten selección primaria: só se garda o do portapapeis. |
@@ -3497,6 +3583,449 @@ As trinta e sete probas do terminal, nun arquivo aparte para que `mod.rs` sexa m
 | `the_selection_moves_with_the_text_and_goes_away_with_it` | Cando a pantalla se despraza, a selección sobe co seu texto. Cando o programa borra unha das súas filas, desaparece, tamén da outra fila, que non cambiou. Escribir enriba dela non a quita, pero borrar a pantalla si. |
 | `copying_only_the_damage_gives_the_same_screen_as_copying_everything` | **A invariante da copia.** 300 casos aleatorios, de ata 79 anacos dunha lista de 70: texto, caracteres anchos e combinados, movementos do cursor, borrados, inserir e borrar caracteres e liñas, desprazamentos e rexións, a pantalla alternativa, estilos, reinicios… Cada caso lese en anacos de ata 16 bytes, por veces cambiando o tamaño, con grellas de 2 × 1 a 80 × 24. Despois de cada anaco, a pantalla copiada só co dano ten que ser igual, cela a cela e no cursor, á dun segundo terminal copiado enteiro. Esta proba atopou o oco do dano de `alacritty_terminal` cos caracteres anchos. Desde a subfase 1.8, antes de cada anaco cambia tamén a selección, igual nos dous terminais: un de cada oito empeza unha, de calquera clase; dous de cada oito móvena; e un quítaa, ás veces con celas fóra da grella. Así comproba tamén que a copia marca as celas onde cambia a selección. Desde a 1.9, outro de cada oito move a vista do historial, igual nos dous terminais, con calquera `Scroll`: de dúas filas cara abaixo a dúas cara arriba, unha pantalla ou ata un extremo. |
 
+## `crates/meiga-core/src/ui/mod.rs`
+
+Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disposicións sen Windows: onde vai cada parte, á escala da xanela, e que parte hai debaixo dun punto ([ADR 0020](../adr/0020-a-barra-de-tabs.md)). Debuxalas e seguir o rato é traballo do programa, con `meiga-render`; eiquí só se calculan rectángulos, así que se proban con coordenadas exactas, sen xanela nin fontes (decisión 2). Polo de agora hai unha, a barra de tabs.
+
+```rust
+//! The parts of the interface that meiga draws itself, as layouts without
+//! Windows: where each part goes, at the scale of the window, and what is
+//! under a point.
+
+pub mod tabbar;
+```
+
+- O comentario do módulo (`//!`) di para que é, coma o parágrafo de enriba.
+- `pub mod tabbar;` declara o submódulo, que está en `src/ui/tabbar.rs`, e faino público: fóra do crate, os seus tipos úsanse co seu camiño, coma `meiga_core::ui::tabbar::Layout`. Ao contrario ca `model`, `ui` non reexporta nada con `pub use`: a disposición da barra chámase `Layout`, e lese co nome do seu módulo diante, `tabbar::Layout`.
+
+## `crates/meiga-core/src/ui/tabbar.rs`
+
+Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), [Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)). Para un número de tabs, un ancho e un DPI, di onde van as tabs, os seus títulos, os seus botóns de pechar (×) e os separadores entre elas, e o botón que abre unha tab (+); e que parte da barra hai debaixo dun punto. A barra do programa debúxaa con estes rectángulos, segue con eles o rato e marca as zonas que cambian ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+
+**A forma da barra**, coas medidas do Windows Terminal en píxeles a escala 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisións 1, 2 e 3; [Tecnoloxías › As barras de tabs](../tecnoloxias.md#55-as-barras-de-tabs-chrome-e-o-windows-terminal)):
+
+- unha franxa de 32 píxeles de alto, de todo o ancho da xanela, enriba do terminal e sempre visíbel, tamén cunha soa tab;
+- as tabs, unha tras outra desde a esquerda, todas do mesmo ancho, ata 240. Se non caben, encóllense todas por igual, sen mínimo: o mínimo e o desprazamento da barra chegan na subfase 2.8;
+- o +, un cadrado de 28, xusto despois da última tab;
+- 4 píxeles de separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do +;
+- cada tab debúxase desde esa separación de enriba ata o bordo de abaixo da barra, para que a activa, coa cor do fondo do terminal, se vexa unida a el; pero, para o rato, ocupa todo o alto da barra;
+- o ×, un cadrado de 24 á dereita da tab, a 4 píxeles do seu bordo dereito e centrado no seu alto, se cabe; e o título, desde 8 píxeles do bordo esquerdo da tab ata o ×;
+- e todas as medidas, escaladas co DPI da xanela, redondeadas e de polo menos un píxel.
+
+**Un exemplo**, o das probas: tres tabs nunha xanela de 800 píxeles a 96 DPI, a escala 100 %. As tabs caben enteiras, de 240 píxeles:
+
+| Parte | Método | Rectángulo |
+|---|---|---|
+| A barra | `bar()` | (0, 0, 800, 32) |
+| A primeira tab, como se debuxa | `tab(0)` | (4, 4, 244, 32) |
+| A terceira | `tab(2)` | (484, 4, 724, 32) |
+| O título da primeira | `title(0)` | (12, 4, 216, 32) |
+| O seu × | `close(0)` | (216, 6, 240, 30) |
+| O que resalta nel o punteiro | `close_highlight(0)` | (218, 8, 238, 28) |
+| A súa cruz | `cross(0)` | (224, 14, 232, 22) |
+| O separador entre a primeira e a segunda | `separator(1)` | (244, 10, 245, 26) |
+| O que cambia co aspecto da primeira | `tab_area(0)` | (4, 0, 245, 32) |
+| O + | `new_tab()` | (728, 4, 756, 32) |
+| O que resalta nel o punteiro | `new_highlight()` | (730, 6, 754, 30) |
+| O seu signo + | `plus()` | (736, 12, 747, 23) |
+
+Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `top`, `right`, `bottom`), e os dous últimos non se inclúen: a primeira tab remata no píxel 243, e a segunda empeza no 244. Á dereita do +, de 756 a 800, a barra está baleira.
+
+### As medidas
+
+```rust
+const BASE_DPI: u32 = 96;
+const HEIGHT: u32 = 32;
+const MAX_TAB: u32 = 240;
+const GAP: u32 = 4;
+const PADDING: u32 = 8;
+const CLOSE: u32 = 24;
+const CLOSE_HIGHLIGHT: u32 = 20;
+const CROSS: u32 = 8;
+const NEW: u32 = 28;
+const NEW_HIGHLIGHT: u32 = 24;
+const PLUS: u32 = 10;
+const SEPARATOR: u32 = 16;
+const STROKE: u32 = 1;
+```
+
+As medidas, en píxeles a escala 100 %, que é 96 DPI (`BASE_DPI`). [`Layout::new`](#crear-e-cambiar-new-height_at-e-resize) escálaas ao DPI da xanela.
+
+| Constante | A 100 % | Que é |
+|---|---|---|
+| `HEIGHT` | 32 | O alto da barra, o da fila de tabs do Windows Terminal. |
+| `MAX_TAB` | 240 | O ancho máximo dunha tab: o `TabViewItemMaxWidth` do `TabView` de WinUI, que usa o Windows Terminal. |
+| `GAP` | 4 | A separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do +. Tamén a que queda á dereita do ×. |
+| `PADDING` | 8 | Desde o bordo esquerdo dunha tab ata o seu título. Nunha tab sen ×, tamén desde o título ata o bordo dereito. |
+| `CLOSE` | 24 | O lado do ×, un cadrado á dereita da tab: todo el recibe o rato. |
+| `CLOSE_HIGHLIGHT` | 20 | O lado do cadrado que resalta o punteiro, no medio do ×. |
+| `CROSS` | 8 | O lado do cadrado da cruz, tamén no medio do ×. |
+| `NEW` | 28 | O lado do +, un cadrado tan alto coma as tabs. |
+| `NEW_HIGHLIGHT` | 24 | O lado do cadrado que resalta o punteiro, no medio do +. |
+| `PLUS` | 10 | O lado do signo +, no medio do botón. Medra un píxel se non ten a paridade do trazo ([`new`](#crear-e-cambiar-new-height_at-e-resize)). |
+| `SEPARATOR` | 16 | O alto das liñas que separan dúas tabs inactivas, no medio do alto das tabs. Teñen un píxel de ancho a calquera escala. |
+| `STROKE` | 1 | O grosor das liñas da cruz e do signo +. |
+
+Son privadas: fóra do módulo só se ven escaladas, a través de `Layout`.
+
+### `Part`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Part {
+    Tab(usize),
+    Close(usize),
+    New,
+    Empty,
+}
+```
+
+A parte da barra que hai nun punto, a resposta de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at):
+
+| Variante | Que é |
+|---|---|
+| `Tab(índice)` | A tab nesa posición, desde 0 e na orde da barra, fóra do seu ×: tamén na separación de enriba, por riba do que se debuxa. |
+| `Close(índice)` | O × da tab nesa posición. |
+| `New` | O +, en todo o alto da barra. |
+| `Empty` | A barra fóra das tabs e do +: á esquerda da primeira tab, entre a última e o +, e á dereita do +. |
+
+- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6).
+- É `Copy`, coma os tipos de [`mouse.rs`](#button-modifiers-wheel-e-mouseaction): uns poucos bytes, que van por valor.
+
+### `Layout`: os campos
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Layout {
+    height: u32,
+    max_tab: u32,
+    gap: u32,
+    padding: u32,
+    close: u32,
+    close_highlight: u32,
+    cross: u32,
+    new: u32,
+    new_highlight: u32,
+    plus: u32,
+    separator: u32,
+    stroke: u32,
+    width: u32,
+    tabs: usize,
+    tab_width: u32,
+}
+```
+
+Onde van as partes da barra, para un número de tabs, un ancho e unha escala:
+
+| Campo | Que é |
+|---|---|
+| De `height` a `stroke` | As medidas, unha por constante, xa escaladas ao DPI da xanela. |
+| `width` | O ancho da barra: o da área cliente da xanela. |
+| `tabs` | Cantas tabs hai. |
+| `tab_width` | O ancho de cada tab, que sae dos outros ([`fit_tabs`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)). |
+
+```rust
+pub const fn height(&self) -> u32 {
+    self.height
+}
+
+pub const fn width(&self) -> u32 {
+    self.width
+}
+
+pub const fn tabs(&self) -> usize {
+    self.tabs
+}
+
+pub const fn tab_width(&self) -> u32 {
+    self.tab_width
+}
+
+pub const fn stroke(&self) -> u32 {
+    self.stroke
+}
+```
+
+- **As medidas escálanse unha vez**, ao facer a disposición, e non en cada consulta. Cambiar o ancho ou o número de tabs só volta calcular o ancho das tabs ([`resize`](#crear-e-cambiar-new-height_at-e-resize)), e cambiar o DPI fai outra disposición.
+- Os campos son privados: ningún método deixa o ancho das tabs sen corresponder ao ancho da barra e ao número de tabs. Lense con `height`, `width`, `tabs`, `tab_width` e `stroke`, que son `const fn`. O alto da barra é tamén onde empeza o terminal.
+- Deriva o mesmo ca `Part`. É `Copy`: catorce números de 32 bits e un `usize`, que a barra do programa copia ao debuxar cada tab.
+
+### Crear e cambiar: `new`, `height_at` e `resize`
+
+```rust
+pub fn new(dpi: u32, width: u32, tabs: usize) -> Self {
+    let size = |pixels| scale(pixels, dpi);
+    let stroke = size(STROKE);
+    let plus = size(PLUS);
+    let mut layout = Self {
+        height: size(HEIGHT),
+        max_tab: size(MAX_TAB),
+        gap: size(GAP),
+        padding: size(PADDING),
+        close: size(CLOSE),
+        close_highlight: size(CLOSE_HIGHLIGHT),
+        cross: size(CROSS),
+        new: size(NEW),
+        new_highlight: size(NEW_HIGHLIGHT),
+        plus: plus + plus.abs_diff(stroke) % 2,
+        separator: size(SEPARATOR),
+        stroke,
+        width,
+        tabs,
+        tab_width: 0,
+    };
+    layout.tab_width = layout.fit_tabs();
+    layout
+}
+
+pub fn height_at(dpi: u32) -> u32 {
+    scale(HEIGHT, dpi)
+}
+
+pub fn resize(&mut self, width: u32, tabs: usize) {
+    self.width = width;
+    self.tabs = tabs;
+    self.tab_width = self.fit_tabs();
+}
+```
+
+- **`new`** fai a barra de `tabs` tabs nunha xanela de `width` píxeles de ancho, a `dpi`. Escala cada medida con [`scale`](#os-axudantes-scale-coord-e-centered), a través da *closure* `size`, e despois calcula o ancho das tabs, que necesita as medidas xa escaladas: por iso `tab_width` empeza en 0, e `fit_tabs` chámase cando a disposición xa existe.
+- **O signo + ten os brazos iguais.** A barra do programa debúxao cunha liña horizontal e outra vertical de `stroke` píxeles, que se cruzan no medio dun cadrado de `plus` de lado. Os brazos, o que sobresae cada liña a cada lado da outra, miden `(plus - stroke) / 2` se esa resta é par; se é impar, un brazo tería un píxel máis ca o outro, así que o lado medra un píxel: `abs_diff` dá a diferenza sen signo, e `% 2`, 1 se é impar. A 100 %, o trazo ten 1 e o lado 10, que medra a 11, con brazos de 5; a 150 % (144 DPI), o trazo ten 2 e o lado 15, que medra a 16, con brazos de 7; e a 125 % (120 DPI), o trazo ten 1 e o lado 13, que queda.
+- **`height_at`** dá o alto da barra a un DPI sen facer a disposición: 32 a 96 DPI e 40 a 120. Polo de agora só o usan as probas.
+- **`resize`**: a barra ten agora `width` píxeles de ancho e `tabs` tabs. As medidas quedan, e só cambia o ancho das tabs. A barra do programa chámao cando cambia o ancho da xanela e cando se abre ou se pecha unha tab; cando cambia o DPI, fai outra disposición con `new`.
+
+### A barra e as tabs: `bar`, `fit_tabs`, `tab` e `tab_area`
+
+```rust
+pub fn bar(&self) -> Rect {
+    Rect::new(0, 0, coord(self.width.into()), coord(self.height.into()))
+}
+
+fn fit_tabs(&self) -> u32 {
+    let room = self
+        .width
+        .saturating_sub(3 * self.gap)
+        .saturating_sub(self.new);
+    let tabs = u32::try_from(self.tabs.max(1)).unwrap_or(u32::MAX);
+    (room / tabs).min(self.max_tab)
+}
+```
+
+- **`bar`**: a barra enteira, desde (0, 0), co ancho da xanela e o alto da barra. A barra do programa mira con ela se un punto está na barra ([`contains_point`](#cratesmeiga-coresrcgeometryrs)), e márcaa enteira cando cambia a disposición.
+- **`fit_tabs`**, privada: o ancho de cada tab, o máximo se caben e, se non, todas iguais, tan anchas como caiban ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3):
+  1. O sitio das tabs é o ancho da barra menos tres separacións, á esquerda da primeira tab, entre a última e o + e á dereita do +, e menos o +: a 100 %, en 800 píxeles, 800 − 3 × 4 − 28 = 760.
+  2. Repártese entre as tabs, e cada unha ten como moito `max_tab`: con tres, 253, que quedan en 240; con dez, 76; con trinta, 25.
+  3. O que sobra da división queda á dereita do +, coa barra baleira.
+
+  **Sen mínimo:** con moitas tabs, estréitanse ata quedar sen × e sen título, e, nunha xanela máis estreita ca o + e as súas separacións, ata 0. O mínimo e o desprazamento da barra chegan na subfase 2.8 ([ADR 0020 › Consecuencias](../adr/0020-a-barra-de-tabs.md#consecuencias)). `saturating_sub` deixa o sitio en 0 en vez de desbordar, `max(1)` evita dividir entre 0 sen tabs, e un número de tabs que non cabe nun `u32` dá tabs de ancho 0.
+
+```rust
+pub fn tab(&self, index: usize) -> Rect {
+    let left = u64::from(self.gap)
+        .saturating_add((index as u64).saturating_mul(u64::from(self.tab_width)));
+    Rect::new(
+        coord(left),
+        coord(self.gap.into()),
+        coord(left.saturating_add(u64::from(self.tab_width))),
+        coord(self.height.into()),
+    )
+}
+
+pub fn tab_area(&self, index: usize) -> Rect {
+    let tab = self.tab(index);
+    Rect::new(tab.left, 0, tab.right.saturating_add(1), tab.bottom).intersection(self.bar())
+}
+
+const fn tab_height(&self) -> u32 {
+    self.height.saturating_sub(self.gap)
+}
+```
+
+- **`tab`**: a tab en `index` como se debuxa: desde `gap` + `index` × `tab_width`, co ancho dunha tab, e desde `gap` píxeles por debaixo do bordo de arriba da barra ata o de abaixo. Para o rato, a tab ocupa tamén a separación de enriba ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)). As contas fanse en `u64`, saturando, e [`coord`](#os-axudantes-scale-coord-e-centered) convérteas en coordenadas: `tab` acepta calquera índice, tamén o da tab despois da última, onde empeza o + ([`new_tab`](#o-botón-que-abre-unha-tab-new_tab-new_highlight-e-plus)).
+- **`tab_area`**: o que cambia cando a tab en `index` cambia de aspecto, porque pasa a estar activa ou resaltada, ou deixa de estalo: toda a súa columna da barra, desde o bordo de arriba, e un píxel máis á dereita, a primeira columna da tab seguinte, onde vai o separador entre as dúas, que depende tamén do aspecto desta. Recórtase á barra: na primeira tab do exemplo, (4, 0, 245, 32). A barra do programa marca así as tabs que gañan ou perden o resalte do punteiro (decisión 8).
+- **`tab_height`**, privada: o alto das tabs como se debuxan, o da barra menos a separación de enriba, 28 a 100 %. O × e os separadores céntranse nel.
+
+### O botón de pechar: `close`, `close_highlight` e `cross`
+
+```rust
+pub fn close(&self, index: usize) -> Option<Rect> {
+    let tab = self.tab(index);
+    let gap = coord(self.gap.into());
+    let right = tab.right - gap;
+    let left = right - coord(self.close.into());
+    if left < tab.left + gap {
+        return None;
+    }
+    let top = tab.top + coord((self.tab_height().saturating_sub(self.close) / 2).into());
+    Some(Rect::new(left, top, right, top + coord(self.close.into())))
+}
+
+pub fn close_highlight(&self, index: usize) -> Option<Rect> {
+    self.close(index)
+        .map(|close| centered(close, self.close_highlight))
+}
+
+pub fn cross(&self, index: usize) -> Option<Rect> {
+    self.close(index).map(|close| centered(close, self.cross))
+}
+```
+
+**`close`** dá o × da tab en `index`, ou `None` se a tab é demasiado estreita para el:
+
+1. Remata `gap` píxeles antes do bordo dereito da tab, e mide `close` de ancho.
+2. Se así empezase a menos de `gap` píxeles do bordo esquerdo, non cabe: a tab é máis estreita ca o × e as dúas separacións dos seus lados, 32 píxeles a 100 %, e queda sen el ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3). Esa tab péchase co botón do medio.
+3. Vai centrado no alto da tab que se debuxa ([`tab_height`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)): na primeira tab do exemplo, (216, 6, 240, 30), con 2 píxeles por riba e 2 por debaixo.
+
+- **`close_highlight`** e **`cross`**: o cadrado que resalta o punteiro, de 20 a 100 %, e o da cruz, de 8, no medio do × ([`centered`](#os-axudantes-scale-coord-e-centered)); `None` se a tab non ten ×. A barra do programa debuxa a cruz coma dúas diagonais de `stroke` píxeles de grosor, en chanzos dun píxel.
+- Para o rato, o × é todo o seu cadrado, aínda que o punteiro só resalte o do medio ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)).
+
+### O título e os separadores: `title` e `separator`
+
+```rust
+pub fn title(&self, index: usize) -> Rect {
+    let tab = self.tab(index);
+    let left = tab.left + coord(self.padding.into());
+    let right = self
+        .close(index)
+        .map_or(tab.right - coord(self.padding.into()), |close| close.left);
+    Rect::new(left, tab.top, right.max(left), tab.bottom)
+}
+
+pub fn separator(&self, index: usize) -> Option<Rect> {
+    if index == 0 || index >= self.tabs {
+        return None;
+    }
+    let tab = self.tab(index);
+    let top = tab.top + coord((self.tab_height().saturating_sub(self.separator) / 2).into());
+    Some(Rect::new(
+        tab.left,
+        top,
+        tab.left + 1,
+        top + coord(self.separator.into()),
+    ))
+}
+```
+
+- **`title`**: o sitio do título da tab en `index`: desde `padding` píxeles do seu bordo esquerdo ata o ×, ou, se a tab non ten ×, ata `padding` píxeles do bordo dereito; e o alto da tab que se debuxa. Nunca vai ao revés: se non hai sitio, `right.max(left)` deixa un rectángulo baleiro. No exemplo, (12, 4, 216, 32); con trinta tabs de 25, sen ×, (12, 4, 21, 32); e con tabs de ancho 0, (12, 4, 12, 32), baleiro.
+  - A barra do programa corta o título ás columnas que caben neste rectángulo ([`text::fit`](#cratesmeiga-coresrctextrs)) e debúxao centrado no alto da tab, recortado a el. Cando un título cambia, só redebuxa este rectángulo (decisión 8).
+- **`separator`**: a liña á esquerda da tab en `index`, entre ela e a anterior: un píxel de ancho, na primeira columna da tab, e `separator` de alto, centrada no alto da tab que se debuxa. No exemplo, a da segunda tab é (244, 10, 245, 26). A primeira tab non ten ningunha, nin hai ningunha despois da última: `None`. A barra do programa só a debuxa entre dúas tabs que non están activas nin resaltadas.
+
+### O botón que abre unha tab: `new_tab`, `new_highlight` e `plus`
+
+```rust
+pub fn new_tab(&self) -> Rect {
+    let left = self.tab(self.tabs).left + coord(self.gap.into());
+    let top = coord(self.gap.into());
+    Rect::new(
+        left,
+        top,
+        left + coord(self.new.into()),
+        top + coord(self.new.into()),
+    )
+}
+
+pub fn new_highlight(&self) -> Rect {
+    centered(self.new_tab(), self.new_highlight)
+}
+
+pub fn plus(&self) -> Rect {
+    centered(self.new_tab(), self.plus)
+}
+```
+
+- **`new_tab`**: o +, un cadrado de `new` píxeles, `gap` píxeles despois da última tab: onde empezaría unha tab máis (`tab(self.tabs)`), máis a separación. Vai á altura das tabs, desde `gap` por debaixo do bordo de arriba: a 100 %, de 4 a 32. No exemplo, (728, 4, 756, 32); con dez tabs de 76, (768, 4, 796, 32), e os 4 píxeles que quedan ata o 800 son a separación da dereita.
+- **`new_highlight`** e **`plus`**: o cadrado que resalta o punteiro, de 24 a 100 %, e o do signo +, de 11, no medio do botón: no exemplo, (730, 6, 754, 30) e (736, 12, 747, 23).
+
+### O que hai debaixo dun punto: `part_at`
+
+```rust
+pub fn part_at(&self, at: Point) -> Option<Part> {
+    if !self.bar().contains_point(at) {
+        return None;
+    }
+    let new = self.new_tab();
+    if (new.left..new.right).contains(&at.x) {
+        return Some(Part::New);
+    }
+    let gap = coord(self.gap.into());
+    if self.tab_width == 0 || at.x < gap {
+        return Some(Part::Empty);
+    }
+    // `at.x - gap` is not negative.
+    let index = ((at.x - gap) as u64 / u64::from(self.tab_width)) as usize;
+    if index >= self.tabs {
+        return Some(Part::Empty);
+    }
+    let on_close = self
+        .close(index)
+        .is_some_and(|close| close.contains_point(at));
+    Some(if on_close {
+        Part::Close(index)
+    } else {
+        Part::Tab(index)
+    })
+}
+```
+
+**`part_at`** dá a parte da barra no píxel `at`, en coordenadas da área cliente, ou `None` fóra da barra. As tabs e o + ocupan todo o alto da barra:
+
+1. Fóra da barra, `None`.
+2. Nas columnas do +, `New`. `(new.left..new.right).contains(&at.x)` mira só a columna, cun rango de enteiros que inclúe `left` e non `right`, coma os rectángulos.
+3. Sen sitio para as tabs (`tab_width` 0), ou á esquerda da primeira, `Empty`.
+4. A tab sae dunha división: a distancia desde o bordo esquerdo da primeira tab, entre o ancho dunha. Despois da última, entre ela e o + ou á dereita do +, `Empty`.
+5. Na tab, `Close` se o punto está no seu × (`contains_point`); se non, `Tab`, tamén por riba e por debaixo do × e na separación de enriba.
+
+- **Unha división, e non unha busca:** as tabs son todas iguais, así que a tab dun punto sae dunha conta, sexan dez ou cen.
+- O comentario lembra por que `at.x - gap` non é negativo: o paso 3 xa descartou os puntos á esquerda de `gap`, así que o `as u64` non perde nada. O cociente, que non pasa de `i32::MAX`, cabe nun `usize`.
+- A barra do programa converte a resposta no que resalta o punteiro, coa tab desa posición ([`Part`](#part)); fóra da barra, `None` non resalta nada. Se cada evento do rato vai á barra ou ao terminal, decídeo antes o programa ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7).
+
+No exemplo, `the_part_under_the_pointer` comproba:
+
+| Punto | Parte | Por que |
+|---|---|---|
+| (4, 20) | `Tab(0)` | O primeiro píxel da primeira tab. |
+| (100, 1) | `Tab(0)` | Na separación de enriba, por riba da tab que se debuxa: para o rato, a tab ocupa todo o alto. |
+| (220, 10) | `Close(0)` | No ×. |
+| (220, 5) e (220, 30) | `Tab(0)` | Por riba e por debaixo do ×, que ocupa as filas de 6 a 29. |
+| (243, 20) e (244, 20) | `Tab(0)` e `Tab(1)` | O último píxel da primeira tab e o primeiro da segunda. |
+| (723, 20) e (725, 20) | `Tab(2)` e `Empty` | O último píxel da terceira, e a separación entre ela e o +. |
+| (728, 0) e (755, 31) | `New` | As esquinas do +, tamén por riba do cadrado que se debuxa. |
+| (756, 20) e (2, 20) | `Empty` | Á dereita do + e á esquerda da primeira tab. |
+| (100, 32), (−1, 10) e (800, 10) | `None` | Debaixo da barra, á esquerda e á dereita dela. |
+
+### Os axudantes: `scale`, `coord` e `centered`
+
+```rust
+fn scale(pixels: u32, dpi: u32) -> u32 {
+    (pixels.saturating_mul(dpi).saturating_add(BASE_DPI / 2) / BASE_DPI).max(1)
+}
+
+fn coord(value: u64) -> i32 {
+    i32::try_from(value).unwrap_or(i32::MAX)
+}
+
+fn centered(rect: Rect, side: u32) -> Rect {
+    let side = coord(side.into());
+    let left = rect.left + (coord(rect.width().into()) - side) / 2;
+    let top = rect.top + (coord(rect.height().into()) - side) / 2;
+    Rect::new(left, top, left + side, top + side)
+}
+```
+
+- **`scale`**: `pixels` a escala 100 %, a `dpi`: multiplicado por `dpi` e dividido entre 96, redondeado ao máis próximo, e polo menos 1 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2). Sumar a metade de 96 antes de dividir redondea, coma en [`Rgb::mix`](#rgb): a división de enteiros só corta os decimais. Con `max(1)`, ningunha medida desaparece, nin sequera a un DPI moi baixo; e `saturating_mul` e `saturating_add` quedan no máximo dun `u32` en vez de desbordar. A 120 DPI (125 %), os 32 do alto son 40, e o trazo, 1,25, queda en 1; a 144 DPI (150 %), o trazo, 1,5, sobe a 2.
+- **`coord`**: un número de píxeles coma unha coordenada, un `i32`, ou `i32::MAX` se non cabe. Ningunha barra chega tan lonxe, pero así as contas de `tab` non desbordan con ningún índice.
+- **`centered`**: o cadrado de `side` píxeles no medio de `rect`. Se o que sobra é impar, o píxel de máis queda á dereita e debaixo: o signo + de 11 no + de 28 deixa 8 píxeles á esquerda e por riba, e 9 á dereita e por debaixo. Úsano `close_highlight`, `cross`, `new_highlight` e `plus`.
+
+**Probas.** Cinco, con coordenadas exactas. `three` fai a barra do exemplo: tres tabs en 800 píxeles a 96 DPI.
+
+| Proba | Que comproba |
+|---|---|
+| `tabs_are_as_wide_as_in_windows_terminal_and_the_button_follows_them` | A barra do exemplo, de 32 de alto, tamén con `height_at(96)`, en (0, 0, 800, 32); as tabs de 240, a primeira en (4, 4, 244, 32) e a terceira en (484, 4, 724, 32); e o + en (728, 4, 756, 32), co resalte en (730, 6, 754, 30) e o signo de 11 píxeles en (736, 12, 747, 23), para que os dous brazos dunha liña de 1 teñan 5. |
+| `a_tab_has_its_title_and_then_its_close_button` | O × da primeira tab en (216, 6, 240, 30), o seu resalte en (218, 8, 238, 28) e a cruz en (224, 14, 232, 22); o título, (12, 4, 216, 32), ata o ×; o separador da segunda tab, na súa primeira columna, (244, 10, 245, 26), e ningún na primeira nin despois da última; e o que cambia co aspecto da primeira, (4, 0, 245, 32). |
+| `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button` | Na mesma barra, dez tabs miden 76 (800 − 3 × 4 − 28 = 760, entre 10), e o + vai en (768, 4, 796, 32); trinta, 25, sen ×, co título en (12, 4, 21, 32); e nunha xanela de 20 píxeles, máis estreita ca o +, as tabs miden 0, e o título da segunda está baleiro, (12, 4, 12, 32). |
+| `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 1920 píxeles con dúas tabs: a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, e a barra de 40. |
+| `the_part_under_the_pointer` | Os puntos da táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at). |
+
 ## `crates/meiga-core/tests/recordings.rs`
 
 Probas de integración: usan o crate desde fóra, como os outros crates, con gravacións reais do ConPTY que leva meiga, feitas co exemplo `conpty` de `meiga-win` e a súa opción `--record` ([Código › meiga-win](meiga-win.md#cratesmeiga-winexamplesconptyrs)). As gravacións están en `tests/data/` e entran no binario das probas con `include_bytes!`, así que as probas non len ningún arquivo:
@@ -3566,7 +4095,7 @@ a [b]
 - Cada tab chámase cunha letra, `a`, `b`, `c`…, na orde na que se abriu, e despois de `z`, `aa`, `ab`… (`Names::fresh`). O contido de cada tab é o seu nome: a xanela é unha `Window<String>`.
 - A barra mostra a tab activa entre corchetes (`bar`).
 - As ordes van en inglés, coma as outras mensaxes de meiga:
-  - `new` abre unha tab ao final e actívaa, coma fará o botón +;
+  - `new` abre unha tab ao final e actívaa, coma o botón + desde a subfase 2.3;
   - `close TAB` pecha unha tab; se é a única, a xanela pecharíase, e o exemplo remata;
   - `move TAB POSITION` move unha tab a unha posición, contada desde 1, coma na barra;
   - `activate TAB`, `next` e `previous` activan unha tab;

@@ -18,3 +18,4 @@ pub mod paste;
 pub mod shell;
 pub mod term;
 pub mod text;
+pub mod ui;

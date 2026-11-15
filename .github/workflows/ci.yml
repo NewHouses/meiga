@@ -103,6 +103,9 @@ jobs:
       - name: Check the tabs
         run: ./tools/check-tabs.ps1
 
+      - name: Check the tab bar with the mouse
+        run: ./tools/check-tabbar.ps1
+
       - name: Check the start-up measurement
         run: ./tools/perf/measure-startup.ps1 -Runs 3 -Warmup 1
 

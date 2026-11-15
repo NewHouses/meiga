@@ -408,19 +408,22 @@ function Show-Text([string]$Text) {
 }
 
 # The size of the grid, which the script wrote first, and of its cells: the
-# grid fills the client area of the window but for the strip of the scroll
-# bar, 12 pixels at a scale of 100 %, and less than a cell.
+# grid fills the client area of the window below the tab bar, 32 pixels high
+# at a scale of 100 %, but for the strip of the scroll bar, 12 pixels, and
+# less than a cell.
 function Measure-Cells {
     $size = @(Get-Lines)[0] -split ' '
     $rect = [Meiga.Tools.MouseCheck+RECT]::new()
     if (-not $api::GetClientRect($window, [ref]$rect)) {
         throw "Could not read the size of the window of $exe."
     }
-    $strip = [Math]::Max(1, [Math]::Floor((12 * $api::GetDpiForWindow($window) + 48) / 96))
+    $dpi = $api::GetDpiForWindow($window)
+    $strip = [Math]::Max(1, [Math]::Floor((12 * $dpi + 48) / 96))
+    $script:bar = [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
     $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
     $script:cell = [pscustomobject]@{
         Width = [Math]::Floor(($rect.Right - $strip) / $grid.Columns)
-        Height = [Math]::Floor($rect.Bottom / $grid.Rows)
+        Height = [Math]::Floor(($rect.Bottom - $bar) / $grid.Rows)
     }
 }
 
@@ -433,7 +436,7 @@ function Get-X([int]$Column, [string]$Side = 'Middle') {
         default { $Column * $cell.Width + [Math]::Floor($cell.Width / 2) }
     }
 }
-function Get-Y([int]$Row) { $Row * $cell.Height + [Math]::Floor($cell.Height / 2) }
+function Get-Y([int]$Row) { $bar + $Row * $cell.Height + [Math]::Floor($cell.Height / 2) }
 
 # Posts messages to the window at once: see PostAll.
 function Send-Messages([long[]]$Messages) {
@@ -674,6 +677,7 @@ $attached = $false
 $pointer = $null
 $grid = $null
 $cell = $null
+$bar = 0
 $passed = $false
 $saved = Get-Text
 try {
