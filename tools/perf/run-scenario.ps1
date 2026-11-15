@@ -45,7 +45,9 @@ Process ids of the terminal, instead of -Name.
 .PARAMETER Start
 Instead of -Name, the path of a terminal that runs the program of its
 command line, such as meiga. The script starts it with the scenario as its
-program, measures that process, and closes its window at the end.
+program, measures that process, and closes its window at the end. It starts
+it with an empty folder as APPDATA, so that meiga has its default values,
+whatever %APPDATA%\meiga\config.toml has.
 
 .PARAMETER Maximized
 With -Start, starts the terminal maximized, as the baseline measured each
@@ -254,6 +256,12 @@ function Get-StartedCount {
 function Start-Terminal {
     $info = [Diagnostics.ProcessStartInfo]::new($Start)
     $info.UseShellExecute = $false
+    # meiga reads its configuration from %APPDATA%\meiga\config.toml: an
+    # empty folder instead gives it its default values. The programs in its
+    # tabs get that folder too.
+    $script:appdata = Join-Path ([IO.Path]::GetTempPath()) "meiga-run-scenario-$PID-appdata"
+    $null = New-Item -ItemType Directory -Force -Path $appdata
+    $info.Environment['APPDATA'] = $appdata
     if ($Maximized) {
         $info.WindowStyle = [Diagnostics.ProcessWindowStyle]::Maximized
     }
@@ -267,6 +275,7 @@ function Start-Terminal {
 
 $windows = [Collections.Generic.List[object]]::new()
 $terminalProcess = $null
+$appdata = $null
 try {
     if ($Start) {
         $terminalProcess = Start-Terminal
@@ -365,6 +374,9 @@ finally {
             $terminalProcess.Kill()
         }
         $terminalProcess.Dispose()
+    }
+    if ($appdata) {
+        Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 

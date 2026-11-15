@@ -89,9 +89,16 @@ public static extern bool AreDpiAwarenessContextsEqual(IntPtr first, IntPtr seco
 '@
 }
 
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "meiga-check-window-$PID-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
+
 $title = 'meiga-check'
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 # With /k, cmd shows each command in the title while it runs ("cmd.exe -
 # ping ..."), as soon as it starts, and the title "meiga" could be gone
 # before the check below. With /c it does not. pause keeps cmd running until
@@ -188,4 +195,5 @@ finally {
         $process.Kill()
     }
     $process.Dispose()
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
 }

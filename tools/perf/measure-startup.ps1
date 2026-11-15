@@ -98,6 +98,7 @@ $invariant = [cultureinfo]::InvariantCulture
 function Measure-Start {
     $info = [Diagnostics.ProcessStartInfo]::new($Path)
     $info.UseShellExecute = $false
+    $info.Environment['APPDATA'] = $appdata
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $process = [Diagnostics.Process]::Start($info)
     try {
@@ -130,13 +131,22 @@ function Measure-Start {
     $clock.Elapsed.TotalMilliseconds
 }
 
-Write-Host "Starting $exe $Warmup + $Runs times..."
-for ($run = 1; $run -le $Warmup; $run++) {
-    $null = Measure-Start
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "meiga-measure-startup-$PID-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
+try {
+    Write-Host "Starting $exe $Warmup + $Runs times..."
+    for ($run = 1; $run -le $Warmup; $run++) {
+        $null = Measure-Start
+    }
+    $start = Get-Date
+    $times = for ($run = 1; $run -le $Runs; $run++) {
+        [pscustomobject]@{ run = $run; ms = Measure-Start }
+    }
 }
-$start = Get-Date
-$times = for ($run = 1; $run -le $Runs; $run++) {
-    [pscustomobject]@{ run = $run; ms = Measure-Start }
+finally {
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # Nearest-rank percentile of the sorted times.
