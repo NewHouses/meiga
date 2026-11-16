@@ -10,9 +10,8 @@ pub const USAGE: &str =
     "Usage: meiga [--trace-frames <file>] [--marks] [--] [<program> [<arguments>]]
        meiga [--trace-frames <file>] [--marks] --bench partial|full|text
 
-  <program>              The program to run in the terminal, and its arguments.
-                         Without it, PowerShell 7 (pwsh) or, if it is not
-                         installed, Windows PowerShell.
+  <program>              The program to run in the first tab, and its arguments.
+                         Without it, the default profile.
   --                     The end of the options: what follows is the program.
   --trace-frames <file>  Write a line per frame to <file> (CSV).
   --marks                Draw a magenta border around the areas that each frame
@@ -41,8 +40,8 @@ pub struct Options {
     /// Whether the window shows the areas that each frame presents.
     pub marks: bool,
     pub bench: Option<BenchMode>,
-    /// The command line of the program, quoted for Windows, or `None` for
-    /// the default shell.
+    /// The command line of the program of the first tab, quoted for
+    /// Windows, or `None` for the default profile.
     pub command: Option<String>,
 }
 

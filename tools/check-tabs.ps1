@@ -49,11 +49,11 @@ Windows lets it blink. With the settings of Windows by default, the cursor
 changes about every half a second while it blinks, and stops blinking 5 s
 after the screen last changed.
 
-It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal,
-which is also the default shell of the new tabs. The new tabs load the
-profile of PowerShell: one that draws something seconds after the prompt
-can make the check fail. The check uses the clipboard: if it had text, the
-check puts it back at the end.
+It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
+The new tabs run the default profile of meiga, which is PowerShell 7 if
+meiga finds it, and load the profile of PowerShell: one that draws
+something seconds after the prompt can make the check fail. The check uses
+the clipboard: if it had text, the check puts it back at the end.
 
 If a check fails, the script ends meiga.exe and keeps the frame log and the
 reports of the script.
@@ -347,6 +347,11 @@ $log = Join-Path $temp "$name.csv"
 $reports = Join-Path $temp "$name.txt"
 $script = Join-Path $temp "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 Remove-Item -LiteralPath $reports -ErrorAction SilentlyContinue
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
@@ -519,6 +524,7 @@ function Wait-Ended([int]$Id, [string]$What) {
 
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name, '-Log', $reports) {
     $info.ArgumentList.Add($argument)
@@ -750,6 +756,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log, $reports -ErrorAction SilentlyContinue
     }

@@ -5,6 +5,7 @@ use std::time::Instant;
 
 use meiga_core::geometry::Rect;
 use meiga_core::model::TabId;
+use meiga_core::profile::Launch;
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::HDC;
 use meiga_win::event::{Event, Handler, HandlerError};
@@ -14,6 +15,7 @@ use crate::bench::Bench;
 use crate::frames::{Frames, Scene};
 use crate::mouse::Response;
 use crate::options::{BenchMode, Options};
+use crate::shells::{Report, Shells};
 use crate::tabs::Tabs;
 use crate::trace::Trace;
 use crate::view::{FONT_FAMILIES, FONT_POINTS};
@@ -59,17 +61,22 @@ pub struct App {
     frames: Frames,
     /// The tabs own their sessions, which close when they are dropped.
     content: Content,
+    /// The problems of the configuration, which a message box tells once
+    /// the window is on the screen.
+    report: Option<Report>,
 }
 
 impl App {
     /// The content of `window`, with the first frame composed: the terminal
-    /// with the program of `options` running in its first tab, or a
-    /// benchmark, which starts its frames as soon as the window runs.
+    /// with the program of `options`, or else the default profile, running
+    /// in its first tab, or a benchmark, which starts its frames as soon as
+    /// the window runs.
     pub fn new(
         window: &Window,
         options: &Options,
         trace: Option<Trace>,
     ) -> Result<Self, HandlerError> {
+        let mut report = None;
         // Only the content with text reads the fonts of the system.
         let mut content = match options.bench {
             Some(BenchMode::Text) => {
@@ -83,13 +90,25 @@ impl App {
                 Content::Bench(Box::new(Bench::new(BenchMode::Text, Some(font))))
             }
             Some(mode) => Content::Bench(Box::new(Bench::new(mode, None))),
-            None => Content::Terminal(Box::new(Tabs::new(window, options.command.as_deref())?)),
+            None => {
+                let (shells, problems) = Shells::load();
+                report = problems;
+                let first = options
+                    .command
+                    .as_deref()
+                    .map_or_else(|| shells.default_launch(), Launch::command_line);
+                Content::Terminal(Box::new(Tabs::new(window, first, shells)?))
+            }
         };
         let mut frames = Frames::new(window, &mut content, trace, options.marks)?;
         if options.bench.is_some() {
             frames.schedule(window)?;
         }
-        Ok(Self { frames, content })
+        Ok(Self {
+            frames,
+            content,
+            report,
+        })
     }
 
     const fn is_bench(&self) -> bool {
@@ -203,6 +222,18 @@ impl Handler for App {
                 }
             }
             Event::Wake(tab) => self.wake(window, tab)?,
+            Event::Shown => {
+                // In front of the window, which owns it, as the questions
+                // before pasting.
+                if let Some(report) = self.report.take() {
+                    window.alert(TITLE, &report.text());
+                    let closed = Response {
+                        dialog: true,
+                        ..Response::default()
+                    };
+                    self.respond(window, closed)?;
+                }
+            }
             Event::Focus { focused } => {
                 if let Content::Terminal(tabs) = &mut self.content {
                     tabs.focus(window, focused, Instant::now());

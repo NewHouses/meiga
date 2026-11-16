@@ -415,6 +415,11 @@ $log = Join-Path $temp "$name.csv"
 $reports = Join-Path $temp "$name.txt"
 $script = Join-Path $temp "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 Remove-Item -LiteralPath $reports -ErrorAction SilentlyContinue
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
@@ -700,7 +705,8 @@ function Get-Bar([int]$Count) {
     $padding = Get-Scaled 8
     $closeSide = Get-Scaled 24
     $newSide = Get-Scaled 28
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide) / $Count))
+    $profilesSide = Get-Scaled 24
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
@@ -875,6 +881,7 @@ function Send-Press([int]$Code, [int[]]$Down = @()) {
 
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name, '-Log', $reports) {
     $info.ArgumentList.Add($argument)
@@ -1236,6 +1243,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$reports.*" -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log, $reports -ErrorAction SilentlyContinue

@@ -130,6 +130,11 @@ $name = "meiga-check-present-$PID"
 $log = Join-Path ([IO.Path]::GetTempPath()) "$name.csv"
 $script = Join-Path ([IO.Path]::GetTempPath()) "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
 
@@ -139,6 +144,7 @@ $previousDpi = [Meiga.Tools.PresentCheck]::SetThreadDpiAwarenessContext([IntPtr]
 
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name) {
     $info.ArgumentList.Add($argument)
@@ -367,6 +373,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     }

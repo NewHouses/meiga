@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 2.4. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
+> Estado: subfase 2.5. Na 2.5 chegou `check-profiles.ps1`, que comproba os perfís e a configuración de meiga: a caixa de mensaxe cos erros do `config.toml`, o perfil e o contorno da primeira tab, o menú dos perfís, co teclado e co rato, cada perfil que atopa meiga, o botón + e *Duplicate tab*; e as comprobacións con xanela lanzan meiga cun `APPDATA` baleiro, para que o `config.toml` de quen as executa non cambie o que comproban, e `check-tabbar.ps1` e `check-menu.ps1` deixan sitio na barra para o botón dos perfís. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -17,6 +17,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`check-tabs.ps1`](#toolscheck-tabsps1) | Comprobar que en `meiga.exe` os atallos abren, mostran e pechan as tabs, e que a saída dunha tab oculta non debuxa nada, o seu programa recibe as respostas ás súas preguntas e non copia ao portapapeis, e a tab, cando se mostra, leva o seu título á xanela e colle a grella dela. |
 | [`check-tabbar.ps1`](#toolscheck-tabbarps1) | Comprobar co rato a barra de tabs de `meiga.exe`: que o botón + abre unha tab, que o × e o botón do medio as pechan e un clic as mostra, que cada cambio debuxa só o que cambia, que un programa que cambia o título sen parar, ou que pon o mesmo unha e outra vez, non esperta a xanela miles de veces por segundo, e que a barra segue co rato mentres Ctrl+Tab mostra outra tab. |
 | [`check-menu.ps1`](#toolscheck-menups1) | Comprobar co rato e co teclado o menú dunha tab de `meiga.exe`: que se abre debaixo da tab ou no punteiro, que cada cambio debuxa só o que cambia, que os seus elementos duplican e pechan tabs, que as teclas que colle non lle chegan ao programa, e as que baixaron antes para el si, ao subir, e que se pecha con Esc, tamén cun botón premido nel, cun clic fóra, cando a xanela cambia de tamaño e cando se minimiza. |
+| [`check-profiles.ps1`](#toolscheck-profilesps1) | Comprobar os perfís e a configuración de `meiga.exe`: que os erros do `config.toml` saen nunha caixa de mensaxe da súa xanela, sen parar nada; que a primeira tab corre o perfil por defecto, no seu cartafol e co contorno dun terminal; que Ctrl+Maiús+Espazo e o botón ▾ abren o menú dos perfís, e que cada perfil corre a súa shell no cartafol persoal; e que o + abre o perfil por defecto, e *Duplicate tab* repite o perfil e o cartafol. |
 | [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
@@ -393,11 +394,11 @@ Comproba que `meiga.exe` non depende do *runtime* de Visual C++. Protexe a decis
 Saída esperada:
 
 ```text
-meiga.exe imports: kernel32.dll, dwrite.dll, ntdll.dll, oleaut32.dll, combase.dll, gdi32.dll, user32.dll, api-ms-win-core-synch-l1-2-0.dll
+meiga.exe imports: kernel32.dll, dwrite.dll, ntdll.dll, oleaut32.dll, combase.dll, api-ms-win-core-synch-l1-2-0.dll, gdi32.dll, user32.dll, advapi32.dll
 OK: no dependencies on the Visual C++ runtime.
 ```
 
-`user32.dll` e `gdi32.dll` chegaron coa xanela, na subfase 1.1, e `dwrite.dll`, `combase.dll` e `oleaut32.dll`, co texto, na 1.3. Para que serve cada unha, e por que ata a 1.4 `kernel32.dll` aparecía dúas veces, explícase en [Código › meiga](meiga.md#comprobacións-feitas).
+`user32.dll` e `gdi32.dll` chegaron coa xanela, na subfase 1.1; `dwrite.dll`, `combase.dll` e `oleaut32.dll`, co texto, na 1.3; e `advapi32.dll`, a das funcións do rexistro de Windows, cos perfís, na 2.5: meiga le nel as distribucións de WSL e o cartafol de Git for Windows ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4). Para que serve cada unha, e por que ata a 1.4 `kernel32.dll` aparecía dúas veces, explícase en [Código › meiga](meiga.md#comprobacións-feitas).
 
 **Por que fai falta.** A opción `+crt-static` está en `.cargo/config.toml`, pero hai formas de perdela sen que nada falle: a máis habitual é definir a variábel `RUSTFLAGS`, que fai que Cargo ignore os `rustflags` de `.cargo/config.toml` (ver [Código › .github](github.md#variábeis-de-contorno)). Comprobouse cunha compilación con `RUSTFLAGS='-C opt-level=3'`:
 
@@ -568,9 +569,25 @@ public static extern bool AreDpiAwarenessContextsEqual(IntPtr first, IntPtr seco
 - `GetClassNameW` dá o nome da clase dunha xanela, e `GetWindowDpiAwarenessContext`, como escala a xanela. `[return: MarshalAs(UnmanagedType.Bool)]` indica que o `BOOL` de Windows (un número de 4 bytes) se converte nun `bool`.
 
 ```powershell
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "meiga-check-window-$PID-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
+```
+
+**O `APPDATA` baleiro.** Desde a subfase 2.5, meiga le ao arrancar a súa configuración, `%APPDATA%\meiga\config.toml` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 1), e un `config.toml` de quen executa a comprobación podería cambiar o que comproba: o perfil das tabs novas, por exemplo, ou unha caixa cos seus erros diante da xanela. Por iso, todas as comprobacións que abren meiga lle dan un `APPDATA` propio, un cartafol baleiro: sen `config.toml`, meiga usa os seus valores por defecto.
+
+- O cartafol vai no cartafol temporal, co número do proceso da comprobación, coma os seus outros arquivos: dúas comprobacións á vez non o comparten. `New-Item -ItemType Directory -Force` créao, e non falla se xa existe; `$null =` descarta o obxecto do cartafol, que se mostraría.
+- meiga le `APPDATA` no seu contorno, que lle dá a comprobación (`$info.Environment`, máis abaixo). E os programas das súas tabs reciben ese mesmo cartafol: meiga dálles o seu contorno (decisión 9).
+- O `finally` bórrao ao rematar.
+- As outras comprobacións fan o mesmo, co cartafol `meiga-check-<nome>-<PID>-appdata`, salvo [`check-profiles.ps1`](#toolscheck-profilesps1), que escribe no seu o `config.toml` que comproba.
+
+```powershell
 $title = 'meiga-check'
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 # With /k, cmd shows each command in the title while it runs ("cmd.exe -
 # ping ..."), as soon as it starts, and the title "meiga" could be gone
 # before the check below. With /c it does not. pause keeps cmd running until
@@ -584,6 +601,7 @@ foreach ($argument in 'cmd', '/d', '/c', "ping -n 2 127.0.0.1 >nul & title $titl
 Desde a subfase 1.6, meiga executa no seu terminal o programa da súa liña de comandos ([Código › meiga](meiga.md#cratesmeigasrcoptionsrs)). O script dálle un `cmd` que fai algo que se ve desde fóra sen ler a pantalla: cambiar o título da xanela.
 
 - `UseShellExecute = $false`: Windows crea o proceso directamente, sen pasar polo Explorador.
+- `Environment` é o contorno que recibe meiga: unha copia do da comprobación, que se pode cambiar antes de arrancalo. Desde a 2.5, `APPDATA` é o cartafol baleiro de enriba.
 - `ArgumentList` pasa cada argumento por separado, e .NET pon as comiñas que fagan falta: o último leva espazos, así que vai entre comiñas. meiga recibe os catro e xúntaos outra vez, coas mesmas regras, para lanzar cmd ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)). Polo camiño, ninguén interpreta o `>nul` nin o `&`: chegan ao cmd de dentro de meiga, que quita as comiñas de fóra e executa o que hai dentro.
 - `/d`: cmd non executa os comandos `AutoRun` do rexistro de Windows, que alguén pode ter configurados e que cambiarían o que fai.
 - `/c`: cmd executa os comandos e remata. Con `/k`, que despois segue aberto esperando ordes, coma unha shell, cmd mostra no título cada comando mentres o executa (`C:\Windows\SYSTEM32\cmd.exe - ping  -n 2 127.0.0.1`), e faino en canto arranca: o título «meiga» podía desaparecer antes de que o script mirase a xanela. Pasou nunha execución da CI: o título de cmd chega poucos milisegundos despois de abrirse a xanela. Con `/c`, cmd non toca o título: só o cambia `title`.
@@ -708,6 +726,7 @@ finally {
         $process.Kill()
     }
     $process.Dispose()
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
 }
 ```
 
@@ -715,7 +734,7 @@ finally {
 
 - `Get-Process -Id … -ErrorAction Ignore` non devolve nada, sen erro, se o proceso xa non existe: `$alive` son os que seguen vivos. O script mira cada 0,1 s ata que non queda ningún, e se pasa o tempo, falla e di cales seguen.
 - O script pecha a xanela cando cmd xa leva polo menos un segundo aberto. Pechala mentres un programa aínda se está a conectar á consola é outro caso, que estuda o [ADR 0011](../adr/0011-fin-e-peche-das-sesions.md).
-- O bloque `finally` execútase sempre, tamén despois dun `throw`: se meiga segue aberto, remátao (`Kill`), e libera os recursos do obxecto do proceso (`Dispose`).
+- O bloque `finally` execútase sempre, tamén despois dun `throw`: se meiga segue aberto, remátao (`Kill`), e libera os recursos do obxecto do proceso (`Dispose`). Despois borra o cartafol `APPDATA`, co que teña dentro (`-Recurse -Force`), e sen erro se non pode (`-ErrorAction SilentlyContinue`).
 
 A CI executa este script en cada PR, despois de empaquetar (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)), así que o anfitrión é `OpenConsole.exe`: `package.ps1` deixou o ConPTY ao lado de `meiga.exe`. Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade.
 
@@ -835,11 +854,17 @@ $name = "meiga-check-present-$PID"
 $log = Join-Path ([IO.Path]::GetTempPath()) "$name.csv"
 $script = Join-Path ([IO.Path]::GetTempPath()) "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
 ```
 
 - O rexistro e o script do terminal van ao cartafol temporal, e os eventos levan o mesmo nome, co número do proceso de PowerShell (`$PID`): dúas comprobacións á vez non comparten arquivos nin eventos.
+- **O `APPDATA` baleiro**, desde a 2.5, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*): co nome dos outros arquivos e `-appdata`, para que meiga non lea o `config.toml` de quen executa a comprobación.
 - O script escríbese nun arquivo, e pwsh execútao con `-File`: así o seu código non pasa polas liñas de comandos de meiga e de pwsh, onde as súas comiñas e os seus `$` terían que ir escapados.
 - **Os eventos con nome.** A comprobación e o script do terminal son procesos distintos, e non se falan polo terminal: o que escribe o script vai á pantalla de meiga, e escribir no terminal dependería do teclado, que comproba outro script, [`check-keyboard.ps1`](#toolscheck-keyboardps1). Ata a subfase 1.7, meiga nin sequera tiña teclado. Un evento (`EventWaitHandle`) é un obxecto de Windows que está sinalado ou non ([Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos)), e un evento con nome pódeo abrir calquera proceso da mesma sesión de Windows que saiba o nome. O script do terminal ábreos con `OpenExisting`, que falla se non existen: por iso a comprobación os crea antes de arrancar meiga.
 - **De reinicio automático** (`AutoReset`): cada `Set` deixa pasar unha soa espera, e o evento volta a quedar sen sinalar. Así, cada `go` é exactamente un paso, e cada `done`, un paso escrito. Se a comprobación sinala `go` antes de que o script chegue a esperalo, como no primeiro paso, mentres pwsh aínda arranca, o evento queda sinalado ata entón: o aviso non se perde.
@@ -856,6 +881,7 @@ $previousDpi = [Meiga.Tools.PresentCheck]::SetThreadDpiAwarenessContext([IntPtr]
 ```powershell
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name) {
     $info.ArgumentList.Add($argument)
@@ -866,6 +892,7 @@ foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '
 - `ArgumentList` pasa cada argumento por separado, e .NET pon as comiñas que fagan falta: as rutas do cartafol temporal poden ter espazos. meiga xunta outra vez o programa e os seus argumentos coas mesmas regras, así que pwsh recibe exactamente estes ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows)).
 - As opcións de pwsh: sen o texto de benvida (`-NoLogo`); sen o perfil do usuario (`-NoProfile`), que podería escribir na pantalla ou tardar; sen preguntar nada (`-NonInteractive`), porque ninguén podería responder; e sen a directiva de execución (`-ExecutionPolicy Bypass`), que podería impedir executar un script novo do cartafol temporal. `-Name` é o parámetro do script: o nome dos eventos.
 - Se meiga non pode lanzar pwsh, móstrao no seu terminal, e a comprobación falla no primeiro paso, porque o script non responde.
+- O contorno de meiga leva o `APPDATA` baleiro, coma en `check-window.ps1`.
 
 ```powershell
     function Get-Log {
@@ -977,6 +1004,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     }
@@ -988,7 +1016,7 @@ finally {
 
 - O fío de PowerShell volta á súa escala, e meiga non queda aberto.
 - `Dispose` pecha os eventos. Windows destrúeos cando se pecha o último *handle* de cada un, o da comprobación ou o do script do terminal.
-- O script do terminal bórrase sempre. O rexistro bórrase se todo foi ben; se non, gárdase para poder miralo.
+- O script do terminal e o cartafol `APPDATA` bórranse sempre. O rexistro bórrase se todo foi ben; se non, gárdase para poder miralo.
 
 A CI executa este script en cada PR, despois de `check-window.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
 
@@ -1212,7 +1240,7 @@ finally {
 ```
 
 - Pase o que pase, o fío do script deixa de compartir o estado das teclas, e a xanela volta á distribución de antes, que hai que pedirlle antes de rematala: é ela quen a cambia para toda a sesión. A pausa dálle tempo a tratar a petición.
-- A distribución que cargou a comprobación descárgase, e o script do terminal bórrase. O rexistro, como en `check-present.ps1`, gárdase se algo fallou.
+- A distribución que cargou a comprobación descárgase, e o script do terminal bórrase, e tamén, desde a 2.5, o `APPDATA` baleiro co que arranca meiga, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*). O rexistro, como en `check-present.ps1`, gárdase se algo fallou.
 
 A CI executa este script en cada PR, co teclado español e co estadounidense, despois de `check-present.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
 
@@ -1554,9 +1582,14 @@ $name = "meiga-check-mouse-$PID"
 $log = Join-Path ([IO.Path]::GetTempPath()) "$name.txt"
 $script = Join-Path ([IO.Path]::GetTempPath()) "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 ```
 
-O script do terminal e o rexistro van ao cartafol temporal, co número do proceso de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). O rexistro é un para as tres fases: `Start-Meiga` bórrao ao comezo de cada unha.
+O script do terminal e o rexistro van ao cartafol temporal, co número do proceso de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). O rexistro é un para as tres fases: `Start-Meiga` bórrao ao comezo de cada unha. E, desde a 2.5, o `APPDATA` baleiro de meiga, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*): o mesmo para as tres.
 
 ```powershell
 # Waits until $Done gives true. If it does not in time, fails with the
@@ -1887,6 +1920,7 @@ function Start-Meiga([string]$Phase, [string]$Title) {
     Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     $info = [Diagnostics.ProcessStartInfo]::new($Path)
     $info.UseShellExecute = $false
+    $info.Environment['APPDATA'] = $appdata
     foreach ($argument in 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
         '-File', $script, '-Log', $log, '-Phase', $Phase) {
         $info.ArgumentList.Add($argument)
@@ -1938,7 +1972,7 @@ function Stop-Meiga {
 
 **Abrir e pechar meiga.**
 
-- `Start-Meiga` borra o rexistro da fase anterior e abre meiga co script do terminal, coas mesmas opcións de pwsh ca en `check-present.ps1`, e agarda a súa xanela con `WaitForInputIdle`, coma `check-window.ps1`. Despois colle a xanela e o fío que a trata, aparta o punteiro, agarda o título do script, que xa escribiu o tamaño da grella, e mide as celas.
+- `Start-Meiga` borra o rexistro da fase anterior e abre meiga co script do terminal, coas mesmas opcións de pwsh ca en `check-present.ps1`, e co `APPDATA` baleiro, e agarda a súa xanela con `WaitForInputIdle`, coma `check-window.ps1`. Despois colle a xanela e o fío que a trata, aparta o punteiro, agarda o título do script, que xa escribiu o tamaño da grella, e mide as celas.
 - **`Connect-Keyboard`**, coma en `check-keyboard.ps1`: `SetKeyboardState` cambia o estado das teclas do fío que a chama, así que o fío do script e o da xanela teñen que compartilo, con `AttachThreadInput`, para que as modificadoras que pon o script sexan as que ve meiga. `AttachThreadInput` necesita que o fío do script teña cola de mensaxes, e `PeekMessageW`, que non colle nada, créaa. Chámana as fases `Text` e `Terminal`, que teclean; a fase `Events` só usa o rato, que leva Maiús no `wParam`.
 - `Stop-Meiga` remata cada fase: o fío do script deixa de compartir o estado das teclas, e a xanela péchase coma co botón X (`CloseMainWindow`). Despois, coma en `check-window.ps1`, agarda a que meiga remate e comproba o código de saída, 0.
 
@@ -2227,6 +2261,7 @@ finally {
         Start-Sleep -Milliseconds 50
     }
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     }
@@ -2239,7 +2274,7 @@ finally {
 - Pase o que pase, o fío do script deixa de compartir o estado das teclas, e meiga non queda aberto: se a comprobación fallou no medio dunha fase, remátao (`Kill`).
 - **O punteiro** volta a onde estaba, se a comprobación o moveu. Vai antes de que o fío volte á súa escala: o punto gardouse en píxeles da pantalla, coa escala por monitor.
 - **O portapapeis** volta ter o texto que tiña ou, se non tiña texto, queda baleiro. Outro programa pode telo aberto un intre, coma o historial do portapapeis, así que a comprobación téntao ata 20 veces, cada 50 ms. O que non era texto, coma unha imaxe, non o puido gardar `Get-Text`, e pérdese.
-- O script do terminal bórrase sempre. O rexistro bórrase se todo foi ben; se non, gárdase, e o script di onde está.
+- O script do terminal e o cartafol `APPDATA` bórranse sempre. O rexistro bórrase se todo foi ben; se non, gárdase, e o script di onde está.
 
 A CI executa este script en cada PR, despois de `check-keyboard.ps1` (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a xanela de meiga está en primeiro plano, así que comproba que un programa pode copiar ao portapapeis (OSC 52).
 
@@ -2769,7 +2804,7 @@ function Compare-Screen([string]$What) {
 - `Get-Expected` calcula, coas filas da consola, o texto que copia meiga cando se selecciona a pantalla enteira: cada fila e, despois, CR LF, salvo nas filas que continúan na seguinte, que non rematan en `|` e non están baleiras. Ao final, `alacritty_terminal` deixa fóra o fin da última fila, e meiga un máis ([Código › meiga-core › `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)): quítanse ata dous.
 - `Compare-Screen` selecciona a pantalla enteira de meiga, da primeira cela á última, e compara o texto co da última pantalla do script. Se non coinciden, busca a primeira liña distinta, e a mensaxe dá as dúas, `… Their line … is '…' in meiga and '…' in the console.`, ou `missing` na que ten menos liñas. Son liñas do texto, non filas: unha liña partida en varias filas é unha.
 
-**O punteiro, e abrir e pechar meiga.** `Move-Pointer`, `Start-Meiga`, `Connect-Keyboard` e `Stop-Meiga` son os de `check-mouse.ps1`, cunha soa fase: `Start-Meiga` agarda o título `meiga-resize-ready` e mide as celas. Eiquí, os movementos que fai Windows no sitio do punteiro chegarían a meiga, e non ao programa, que non pide o rato; e `Resize-Window` chama a `Move-Pointer` despois de cada cambio de tamaño, porque a xanela pode medrar ata o punteiro.
+**O punteiro, e abrir e pechar meiga.** `Move-Pointer`, `Start-Meiga`, `Connect-Keyboard` e `Stop-Meiga` son os de `check-mouse.ps1`, cunha soa fase: `Start-Meiga` agarda o título `meiga-resize-ready` e mide as celas. Coma alí, desde a 2.5, meiga arranca cun `APPDATA` baleiro, que a comprobación crea ao principio, xunto ao script do terminal, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*). Eiquí, os movementos que fai Windows no sitio do punteiro chegarían a meiga, e non ao programa, que non pide o rato; e `Resize-Window` chama a `Move-Pointer` despois de cada cambio de tamaño, porque a xanela pode medrar ata o punteiro.
 
 ```powershell
 # As per monitor (v2), as meiga, this thread sees the pixels of the window as
@@ -3045,13 +3080,13 @@ try {
 - **Ctrl+0** (`D0`, o 0 de enriba das letras) volta aos 12 puntos, e a grella, a 60 × 20.
 - Despois, `Stop-Meiga`, e `$passed` di que todo foi ben.
 
-O `finally` é o de `check-mouse.ps1`: meiga non queda aberto; o punteiro volta a onde estaba, tamén despois da selección por riba da xanela; o portapapeis volta ter o texto que tiña; e, se algo fallou, o rexistro, coas pantallas que escribiu o script, gárdase, e o script di onde está: `What the program wrote is in …`.
+O `finally` é o de `check-mouse.ps1`: meiga non queda aberto; o punteiro volta a onde estaba, tamén despois da selección por riba da xanela; o portapapeis volta ter o texto que tiña; o script do terminal e o cartafol `APPDATA` bórranse; e, se algo fallou, o rexistro, coas pantallas que escribiu o script, gárdase, e o script di onde está: `What the program wrote is in …`.
 
 A CI executa este script en cada PR, despois de `check-mouse.ps1`, no paso *Check the resizing, the history and the zoom* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a escala é do 100 %, e a franxa mide 12 píxeles.
 
 ## `tools/check-tabs.ps1`
 
-Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Os atallos: Ctrl+Maiús+T abre unha tab coa shell por defecto e móstraa cun fotograma completo; Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior, e dan a volta; e Ctrl+Maiús+W pecha a tab que se mostra, cos seus programas, ou a xanela, se é a última. E unha tab oculta: o seu fío lector baixa de prioridade; a saída do seu programa non debuxa nada, pero o programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que non remata; o seu título non chega á xanela, só á súa tab na barra, ata que se mostra, e o texto que copia ao portapapeis non chega nunca, tampouco dentro dunha actualización sincronizada que o programa mantén aberta ata que se mostra a tab, mentres que o que copia xa á vista si, tamén dentro dunha actualización sincronizada que o programa deixa aberta e que a xanela remata á súa hora límite; e a súa grella non cambia ata que se mostra. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación, coma en [`check-present.ps1`](#toolscheck-presentps1), e escribe nun arquivo o que ve. Teclea os atallos na xanela coma [`check-keyboard.ps1`](#toolscheck-keyboardps1) as súas teclas, pero co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1) as accións do rato, e sabe que tab se mostra pola prioridade dos fíos lectores. A xanela non ten que estar en primeiro plano, pero sen iso a comprobación demostra menos do portapapeis (o paso 8). Leva uns 10 s, boa parte deles agardando a que deixe de pestanexar o cursor da tab nova (o paso 3).
+Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Os atallos: Ctrl+Maiús+T abre unha tab co perfil por defecto e móstraa cun fotograma completo; Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior, e dan a volta; e Ctrl+Maiús+W pecha a tab que se mostra, cos seus programas, ou a xanela, se é a última. E unha tab oculta: o seu fío lector baixa de prioridade; a saída do seu programa non debuxa nada, pero o programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que non remata; o seu título non chega á xanela, só á súa tab na barra, ata que se mostra, e o texto que copia ao portapapeis non chega nunca, tampouco dentro dunha actualización sincronizada que o programa mantén aberta ata que se mostra a tab, mentres que o que copia xa á vista si, tamén dentro dunha actualización sincronizada que o programa deixa aberta e que a xanela remata á súa hora límite; e a súa grella non cambia ata que se mostra. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación, coma en [`check-present.ps1`](#toolscheck-presentps1), e escribe nun arquivo o que ve. Teclea os atallos na xanela coma [`check-keyboard.ps1`](#toolscheck-keyboardps1) as súas teclas, pero co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1) as accións do rato, e sabe que tab se mostra pola prioridade dos fíos lectores. A xanela non ten que estar en primeiro plano, pero sen iso a comprobación demostra menos do portapapeis (o paso 8). Leva uns 10 s, boa parte deles agardando a que deixe de pestanexar o cursor da tab nova (o paso 3).
 
 ```powershell
 .\tools\check-tabs.ps1                                  # comproba target\release\meiga.exe
@@ -3059,7 +3094,7 @@ Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-var
 .\tools\check-tabs.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
 ```
 
-Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script da primeira tab con `pwsh`, que é tamén a shell por defecto das tabs novas. As tabs novas cargan o perfil de PowerShell: un perfil que debuxe algo segundos despois do *prompt* pode facer fallar a comprobación, porque nos pasos 4 e 5 non pode haber ningún fotograma. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`.
+Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script da primeira tab con `pwsh`. As tabs novas corren o perfil por defecto: desde a 2.5, co `APPDATA` baleiro da comprobación, PowerShell, o PowerShell 7 que atopa meiga nos cartafoles onde o deixan os seus instaladores, ou, se non atopa ningún, Windows PowerShell ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 4 e 5); ata a 2.4, o `pwsh` do `PATH`, ou `powershell`, se non o había. E cargan o perfil de PowerShell do usuario: un perfil que debuxe algo segundos despois do *prompt* pode facer fallar a comprobación, porque nos pasos 4 e 5 non pode haber ningún fotograma. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`.
 
 **Coidado:** mentres corre, non uses o rato nin o teclado: as teclas mesturaríanse coas da comprobación, e un clic noutra xanela cambiaría o primeiro plano, que a comprobación mira no paso 8 e que ten que quedar igual ata o final dese paso. Se cambia e o paso falla, a mensaxe de erro dío. E usa o portapapeis: se tiña texto, ao rematar volta deixalo nel, pero calquera outra cousa, coma unha imaxe, pérdese. Ademais, a xanela de meiga cambia de tamaño unha vez.
 
@@ -3076,6 +3111,7 @@ OK: Ctrl+Shift+W closes the tab that is shown, and its programs end; then the ta
 OK: closing the last tab closes the window, and it ends with exit code 0.
 ```
 
+- **O programa** da primeira liña é o do perfil por defecto: `pwsh.exe`, se meiga atopa PowerShell 7, e se non, `powershell.exe`.
 - **Os milisegundos** da terceira liña son os que agardou o programa a resposta á súa pregunta: os 150 ms da hora límite da actualización sincronizada, máis o que tardan a pregunta en chegar a meiga e a resposta en voltar ao programa. Cambian dunha vez a outra, e a comprobación acepta ata 1 000.
 - **As grellas** da cuarta, en columnas e filas: a que tiña a primeira tab cando se ocultou, a da xanela ao abrirse, e a que recibe ao mostrarse, a da xanela de 640 × 480 píxeles. Dependen da escala da pantalla e do tamaño que lle dá Windows á xanela ao abrila.
 - **O portapapeis.** A quinta liña depende da xanela de meiga, coma en [`check-mouse.ps1`](#toolscheck-mouseps1): se non está en primeiro plano, é `OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.`
@@ -3367,6 +3403,11 @@ $log = Join-Path $temp "$name.csv"
 $reports = Join-Path $temp "$name.txt"
 $script = Join-Path $temp "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 Remove-Item -LiteralPath $reports -ErrorAction SilentlyContinue
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
@@ -3376,6 +3417,7 @@ $previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
 ```
 
 - Os tres arquivos van ao cartafol temporal, co número do proceso da comprobación, coma en `check-present.ps1`: o rexistro dos fotogramas (`.csv`), os informes do script da primeira tab (`.txt`) e o propio script (`.ps1`). Os eventos levan o mesmo nome, con `-go` e `-done`.
+- **O `APPDATA` baleiro**, desde a 2.5, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*): sen o `config.toml` de quen executa a comprobación, as tabs novas corren o perfil por defecto de meiga.
 - Os informes bórranse antes de arrancar meiga: o script engade unha liña por paso, e a comprobación le a última. O rexistro non fai falta borralo: meiga baléirao ao arrancar.
 - **Os eventos con nome**, de reinicio automático, coma en `check-present.ps1`: cada `Set` deixa pasar unha espera. O script ábreos con `OpenExisting`, así que se crean antes de arrancar meiga.
 - **A escala do fío.** Por monitor (v2), coma meiga e coma en `check-present.ps1`: os 640 × 480 que se lle piden a `SetWindowPos` no paso 7 son píxeles da xanela, tamén nunha pantalla ao 150 %. Ao rematar, o fío volta á escala que tiña.
@@ -3608,6 +3650,7 @@ function Wait-Ended([int]$Id, [string]$What) {
 ```powershell
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name, '-Log', $reports) {
     $info.ArgumentList.Add($argument)
@@ -3635,7 +3678,7 @@ try {
 
 **Abrir meiga.**
 
-- A liña de comandos é coma en `check-present.ps1`: o rexistro dos fotogramas (`--trace-frames`), e pwsh co script da primeira tab e as mesmas opcións, o nome dos eventos (`-Name`) e o arquivo dos informes (`-Log`). Só a primeira tab corre o programa da liña de comandos de meiga: as novas corren a shell por defecto ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 12).
+- A liña de comandos é coma en `check-present.ps1`: o rexistro dos fotogramas (`--trace-frames`), e pwsh co script da primeira tab e as mesmas opcións, o nome dos eventos (`-Name`) e o arquivo dos informes (`-Log`); e o contorno, co `APPDATA` baleiro. Só a primeira tab corre o programa da liña de comandos de meiga: as novas corren o perfil por defecto ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 12, concretada na 2.5 pola decisión 5 do [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md): o perfil por defecto, e non sempre PowerShell).
 - As variábeis que usan o `finally` e as funcións créanse antes, porque `Set-StrictMode` non deixa ler unha que non existe, e `$saved` garda o texto do portapapeis.
 - Despois, coma `Start-Meiga` en `check-mouse.ps1`: arranca meiga, agarda a súa xanela con `WaitForInputIdle`, e colle a xanela e o fío que a trata; e, para as teclas, a distribución do teclado dese fío.
 - `$started`, lido xusto despois de arrancar meiga, é a hora á que empezou: os fillos que contan `Get-Shells` e `Get-Consoles` son os creados despois.
@@ -3704,7 +3747,7 @@ try {
 - Ctrl+Maiús+T abre unha tab ao final e móstraa ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 11): `Open-Tab` agarda o seu programa e as prioridades, a normal para o lector novo e a de debaixo para o da primeira tab.
 - **O primeiro fotograma, completo.** A vista esquece a pantalla que tiña e copia enteira a da tab nova, e o fotograma debuxa a xanela enteira, marxes incluídas e, desde a 2.3, tamén a barra de tabs (decisión 5). Se a vista copiase só o que cambiou, o fotograma só debuxaría as celas distintas.
 - **O título.** A xanela xa non pode ter o da primeira tab: colle o da nova, ou «meiga» mentres o seu programa non pon ningún (decisión 8). Non fai falta agardalo: meiga cámbiao antes de baixar a prioridade do lector vello, que `Open-Tab` xa viu.
-- A liña `OK:` di o nome do programa novo, `pwsh.exe`, a shell por defecto (decisión 12). A comprobación non o compara con nada. Despois, `$second` garda só o número do seu proceso.
+- A liña `OK:` di o nome do programa novo, o do perfil por defecto: `pwsh.exe` ou, se meiga non atopa PowerShell 7, `powershell.exe` (decisión 12). A comprobación non o compara con nada. Despois, `$second` garda só o número do seu proceso.
 
 ```powershell
     # 3. Nothing is drawn for a second: the cursor of the new tab, if it
@@ -3950,6 +3993,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log, $reports -ErrorAction SilentlyContinue
     }
@@ -3965,14 +4009,14 @@ O `finally` é coma o de `check-mouse.ps1`, sen o punteiro, que esta comprobaci�
 
 - O fío do script deixa de compartir o estado das teclas, e meiga non queda aberto: se a comprobación fallou no medio, remátao (`Kill`). O fío volta á súa escala.
 - **O portapapeis** volta ter o texto que tiña ou, se non tiña texto, queda baleiro, co mesmo bucle de ata 20 intentos, cada 50 ms.
-- `Dispose` pecha os eventos, coma en `check-present.ps1`, e o script da primeira tab bórrase sempre.
+- `Dispose` pecha os eventos, coma en `check-present.ps1`, e o script da primeira tab e o cartafol `APPDATA` bórranse sempre.
 - **Se algo fallou,** o rexistro dos fotogramas e os informes gárdanse, e a comprobación di onde, cunha liña `Kept …` por arquivo: no rexistro están os fotogramas de cada paso, e nos informes, o que viu o script. Se todo foi ben, bórranse.
 
 A CI executa este script en cada PR, despois de `check-resize.ps1`, no paso *Check the tabs* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). No *runner*, a xanela de meiga está en primeiro plano, así que comproba tamén o control positivo: o texto que copia unha tab á vista chega ao portapapeis, tamén dentro dunha actualización sincronizada que remata a xanela, e o dunha tab oculta, non, tampouco dentro dunha actualización que segue aberta ao mostrala.
 
 ## `tools/check-tabbar.ps1`
 
-Desde a subfase 2.3. Comproba co rato a barra de tabs de `meiga.exe` ([ADR 0020](../adr/0020-a-barra-de-tabs.md)). Os botóns: o + abre unha tab coa shell por defecto cando o botón esquerdo se solta enriba del, e móstraa cun fotograma completo; un clic nunha tab móstraa, e a xanela colle o seu título; o botón do medio pecha a tab que ten debaixo; un × que se preme e se solta fóra del non pecha nada; mentres o botón do medio está premido nunha tab, Ctrl+Tab mostra outra, e a barra segue co rato ata que o botón se solta, fóra da tab, sen pechar nada; e o × da última tab pecha a xanela. O que debuxa cada cambio: o punteiro sobre unha tab ou sobre o +, só esa tab ou o +; un título novo, só o seu rectángulo; pechar unha tab oculta, só a barra; e, en repouso, nada. E os títulos que cambian sen parar: mentres un programa os cambia tan rápido como pode, na tab que se mostra ou nunha oculta, o fío da xanela non esperta máis de 1 000 veces por segundo, porque a xanela os colle como moito unha vez por intervalo de fotograma; e tampouco cando o programa pon o mesmo título unha e outra vez, que non debuxa nada. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación e escribe nun arquivo o que fixo, coma en [`check-tabs.ps1`](#toolscheck-tabsps1). Publica na barra as mensaxes do rato co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1), nos sitios que calcula coma meiga; teclea Ctrl+Tab coma `check-tabs.ps1`; e sabe que tab se mostra pola prioridade dos fíos lectores, tamén coma `check-tabs.ps1`. Leva uns 25 s: oito, os dos títulos (os pasos 3 e 7), e boa parte do resto agardando a que se calme a tab nova (o paso 5) e a que meiga deixe de debuxar despois de cada acción.
+Desde a subfase 2.3. Comproba co rato a barra de tabs de `meiga.exe` ([ADR 0020](../adr/0020-a-barra-de-tabs.md)). Os botóns: o + abre unha tab co perfil por defecto cando o botón esquerdo se solta enriba del, e móstraa cun fotograma completo; un clic nunha tab móstraa, e a xanela colle o seu título; o botón do medio pecha a tab que ten debaixo; un × que se preme e se solta fóra del non pecha nada; mentres o botón do medio está premido nunha tab, Ctrl+Tab mostra outra, e a barra segue co rato ata que o botón se solta, fóra da tab, sen pechar nada; e o × da última tab pecha a xanela. O que debuxa cada cambio: o punteiro sobre unha tab ou sobre o +, só esa tab ou o +; un título novo, só o seu rectángulo; pechar unha tab oculta, só a barra; e, en repouso, nada. E os títulos que cambian sen parar: mentres un programa os cambia tan rápido como pode, na tab que se mostra ou nunha oculta, o fío da xanela non esperta máis de 1 000 veces por segundo, porque a xanela os colle como moito unha vez por intervalo de fotograma; e tampouco cando o programa pon o mesmo título unha e outra vez, que non debuxa nada. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación e escribe nun arquivo o que fixo, coma en [`check-tabs.ps1`](#toolscheck-tabsps1). Publica na barra as mensaxes do rato co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1), nos sitios que calcula coma meiga; teclea Ctrl+Tab coma `check-tabs.ps1`; e sabe que tab se mostra pola prioridade dos fíos lectores, tamén coma `check-tabs.ps1`. Leva uns 25 s: oito, os dos títulos (os pasos 3 e 7), e boa parte do resto agardando a que se calme a tab nova (o paso 5) e a que meiga deixe de debuxar despois de cada acción.
 
 ```powershell
 .\tools\check-tabbar.ps1                                  # comproba target\release\meiga.exe
@@ -3980,7 +4024,7 @@ Desde a subfase 2.3. Comproba co rato a barra de tabs de `meiga.exe` ([ADR 0020]
 .\tools\check-tabbar.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
 ```
 
-Necesita PowerShell 7 no `PATH`, coma `check-tabs.ps1`: meiga lanza o script da primeira tab con `pwsh`, que é tamén a shell por defecto da tab nova. A tab nova carga o perfil de PowerShell: a comprobación agarda a que a súa shell deixe de usar o procesador (o paso 5), pero un perfil que debuxe algo segundos despois do *prompt* pode facela fallar, porque desde o paso 6 cada fotograma ten que caer onde o espera a comprobación.
+Necesita PowerShell 7 no `PATH`, coma `check-tabs.ps1`: meiga lanza o script da primeira tab con `pwsh`. A tab nova corre o perfil por defecto, coma en `check-tabs.ps1`: desde a 2.5, PowerShell ou, se meiga non atopa PowerShell 7, Windows PowerShell. E carga o perfil de PowerShell do usuario: a comprobación agarda a que a súa shell deixe de usar o procesador (o paso 5), pero un perfil que debuxe algo segundos despois do *prompt* pode facela fallar, porque desde o paso 6 cada fotograma ten que caer onde o espera a comprobación.
 
 **O ConPTY.** O límite dos espertares só se comproba de verdade co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, coma na CI: dálle á xanela cada título que pon o programa. Sen el, meiga usa a consola de Windows, que lle dá os títulos xuntos, ao seu ritmo. A comprobación corre igual, e o resto compróbao, pero avisa ao principio (ver *O aviso do ConPTY*, máis abaixo).
 
@@ -4006,6 +4050,7 @@ OK: the close button of the last tab closes the window, and it ends with exit co
 - **A primeira liña** di o alto da barra e o ancho das tabs, en píxeles, que dependen da escala da pantalla: ao 100 %, coma no *runner* da CI, 32 e 240, e ao 150 %, 48 e 360 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2).
 - **Os píxeles** da segunda son o bordo de arriba da quinta fila do terminal: a barra e catro filas, que dependen da escala e da fonte.
 - **Os títulos e os espertares** da terceira e da sexta: cantos títulos puxo o programa en dous segundos, e cantas veces por segundo espertou mentres tanto o fío da xanela; e despois, cantas veces puxo o mesmo título noutros dous, e cantas veces por segundo espertou entón o fío. Dependen da máquina e cambian dunha vez a outra: a comprobación só esixe que os espertares non pasen de 1 000.
+- **O programa** da cuarta é o do perfil por defecto, coma en `check-tabs.ps1`: `pwsh.exe`, ou `powershell.exe` se meiga non atopa PowerShell 7.
 - **Os fotogramas e os píxeles** cambian tamén dunha vez a outra: a comprobación non os conta, só mira onde caen (ver `Assert-Inside`, máis abaixo).
 
 Sen o ConPTY de meiga ao lado de `meiga.exe`, antes de todo isto sae un aviso:
@@ -4257,7 +4302,7 @@ $null = $go.WaitOne()
 - **Os títulos acaban nun coñecido.** O paso 3 remata co título co que empezou a tab, `meiga-tabbar-1`, que a xanela ten que ter despois de todos os `spin`, e o 4 repíteo. O 5, con outro, `meiga-tabbar-renamed`, que a tab, oculta entón, ten que levar á xanela cando se mostre (o paso 8 da comprobación), e o 6 repíteo. Así, os pasos 4 e 6 poñen sempre o título que a tab xa ten.
 - **Os 60 s e o final**, coma en `check-tabs.ps1`: se a comprobación se interrompe, o script remata só; despois do último paso, agarda sen límite ata que se pecha a súa tab, a última que queda, co seu × (o paso 13).
 
-Os arquivos, os eventos e a escala do fío son coma en `check-tabs.ps1`, co nome `meiga-check-tabbar-<PID>`: no cartafol temporal, o rexistro dos fotogramas (`.csv`), os informes do script (`.txt`) e o propio script (`.ps1`); os eventos `-go` e `-done`; e o fío por monitor (v2), coma meiga, así que os píxeles que calcula `Get-Bar` e os das mensaxes que publica a comprobación son os da xanela, tamén nunha pantalla ao 150 %.
+Os arquivos, os eventos e a escala do fío son coma en `check-tabs.ps1`, co nome `meiga-check-tabbar-<PID>`: no cartafol temporal, o rexistro dos fotogramas (`.csv`), os informes do script (`.txt`) e o propio script (`.ps1`), e, desde a 2.5, o `APPDATA` baleiro de meiga, `meiga-check-tabbar-<PID>-appdata`, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*); os eventos `-go` e `-done`; e o fío por monitor (v2), coma meiga, así que os píxeles que calcula `Get-Bar` e os das mensaxes que publica a comprobación son os da xanela, tamén nunha pantalla ao 150 %.
 
 **As esperas e o rexistro dos fotogramas.** `Wait-For`, `Get-Log`, `Get-Frames`, `Wait-Quiet` e `Test-Full` son os de `check-tabs.ps1`. `Show-Lines` tamén, cunha columna máis:
 
@@ -4449,7 +4494,8 @@ function Get-Bar([int]$Count) {
     $padding = & $scale 8
     $closeSide = & $scale 24
     $newSide = & $scale 28
-    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide) / $Count))
+    $profilesSide = & $scale 24
+    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
@@ -4477,8 +4523,8 @@ function Get-Bar([int]$Count) {
 **A barra, coma a calcula meiga: `Get-Bar`.** meiga non di onde debuxa cada cousa: a comprobación calcúlao coas mesmas regras ca `Layout`, en `meiga-core` ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)), para `$Count` tabs, co ancho da área cliente e a escala da xanela ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2).
 
 - **A escala.** `$scale` escala unha medida en píxeles ao 100 %, `(píxeles × DPI + 48) / 96`, sen decimais e polo menos 1, coma a franxa da barra de desprazamento en `check-mouse.ps1`. É un bloque de código, e `& $scale 32` execútao co argumento 32. Dentro, `$dpi` é a variábel da función, que o bloque atopa porque se executa dentro dela: o ámbito dinámico de PowerShell, coma en `Wait-Copied` de [`check-resize.ps1`](#toolscheck-resizeps1).
-- **As medidas**, ao 100 %: a barra, 32 de alto; 4 de separación, `$gap`, por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do +; 8 desde o bordo esquerdo da tab ata o título, `$padding`; o ×, un cadrado de 24; e o +, un de 28.
-- **O ancho das tabs**, `$width`: ata 240, todas iguais; e, se non caben, a parte que lles toca do ancho da área cliente sen as tres separacións nin o +, sen decimais (decisión 3). `[Math]::Max(0, …)` evita un ancho negativo nunha xanela máis estreita ca o +.
+- **As medidas**, ao 100 %: a barra, 32 de alto; 4 de separación, `$gap`, por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita dos botóns; 8 desde o bordo esquerdo da tab ata o título, `$padding`; o ×, un cadrado de 24; o +, un de 28; e, desde a 2.5, o botón dos perfís, o ▾, xunto ao +, 24 de ancho, `$profilesSide` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
+- **O ancho das tabs**, `$width`: ata 240, todas iguais; e, se non caben, a parte que lles toca do ancho da área cliente sen as tres separacións nin os botóns, sen decimais (decisión 3). `[Math]::Max(0, …)` evita un ancho negativo nunha xanela máis estreita ca os botóns. Ata a 2.4 só restaba o +; desde a 2.5, tamén o ▾, coma meiga: sen el, cando as tabs non caben co seu ancho máximo, as que calcula a comprobación serían máis anchas ca as de meiga. A comprobación non usa o ▾: só deixa o seu sitio.
 - **Cada tab** é un obxecto con catro rectángulos: `Rect`, o que se debuxa, desde a separación de riba ata o bordo de abaixo da barra; `Area`, toda a súa columna e un píxel máis á dereita, o separador entre ela e a seguinte, que se debuxa na primeira columna da seguinte e cambia co aspecto das dúas: é o que debuxa meiga cando a tab gaña ou perde o resalte; `Title`, o sitio do título, desde a marxe esquerda da tab ata o ×; e `Close`, o ×, á dereita, cunha separación ao seu lado, e centrado no alto da tab debuxada. O bordo de abaixo do × vai despois, porque se calcula co de arriba.
 - **A barra** é outro obxecto: `Rect`, toda a barra; `Height`, o seu alto; `Tabs`, as tabs, sempre nunha lista, tamén cunha soa; `New`, o +, despois da última tab e dunha separación; e `Client`, a área cliente, para o paso 2.
 - Non contempla as tabs tan estreitas que quedan sen × (decisión 3): a comprobación ten como moito dúas.
@@ -4578,6 +4624,7 @@ function Clear-Highlight($Bar) {
 ```powershell
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name, '-Log', $reports) {
     $info.ArgumentList.Add($argument)
@@ -4602,7 +4649,7 @@ try {
     $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
 ```
 
-**Abrir meiga,** coma en `check-tabs.ps1`, sen o portapapeis: a mesma liña de comandos, co script na primeira tab, e a shell por defecto nas novas; `$started`, a hora á que empezou meiga, para `Get-Shells` e `Get-Consoles`; e a xanela e o fío que a trata, que `PostAll` suspende e cuxos espertares conta `Measure-Wakes`. Eiquí non comparte aínda a entrada co fío da xanela: só fai falta no paso 10, para Ctrl+Tab, e `Join-Input` compártea alí. `$pointer` e `$attached` créanse antes, porque os le o `finally`, o segundo a través de `Split-Input`: con `Set-StrictMode`, ler unha variábel que non existe sería un erro.
+**Abrir meiga,** coma en `check-tabs.ps1`, sen o portapapeis: a mesma liña de comandos, co script na primeira tab, e o perfil por defecto nas novas; o mesmo contorno, co `APPDATA` baleiro; `$started`, a hora á que empezou meiga, para `Get-Shells` e `Get-Consoles`; e a xanela e o fío que a trata, que `PostAll` suspende e cuxos espertares conta `Measure-Wakes`. Eiquí non comparte aínda a entrada co fío da xanela: só fai falta no paso 10, para Ctrl+Tab, e `Join-Input` compártea alí. `$pointer` e `$attached` créanse antes, porque os le o `finally`, o segundo a través de `Split-Input`: con `Set-StrictMode`, ler unha variábel que non existe sería un erro.
 
 **Os pasos,** trece, numerados no código. O 1 non ten liña `OK:`, só a do tamaño da barra, e o 5 non escribe nada: preparan os seguintes, ou fallan se algo vai mal.
 
@@ -4611,7 +4658,7 @@ try {
 | 1 | O script da primeira tab oculta o cursor e pon un título. A comprobación aparta o punteiro e calcula a barra cunha tab. | A xanela ten ese título, e o lector da tab, a prioridade normal. |
 | 2 | O script escribe na quinta fila. | Fotogramas só nesa fila, debaixo da barra. |
 | 3 | O script, á vista, pon títulos durante dous segundos, e acaba co que tiña; despois, pon ese mesmo unha e outra vez, outros dous. | Cos títulos, o fío da xanela esperta como moito 1 000 veces por segundo, e os fotogramas só debuxan o título da tab; a xanela acaba co último. Co mesmo título, o fío tampouco esperta máis de 1 000 veces por segundo, e non hai ningún fotograma. |
-| 4 | O punteiro no +; o botón esquerdo baixa nel, e despois sobe. | O punteiro e o botón que baixa debuxan só o +, e non abren nada. Cando o botón sobe, ábrese unha tab coa shell por defecto, que se mostra cun primeiro fotograma completo. |
+| 4 | O punteiro no +; o botón esquerdo baixa nel, e despois sobe. | O punteiro e o botón que baixa debuxan só o +, e non abren nada. Cando o botón sobe, ábrese unha tab co perfil por defecto, que se mostra cun primeiro fotograma completo. |
 | 5 | Nada. | A shell da tab nova deixa de usar o procesador, e meiga leva un segundo sen debuxar. |
 | 6 | O punteiro na primeira tab, oculta. | Fotogramas só na columna da tab. |
 | 7 | O script, oculto, pon títulos durante dous segundos, e acaba nun novo; despois, pon ese unha e outra vez, outros dous. | Cos títulos, o fío da xanela esperta como moito 1 000 veces por segundo, e os fotogramas só debuxan o título da tab na barra. Co mesmo título, tampouco máis de 1 000, e ningún fotograma. A xanela segue co título da tab que mostra. |
@@ -4694,8 +4741,8 @@ Despois, `Assert-SameTitle`: o script pon `meiga-tabbar-1` unha e outra vez dura
 
 - **O punteiro** no medio do +: resáltao, e os fotogramas só poden debuxar o + ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 8): o resalte e, cando Windows avisa de que o punteiro saíu, quitalo.
 - **O botón esquerdo, que baixa** no +: meiga márcao coma premido e captura o rato, pero aínda non abre nada (decisión 6). Os fotogramas, outra vez, só no +, e segue habendo un só programa, o da primeira tab. Coma todas, a mensaxe do botón leva o seu punto: o botón baixa no +, aínda que Windows xa quitase o resalte.
-- **O botón, que sobe** enriba do +: ábrese unha tab coa shell por defecto, ao final, e móstrase, coma con Ctrl+Maiús+T (decisión 9). A comprobación agarda o segundo programa, `$second`, e as prioridades: a normal para o lector novo, e a de debaixo para o da primeira tab. O primeiro fotograma despois de soltar o botón ten que ser completo: mostrar a tab nova debuxa a xanela enteira, coa barra xa con dúas tabs ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 5, e [ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 8).
-- `$opened` é o programa que non é o da primeira tab: só hai dous. A liña `OK:` di o seu nome, `pwsh.exe`, a shell por defecto; a comprobación non o compara con nada.
+- **O botón, que sobe** enriba do +: ábrese unha tab co perfil por defecto, ao final, e móstrase, coma con Ctrl+Maiús+T (decisión 9, e, desde a 2.5, [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). A comprobación agarda o segundo programa, `$second`, e as prioridades: a normal para o lector novo, e a de debaixo para o da primeira tab. O primeiro fotograma despois de soltar o botón ten que ser completo: mostrar a tab nova debuxa a xanela enteira, coa barra xa con dúas tabs ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 5, e [ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 8).
+- `$opened` é o programa que non é o da primeira tab: só hai dous. A liña `OK:` di o seu nome, o do perfil por defecto, `pwsh.exe` ou `powershell.exe`; a comprobación non o compara con nada.
 
 ```powershell
     # 5. The new tab has written its prompt, and nothing is drawn for a
@@ -4890,6 +4937,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log, $reports -ErrorAction SilentlyContinue
     }
@@ -4906,7 +4954,7 @@ O `finally` é coma o de `check-tabs.ps1`, sen o portapapeis, e co punteiro de `
 - Primeiro, `Split-Input`: se a comprobación fallou no paso 10, coa entrada aínda compartida, deixa o estado das teclas sen ningunha abaixo e deixa de compartila. Se non, non fai nada.
 - meiga non queda aberto: se a comprobación fallou no medio, remátao (`Kill`).
 - O punteiro volta a onde estaba, se `Move-Pointer` o moveu; se non, `$pointer` segue en `$null`. O fío volta á súa escala.
-- `Dispose` pecha os eventos, e o script da primeira tab bórrase sempre.
+- `Dispose` pecha os eventos, e o script da primeira tab e o cartafol `APPDATA` bórranse sempre.
 - **Se algo fallou,** o rexistro dos fotogramas e os informes gárdanse, e a comprobación di onde, cunha liña `Kept …` por arquivo: no rexistro están os fotogramas de cada paso, coas súas zonas, e nos informes, o que fixo o script. Se todo foi ben, bórranse.
 
 A CI executa este script en cada PR, despois de `check-tabs.ps1`, no paso *Check the tab bar with the mouse* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)). Alí, `package.ps1` xa deixou o ConPTY de meiga ao lado de `meiga.exe`, así que o límite dos espertares compróbase de verdade.
@@ -4921,7 +4969,7 @@ Desde a subfase 2.4. Comproba co rato e co teclado o menú dunha tab de `meiga.e
 .\tools\check-menu.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
 ```
 
-Necesita PowerShell 7 no `PATH`, coma `check-tabs.ps1`: meiga lanza o script da primeira tab con `pwsh`, e as súas copias tamén. Ningunha tab corre a shell por defecto: as copias corren o mesmo script, sen o perfil de PowerShell (`-NoProfile`), así que, ao contrario ca `check-tabbar.ps1`, a comprobación non agarda a que se calme a shell dunha tab nova.
+Necesita PowerShell 7 no `PATH`, coma `check-tabs.ps1`: meiga lanza o script da primeira tab con `pwsh`, e as súas copias tamén. Ningunha tab corre o perfil por defecto: as copias corren o mesmo script, sen o perfil de PowerShell (`-NoProfile`), así que, ao contrario ca `check-tabbar.ps1`, a comprobación non agarda a que se calme a shell dunha tab nova.
 
 **Coidado:** mentres corre, non uses o rato nin o teclado: o punteiro por riba da xanela resaltaría tabs e elementos do menú, e os seus fotogramas caerían onde a comprobación non os espera; un clic noutra xanela quitaríalle o foco a meiga, se o ten, e iso pecha o menú; e as teclas que premeses mesturaríanse coas da comprobación, que comparte o estado das teclas co fío da xanela. Ao principio, se o punteiro está enriba da xanela, a comprobación apártao, e ao rematar devólveo a onde estaba. Non usa o portapapeis, pero a xanela de meiga cambia de tamaño unha vez, e minimízase e restáurase outra.
 
@@ -5459,6 +5507,11 @@ $log = Join-Path $temp "$name.csv"
 $reports = Join-Path $temp "$name.txt"
 $script = Join-Path $temp "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 Remove-Item -LiteralPath $reports -ErrorAction SilentlyContinue
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
@@ -5467,7 +5520,7 @@ $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::Aut
 $previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
 ```
 
-Os arquivos, os eventos e a escala do fío son coma en `check-tabs.ps1`, co nome `meiga-check-menu-<PID>`: no cartafol temporal, o rexistro dos fotogramas (`.csv`), os informes do script (`.txt`) e o propio script (`.ps1`); os eventos `-go` e `-done`, de reinicio automático, que se crean antes de arrancar meiga; e o fío por monitor (v2), coma meiga, así que os píxeles que calculan `Get-Bar` e `Get-Menu`, e os das mensaxes que publica a comprobación, son os da xanela, tamén nunha pantalla ao 150 %. Os arquivos das copias van xunto aos informes, co número do proceso de cada copia detrás: `meiga-check-menu-<PID>.txt.<proceso>`.
+Os arquivos, os eventos e a escala do fío son coma en `check-tabs.ps1`, co nome `meiga-check-menu-<PID>`: no cartafol temporal, o rexistro dos fotogramas (`.csv`), os informes do script (`.txt`) e o propio script (`.ps1`), e, desde a 2.5, o `APPDATA` baleiro de meiga, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*); os eventos `-go` e `-done`, de reinicio automático, que se crean antes de arrancar meiga; e o fío por monitor (v2), coma meiga, así que os píxeles que calculan `Get-Bar` e `Get-Menu`, e os das mensaxes que publica a comprobación, son os da xanela, tamén nunha pantalla ao 150 %. Os arquivos das copias van xunto aos informes, co número do proceso de cada copia detrás: `meiga-check-menu-<PID>.txt.<proceso>`.
 
 ```powershell
 # Waits until $Condition is true, or throws what $Failure says.
@@ -5526,7 +5579,7 @@ function Wait-Quiet([int]$Milliseconds) {
 }
 ```
 
-**`Wait-Quiet`** é a de `check-tabs.ps1`, sen o segundo parámetro: o máximo é sempre `TimeoutSeconds`. Alí, e en `check-tabbar.ps1`, un paso agarda a que deixe de pestanexar o cursor dunha tab nova coa shell por defecto, e necesita máis; eiquí, as tabs novas son copias, que ocultan o seu cursor. Agarda a que meiga leve `$Milliseconds` sen escribir nada no rexistro, mirando cada 50 ms, e falla se meiga remata ou segue debuxando todo ese tempo. Os pasos úsana con 400 ms, máis de 10 intervalos entre fotogramas, coma `check-tabs.ps1`.
+**`Wait-Quiet`** é a de `check-tabs.ps1`, sen o segundo parámetro: o máximo é sempre `TimeoutSeconds`. Alí, e en `check-tabbar.ps1`, un paso agarda a que deixe de pestanexar o cursor dunha tab nova co perfil por defecto, e necesita máis; eiquí, as tabs novas son copias, que ocultan o seu cursor. Agarda a que meiga leve `$Milliseconds` sen escribir nada no rexistro, mirando cada 50 ms, e falla se meiga remata ou segue debuxando todo ese tempo. Os pasos úsana con 400 ms, máis de 10 intervalos entre fotogramas, coma `check-tabs.ps1`.
 
 ```powershell
 function Test-Full($Line) {
@@ -5808,7 +5861,8 @@ function Get-Bar([int]$Count) {
     $padding = Get-Scaled 8
     $closeSide = Get-Scaled 24
     $newSide = Get-Scaled 28
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide) / $Count))
+    $profilesSide = Get-Scaled 24
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
@@ -5830,7 +5884,7 @@ function Get-Bar([int]$Count) {
 
 - `Get-Client` le a área cliente da xanela cada vez: no paso 8 cambia.
 - **`Get-Scaled`** escala unha medida en píxeles ao 100 % á escala da xanela, coma meiga: `(píxeles × DPI + 48) / 96`, sen decimais e polo menos 1. É o bloque `$scale` de `check-tabbar.ps1`, agora nunha función, porque a usan a barra e o menú, coma en meiga, onde desde a 2.4 a comparten as dúas ([Código › meiga-core › `ui/mod.rs`](meiga-core.md#cratesmeiga-coresrcuimodrs)). `$dpi` é a variábel do script, que se le ao principio.
-- **`Get-Bar`** é o de `check-tabbar.ps1` (ver *A barra, coma a calcula meiga: `Get-Bar`*), só co que necesita esta comprobación: de cada tab, o rectángulo que se debuxa, `Rect`, e o do seu título, `Title`, que vai ata o ×, do que só fai falta o lado esquerdo; e da barra, toda ela, `Rect`, o seu alto, `Height`, e as tabs.
+- **`Get-Bar`** é o de `check-tabbar.ps1` (ver *A barra, coma a calcula meiga: `Get-Bar`*), só co que necesita esta comprobación: de cada tab, o rectángulo que se debuxa, `Rect`, e o do seu título, `Title`, que vai ata o ×, do que só fai falta o lado esquerdo; e da barra, toda ela, `Rect`, o seu alto, `Height`, e as tabs. Coma alí, desde a 2.5 o ancho das tabs deixa sitio tamén para o botón dos perfís, `$profilesSide`, 24 píxeles ao 100 % ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
 
 ```powershell
 # The sizes of the menu of a tab, as meiga computes them (see
@@ -6028,6 +6082,7 @@ function Send-Press([int]$Code, [int[]]$Down = @()) {
 ```powershell
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name, '-Log', $reports) {
     $info.ArgumentList.Add($argument)
@@ -6055,7 +6110,7 @@ try {
     Join-Input
 ```
 
-**Abrir meiga,** coma en `check-tabbar.ps1`: a mesma liña de comandos, co script na primeira tab; `$started`, a hora á que empezou meiga, para `Get-Shells` e `Get-Consoles`; e a xanela e o fío que a trata, que `PostAll` suspende. `$process`, `$pointer`, `$attached` e `$passed` créanse antes, porque os le o `finally`: con `Set-StrictMode`, ler unha variábel que non existe sería un erro. O novo, ao final:
+**Abrir meiga,** coma en `check-tabbar.ps1`: a mesma liña de comandos, co script na primeira tab, e o mesmo contorno, co `APPDATA` baleiro; `$started`, a hora á que empezou meiga, para `Get-Shells` e `Get-Consoles`; e a xanela e o fío que a trata, que `PostAll` suspende. `$process`, `$pointer`, `$attached` e `$passed` créanse antes, porque os le o `finally`: con `Set-StrictMode`, ler unha variábel que non existe sería un erro. O novo, ao final:
 
 - `$dpi`, a escala da xanela, para `Get-Scaled`: lese unha vez, porque a comprobación non leva a xanela a outro monitor.
 - `$sizes`, as medidas do menú a esa escala, de `Get-MenuSizes`.
@@ -6526,6 +6581,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$reports.*" -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log, $reports -ErrorAction SilentlyContinue
@@ -6543,10 +6599,2244 @@ O `finally` é o de `check-tabbar.ps1`, cunha liña máis:
 - Primeiro, `Split-Input`: deixa o estado das teclas sen ningunha abaixo, e deixa de compartir a entrada co fío da xanela, que eiquí se comparte desde o principio.
 - meiga non queda aberto: se a comprobación fallou no medio, remátao (`Kill`).
 - O punteiro volta a onde estaba, se `Move-Pointer` o moveu; se non, `$pointer` segue en `$null`. O fío volta á súa escala.
-- `Dispose` pecha os eventos, e o script da primeira tab bórrase sempre, e tamén os arquivos das copias: `-Path`, ao contrario ca `-LiteralPath`, entende o `*` coma calquera texto, e `"$reports.*"` son os arquivos co nome do dos informes, un punto e algo máis.
+- `Dispose` pecha os eventos, e o script da primeira tab e o cartafol `APPDATA` bórranse sempre, e tamén os arquivos das copias: `-Path`, ao contrario ca `-LiteralPath`, entende o `*` coma calquera texto, e `"$reports.*"` son os arquivos co nome do dos informes, un punto e algo máis.
 - **Se algo fallou,** o rexistro dos fotogramas e os informes gárdanse, e a comprobación di onde, cunha liña `Kept …` por arquivo: no rexistro están os fotogramas de cada paso, coas súas zonas, e nos informes, o que fixo o script da primeira tab e as teclas que leu. Se todo foi ben, bórranse.
 
 A CI executa este script en cada PR, despois de `check-tabbar.ps1`, no paso *Check the menu of a tab* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
+
+## `tools/check-profiles.ps1`
+
+Desde a subfase 2.5. Comproba os perfís e a configuración de `meiga.exe` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md); [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)). Os erros do `config.toml`: unha caixa de mensaxe da xanela de meiga, co título meiga e un só botón, ábrese cando a xanela xa está na pantalla e pintada, e di cada erro coa súa liña e a súa columna, e que meiga os ignorou; mentres está aberta, o programa da primeira tab xa corre, e, cando se pecha, a xanela pinta todo outra vez e debuxa o que escribiu el, só no terminal e, se deu un título, na súa tab. E, cun `config.toml` que non é TOML, a caixa di onde está mal, e que meiga ignorou o arquivo enteiro. A primeira tab: corre o perfil por defecto do arquivo, Probe, un perfil que engade o propio arquivo, coas variábeis da súa liña de comandos e do seu cartafol expandidas, e no seu cartafol, que leva no nome unha letra que non é ASCII; e, co arquivo ignorado, a shell por defecto, no cartafol persoal. O contorno do seu programa: `TERM_PROGRAM=meiga`, `TERM_PROGRAM_VERSION` coa versión de meiga e `COLORTERM=truecolor`, en vez dos valores que tiña meiga; un `WSLENV` que garda os nomes que xa tiña, coas súas opcións, menos os do Windows Terminal, e leva ao final os que faltaban; e nin `WT_SESSION` nin `WT_PROFILE_ID`. O menú dos perfís: Ctrl+Maiús+Espazo ábreo debaixo do botón + e do botón dos perfís, o ▾, e só debuxa o menú, cos perfís que atopa meiga, menos o que oculta o arquivo, e Probe ao final; as repeticións do Espazo non abren nada; e o programa non recibe as teclas que colle o menú, pero si Ctrl e Maiús, que baixaron para el. O ▾ co rato: o punteiro e o botón que baixa só debuxan o botón, e, cando o botón sobe, ábrese o menú e a xanela solta o rato; un clic en Probe abre unha tab con el. Os perfís que atopa meiga: cada un ábrese desde o menú nunha tab que corre a liña de comandos que espera a comprobación, no cartafol persoal, e os de WSL, co `--cd "~"`. O botón + abre unha tab co perfil por defecto, e *Duplicate tab* cópiaa, coa mesma liña de comandos e no mesmo cartafol. E meiga sae co código 0 cando se pecha a súa xanela, e os programas das súas tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs), en [Código › meiga-core › `config.rs`](meiga-core.md#cratesmeiga-coresrcconfigrs), [› `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers) e [› `environment.rs`](meiga-core.md#cratesmeiga-coresrcenvironmentrs), e en [Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa, nun cartafol propio e cun `APPDATA` propio, co `config.toml` que escribe a comprobación; na súa primeira tab, Probe corre un script de PowerShell que di nun arquivo o número do seu proceso e as súas variábeis, e despois fai un paso cada vez que llo di a comprobación, coma en [`check-menu.ps1`](#toolscheck-menups1). A comprobación atopa as shells instaladas coma meiga, sen lanzar ningún proceso, para saber que perfís ten que mostrar o menú e que liña de comandos ten que correr cada un; e le a liña de comandos de cada programa en WMI, e o seu cartafol, na memoria do seu proceso. Publica as mensaxes do rato e das teclas co fío da xanela suspendido, coma `check-menu.ps1`, nos sitios da barra e do menú, que calcula coma meiga: só o ancho do menú, que depende da fonte, sae do fotograma que o abre. Leva uns 30 s, boa parte deles abrindo e pechando as shells que atopa meiga, unha por unha: máis se tardan en arrancar.
+
+```powershell
+.\tools\check-profiles.ps1                                  # comproba target\release\meiga.exe
+.\tools\check-profiles.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-profiles.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
+```
+
+Necesita PowerShell 7 no `PATH`, coma `check-menu.ps1`: a liña de comandos de Probe empeza por `pwsh`, sen ruta, e Windows búscao no `PATH`. E o `Cargo.toml` do repositorio, ao lado do cartafol `tools`, onde le a versión de meiga. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`; ao contrario ca `check-tabbar.ps1`, non avisa se falta. Non le o `config.toml` de quen a executa: meiga corre co `APPDATA` da comprobación.
+
+**Coidado:** mentres corre, non uses o rato nin o teclado, coma con `check-menu.ps1`: o punteiro por riba da xanela resaltaría o que tivese debaixo, e os seus fotogramas caerían onde a comprobación non os espera; e as teclas que premeses mesturaríanse coas da comprobación, que comparte o estado das teclas co fío da xanela. Ao principio, se o punteiro está enriba da xanela, a comprobación apártao, e ao rematar devólveo a onde estaba. Ademais, abre unha tab con cada shell que atopa meiga: arrancan coma nunha tab de meiga, coa configuración de quen executa a comprobación, coma o seu perfil de PowerShell, e unha distribución de WSL parada arranca a súa máquina virtual. Non usa o portapapeis nin cambia o tamaño da xanela.
+
+Saída esperada, cos valores que dependen da máquina e da pantalla:
+
+```text
+OK: once the window is on the screen and painted, a message box owned by it, with the title meiga and one button, tells the 2 errors of config.toml, each with its line and its column, and that meiga ignored them; when it closes, the window paints all of it again, and draws what the program of the first tab wrote meanwhile, and what it writes then.
+OK: the first tab runs Probe, the default profile of config.toml, with the variables of its command line and of its folder expanded, in its folder, whose name is not ASCII; its program gets TERM_PROGRAM=meiga, TERM_PROGRAM_VERSION=…, COLORTERM=truecolor and WSLENV=COLORTERM/u:MEIGA_CHECK_WORK/p:TERM_PROGRAM:TERM_PROGRAM_VERSION, and neither WT_SESSION nor WT_PROFILE_ID.
+OK: Ctrl+Shift+Space opens the menu of the profiles below the buttons + and of the profiles (… x … pixels, with cells … pixels wide), and draws only the menu: …, Probe; while Space repeats, nothing opens; Down draws only the highlights of the first two items, and Esc closes the menu; the program gets Ctrl and Shift, which went down for it, and no other key of the menu.
+OK: the pointer on the button of the profiles, and its press, draw only the button; when the left button goes up on it, the menu opens, only the button and the menu are drawn, and the window lets the mouse go; the pointer on an item draws only its highlight, and a click on Probe opens a tab, shown with one full frame, whose program runs the command line of Probe in its folder; Ctrl+Shift+W closes it, and its program ends.
+OK: Ctrl+Shift+Space, Down and Enter open …, each in a tab whose program runs the command line that meiga finds for it, in the home folder; Ctrl+Shift+W closes it, and its program ends.
+OK: the button + opens a tab with Probe, the default profile, and Duplicate tab copies it, with the same command line, in the same folder.
+OK: it ends with exit code 0 when its window closes, and the programs of its tabs and their consoles end too.
+OK: with a config.toml that is not TOML, the message box tells where it is wrong, and that meiga ignored the file; the first tab runs the default shell, …, in the home folder, and it ends with exit code 0 when its window closes.
+```
+
+- **A versión** da segunda liña é a de meiga, a de `[workspace.package]` en `Cargo.toml`: a que pon meiga en `TERM_PROGRAM_VERSION`.
+- **O título** da primeira tab: se o seu programa deu un mentres a caixa estaba aberta, ou despois, a primeira liña remata con `; its tab shows the title that the program gave, '…'`. Pásalle a PowerShell cando corre como administrador, coma no *runner* da CI: ao arrancar, pon `Administrator: ` diante do título da súa consola, que é a ruta de `pwsh.exe` ([`ConsoleHostRawUserInterface.cs`](https://github.com/PowerShell/PowerShell/blob/v7.7.0/src/Microsoft.PowerShell.ConsoleHost/host/msh/ConsoleHostRawUserInterface.cs#L40-L56), v7.7.0), coma cmd en [`check-window.ps1`](#toolscheck-windowps1). No *runner*, a liña remata en `'Administrator: C:\Program Files\PowerShell\7\pwsh.exe'.` Nunha consola sen permisos de administrador, en `and what it writes then.`
+- **Os perfís** da terceira e da quinta liña son os que atopa meiga nesa máquina, na orde do menú ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4): PowerShell, se atopa PowerShell 7; Windows PowerShell; as distribucións de WSL instaladas, a por defecto primeiro; e Git Bash, se está. Command Prompt non sae, porque o oculta o `config.toml` da comprobación. Na terceira, Probe vai ao final; na quinta, non, porque Probe ábreno os pasos 4 e 6. Nun equipo con PowerShell 7 e só as shells de Windows, a terceira di `PowerShell, Windows PowerShell, Probe`, e a quinta, `PowerShell, Windows PowerShell`.
+- **As medidas do menú,** na terceira: o seu ancho e o seu alto, e o ancho das celas do seu texto, en píxeles. Coma en [`check-menu.ps1`](#toolscheck-menups1), dependen da escala da pantalla e, eiquí, tamén dos perfís. O alto son o bordo e o espazo, arriba e abaixo, e un elemento por perfil: ao 100 %, coma no *runner* da CI, 6 píxeles e 32 por perfil, e ao 150 %, 10 e 48 por perfil. O ancho son as celas do nome máis longo e os lados do menú: 32 píxeles ao 100 %, e 50 ao 150 %. Co menú do equipo de enriba, o nome máis longo é *Windows PowerShell*, de 18 caracteres, e, ao 150 %, con celas de 11 píxeles, coma en `check-menu.ps1`, o menú mide 248 × 154 píxeles.
+- **A shell por defecto** da última liña é PowerShell, se meiga atopa PowerShell 7, e se non, Windows PowerShell (decisión 5).
+
+Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1: se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coas zonas que presentou cada unha, coma `check-menu.ps1`; se é da caixa, a mensaxe di o que di a caixa e o que tiña que dicir; e, se é dunha tab, a liña de comandos ou o cartafol do seu programa, e os que esperaba. E garda o cartafol da comprobación, co `config.toml`, os rexistros dos fotogramas e os informes de Probe, e di onde, cunha liña `Kept …`. Pase o que pase, `meiga.exe` non queda aberto, e o punteiro volta a onde estaba.
+
+**Comprobado** con trinta copias de meiga cun cambio feito a propósito cada unha, compiladas noutro cartafol en *release* sen LTO, coma as de [`check-resize.ps1`](#toolscheck-resizeps1), e co ConPTY ao lado. Vinte e oito fallan, cada unha no seu paso, e dúas pasan, coma se esperaba:
+
+| Copia | O que estraga | Onde falla |
+|---|---|---|
+| `no-alert` | Non mostra a caixa dos erros. | No paso 1: `The window did not show a message box.` |
+| `alert-before-shown` | Abre a caixa antes de mostrar a xanela. | No paso 1: `The message box opened before the window of meiga.exe was on the screen.` |
+| `alert-unowned` | A caixa non ten dona. | No paso 1: a dona da caixa é a xanela 0, e non a de meiga. |
+| `alert-no-catch-up` | Ao pecharse a caixa, a xanela non se pon ao día: nin pinta todo nin debuxa o que escribiu o programa mentres tanto. | No paso 1: `When the message box closed, the window did not paint all of it.` |
+| `column-from-zero` | As columnas contan desde 0. | No paso 1: a caixa di `Line 3, column 0` e `Line 16, column 9`. |
+| `column-in-bytes` | As columnas contan bytes, e non caracteres. | Pasa. |
+| `syntax-error-no-box` | Cun arquivo que non é TOML, non mostra a caixa. | No paso 8: `The window did not show a message box.` |
+| `ignored-file-says-them` | Cun arquivo que non é TOML, a caixa di que meiga ignorou os erros, e non o arquivo. | No paso 8: a caixa remata en `meiga ignored them, and uses its default values instead.` |
+| `no-term-program` | Non pon `TERM_PROGRAM`. | No paso 2: `The program of the first tab got 'vscode' as TERM_PROGRAM, instead of 'meiga'.` |
+| `keeps-wt-session` | Non quita `WT_SESSION` nin `WT_PROFILE_ID`. | No paso 2: o programa recibe o `WT_SESSION` de meiga. |
+| `wslenv-unchanged` | Non cambia o `WSLENV`. | No paso 2: o programa recibe o `WSLENV` de meiga, cos nomes do Windows Terminal e sen os novos. |
+| `environment-not-passed` | Non lles dá o contorno ás sesións, e os programas herdan o de meiga. | No paso 2: o programa recibe `vscode` en `TERM_PROGRAM`. |
+| `directory-ignored` | Ignora o `directory` dos perfís. | No paso 2: Probe empeza no cartafol de meiga, e non no seu. |
+| `command-not-expanded` | Non expande as variábeis de `command`. | No paso 1, indirectamente (ver despois da táboa). |
+| `default-ignored` | Ignora `default_profile`. | No paso 1, indirectamente. |
+| `hidden-shown` | Ignora `hidden`. | No paso 3: o menú ten un elemento máis, Command Prompt. |
+| `home-is-meiga-folder` | Os perfís empezan no cartafol de meiga, e non no persoal. | No paso 5: o primeiro perfil empeza no cartafol da comprobación. |
+| `wsl-without-cd` | Os perfís de WSL corren `wsl.exe -d <nome>`, sen `--cd "~"`. | No paso 5, nun equipo cunha distribución de WSL: a súa liña de comandos non é a que espera a comprobación. |
+| `git-bash-missing` | Non atopa Git Bash. | No paso 3, nun equipo con Git Bash: o menú ten un elemento menos. |
+| `profiles-button-opens-tab` | O ▾ abre unha tab, coma o +. | No paso 4: o ▾ debuxa a xanela enteira, a da tab nova. |
+| `profiles-button-apart` | O ▾ vai separado do +. | No paso 4: o punteiro e o botón que baixa debuxan fóra do sitio do ▾. |
+| `menu-below-profiles-only` | O menú ábrese debaixo do ▾, e non dos dous botóns. | No paso 3: o menú vai máis á dereita. |
+| `no-ctrl-shift-space` | Ctrl+Maiús+Espazo non fai nada. | No paso 3: `Ctrl+Shift+Space drew 0 areas instead of the menu of the profiles.` |
+| `repeat-chooses` | As repeticións do Espazo chegan ao menú, que escolle o primeiro perfil. | No paso 3: os fotogramas presentan varias zonas, e non só o menú: a repetición escolle o primeiro perfil, e ábrese unha tab. |
+| `profiles-keyboard-no-highlight` | O menú do teclado ábrese sen ningún elemento resaltado. | No paso 5: Intro, no primeiro perfil, non escolle nada, e non se abre ningunha tab. |
+| `wrong-item` | Cada elemento abre o perfil seguinte. | No paso 4: `A click on Probe did not open a tab with a program.` Probe é o último. |
+| `items-open-default` | Cada elemento abre o perfil por defecto. | No paso 5: o primeiro perfil corre a liña de comandos de Probe. |
+| `menu-not-refreshed` | O menú non busca outra vez as shells cando se abre. | Pasa. |
+| `plus-opens-first` | O + abre o primeiro perfil, e non o por defecto. | No paso 6: o + corre o primeiro perfil, e non Probe. |
+| `duplicate-loses-folder` | *Duplicate tab* non repite o cartafol. | No paso 6: a copia empeza no cartafol de meiga, e non no de Probe. |
+
+- **`command-not-expanded` e `default-ignored`** fallan no paso 1, e non no 2, porque a primeira tab non chega a correr o script de Probe: coa primeira, pwsh busca un script cunha ruta que leva `%MEIGA_CHECK_WORK%` tal cal, e non o atopa; coa segunda, a primeira tab corre a shell por defecto. O informe de Probe non chega, e a mensaxe é `While the message box was open, the program of the first tab did not write on its screen.`
+- **`syntax-error-no-box` e `ignored-file-says-them`** fallan no paso 8, despois das sete liñas `OK:` da primeira meiga.
+- **`wsl-without-cd` e `git-bash-missing`** só poden fallar nun equipo coas súas shells: cunha distribución de WSL, e con Git Bash. Noutro, pasarían.
+- **As dúas que pasan.** `column-in-bytes`: as dúas liñas cos erros só levan ASCII antes deles, e nelas un carácter é un byte; a ñ vai noutra liña. As columnas en caracteres próbaas unha proba de `config.rs`, cun Ñ antes do erro na mesma liña ([Código › meiga-core › `config.rs`](meiga-core.md#cratesmeiga-coresrcconfigrs)). `menu-not-refreshed`: as shells instaladas non cambian mentres corre a comprobación, así que o menú mostra as mesmas, búsqueas meiga outra vez ao abrilo ou non (decisión 4). Para velo, habería que instalar ou desinstalar unha shell no medio.
+
+Esta comprobación non mira as cores nin o texto da barra e do menú, só onde debuxan: non ve o perfil por defecto en negra nin a frecha do ▾ (decisión 6), nin o nome do perfil na tab (decisión 11), nin a icona de aviso da caixa (decisión 8). Tampouco teclea Ctrl+Maiús+T, que abre tamén o perfil por defecto (decisión 5), nin mira que meiga non poña `TERM` (decisión 9), nin o que reciben os programas de Linux a través do `WSLENV`: só o que recibe o de Windows. O límite de 20 erros na caixa (decisión 8), as columnas en caracteres e os arquivos que non son UTF-8 ou pasan de 1 MiB (decisión 2), un `default_profile` que non é un perfil visíbel e os perfís ocultos todos (decisión 5), e `~` en `directory` (decisión 3) próbanse en Rust, sen xanela: en [Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs), en [Código › meiga-core › `config.rs`](meiga-core.md#cratesmeiga-coresrcconfigrs) e en [› `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers).
+
+Explicación por partes. Moito é coma en [`check-menu.ps1`](#toolscheck-menups1): o código vai enteiro, e o que xa se explicou alí explícase eiquí en breve.
+
+```powershell
+<#
+.SYNOPSIS
+Checks the profiles and the configuration of meiga.exe: the message box with
+the errors of config.toml, the profile that its first tab runs, the
+environment of its programs, and the menu of the profiles, with the keyboard
+and with the mouse.
+
+.DESCRIPTION
+Starts meiga.exe with its frame log (--trace-frames), in a folder of its own,
+and with an APPDATA of its own, whose config.toml makes Probe the default
+profile: a PowerShell script that runs in another folder, whose name has a
+letter that is not ASCII. The file also hides Command Prompt, and has two
+errors: a key that meiga does not know, and a value that is neither true nor
+false. meiga gets the variables of Windows Terminal, and other values for the
+ones that it sets for its programs. The first tab runs the script, which
+does one step at a time, when this check tells it to, and reports it in a
+file; the other tabs of Probe only report their folder and their variables
+in a file of their own, and wait until their tab closes.
+
+The check finds the shells that are installed as meiga does (see
+crates/meiga-win/src/profiles.rs): in the folders where their installers put
+them, and in the registry. It posts mouse and key messages to the window, at
+the places of the layouts of the bar and of the menu, which it computes as
+meiga does (ADR 0020, 0021 and 0022): only the width of the menu, which
+depends on the font, comes from the frame that opens it. It checks that:
+
+- once the window is on the screen and painted, a message box in front of
+  it, owned by it, with the title meiga and one button, tells the errors of
+  the file, each with its line and its column, and that meiga ignored them;
+  meanwhile, the program of the first tab runs. When the box closes, the
+  window paints all of it again, and draws what the program wrote meanwhile,
+  and what it writes then: only in the terminal and, if the program gave a
+  title, in the first tab. PowerShell gives one while it starts as an
+  administrator: it puts "Administrator: " before the title of its console;
+- the first tab runs Probe, with the variables of its command line and of
+  its folder expanded, in its folder. Its program gets TERM_PROGRAM=meiga,
+  TERM_PROGRAM_VERSION with the version of meiga, and COLORTERM=truecolor,
+  instead of the values that meiga had; WSLENV with them, and without the
+  variables of Windows Terminal; and neither WT_SESSION nor WT_PROFILE_ID;
+- Ctrl+Shift+Space opens the menu of the profiles below the button + and
+  the one of the profiles, and the frame draws only the menu: the profiles
+  that the check finds, but Command Prompt, and Probe at the end, as wide as
+  the longest name. No program starts, nor while Space repeats. Down draws
+  only the highlights of the first two items, and Esc closes the menu. The
+  program gets Ctrl and Shift, which went down for it, and no other key;
+- the pointer on the button of the profiles, and its press, draw only the
+  button; when the left button goes up on it, the menu opens, and only the
+  button and the menu are drawn, and the window lets the mouse go. The
+  pointer on an item draws only its highlight, and a click on Probe opens a
+  tab at the end, shown with one full frame, whose program runs the command
+  line of Probe in its folder;
+- Ctrl+Shift+Space, Down and Enter open each profile that the check finds,
+  whose program runs the command line that the check expects, in the home
+  folder of the user: WSL with --cd "~", in the one of Linux. Ctrl+Shift+W
+  closes it, and its program ends;
+- the button + opens a tab with Probe, the default profile, and Duplicate
+  tab copies it, with the same command line and the same folder;
+- meiga.exe ends with exit code 0 when its window closes;
+- with a config.toml that is not TOML, the message box says where it is
+  wrong, and that meiga ignored the file: the first tab runs the default
+  shell, in the home folder, and meiga.exe ends with exit code 0 when its
+  window closes.
+
+Opening each profile starts its shell, as a tab of meiga does: the ones of
+the user load their profiles, and WSL may have to start. The check waits
+until each one is idle, and closes it then. A start-up file that changes
+the folder of its shell, as a cd in the .bashrc of Git Bash, can make the
+check fail, if it runs before the check reads the folder.
+
+As check-menu.ps1 does, the check moves the pointer out of the window, posts
+its messages while the thread of the window is suspended, and types each key
+with the key state that it needs, which it shares with the thread of the
+window (see check-tabs.ps1). It reads the command line of each program from
+WMI, and its folder from the memory of its process.
+
+It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
+
+If a check fails, the script ends meiga.exe and keeps its folder, with the
+frame log and the reports of the script.
+
+.PARAMETER Path
+The executable to check. Defaults to target\release\meiga.exe.
+
+.PARAMETER TimeoutSeconds
+How long to wait for the window, for the message box, for each step, and
+for the programs of the check to end. The shells of the user get three
+times as long to end, and at least 30 s.
+#>
+[CmdletBinding()]
+param(
+    [string]$Path,
+
+    [ValidateRange(1, 600)]
+    [int]$TimeoutSeconds = 10
+)
+```
+
+**A axuda e os parámetros.** A axuda integrada en PowerShell di en inglés o que comproba, en que orde e como: `Get-Help .\tools\check-profiles.ps1 -Full` móstraa, cos parámetros. Os parámetros son os de `check-menu.ps1`: `-Path`, o `meiga.exe` que se comproba, e `-TimeoutSeconds`, o tempo máximo de cada espera: que se abran a xanela e a caixa de mensaxe, cada paso, e que rematen os programas da comprobación. As shells do usuario teñen o triplo para rematar, e polo menos 30 s (ver `$shellSeconds`, máis abaixo).
+
+```powershell
+# Windows PowerShell 5.1 can read this file but not run it: tell how to run
+# it with PowerShell 7. tools/check-powershell.ps1 checks that this works.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $command = "pwsh -File $(Resolve-Path -Relative $PSCommandPath)"
+    if ($PSBoundParameters.Count -gt 0) { $command += ' <the same parameters>' }
+    Write-Host "This script needs PowerShell 7. Run it with: $command" -ForegroundColor Yellow
+    exit 1
+}
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $Path) {
+    $Path = Join-Path $PSScriptRoot '..\target\release\meiga.exe'
+}
+$Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "$Path does not exist. Build it first with: cargo build --release"
+}
+$exe = Split-Path -Leaf $Path
+```
+
+O comezo é o de todos os scripts, coma en `check-menu.ps1`: a comprobación da versión de PowerShell (ver [`check-powershell.ps1`](#toolscheck-powershellps1)); as dúas liñas que deteñen o script ante calquera erro; e a ruta de `meiga.exe`, por defecto `target\release\meiga.exe`, e, se non existe, un erro que di como compilalo.
+
+```powershell
+# The version of meiga, which its programs get in TERM_PROGRAM_VERSION.
+$manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\Cargo.toml') -Raw
+if ($manifest -notmatch '(?ms)^\[workspace\.package\]\s*$.*?^version\s*=\s*"([^"]+)"') {
+    throw 'Could not find the version of meiga in Cargo.toml.'
+}
+$version = $Matches[1]
+```
+
+**A versión de meiga**, a que lles pon meiga aos seus programas en `TERM_PROGRAM_VERSION` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 9): a da táboa `[workspace.package]` do `Cargo.toml` da raíz do repositorio, un cartafol por riba do do script, que herdan todos os crates.
+
+- `-Raw` le o arquivo enteiro nun só texto.
+- **A expresión regular.** `(?ms)` fai que `^` e `$` valgan ao principio e ao final de cada liña, e que `.` colla tamén os saltos de liña. Busca a liña `[workspace.package]` e, co mínimo texto entre as dúas (`.*?`), a primeira liña que empeza por `version = "…"`; o que vai entre as comiñas queda en `$Matches[1]`.
+- Se non a atopa, un erro: a comprobación non sabería que versión esperar.
+
+**As funcións de Windows**, declaradas en C# nunha clase propia, `ProfilesCheck`:
+
+```powershell
+if (-not ('Meiga.Tools.ProfilesCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name ProfilesCheck -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT { public int Left, Top, Right, Bottom; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct POINT { public int X, Y; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wParam; public IntPtr lParam; public uint time; public int x, y; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GUITHREADINFO
+{
+    public int cbSize;
+    public uint flags;
+    public IntPtr hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret;
+    public RECT rcCaret;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+struct PROCESS_BASIC_INFORMATION
+{
+    public IntPtr ExitStatus, PebBaseAddress, AffinityMask, BasePriority, UniqueProcessId, InheritedFromUniqueProcessId;
+}
+
+public delegate bool EnumProc(IntPtr window, IntPtr parameter);
+
+[DllImport("user32.dll")]
+public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+
+[DllImport("kernel32.dll")]
+public static extern uint GetCurrentThreadId();
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool PeekMessageW(out MSG message, IntPtr window, uint first, uint last, uint remove);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool AttachThreadInput(uint thread, uint to, [MarshalAs(UnmanagedType.Bool)] bool attach);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetKeyboardState(byte[] state);
+
+[DllImport("user32.dll")]
+public static extern IntPtr GetKeyboardLayout(uint thread);
+
+[DllImport("user32.dll")]
+public static extern uint MapVirtualKeyExW(uint code, uint type, IntPtr layout);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetGUIThreadInfo(uint thread, ref GUITHREADINFO info);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetClientRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetCursorPos(out POINT point);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetCursorPos(int x, int y);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool ScreenToClient(IntPtr window, ref POINT point);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool ClientToScreen(IntPtr window, ref POINT point);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool PostMessageW(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+
+[DllImport("user32.dll")]
+public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsWindowVisible(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern IntPtr GetWindow(IntPtr window, uint command);
+
+[DllImport("user32.dll")]
+public static extern int GetDlgCtrlID(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool EnumWindows(EnumProc callback, IntPtr parameter);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool EnumThreadWindows(uint thread, EnumProc callback, IntPtr parameter);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool EnumChildWindows(IntPtr parent, EnumProc callback, IntPtr parameter);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern int GetClassNameW(IntPtr window, System.Text.StringBuilder name, int count);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern int GetWindowTextW(IntPtr window, System.Text.StringBuilder text, int count);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern uint GetDlgItemTextW(IntPtr dialog, int id, System.Text.StringBuilder text, int count);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int id);
+
+[DllImport("ntdll.dll")]
+static extern int NtQueryInformationProcess(IntPtr process, int type, ref PROCESS_BASIC_INFORMATION information, int size, out int returned);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool ReadProcessMemory(IntPtr process, IntPtr address, byte[] buffer, IntPtr size, out IntPtr read);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+static extern uint GetFileAttributesW(string path);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+static extern uint GetLongPathNameW(string path, System.Text.StringBuilder longPath, uint size);
+
+[DllImport("kernel32.dll")]
+static extern int GetThreadPriority(IntPtr thread);
+
+[DllImport("kernel32.dll")]
+static extern int GetThreadDescription(IntPtr thread, out IntPtr description);
+
+[DllImport("kernel32.dll")]
+static extern IntPtr LocalFree(IntPtr memory);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool CloseHandle(IntPtr handle);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern uint SuspendThread(IntPtr thread);
+
+[DllImport("kernel32.dll")]
+static extern uint ResumeThread(IntPtr thread);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetThreadContext(IntPtr thread, IntPtr context);
+```
+
+| Función | Para que |
+|---|---|
+| `GetWindowThreadProcessId` e `GetCurrentThreadId` | O fío da xanela de meiga, e o do script. |
+| `PeekMessageW`, `AttachThreadInput` e `SetKeyboardState` | Poñen abaixo Ctrl e Maiús, ou ningunha tecla, coma en `check-menu.ps1`. |
+| `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
+| `GetGUIThreadInfo` | A xanela que ten o rato capturado no fío da xanela de meiga. |
+| `GetClientRect` e `GetDpiForWindow` | O tamaño da área cliente e a escala da xanela, para calcular a barra e o menú. |
+| `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Len e moven o punteiro, e pasan un punto da pantalla á área cliente, ou ao revés. |
+| `PostMessageW` | Publica na xanela as mensaxes do rato e das teclas, e a que a pecha; e na caixa de mensaxe, a do seu botón. |
+| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
+| `EnumWindows`, `GetClassNameW` e `GetWindowTextW` | Atopan a xanela de meiga, aínda que estea oculta, e len o título dunha xanela. |
+| `EnumThreadWindows`, `IsWindowVisible`, `GetWindow`, `EnumChildWindows`, `GetDlgCtrlID`, `GetDlgItemTextW` e `IsWindow` | Atopan a caixa de mensaxe do fío da xanela, a súa dona e o seu botón, len o seu texto, e din se xa se pechou; `IsWindowVisible` di tamén se a xanela de meiga está na pantalla. |
+| `OpenProcess`, `NtQueryInformationProcess` e `ReadProcessMemory` | Len o cartafol actual dun proceso, na súa memoria. |
+| `GetFileAttributesW` e `GetLongPathNameW` | Din se un arquivo existe, coma o mira meiga, e dan a forma longa dunha ruta. |
+| `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
+| `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len a prioridade dun fío de meiga polo seu nome. |
+
+- **Son as de `check-tabbar.ps1` e quince máis:** as dez das xanelas e da caixa, as tres do cartafol dun proceso, `GetFileAttributesW` e `GetLongPathNameW`. Non están as catro que engadiu `check-menu.ps1` para cambiar o tamaño da xanela e minimizala: esta comprobación non o fai.
+- **As estruturas.** `RECT`, `POINT`, `MSG` e `GUITHREADINFO` son as de `check-tabbar.ps1`. `PROCESS_BASIC_INFORMATION`, sen `public`, é o que dá `NtQueryInformationProcess`, do que só se usa o enderezo do PEB (ver `FolderOf`). E `EnumProc` é o tipo da función que as tres `Enum…` chaman con cada xanela: en C#, unha lambda, que, se devolve `false`, para a busca.
+- **As vinte que non levan `public`,** `GetGUIThreadInfo`, as seis desde `EnumWindows` e as trece desde `OpenThread`, só as usan as funcións propias da clase, en C#.
+- **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
+
+```csharp
+// Posts messages to a window: each one is three numbers, the message, its
+// wParam and its lParam. The thread of the window is suspended meanwhile,
+// so it reads all of them before the input that Windows makes: a thread
+// reads the posted messages first. If `state` is not null, the thread of
+// the window gets it as its key state, which this thread shares: the key
+// state changes as the thread reads its input, so it is set while the
+// thread is suspended, for the keys of the messages.
+public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] state)
+{
+    // THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT
+    IntPtr handle = OpenThread(0x0002 | 0x0008, false, thread);
+    if (handle == IntPtr.Zero) throw new System.ComponentModel.Win32Exception();
+    // A CONTEXT of x64: 1232 bytes, aligned to 16.
+    IntPtr memory = Marshal.AllocHGlobal(1232 + 16);
+    try
+    {
+        if (SuspendThread(handle) == uint.MaxValue) throw new System.ComponentModel.Win32Exception();
+        try
+        {
+            // SuspendThread does not wait until the thread stops; reading its
+            // context does. ContextFlags: CONTEXT_CONTROL of x64.
+            IntPtr context = new IntPtr((memory.ToInt64() + 15) & ~15L);
+            Marshal.WriteInt32(context, 0x30, 0x00100001);
+            if (!GetThreadContext(handle, context)) throw new System.ComponentModel.Win32Exception();
+            if (state != null && !SetKeyboardState(state)) throw new System.ComponentModel.Win32Exception();
+            for (int i = 0; i + 2 < messages.Length; i += 3)
+            {
+                if (!PostMessageW(window, (uint)messages[i], new UIntPtr((ulong)messages[i + 1]), new IntPtr(messages[i + 2])))
+                    throw new System.ComponentModel.Win32Exception();
+            }
+        }
+        finally { ResumeThread(handle); }
+    }
+    finally
+    {
+        Marshal.FreeHGlobal(memory);
+        CloseHandle(handle);
+    }
+}
+
+// The window that has the mouse captured in the thread `thread`, or zero.
+public static IntPtr CaptureOf(uint thread)
+{
+    GUITHREADINFO info = new GUITHREADINFO();
+    info.cbSize = Marshal.SizeOf(typeof(GUITHREADINFO));
+    if (!GetGUIThreadInfo(thread, ref info)) throw new System.ComponentModel.Win32Exception();
+    return info.hwndCapture;
+}
+
+// The priority of the thread of a process whose name is `name`, or null if
+// the process has none, or has ended.
+public static int? PriorityOf(int process, string name)
+{
+    System.Diagnostics.Process target;
+    try { target = System.Diagnostics.Process.GetProcessById(process); }
+    catch (ArgumentException) { return null; }
+    using (target)
+    {
+        System.Diagnostics.ProcessThreadCollection threads;
+        try { threads = target.Threads; }
+        catch (InvalidOperationException) { return null; }
+        foreach (System.Diagnostics.ProcessThread thread in threads)
+        {
+            // THREAD_QUERY_LIMITED_INFORMATION
+            IntPtr handle = OpenThread(0x0800, false, (uint)thread.Id);
+            if (handle == IntPtr.Zero) continue;
+            try
+            {
+                IntPtr text;
+                if (GetThreadDescription(handle, out text) < 0) continue;
+                string description;
+                try { description = Marshal.PtrToStringUni(text); }
+                finally { LocalFree(text); }
+                if (description == name) return GetThreadPriority(handle);
+            }
+            finally { CloseHandle(handle); }
+        }
+    }
+    return null;
+}
+```
+
+**`PostAll`, `CaptureOf` e `PriorityOf`** son as de `check-menu.ps1`, letra por letra (ver alí): publicar de vez as mensaxes dunha acción, co fío da xanela suspendido e, para as teclas, co seu estado das teclas; a xanela que ten o rato capturado nun fío; e a prioridade do fío dun proceso polo seu nome, coa que a comprobación sabe que tab se mostra.
+
+```csharp
+static string ClassOf(IntPtr window)
+{
+    var name = new System.Text.StringBuilder(256);
+    GetClassNameW(window, name, name.Capacity);
+    return name.ToString();
+}
+
+// The text of a window: the title of a top-level one.
+public static string TextOf(IntPtr window)
+{
+    var text = new System.Text.StringBuilder(1024);
+    GetWindowTextW(window, text, text.Capacity);
+    return text.ToString();
+}
+
+// The top-level window of the class `name` of the process `process`, also a
+// hidden one, or zero.
+public static IntPtr WindowOf(int process, string name)
+{
+    IntPtr found = IntPtr.Zero;
+    EnumWindows((window, parameter) =>
+    {
+        uint owner;
+        GetWindowThreadProcessId(window, out owner);
+        if (owner != (uint)process || ClassOf(window) != name) return true;
+        found = window;
+        return false;
+    }, IntPtr.Zero);
+    return found;
+}
+```
+
+**As xanelas: `ClassOf`, `TextOf` e `WindowOf`.** `ClassOf` dá o nome da clase dunha xanela, e `TextOf`, o seu texto: nunha xanela de nivel superior, coma a caixa de mensaxe, o seu título. `WindowOf` dá a xanela de nivel superior dun proceso que ten unha clase, `meiga` para a de meiga: `EnumWindows` chama a lambda con cada xanela de nivel superior, tamén coas ocultas, e a lambda mira o proceso de cada unha, con `GetWindowThreadProcessId`, e a súa clase; cando atopa a de meiga, gárdaa en `found` e devolve `false`, que para a busca. Se non a atopa, cero.
+
+- **Tamén oculta.** As outras comprobacións atopan a xanela con `MainWindowHandle`, que só dá unha xanela visíbel e sen dona. Eiquí, a xanela ten que atoparse aínda que non estea na pantalla: unha meiga que abrise a caixa antes de mostrala ten que fallar dicindo iso, e non que non abriu a xanela.
+
+```csharp
+// The visible dialog boxes of the thread `thread`, as a message box.
+public static IntPtr[] DialogsOf(uint thread)
+{
+    var dialogs = new System.Collections.Generic.List<IntPtr>();
+    EnumThreadWindows(thread, (window, parameter) =>
+    {
+        if (ClassOf(window) == "#32770" && IsWindowVisible(window)) dialogs.Add(window);
+        return true;
+    }, IntPtr.Zero);
+    return dialogs.ToArray();
+}
+
+// The buttons of the dialog box `dialog`.
+public static IntPtr[] ButtonsOf(IntPtr dialog)
+{
+    var buttons = new System.Collections.Generic.List<IntPtr>();
+    EnumChildWindows(dialog, (window, parameter) =>
+    {
+        if (ClassOf(window) == "Button") buttons.Add(window);
+        return true;
+    }, IntPtr.Zero);
+    return buttons.ToArray();
+}
+
+// The text of a message box: the one of its control 0xFFFF.
+public static string MessageOf(IntPtr dialog)
+{
+    var text = new System.Text.StringBuilder(16384);
+    GetDlgItemTextW(dialog, 0xFFFF, text, text.Capacity);
+    return text.ToString();
+}
+```
+
+**Os diálogos: `DialogsOf`, `ButtonsOf` e `MessageOf`.** Unha caixa de mensaxe de Windows (`MessageBoxW`) é un diálogo: unha xanela de nivel superior da clase `#32770`, a das caixas de diálogo, do fío que a abre, que é o da xanela de meiga ([Código › meiga-win › `Window::alert`](meiga-win.md#windowalert)).
+
+- **`DialogsOf`** dá os diálogos visíbeis dun fío: `EnumThreadWindows` percorre as súas xanelas de nivel superior. [`check-mouse.ps1`](#toolscheck-mouseps1) busca a súa caixa polo título, con `FindWindowW`; esta comprobación quere ver tamén unha caixa con outro título, ou dúas caixas, para dicilo.
+- **`ButtonsOf`** dá os botóns dun diálogo: as súas xanelas fillas da clase `Button`, con `EnumChildWindows`.
+- **`MessageOf`** le o texto dunha caixa de mensaxe, con `GetDlgItemTextW`: o do control co identificador `0xFFFF`, onde `MessageBoxW` pon a mensaxe, ata 16 384 caracteres.
+
+```csharp
+// The current folder of the process `process`, or null if it cannot be read:
+// the one of its PEB, which Windows sets when it starts the process, with a
+// backslash at its end. In the PEB of x64, the parameters of the process are
+// at 0x20; and in them, the folder, a UNICODE_STRING at 0x38: its length in
+// bytes, and the address of its characters at 0x40.
+public static string FolderOf(int process)
+{
+    // PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ
+    IntPtr handle = OpenProcess(0x1000 | 0x0010, false, process);
+    if (handle == IntPtr.Zero) return null;
+    try
+    {
+        var information = new PROCESS_BASIC_INFORMATION();
+        int returned;
+        if (NtQueryInformationProcess(handle, 0, ref information, Marshal.SizeOf(information), out returned) != 0) return null;
+        byte[] address = new byte[8];
+        IntPtr read;
+        if (!ReadProcessMemory(handle, information.PebBaseAddress + 0x20, address, new IntPtr(8), out read)) return null;
+        IntPtr parameters = new IntPtr(BitConverter.ToInt64(address, 0));
+        byte[] folder = new byte[16];
+        if (!ReadProcessMemory(handle, parameters + 0x38, folder, new IntPtr(16), out read)) return null;
+        int length = BitConverter.ToUInt16(folder, 0);
+        IntPtr characters = new IntPtr(BitConverter.ToInt64(folder, 8));
+        byte[] text = new byte[length];
+        if (length > 0 && !ReadProcessMemory(handle, characters, text, new IntPtr(length), out read)) return null;
+        return System.Text.Encoding.Unicode.GetString(text);
+    }
+    finally { CloseHandle(handle); }
+}
+```
+
+**O cartafol dun proceso: `FolderOf`.** WMI dá a liña de comandos de cada programa, pero non o seu cartafol actual, e Windows non ten ningunha función pública que o dea doutro proceso: `FolderOf` leo na memoria do proceso, no seu PEB (*process environment block*), onde Windows o pon cando o crea, co cartafol que lle pasou meiga.
+
+- `OpenProcess` abre o proceso para ler a súa información básica e a súa memoria (`PROCESS_QUERY_LIMITED_INFORMATION` e `PROCESS_VM_READ`).
+- `NtQueryInformationProcess`, de `ntdll.dll`, coa clase 0, `ProcessBasicInformation`, dá o enderezo do PEB.
+- **Tres lecturas** con `ReadProcessMemory`, nos sitios do PEB de x64, coma di o comentario: en 0x20 do PEB, o enderezo dos parámetros do proceso; en 0x38 dos parámetros, o cartafol, un `UNICODE_STRING` de 16 bytes, coa súa lonxitude en bytes nos dous primeiros e o enderezo dos seus caracteres nos oito desde 0x40, o byte 8 da estrutura; e eses caracteres, en UTF-16.
+- **Co `\` ao final:** Windows garda así o cartafol actual, e `Assert-Launch` quítao antes de comparar.
+- Se algo falla, `null`: o proceso puido rematar. O `finally` pecha sempre o *handle*.
+
+```csharp
+// Whether `path` is a file that Windows finds, as meiga tests it: also an
+// alias of a program of the Microsoft Store.
+public static bool IsFile(string path)
+{
+    uint attributes = GetFileAttributesW(path);
+    // INVALID_FILE_ATTRIBUTES, and FILE_ATTRIBUTE_DIRECTORY.
+    return attributes != 0xFFFFFFFF && (attributes & 0x10) == 0;
+}
+
+// The long form of the path of a folder that exists: with the long names of
+// the folders that have a short one too, as RUNNER~1.
+public static string LongPathOf(string path)
+{
+    var longPath = new System.Text.StringBuilder(32768);
+    uint length = GetLongPathNameW(path, longPath, (uint)longPath.Capacity);
+    if (length == 0 || length >= longPath.Capacity) throw new System.ComponentModel.Win32Exception();
+    return longPath.ToString();
+}
+```
+
+**Os arquivos e as rutas: `IsFile` e `LongPathOf`.**
+
+- **`IsFile`** di se unha ruta é un arquivo que Windows atopa, coma o mira meiga ([Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs)): `GetFileAttributesW` dá os seus atributos, ou `0xFFFFFFFF` (`INVALID_FILE_ATTRIBUTES`) se non o atopa, e non pode ser un cartafol (`FILE_ATTRIBUTE_DIRECTORY`, `0x10`). Así ve tamén os alias dos programas da Microsoft Store, coma o `pwsh.exe` de `WindowsApps`.
+- **`LongPathOf`** dá a forma longa da ruta dun cartafol que existe, con `GetLongPathNameW`: cos nomes longos dos cartafoles que teñen tamén un curto, coma `RUNNER~1`. Se falla, ou a ruta non cabe, un erro.
+
+```powershell
+'@
+}
+$api = [Meiga.Tools.ProfilesCheck]
+
+$WM_CLOSE = 0x0010
+$WM_COMMAND = 0x0111
+$WM_KEYDOWN = 0x0100
+$WM_KEYUP = 0x0101
+$WM_SYSKEYDOWN = 0x0104
+$WM_SYSKEYUP = 0x0105
+$WM_MOUSEMOVE = 0x0200
+$WM_LBUTTONDOWN = 0x0201
+$WM_LBUTTONUP = 0x0202
+$MK_LBUTTON = 0x0001
+$MAPVK_VK_TO_VSC = 0
+$GW_OWNER = 4
+$VK_RETURN = 0x0D
+$VK_SHIFT = 0x10
+$VK_CONTROL = 0x11
+$VK_ESCAPE = 0x1B
+$VK_SPACE = 0x20
+$VK_DOWN = 0x28
+$VK_W = 0x57
+$VK_Z = 0x5A
+$VK_APPS = 0x5D
+$VK_F10 = 0x79
+$VK_LSHIFT = 0xA0
+$VK_LCONTROL = 0xA2
+# The keys that Shift sets down: Shift and the left Shift. And the ones of
+# Ctrl.
+$shiftKeys = $VK_SHIFT, $VK_LSHIFT
+$ctrlKeys = $VK_CONTROL, $VK_LCONTROL
+$THREAD_PRIORITY_NORMAL = 0
+$THREAD_PRIORITY_BELOW_NORMAL = -1
+# The console of each tab: the one of the ConPTY of meiga, or the one of
+# Windows if the ConPTY is not next to meiga.exe.
+$consoles = 'OpenConsole.exe', 'conhost.exe'
+```
+
+**A clase e as constantes,** coma en `check-menu.ps1`, coas que necesita esta comprobación:
+
+- `'@` remata a definición en C#, e `$api` garda a clase, para chamar as súas funcións con `$api::`.
+- **`WM_CLOSE`**, a mensaxe que pecha a xanela de meiga, coma o seu ×, nos pasos 7 e 8; e **`WM_COMMAND`**, a que recibe un diálogo cando se preme un botón (ver `Close-Dialog`).
+- As mensaxes das teclas e do rato e `MAPVK_VK_TO_VSC`, coma en `check-menu.ps1`, sen as do botón dereito: eiquí só se usa o esquerdo.
+- **`GW_OWNER`**, a orde de `GetWindow` que dá a dona dunha xanela.
+- Os códigos de tecla virtual: Intro, Maiús, Ctrl, Esc, Espazo, ↓, W, Z, a tecla de menú, F10, e a Maiús e o Ctrl esquerdos, que van en `$shiftKeys` e `$ctrlKeys`, coma en `check-menu.ps1`. F10 non se teclea: está porque a le `Get-Key`, e con `Set-StrictMode` ler unha variábel que non existe sería un erro.
+- As dúas prioridades dos lectores e os nomes das consolas das tabs, os de `check-menu.ps1`.
+
+```powershell
+# The script of the tabs of Probe. The first one writes on its screen, and
+# reports its process and some of its variables in $Log; then, each time the
+# check sets the event <Name>-go, it does its next step, reports it, and
+# sets <Name>-done. The other ones report the same in a file of their own,
+# and wait until their tab closes.
+$program = @'
+param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][string]$Log)
+$ErrorActionPreference = 'Stop'
+$e = [char]27
+$out = [Console]::Out
+# The cursor is hidden, so that it never blinks.
+$out.Write("$e[?25l")
+$report = [ordered]@{ pid = $PID }
+foreach ($variable in 'TERM_PROGRAM', 'TERM_PROGRAM_VERSION', 'COLORTERM', 'WSLENV', 'WT_SESSION', 'WT_PROFILE_ID', 'APPDATA') {
+    $report[$variable] = [Environment]::GetEnvironmentVariable($variable)
+}
+$json = ConvertTo-Json $report -Compress
+$created = $false
+$first = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::ManualReset, "$Name-first", [ref]$created)
+if (-not $created) {
+    [IO.File]::WriteAllText("$Log.$PID", $json)
+    $null = $first.WaitOne()
+    exit
+}
+```
+
+**O script de Probe,** o que corren as tabs de Probe, cos dous parámetros de `check-menu.ps1`, `-Name` e `-Log`, que lle pon a liña de comandos de Probe (ver *O `config.toml`*):
+
+- **O informe.** Oculta o cursor, para que non pestanexe, e fai un informe co número do seu proceso, `pid`, e as variábeis que mira a comprobación: as tres que pon meiga, `WSLENV`, as dúas do Windows Terminal e `APPDATA`. `GetEnvironmentVariable` dá `$null` se unha non existe, e `ConvertTo-Json -Compress` escribe o informe nunha liña, con `null` nas que non existen.
+- **Quen é a primeira,** coma en `check-menu.ps1`: a primeira tab de Probe crea o evento `<Name>-first`, e as outras só o abren. Unha copia, a dunha tab de Probe que abre o menú, o + ou *Duplicate tab*, escribe o informe nun arquivo propio, o de `-Log` co número do seu proceso ao final, e agarda sen límite: ninguén sinala o evento, e o script remata cando se pecha a súa tab. Ao contrario ca en `check-menu.ps1`, non lle pon título á tab: a comprobación non o mira.
+
+```powershell
+$go = [Threading.EventWaitHandle]::OpenExisting("$Name-go")
+$done = [Threading.EventWaitHandle]::OpenExisting("$Name-done")
+# While the message box of meiga is open: the window draws it once the box
+# closes.
+$out.Write("$e[2J$e[Hmeiga-check-profiles: written while the message box is open")
+[IO.File]::AppendAllText($Log, "ready $json`n")
+Add-Type -Namespace MeigaCheck -Name Console -MemberDefinition @"
+[DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int handle);
+[DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
+"@
+$in = [MeigaCheck.Console]::GetStdHandle(-10)
+# Up to 64 INPUT_RECORD of 20 bytes: the type of the event in the first two
+# and, for a key, whether it goes down from byte 4, and its virtual-key code
+# from byte 10.
+$records = [byte[]]::new(20 * 64)
+# The keys that reach the program until Z goes up: the virtual-key code of
+# each one, with + when it goes down and - when it goes up.
+function Read-Keys {
+    $keys = [Collections.Generic.List[string]]::new()
+    while ($true) {
+        $read = 0
+        $null = [MeigaCheck.Console]::ReadConsoleInputW($in, $records, 64, [ref]$read)
+        for ($at = 0; $at -lt 20 * $read; $at += 20) {
+            if ([BitConverter]::ToUInt16($records, $at) -ne 1) { continue }
+            $down = [BitConverter]::ToInt32($records, $at + 4) -ne 0
+            $key = [BitConverter]::ToUInt16($records, $at + 10)
+            $keys.Add("$key$(if ($down) { '+' } else { '-' })")
+            if ($key -eq 0x5A -and -not $down) { return $keys -join ' ' }
+        }
+    }
+}
+$steps = @(
+    { $out.Write("$e[3;1Hmeiga-check-profiles: written after the message box"); 'wrote' },
+    { "keys $(Read-Keys)" }
+)
+foreach ($step in $steps) {
+    if (-not $go.WaitOne(60000)) { exit 1 }
+    [IO.File]::AppendAllText($Log, "$(& $step)`n")
+    $null = $done.Set()
+}
+# Until the tab closes, which ends this script.
+$null = $go.WaitOne()
+'@
+```
+
+**A primeira tab de Probe:**
+
+- **Mentres a caixa está aberta,** se meiga a abre cando debe: abre os eventos `<Name>-go` e `<Name>-done`, que creou a comprobación; borra a pantalla e escribe unha liña na primeira fila (`ESC[2J` e `ESC[H`); e escribe `ready` e o informe no arquivo dos informes. A comprobación agarda por esa liña antes de pechar a caixa.
+- **`Read-Keys`** é a de `check-menu.ps1` (ver *As teclas que lle chegan ao programa: `Read-Keys`*): le da consola, con `ReadConsoleInputW`, as teclas que lle chegan ao programa ata que sobe un Z, e dá o código de tecla virtual de cada unha, cun `+` ao baixar e un `-` ao subir.
+
+**Os pasos do script**, cada un co seu informe:
+
+| Paso | Que fai | O informe |
+|---|---|---|
+| 1 | Escribe unha liña na terceira fila. | `wrote` |
+| 2 | Le as teclas ata un Z. | `keys` e as teclas, separadas por espazos. |
+
+- **Os 60 s e o final,** coma en `check-menu.ps1`: se a comprobación se interrompe, o script remata só; despois do último paso, agarda sen límite ata que se pecha a súa tab, co paso 7 da comprobación.
+
+```powershell
+$name = "meiga-check-profiles-$PID"
+# All the files of the check, with the APPDATA of meiga, and the folder of
+# Probe, whose name has a letter that is not ASCII: an n with a tilde. With
+# the long names of the folders, which .NET gives as the current one.
+$work = Join-Path ($api::LongPathOf([IO.Path]::GetTempPath())) $name
+$appdata = Join-Path $work 'appdata'
+$config = Join-Path $appdata 'meiga\config.toml'
+$probeFolder = Join-Path $work "the folder $([char]0x00F1)"
+$script = Join-Path $work 'probe.ps1'
+$reports = Join-Path $work 'reports.txt'
+$log = Join-Path $work 'frames.csv'
+Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+$null = New-Item -ItemType Directory -Force -Path (Split-Path $config), $probeFolder
+Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+```
+
+**Os arquivos da comprobación,** todos nun cartafol propio, `$work`, no cartafol temporal, co nome `$name`: `meiga-check-profiles-<PID>`, co número do proceso de PowerShell, que é tamén o principio do nome dos eventos, coma en `check-menu.ps1`. Dentro:
+
+- `appdata`, o `APPDATA` de meiga, co `config.toml` en `appdata\meiga`, onde o busca meiga ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 1);
+- o cartafol de Probe, `the folder ñ`, cunha letra que non é ASCII, a ñ: `[char]0x00F1`, porque o script só leva ASCII;
+- o script de Probe, `probe.ps1`, en UTF-8 sen BOM; os informes, `reports.txt`, e os das copias, `reports.txt.<proceso>`; e o rexistro dos fotogramas, `frames.csv`.
+
+`$work` leva a forma longa da ruta (`LongPathOf`), cos nomes longos dos cartafoles, coma o cartafol actual que dá .NET: o cartafol temporal pode levar o nome curto dalgún, coma `RUNNER~1` no *runner* da CI, e as rutas que compara a comprobación terían formas distintas. `Remove-Item` borra o cartafol, se quedou dunha execución anterior co mesmo número; `New-Item` crea o do `config.toml` e o de Probe, e con eles `$work` e `appdata`; e `Set-Content` escribe o script.
+
+```powershell
+# The configuration: Probe, with a variable of meiga in its command line and
+# in its folder, is the default profile; Command Prompt is hidden; and two
+# errors, which meiga ignores: a key that it does not know, and a value that
+# is neither true nor false, whose profile stays visible.
+$probeLine = 'pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%MEIGA_CHECK_WORK%\probe.ps1" -Name {0} -Log "%MEIGA_CHECK_WORK%\reports.txt"' -f $name
+$configLines = @(
+    '# Written by tools/check-profiles.ps1.'
+    'default_profile = "Probe"'
+    'colour = "red"'
+    ''
+    '[[profiles]]'
+    'name = "Probe"'
+    "command = '$probeLine'"
+    "directory = '%MEIGA_CHECK_WORK%\$(Split-Path -Leaf $probeFolder)'"
+    ''
+    '[[profiles]]'
+    'name = "Command Prompt"'
+    'hidden = true'
+    ''
+    '[[profiles]]'
+    'name = "Windows PowerShell"'
+    'hidden = "yes"'
+)
+$utf8 = [Text.UTF8Encoding]::new($false)
+[IO.File]::WriteAllText($config, ($configLines -join "`n") + "`n", $utf8)
+```
+
+**O `config.toml`,** co `<PID>` de cada execución:
+
+```toml
+# Written by tools/check-profiles.ps1.
+default_profile = "Probe"
+colour = "red"
+
+[[profiles]]
+name = "Probe"
+command = 'pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%MEIGA_CHECK_WORK%\probe.ps1" -Name meiga-check-profiles-<PID> -Log "%MEIGA_CHECK_WORK%\reports.txt"'
+directory = '%MEIGA_CHECK_WORK%\the folder ñ'
+
+[[profiles]]
+name = "Command Prompt"
+hidden = true
+
+[[profiles]]
+name = "Windows PowerShell"
+hidden = "yes"
+```
+
+Cada liña está por algo ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 3, as claves):
+
+- **`default_profile = "Probe"`:** o perfil por defecto é Probe, que engade o propio arquivo. A primeira tab e o botón + teñen que correlo (decisión 5); unha meiga que ignorase a clave correría PowerShell ou Windows PowerShell.
+- **`colour = "red"`:** unha clave que meiga non coñece, na liña 3, columna 1. meiga ignóraa, só a ela, e dio na caixa (decisión 2).
+- **Probe,** un perfil novo: un nome que meiga non atopa, con `command`, que o engade despois dos atopados (decisión 3). A súa liña de comandos é a do script de Probe, coas opcións de pwsh de `check-menu.ps1` e o `$name` que pon `-f`; e o seu cartafol, o da ñ. Os dous levan `%MEIGA_CHECK_WORK%`, unha variábel do contorno de meiga, que meiga ten que expandir; e van entre comiñas simples, as cadeas literais de TOML, onde `\` é só unha barra, sen escapes.
+- **Command Prompt,** un nome que meiga atopa, con `hidden = true`: ocúltao, e o menú non o mostra (decisión 3).
+- **Windows PowerShell,** con `hidden = "yes"`: un valor que non é `true` nin `false`, na liña 16, columna 10. meiga ignora o valor, só el, e o perfil segue visíbel (decisión 2): se meiga ignorase o perfil enteiro, ou o arquivo, o menú cambiaría.
+
+O arquivo escríbese con `WriteAllText`, en UTF-8 sen BOM (`UTF8Encoding` con `$false`), coas liñas separadas por LF e outro ao final. `$configLines` queda para `Get-Problem`, que busca nela as liñas dos erros.
+
+```powershell
+# An error of the file, as meiga tells it: the line, and the column of $At
+# in it, counted from 1.
+function Get-Problem([string]$Line, [string]$At, [string]$Message) {
+    'Line {0}, column {1}: {2}' -f ([Array]::IndexOf($configLines, $Line) + 1), ($Line.IndexOf($At) + 1), $Message
+}
+$problems = @(
+    Get-Problem 'colour = "red"' 'colour' 'unknown key `colour`'
+    Get-Problem 'hidden = "yes"' '"yes"' '`hidden` has to be true or false, not a string'
+)
+```
+
+**Os erros, coma os di meiga: `Get-Problem`** ([Código › meiga-core › `config.rs`](meiga-core.md#cratesmeiga-coresrcconfigrs)): `Line <liña>, column <columna>: <mensaxe>`. A liña é a posición do texto en `$configLines`, desde 1, e a columna, a de `$At` nesa liña, tamén desde 1: `IndexOf` conta desde 0. meiga conta as columnas en caracteres (decisión 2), e `IndexOf`, en unidades de UTF-16; nestas dúas liñas, só con ASCII, dá o mesmo, e tamén en bytes (ver as copias que pasan, máis arriba). `$problems` son os dous erros, na orde do arquivo, coas mensaxes de meiga: a clave descoñecida, na súa primeira letra, e o valor que non é `true` nin `false`, na súa primeira comiña.
+
+```powershell
+# What a tab of Probe runs: its command line, with the variable expanded, in
+# its folder.
+$probeProfile = [pscustomobject]@{
+    Name = 'Probe'
+    Command = $probeLine.Replace('%MEIGA_CHECK_WORK%', $work)
+    Folder = $probeFolder
+}
+```
+
+**O que corre unha tab de Probe,** `$probeProfile`: o seu nome, a súa liña de comandos coa variábel expandida, coma a ten que expandir meiga, e o seu cartafol. Cada perfil que mira a comprobación é un obxecto así; os que atopa meiga saen de `Get-Detected`, máis abaixo.
+
+```powershell
+# What meiga gets: its APPDATA and the folder of the check, the variables of
+# Windows Terminal, and other values for the ones of a terminal, as in a
+# terminal that Windows Terminal or VS Code starts. WSLENV passes some of them
+# to WSL, with their flags.
+$given = [ordered]@{
+    APPDATA = $appdata
+    MEIGA_CHECK_WORK = $work
+    WT_SESSION = '0a2c4f1e-6b3d-4e5f-8a7b-9c0d1e2f3a4b'
+    WT_PROFILE_ID = '{61c54bbd-c2c6-5271-96e7-009a87ff44bf}'
+    TERM_PROGRAM = 'vscode'
+    TERM_PROGRAM_VERSION = '1.0.0'
+    COLORTERM = '24bit'
+    WSLENV = 'WT_SESSION:COLORTERM/u:WT_PROFILE_ID/p:MEIGA_CHECK_WORK/p'
+}
+# And what its programs get instead.
+$expectedVariables = [ordered]@{
+    TERM_PROGRAM = 'meiga'
+    TERM_PROGRAM_VERSION = $version
+    COLORTERM = 'truecolor'
+    WSLENV = 'COLORTERM/u:MEIGA_CHECK_WORK/p:TERM_PROGRAM:TERM_PROGRAM_VERSION'
+    WT_SESSION = $null
+    WT_PROFILE_ID = $null
+    APPDATA = $appdata
+}
+```
+
+**O contorno** ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 9; [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). `$given` é o que recibe meiga, ademais do contorno de PowerShell: o seu `APPDATA`; `MEIGA_CHECK_WORK`, o cartafol da comprobación, que expanden `command` e `directory`; e as variábeis do Windows Terminal, `WT_SESSION` e `WT_PROFILE_ID`, e outros valores para as dun terminal, coma nun terminal que abrisen o Windows Terminal ou VS Code: meiga, aberto desde el, herdaríaos. `WSLENV` pásalle a WSL algunhas delas, coas súas opcións: `/u`, só ao entrar en WSL desde Windows, e `/p`, unha ruta, que WSL traduce. `$expectedVariables` é o que teñen que recibir os programas das tabs:
+
+- `TERM_PROGRAM=meiga`, `TERM_PROGRAM_VERSION` coa versión de meiga e `COLORTERM=truecolor`, os valores de meiga, e non os que tiña;
+- o `WSLENV` de meiga, coas súas entradas na súa orde e coas súas opcións, sen as do Windows Terminal, e cos nomes que faltaban ao final, sen opcións: `COLORTERM` xa estaba, e queda coa súa `/u`, e `TERM_PROGRAM` e `TERM_PROGRAM_VERSION` engádense;
+- nin `WT_SESSION` nin `WT_PROFILE_ID`: `$null`, coma no informe dunha variábel que non existe;
+- e o mesmo `APPDATA`, que meiga non cambia: o da comprobación.
+
+```powershell
+$go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
+$done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
+
+# As per monitor (v2), the same as meiga, the size of the window is in pixels.
+$previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+```
+
+**Os eventos e a escala,** coma en `check-menu.ps1`: `<Name>-go` e `<Name>-done`, de reinicio automático, que abre o script de Probe; e a escala por monitor (v2), a de meiga, para o fío de PowerShell, que garda a de antes en `$previousDpi`.
+
+```powershell
+# Waits until $Condition is true, or throws what $Failure says.
+function Wait-For([scriptblock]$Condition, [scriptblock]$Failure) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (-not (& $Condition)) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode): $(& $Failure)"
+        }
+        if ([DateTime]::UtcNow -gt $deadline) { throw (& $Failure) }
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+# The lines of the frame log, as objects. meiga writes each line at once.
+function Get-Log {
+    if (-not (Test-Path -LiteralPath $log)) { return }
+    Get-Content -LiteralPath $log | ConvertFrom-Csv
+}
+
+# The frames after the first $From lines of the log.
+function Get-Frames([int]$From) {
+    @(Get-Log | Select-Object -Skip $From | Where-Object kind -EQ 'frame')
+}
+
+# Waits until meiga has written nothing in its log for $Milliseconds.
+function Wait-Quiet([int]$Milliseconds) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $count = -1
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $lines = @(Get-Log).Count
+        if ($lines -ne $count) {
+            $count = $lines
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge $Milliseconds) {
+            return
+        }
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) while the check waited for it to stop drawing."
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$exe kept drawing for $TimeoutSeconds s."
+        }
+        Start-Sleep -Milliseconds 50
+    }
+}
+
+function Test-Full($Line) {
+    [long]$Line.pixels -eq [long]$Line.width * [long]$Line.height -and [long]$Line.pixels -gt 0
+}
+
+function Show-Lines($Lines) {
+    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels, areas -AutoSize | Out-Host
+}
+```
+
+**As esperas e o rexistro dos fotogramas.** `Wait-For`, `Get-Log`, `Get-Frames`, `Wait-Quiet`, `Test-Full` e `Show-Lines` son os de `check-menu.ps1`, letra por letra (ver *As esperas*, *O rexistro dos fotogramas* e `Wait-Quiet`). Eiquí, o rexistro, `$log`, cambia no paso 8, coa segunda meiga.
+
+```powershell
+# A rectangle, from its left and top, included, to its right and bottom,
+# excluded.
+function New-Rect([int]$Left, [int]$Top, [int]$Right, [int]$Bottom) {
+    [pscustomobject]@{ Left = $Left; Top = $Top; Right = $Right; Bottom = $Bottom }
+}
+
+function Show-Rect($Rect) {
+    "($($Rect.Left), $($Rect.Top)) to ($($Rect.Right), $($Rect.Bottom))"
+}
+
+# Whether $Inner is inside $Outer.
+function Test-Inside($Inner, $Outer) {
+    $Inner.Left -ge $Outer.Left -and $Inner.Top -ge $Outer.Top -and
+    $Inner.Right -le $Outer.Right -and $Inner.Bottom -le $Outer.Bottom
+}
+
+# The smallest rectangle around $Rects.
+function Get-Union($Rects) {
+    $all = @($Rects)
+    New-Rect ($all | Measure-Object -Property Left -Minimum).Minimum ($all | Measure-Object -Property Top -Minimum).Minimum `
+    ($all | Measure-Object -Property Right -Maximum).Maximum ($all | Measure-Object -Property Bottom -Maximum).Maximum
+}
+
+# The point in the middle of $Rect.
+function Get-Center($Rect) {
+    [pscustomobject]@{
+        X = [int][Math]::Floor(($Rect.Left + $Rect.Right) / 2)
+        Y = [int][Math]::Floor(($Rect.Top + $Rect.Bottom) / 2)
+    }
+}
+
+# The areas that the frames of $Lines presented: "x y w h;x y w h".
+function Get-Areas($Lines) {
+    foreach ($line in $Lines) {
+        foreach ($area in ($line.areas -split ';' | Where-Object { $_ })) {
+            $x, $y, $w, $h = [int[]]($area -split ' ')
+            New-Rect $x $y ($x + $w) ($y + $h)
+        }
+    }
+}
+```
+
+**Os rectángulos.** `New-Rect`, `Show-Rect`, `Test-Inside`, `Get-Union` e `Get-Areas` son os de `check-menu.ps1` (ver *Os rectángulos*). **`Get-Center`** é novo: o punto do medio dun rectángulo, sen decimais, onde a comprobación fai clic nos botóns da barra.
+
+```powershell
+# Waits until meiga stops drawing, and returns the frames after the first
+# $From lines of the log, which have to be some, all of them inside $Rect;
+# otherwise throws $What.
+function Assert-Inside([int]$From, $Rect, [string]$What) {
+    Wait-Quiet 400
+    $frames = @(Get-Frames $From)
+    $outside = @(Get-Areas $frames | Where-Object { -not (Test-Inside $_ $Rect) })
+    if ($frames.Count -eq 0 -or $outside.Count -gt 0) {
+        Show-Lines $frames
+        throw "$What`: the window did not draw only inside $(Show-Rect $Rect)."
+    }
+    $frames
+}
+
+# Waits until meiga stops drawing, and checks that the frames after the first
+# $From lines of the log, which have to be some, drew only inside the
+# terminal, where the program of the first tab writes; and inside the first
+# tab too, if the window no longer has the title $Title: then the program
+# gave one, as PowerShell does while it starts as an administrator, which
+# puts "Administrator: " before the title of its console. Otherwise throws
+# $What.
+function Assert-Written([int]$From, [string]$Title, [string]$What) {
+    Wait-Quiet 400
+    $frames = @(Get-Frames $From)
+    # After the frames: the window already has the title that they drew.
+    $allowed = @($terminal)
+    if ($api::TextOf($window) -cne $Title) { $allowed += $bar.FirstTab }
+    $outside = @(foreach ($area in @(Get-Areas $frames)) {
+            if (@($allowed | Where-Object { Test-Inside $area $_ }).Count -eq 0) { $area }
+        })
+    if ($frames.Count -eq 0 -or $outside.Count -gt 0) {
+        Show-Lines $frames
+        throw "$What`: the window did not draw only inside $(($allowed | ForEach-Object { Show-Rect $_ }) -join ' and ')."
+    }
+}
+
+# Waits until meiga stops drawing, and checks that the frames after the first
+# $From lines of the log presented $Rect, and nothing else; otherwise throws
+# $What.
+function Assert-Only([int]$From, $Rect, [string]$What) {
+    Wait-Quiet 400
+    $frames = @(Get-Frames $From)
+    $areas = @(Get-Areas $frames)
+    if ($areas.Count -ne 1 -or (Show-Rect $areas[0]) -ne (Show-Rect $Rect)) {
+        Show-Lines $frames
+        throw "$What`: the window did not draw only $(Show-Rect $Rect)."
+    }
+}
+
+# Waits until meiga stops drawing, and checks that it drew one full frame
+# after the first $From lines of the log; otherwise throws $What.
+function Assert-OneFull([int]$From, [string]$What) {
+    Wait-Quiet 400
+    $full = @(Get-Frames $From | Where-Object { Test-Full $_ })
+    if ($full.Count -ne 1) {
+        Show-Lines (Get-Frames $From)
+        throw "$What made $($full.Count) full frames instead of 1."
+    }
+}
+
+# Waits until a frame after the first $From lines of the log presents the
+# menu $Menu: then the window has taken the keys that opened it.
+function Wait-Menu([int]$From, $Menu, [string]$What) {
+    Wait-For { @(Get-Areas (Get-Frames $From) | Where-Object { Test-Inside $Menu $_ }).Count -gt 0 } {
+        "$What did not open the menu of the profiles at $(Show-Rect $Menu)."
+    }
+}
+```
+
+**O que debuxa cada cambio.** `Assert-Inside`, `Assert-Only` e `Assert-OneFull` son os de `check-menu.ps1` (ver *O que debuxa cada cambio*). **`Assert-Written`** é nova, para o paso 1: coma `Assert-Inside` co terminal, `$terminal`, onde escribe o programa da primeira tab; pero, se a xanela xa non ten o título `$Title`, o que tiña antes de pecharse a caixa, deixa debuxar tamén na primeira tab, `$bar.FirstTab`. Entón o programa deu un título, e meiga dállo á xanela e á tab no mesmo fotograma ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)): PowerShell dá un cando arranca como administrador, coma no *runner* da CI. Le o título da xanela despois de ler os fotogramas, e meiga pono antes de compoñer e presentar o fotograma que o debuxa, e de escribir a súa liña: se os fotogramas que le debuxaron un título, a xanela xa o ten, e a comprobación non pode fallar polo momento en que chega. Se falla, a mensaxe di os rectángulos onde se podía debuxar, un ou os dous. **`Wait-Menu`** é nova: agarda a que un fotograma presente unha zona que conteña o menú, sen agardar a que meiga deixe de debuxar. Abonda para saber que a xanela xa tratou as teclas ou o botón que o abriron, e que a comprobación pode cambiar o estado das teclas (ver *Unha tecla cada vez* en `check-menu.ps1`).
+
+```powershell
+# The reports of the script of the first tab.
+function Get-Reports {
+    if (-not (Test-Path -LiteralPath $reports)) { return @() }
+    @(Get-Content -LiteralPath $reports)
+}
+
+# Tells the script of the first tab to do its next step, waits until it has
+# done it, and returns its report.
+function Invoke-Step([string]$What) {
+    $null = $go.Set()
+    if (-not $done.WaitOne($TimeoutSeconds * 1000)) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) before the script of the first tab could $What."
+        }
+        throw "The script of the first tab did not $What within $TimeoutSeconds s."
+    }
+    @(Get-Reports)[-1]
+}
+
+# Checks that the program of a tab of Probe got the variables of a terminal,
+# and not the ones of meiga: $Report, as its script tells them.
+function Assert-Variables($Report, [string]$What) {
+    foreach ($variable in $expectedVariables.Keys) {
+        $value = $Report.$variable
+        $expected = $expectedVariables[$variable]
+        if ($value -cne $expected) {
+            $show = { param($Text) if ($null -eq $Text) { 'none' } else { "'$Text'" } }
+            throw "$What got $(& $show $value) as $variable, instead of $(& $show $expected)."
+        }
+    }
+}
+```
+
+**Os informes e as variábeis.** `Get-Reports` e `Invoke-Step` son os de `check-menu.ps1` (ver *Os informes*). **`Assert-Variables`** compara as variábeis dun informe de Probe coas de `$expectedVariables`, unha por unha, distinguindo maiúsculas (`-cne`); se unha non é a que debe, falla, e di o que recibiu o programa e o que tiña que recibir: o bloque `$show` pon o valor entre comiñas, ou `none` se non existe.
+
+```powershell
+# The programs of the tabs: the processes that meiga started, but for the
+# consoles. A process that ended before meiga started may have had a
+# process with the same number as its parent.
+function Get-Shells {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -notin $consoles -and $_.CreationDate -ge $started })
+}
+
+# The consoles of the tabs.
+function Get-Consoles {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -in $consoles -and $_.CreationDate -ge $started })
+}
+
+# Waits until a tab opens with a program that is not one of $Known, and
+# returns its process, from WMI.
+function Wait-NewShell([int[]]$Known, [string]$What) {
+    $new = { @(Get-Shells | Where-Object { [int]$_.ProcessId -notin $Known }) }
+    Wait-For { @(& $new).Count -gt 0 } { "$What did not open a tab with a program." }
+    $shells = @(& $new)
+    if ($shells.Count -ne 1) {
+        throw "$What opened $($shells.Count) tabs, with the command lines: $(($shells | ForEach-Object CommandLine) -join '; ')."
+    }
+    $shells[0]
+}
+
+# Checks that $Shell, a process from WMI, runs the command line of $Launch,
+# which a tab of a profile runs, in its folder.
+function Assert-Launch($Shell, $Launch, [string]$What) {
+    if ($Shell.CommandLine -cne $Launch.Command) {
+        throw "$What started '$($Shell.CommandLine)' instead of '$($Launch.Command)', the command line of $($Launch.Name)."
+    }
+    $folder = $api::FolderOf([int]$Shell.ProcessId)
+    if ($null -eq $folder) {
+        throw "$What started a program whose folder cannot be read: it may have ended."
+    }
+    # Folders do not distinguish upper and lower case.
+    if ($folder.TrimEnd('\') -ne $Launch.Folder.TrimEnd('\')) {
+        throw "$What started its program in $folder instead of $($Launch.Folder), the folder of $($Launch.Name)."
+    }
+}
+```
+
+**Os programas das tabs.** `Get-Shells` e `Get-Consoles` son os de `check-menu.ps1` (ver *Os programas e as consolas das tabs*): os fillos de meiga, os programas das tabs e as súas consolas, desde WMI.
+
+- **`Wait-NewShell`** é coma `Wait-Copy` en `check-menu.ps1`: agarda a que se abra unha tab cun programa que non é ningún dos de `$Known`, e só un; se hai máis, falla, e di as súas liñas de comandos. Non compara nada: devolve o proceso, de WMI, para `Assert-Launch`.
+- **`Assert-Launch`** comproba o que corre unha tab: que o seu programa corre exactamente a liña de comandos do perfil, a que dá `Win32_Process` (`CommandLine`), distinguindo maiúsculas; e que empezou no cartafol do perfil, o que le `FolderOf`, sen o `\` do final e sen distinguir maiúsculas, coma os cartafoles de Windows. Se o proceso xa rematou, `FolderOf` dá `null`, e tamén falla.
+
+```powershell
+# The priority of the reader thread of the tab whose program is $Program,
+# or $null if it has none.
+function Get-Priority([int]$Program) {
+    $api::PriorityOf($process.Id, "conpty reader $Program")
+}
+
+# Waits until the tab of $Shown is the one with the reader of normal
+# priority, and the ones of $Hidden have the lower one.
+function Wait-Shown([int]$Shown, [int[]]$Hidden, [string]$What) {
+    Wait-For {
+        (Get-Priority $Shown) -eq $THREAD_PRIORITY_NORMAL -and
+        @($Hidden | Where-Object { (Get-Priority $_) -ne $THREAD_PRIORITY_BELOW_NORMAL }).Count -eq 0
+    } {
+        $all = @($Shown) + $Hidden | ForEach-Object { "$_ $(Get-Priority $_)" }
+        "$What`: the priorities of the readers are not the expected ones (process and priority: $($all -join ', '))."
+    }
+}
+
+# Waits until the process $Id has used no processor time for a second, or
+# for $Seconds at most: a shell of the user has started, and its profile may
+# keep working.
+function Wait-Settled([int]$Id, [int]$Seconds) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
+    $last = -1
+    $since = [DateTime]::UtcNow
+    while ([DateTime]::UtcNow -lt $deadline) {
+        try { $time = (Get-Process -Id $Id -ErrorAction Stop).TotalProcessorTime.Ticks }
+        catch { return }
+        if ($time -ne $last) {
+            $last = $time
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 1000) {
+            return
+        }
+        Start-Sleep -Milliseconds 100
+    }
+}
+
+# Waits until the process $Id has ended, also after meiga, for $Seconds at
+# most.
+function Wait-Ended([int]$Id, [string]$What, [int]$Seconds = $TimeoutSeconds) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
+    while (Get-Process -Id $Id -ErrorAction Ignore) {
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What was still running after $Seconds s."
+        }
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+# Waits until the consoles of the tabs have ended, once meiga has.
+function Wait-ConsolesEnded {
+    foreach ($console in Get-Consoles) {
+        Wait-Ended ([int]$console.ProcessId) "The console $($console.Name) of a tab"
+    }
+}
+```
+
+**As prioridades e os finais.**
+
+- `Get-Priority` e `Wait-Shown` son os de `check-menu.ps1` (ver alí): a prioridade do lector dunha tab, e a espera a que se mostre a tab dun programa, co seu lector na prioridade normal, e os das outras, na de debaixo.
+- **`Wait-Settled`** é coma a de [`check-tabbar.ps1`](#toolscheck-tabbarps1): agarda a que un proceso leve un segundo sen usar o procesador, mirándoo cada 100 ms. Pero non falla: remata se o proceso xa non existe, ou cando pasan `$Seconds`. É para as shells do usuario: unha arrancou, e o seu perfil pode seguir traballando máis tempo do que a comprobación pode agardar.
+- **`Wait-Ended`** é a de `check-menu.ps1`, cun límite opcional, `$Seconds`: por defecto, `TimeoutSeconds`; para as shells do usuario, `$shellSeconds`.
+- **`Wait-ConsolesEnded`** agarda a que rematen as consolas das tabs, unha por unha, cando xa rematou meiga.
+
+```powershell
+# Waits for the message box of meiga, and checks that it is in front of its
+# window, owned by it, with the title meiga and one button. Returns it, with
+# its button and its text, with each line ending in a line feed.
+function Get-Dialog {
+    Wait-For { @($api::DialogsOf($thread)).Count -gt 0 } { 'The window did not show a message box.' }
+    $dialogs = @($api::DialogsOf($thread))
+    if ($dialogs.Count -ne 1) {
+        throw "The window showed $($dialogs.Count) message boxes instead of one."
+    }
+    $dialog = $dialogs[0]
+    $owner = $api::GetWindow($dialog, $GW_OWNER)
+    if ($owner -ne $window) {
+        throw "The owner of the message box is the window $owner, instead of the one of $exe, $window."
+    }
+    $title = $api::TextOf($dialog)
+    if ($title -cne 'meiga') {
+        throw "The message box has the title '$title' instead of 'meiga'."
+    }
+    $buttons = @($api::ButtonsOf($dialog))
+    if ($buttons.Count -ne 1) {
+        throw "The message box has $($buttons.Count) buttons instead of one."
+    }
+    [pscustomobject]@{
+        Window = $dialog
+        Button = $buttons[0]
+        Text = $api::MessageOf($dialog).Replace("`r`n", "`n")
+    }
+}
+
+# Presses the button of the message box $Dialog, as its keyboard or its
+# mouse does, and waits until the box closes.
+function Close-Dialog($Dialog) {
+    $id = $api::GetDlgCtrlID($Dialog.Button)
+    if (-not $api::PostMessageW($Dialog.Window, $WM_COMMAND, [UIntPtr]::new([uint64]$id), $Dialog.Button)) {
+        throw "Could not press the button of the message box: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    Wait-For { -not $api::IsWindow($Dialog.Window) } { 'The message box did not close when its button was pressed.' }
+}
+```
+
+**A caixa de mensaxe: `Get-Dialog` e `Close-Dialog`.**
+
+- **`Get-Dialog`** agarda a que o fío da xanela de meiga teña un diálogo visíbel (`DialogsOf`), e comproba que é só un; que a súa dona (`GW_OWNER`) é a xanela de meiga, así que vai sempre diante dela, e a xanela non recibe o rato nin as teclas mentres está aberta ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 8); que o seu título é `meiga`, distinguindo maiúsculas; e que ten un só botón. Devolve a caixa, o seu botón e o seu texto, cos saltos de liña en LF, se viñan en CR LF.
+- **`Close-Dialog`** preme o botón, coma o teclado ou o rato: publica na caixa `WM_COMMAND`, co identificador do botón no `wParam` e a xanela do botón no `lParam`, e agarda a que a caixa xa non exista (`IsWindow`). O identificador lese do botón, con `GetDlgCtrlID`: nunha caixa só con *OK* (`MB_OK`), o botón non ten `IDOK` (1), senón `IDCANCEL` (2), para que Esc a peche, e un `WM_COMMAND` con `IDOK` non faría nada. [`check-mouse.ps1`](#toolscheck-mouseps1) pasa `IDOK` ou `IDCANCEL` na súa caixa, que ten os dous botóns.
+
+```powershell
+# If the pointer is over the window, moves it out, above the window: the
+# moves that Windows makes at its place would reach the bar.
+function Move-Pointer {
+    $point = [Meiga.Tools.ProfilesCheck+POINT]::new()
+    if (-not $api::GetCursorPos([ref]$point)) { return }
+    $inside = [Meiga.Tools.ProfilesCheck+POINT]::new()
+    $inside.X = $point.X
+    $inside.Y = $point.Y
+    $rect = [Meiga.Tools.ProfilesCheck+RECT]::new()
+    if (-not $api::ScreenToClient($window, [ref]$inside) -or -not $api::GetClientRect($window, [ref]$rect) -or
+        $inside.X -lt 0 -or $inside.Y -lt 0 -or $inside.X -ge $rect.Right -or $inside.Y -ge $rect.Bottom) {
+        return
+    }
+    if ($null -eq $script:pointer) { $script:pointer = $point }
+    $title = [Meiga.Tools.ProfilesCheck+POINT]::new()
+    $title.X = [Math]::Floor($rect.Right / 2)
+    $title.Y = -8
+    $null = $api::ClientToScreen($window, [ref]$title)
+    if (-not $api::SetCursorPos($title.X, $title.Y)) {
+        throw "Could not move the pointer out of the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+}
+
+# The client area of the window.
+function Get-Client {
+    $client = [Meiga.Tools.ProfilesCheck+RECT]::new()
+    if (-not $api::GetClientRect($window, [ref]$client)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $client
+}
+
+# `$Pixels` at a scale of 100 %, at the scale of the window, as meiga does:
+# rounded, and at least one.
+function Get-Scaled([int]$Pixels) {
+    [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
+}
+
+# The layout of the bar with $Count tabs, as meiga computes it (see
+# crates/meiga-core/src/ui/tabbar.rs): its height, the first tab, the button
+# + after the last tab, the one of the profiles joined to it, and both of
+# them, which the menu of the profiles opens below.
+function Get-Bar([int]$Count) {
+    $client = Get-Client
+    $height = Get-Scaled 32
+    $gap = Get-Scaled 4
+    $newSide = Get-Scaled 28
+    $profilesSide = Get-Scaled 24
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $left = $gap + $Count * $width + $gap
+    $new = New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
+    $profiles = New-Rect $new.Right $new.Top ($new.Right + $profilesSide) $new.Bottom
+    [pscustomobject]@{
+        Height = $height
+        FirstTab = New-Rect $gap $gap ($gap + $width) $height
+        New = $new
+        Profiles = $profiles
+        Buttons = Get-Union @($new, $profiles)
+    }
+}
+```
+
+**A barra, coma a calcula meiga: `Get-Bar`.** `Move-Pointer`, `Get-Client` e `Get-Scaled` son os de `check-menu.ps1` (ver *A barra, coma a calcula meiga*). `Get-Bar` é novo, e calcula só o que necesita esta comprobación, coas regras do *layout* da barra ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)):
+
+- **O ancho das tabs,** coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1): 240 píxeles ao 100 %, ou menos, se non caben, repartindo entre as tabs a área cliente sen tres espazos de 4, o + e o ▾.
+- **`FirstTab`,** a primeira tab, desde un espazo de 4 á esquerda e arriba ata o fondo da barra: ao 100 %, de (4, 4) a (244, 32), coma `tab(0)` en `Layout`. O título da tab vai dentro dela, e o paso 1 déixaa debuxar se o programa deu un.
+- **O +,** `New`, un cadrado de 28 ao 100 %, despois da última tab e dun espazo, e a 4 do bordo de arriba; e **o ▾,** `Profiles`, pegado á súa dereita, do mesmo alto e 24 de ancho ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
+- **`Buttons`,** os dous xuntos, con `Get-Union`: o menú dos perfís ábrese debaixo deles.
+- **`Height`,** o alto da barra, 32 ao 100 %: o terminal empeza debaixo.
+
+Cunha tab, nunha xanela ancha, o + vai ao 100 % de (248, 4) a (276, 32), e o ▾, de (276, 4) a (300, 32); ao 150 %, de (372, 6) a (414, 48), e de (414, 6) a (450, 48).
+
+```powershell
+# The sizes of a menu of $Items items, as meiga computes them (see
+# crates/meiga-core/src/ui/menu.rs): between a border with some space inside
+# it. Its width depends on the font, and comes from the frame that opens it.
+function Get-MenuSizes([int]$Items) {
+    $border = Get-Scaled 1
+    $padding = Get-Scaled 2
+    $side = Get-Scaled 4
+    $gap = Get-Scaled 2
+    $item = (Get-Scaled 28) + 2 * $gap
+    [pscustomobject]@{
+        Items = $Items
+        Border = $border
+        Padding = $padding
+        Side = $side
+        Gap = $gap
+        Item = $item
+        Height = 2 * ($border + $padding) + $Items * $item
+        # Beside the text: the border, the space between it and the
+        # highlight, and the one between the highlight and the text, on
+        # each side.
+        Sides = 2 * ($border + $side + (Get-Scaled 11))
+    }
+}
+
+# The menu, as meiga places it: with its top-left corner at $Left, $Top or,
+# where it does not fit, its right side at $OtherRight or its bottom at
+# $OtherBottom; and never outside the client area.
+function Get-Menu([int]$Left, [int]$Top, [int]$OtherRight, [int]$OtherBottom) {
+    $client = Get-Client
+    $width = [Math]::Min($menuWidth, $client.Right)
+    $height = $sizes.Height
+    $x = if ($Left + $width -gt $client.Right) { $OtherRight - $width } else { $Left }
+    $y = if ($Top + $height -gt $client.Bottom) { $OtherBottom - $height } else { $Top }
+    $x = [Math]::Max(0, [Math]::Min($x, $client.Right - $width))
+    $y = [Math]::Max(0, [Math]::Min($y, $client.Bottom - $height))
+    New-Rect $x $y ($x + $width) ($y + $height)
+}
+
+# The items of $Menu, each one with a point in the middle of it, X and Y,
+# and its highlight, without the space on its sides and above and below it.
+function Get-Entries($Menu) {
+    $top = $Menu.Top + $sizes.Border + $sizes.Padding
+    $left = $Menu.Left + $sizes.Border + $sizes.Side
+    $right = $Menu.Right - $sizes.Border - $sizes.Side
+    $x = [Math]::Floor(($Menu.Left + $Menu.Right) / 2)
+    foreach ($index in 1..$sizes.Items) {
+        [pscustomobject]@{
+            X = $x
+            Y = $top + [Math]::Floor($sizes.Item / 2)
+            Highlight = New-Rect $left ($top + $sizes.Gap) $right ($top + $sizes.Item - $sizes.Gap)
+        }
+        $top += $sizes.Item
+    }
+}
+```
+
+**O menú dos perfís: `Get-MenuSizes`, `Get-Menu` e `Get-Entries`.** Son os de `check-menu.ps1` (ver *O menú, coma o calcula meiga*, *Onde se abre* e *As entradas*), para un menú de `$Items` elementos e sen liña: o menú dos perfís ten un elemento por perfil, e nada máis ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). O alto, `Height`, é o bordo e o espazo, arriba e abaixo, e os elementos: ao 100 %, 6 e 32 por elemento; ao 150 %, 10 e 48. `Get-Entries` dá os elementos un detrás doutro, desde o primeiro, sen o caso da liña. `Get-Menu` é o mesmo, co comentario do menú en xeral: o paso 3 pásalle o lado esquerdo e o de abaixo dos dous botóns e, para o outro lado, o dereito e o de arriba, así que, se o menú non cabe pola dereita, vai co seu lado dereito no do ▾, e, se non cabe por abaixo, por riba dos botóns.
+
+```powershell
+# A mouse message at a point: the message, its wParam and its lParam.
+function Get-Mouse([int]$Message, [int]$Keys, $Point) {
+    $Message, $Keys, (([int]$Point.X -band 0xFFFF) -bor (([int]$Point.Y -band 0xFFFF) -shl 16))
+}
+
+# Posts mouse messages at once: see PostAll.
+function Send-Mouse([long[]]$Messages) {
+    $api::PostAll($window, $thread, $Messages, $null)
+}
+
+# A click of the left button at $Point: the pointer moves there, and the
+# button goes down and up.
+function Send-Click($Point) {
+    Send-Mouse @(
+        Get-Mouse $WM_MOUSEMOVE 0 $Point
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $Point
+        Get-Mouse $WM_LBUTTONUP 0 $Point
+    )
+}
+
+# The window that has the mouse captured in the thread of the window of
+# meiga, or zero.
+function Get-Capture {
+    $api::CaptureOf($thread)
+}
+
+# Shares the input of this thread with the one of the window, whose key
+# state Send-Keys sets: SetKeyboardState sets the key state of the thread
+# that calls it. This thread needs a message queue, which PeekMessageW
+# creates.
+function Join-Input {
+    $message = [Meiga.Tools.ProfilesCheck+MSG]::new()
+    $null = $api::PeekMessageW([ref]$message, [IntPtr]::Zero, 0, 0, 0)
+    if (-not $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $true)) {
+        throw "AttachThreadInput failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    $script:attached = $true
+}
+
+# Stops sharing the input with the thread of the window, with no key down.
+function Split-Input {
+    if ($script:attached) {
+        $null = $api::SetKeyboardState([byte[]]::new(256))
+        $null = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $false)
+        $script:attached = $false
+    }
+}
+
+# The message of $Code going down, or up: the message, its wParam and its
+# lParam. With $Repeat, it goes down again, as Windows repeats a key that
+# stays down. F10 goes as a system key, as Windows sends it.
+function Get-Key([int]$Code, [bool]$Down, [bool]$Repeat) {
+    $scan = $api::MapVirtualKeyExW($Code, $MAPVK_VK_TO_VSC, $api::GetKeyboardLayout($thread))
+    [long]$bits = 1 -bor ($scan -shl 16)
+    if ($Down) {
+        # The key was down (bit 30).
+        if ($Repeat) { $bits = $bits -bor 0x40000000L }
+        $message = if ($Code -eq $VK_F10) { $WM_SYSKEYDOWN } else { $WM_KEYDOWN }
+    }
+    else {
+        # The key was down (bit 30), and goes up (bit 31).
+        $bits = $bits -bor 0xC0000000L
+        $message = if ($Code -eq $VK_F10) { $WM_SYSKEYUP } else { $WM_KEYUP }
+    }
+    $message, $Code, $bits
+}
+
+# Posts key messages at once, with the keys of $Down down and no other one
+# (see PostAll). The input has to be shared with the thread of the window:
+# see Join-Input.
+function Send-Keys([long[]]$Messages, [int[]]$Down = @()) {
+    $state = [byte[]]::new(256)
+    foreach ($key in $Down) { $state[$key] = 0x80 }
+    $api::PostAll($window, $thread, $Messages, $state)
+}
+
+# Types $Code: it goes down and up, with the keys of $Down down.
+function Send-Press([int]$Code, [int[]]$Down = @()) {
+    Send-Keys @((Get-Key $Code $true) + (Get-Key $Code $false)) $Down
+}
+
+# Ctrl and Shift go down, and each key of $Codes goes down and up, with
+# both of them down. They stay down until Send-ModifiersUp, which changes
+# the key state: before it, the window has to take the keys, which read it.
+function Send-Shortcut([int[]]$Codes) {
+    $messages = @(Get-Key $VK_CONTROL $true; Get-Key $VK_SHIFT $true)
+    foreach ($code in $Codes) {
+        $messages += @(Get-Key $code $true) + @(Get-Key $code $false)
+    }
+    Send-Keys $messages ($ctrlKeys + $shiftKeys)
+}
+
+# Shift and Ctrl go up.
+function Send-ModifiersUp {
+    Send-Keys @(Get-Key $VK_SHIFT $false; Get-Key $VK_CONTROL $false)
+}
+```
+
+**O rato e as teclas.** `Get-Mouse`, `Send-Mouse`, `Get-Capture`, `Join-Input`, `Split-Input`, `Get-Key`, `Send-Keys` e `Send-Press` son os de `check-menu.ps1` (ver *Os puntos e os clics*, *A captura e o estado das teclas* e *As teclas*). `Send-Click` tamén, pero só co botón esquerdo. E dúas novas, para os atallos con Ctrl e Maiús:
+
+- **`Send-Shortcut`:** Ctrl e Maiús baixan, e cada tecla de `$Codes` baixa e sobe, todo nunha publicación, co estado das teclas con Ctrl e Maiús abaixo. Ctrl e Maiús quedan abaixo ata `Send-ModifiersUp`, e as teclas do atallo, coma as dúas W do paso 6, van todas co mesmo estado.
+- **`Send-ModifiersUp`:** Maiús e Ctrl soben, nunha publicación sen ningunha tecla abaixo. Cambia o estado das teclas, así que só se pode chamar cando a xanela xa tratou as do atallo, que len o anterior: por iso, entre as dúas, a comprobación agarda o que fai o atallo, coma unha tab que se mostra ou o menú que se abre.
+
+```powershell
+# The items of $Items in the order of $Before, which tells whether its first
+# argument goes before its second, as meiga sorts them: an insertion sort,
+# which keeps the order of the ones that are alike.
+function Get-Sorted([object[]]$Items, [scriptblock]$Before) {
+    $sorted = [Collections.Generic.List[object]]::new()
+    foreach ($item in $Items) {
+        $at = $sorted.Count
+        while ($at -gt 0 -and (& $Before $item $sorted[$at - 1])) { $at-- }
+        $sorted.Insert($at, $item)
+    }
+    $sorted.ToArray()
+}
+
+# The folders of the versions of PowerShell among $Names, the newest first,
+# as meiga orders them: the ones named with a number, as 7, or, with
+# $Preview, with a number and -preview, as 7-preview.
+function Get-Versions([string[]]$Names, [bool]$Preview) {
+    $versions = @(foreach ($folder in $Names) {
+            $number = $folder
+            if ($Preview) {
+                if (-not $folder.EndsWith('-preview', [StringComparison]::Ordinal)) { continue }
+                $number = $folder.Substring(0, $folder.Length - '-preview'.Length)
+            }
+            $value = [uint32]0
+            if ($number -cmatch '^[0-9]+$' -and [uint32]::TryParse($number, [ref]$value)) {
+                [pscustomobject]@{ Number = $value; Folder = $folder }
+            }
+        })
+    $newest = {
+        param($First, $Second)
+        $First.Number -gt $Second.Number -or
+        ($First.Number -eq $Second.Number -and [string]::CompareOrdinal($First.Folder, $Second.Folder) -gt 0)
+    }
+    Get-Sorted $versions $newest | ForEach-Object Folder
+}
+
+# The first PowerShell 7 that is installed, as meiga finds it (see
+# crates/meiga-win/src/profiles.rs), or nothing.
+function Get-PowerShell {
+    $programFiles = [Environment]::GetEnvironmentVariable('ProgramFiles')
+    $local = [Environment]::GetEnvironmentVariable('LOCALAPPDATA')
+    $user = [Environment]::GetEnvironmentVariable('USERPROFILE')
+    $installed = "$programFiles\PowerShell"
+    # Only folders, and not links to them.
+    $folders = @()
+    if ($programFiles) {
+        $folders = @(Get-ChildItem -LiteralPath $installed -Directory -Force -ErrorAction Ignore |
+                Where-Object { -not $_.LinkType } | ForEach-Object Name)
+    }
+    $paths = @(
+        Get-Versions $folders $false | ForEach-Object { "$installed\$_\pwsh.exe" }
+        if ($local) { "$local\Microsoft\WindowsApps\Microsoft.PowerShell_8wekyb3d8bbwe\pwsh.exe" }
+        if ($user) { "$user\scoop\apps\pwsh\current\pwsh.exe"; "$user\.dotnet\tools\pwsh.exe" }
+        Get-Versions $folders $true | ForEach-Object { "$installed\$_\pwsh.exe" }
+        if ($local) { "$local\Microsoft\WindowsApps\Microsoft.PowerShellPreview_8wekyb3d8bbwe\pwsh.exe" }
+    )
+    $paths | Where-Object { $api::IsFile($_) } | Select-Object -First 1
+}
+```
+
+**As shells, coma as atopa meiga.** A comprobación atopa as shells instaladas coas mesmas regras ca meiga ([Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs); [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4): sen lanzar ningún proceso, só mirando arquivos e o rexistro de Windows. Así sabe que perfís ten que mostrar o menú, en que orde, e que liña de comandos ten que correr cada un.
+
+- **`Get-Sorted`** ordena coma meiga: por inserción, que mantén na súa orde os elementos iguais (decisión 12). `$Before` di se o seu primeiro argumento vai antes ca o segundo: cada elemento entra ao final, e retrocede mentres vaia antes ca o anterior.
+- **`Get-Versions`** ordena os cartafoles das versións de PowerShell, a máis nova primeiro: os que se chaman cun número, coma `7`, ou, con `$Preview`, cun número e `-preview`, coma `7-preview`. Só díxitos ASCII (`-cmatch '^[0-9]+$'`) e un número que caiba en 32 bits sen signo (`TryParse`); cun número igual, coma `7` e `07`, primeiro o nome maior, en orde ordinal.
+- **`Get-PowerShell`** dá o primeiro PowerShell 7 que existe (`IsFile`), nesta orde: os cartafoles con número de `%ProgramFiles%\PowerShell`, só cartafoles de verdade, e non ligazóns a eles (`LinkType`); o da Microsoft Store, en `WindowsApps`; o de scoop e o das ferramentas de .NET, no cartafol persoal; e as versións *preview*, as dos cartafoles e a da Store. Se non hai ningún, nada: o menú non ten o perfil PowerShell.
+
+```powershell
+# The value $Value of the key $Key of the registry, if it is a string, with
+# the variables that it may have expanded, or $null.
+function Get-RegistryText($Key, [string]$Value) {
+    if ($Key.GetValueNames() -notcontains $Value) { return $null }
+    if ($Key.GetValueKind($Value) -notin 'String', 'ExpandString') { return $null }
+    [string]$Key.GetValue($Value)
+}
+
+# The names of the distributions of WSL of the user, as meiga orders them:
+# the default one first, and then the others by name, without
+# distinguishing case; without the ones that are not installed, nor the
+# engines of Docker Desktop and Rancher Desktop.
+function Get-Distributions {
+    $lxss = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Lxss')
+    if (-not $lxss) { return }
+    try {
+        $default = Get-RegistryText $lxss 'DefaultDistribution'
+        $installed = @(foreach ($subkey in $lxss.GetSubKeyNames()) {
+                $key = $lxss.OpenSubKey($subkey)
+                if (-not $key) { continue }
+                try {
+                    $distribution = Get-RegistryText $key 'DistributionName'
+                    $installedState = $key.GetValueNames() -contains 'State' -and $key.GetValueKind('State') -eq 'DWord' -and
+                    [int]$key.GetValue('State') -eq 1
+                    $engine = $null -ne $distribution -and ($distribution.StartsWith('docker-desktop', [StringComparison]::OrdinalIgnoreCase) -or
+                        $distribution.StartsWith('rancher-desktop', [StringComparison]::OrdinalIgnoreCase))
+                    if ($null -ne $distribution -and $installedState -and -not $engine) {
+                        [pscustomobject]@{
+                            Name = $distribution
+                            IsDefault = $null -ne $default -and [string]::Equals($subkey, $default, [StringComparison]::OrdinalIgnoreCase)
+                        }
+                    }
+                }
+                finally { $key.Dispose() }
+            })
+    }
+    finally { $lxss.Dispose() }
+    $order = {
+        param($First, $Second)
+        if ($First.IsDefault -ne $Second.IsDefault) { return $First.IsDefault }
+        [string]::CompareOrdinal($First.Name.ToLowerInvariant(), $Second.Name.ToLowerInvariant()) -lt 0
+    }
+    Get-Sorted $installed $order | ForEach-Object Name
+}
+
+# The bash.exe of Git for Windows, as meiga finds it, or nothing: in the
+# folder where the registry says that it is installed, for all the users or
+# for this one, or in the folder of scoop.
+function Get-GitBash {
+    $paths = @(
+        foreach ($root in [Microsoft.Win32.Registry]::LocalMachine, [Microsoft.Win32.Registry]::CurrentUser) {
+            $key = $root.OpenSubKey('SOFTWARE\GitForWindows')
+            if ($key) {
+                try {
+                    $folder = Get-RegistryText $key 'InstallPath'
+                    if ($null -ne $folder) { "$($folder.TrimEnd('\'))\bin\bash.exe" }
+                }
+                finally { $key.Dispose() }
+            }
+        }
+        $user = [Environment]::GetEnvironmentVariable('USERPROFILE')
+        if ($user) { "$user\scoop\apps\git\current\bin\bash.exe" }
+    )
+    $paths | Where-Object { $api::IsFile($_) } | Select-Object -First 1
+}
+```
+
+**WSL e Git Bash.**
+
+- **`Get-RegistryText`** dá un valor do rexistro se é un texto (`REG_SZ` ou `REG_EXPAND_SZ`), coas variábeis que poida ter expandidas, ou `$null`.
+- **`Get-Distributions`** dá as distribucións de WSL do usuario, na orde de meiga. Na clave `Lxss` do usuario, cada subclave é unha distribución, co seu nome, `DistributionName`, e o seu estado, `State`, un `DWORD` que vale 1 cando está instalada. Quedan fóra as que non están instaladas e os motores de Docker Desktop e Rancher Desktop, os nomes que empezan por `docker-desktop` ou `rancher-desktop`, sen distinguir maiúsculas. A por defecto, a subclave que di `DefaultDistribution`, vai primeiro, e as outras, polo seu nome, sen distinguir maiúsculas. Os `finally` pechan cada clave.
+- **`Get-GitBash`** dá o `bash.exe` de Git for Windows: o de `bin` no cartafol onde di o rexistro que está instalado, `InstallPath` en `SOFTWARE\GitForWindows`, para todos os usuarios ou só para este; ou o de scoop. O primeiro que existe.
+
+```powershell
+# $Text as an argument of a command line, as meiga quotes it (see
+# crates/meiga-core/src/shell.rs): in quotes if it is empty or has spaces or
+# tabs; a quote, and the backslashes before it, escaped; and the
+# backslashes before the closing quote, doubled.
+function Get-Argument([string]$Text) {
+    $quote = $Text -eq '' -or $Text -match '[ \t]'
+    $line = [Text.StringBuilder]::new()
+    if ($quote) { $null = $line.Append([char]'"') }
+    $backslashes = 0
+    foreach ($character in $Text.ToCharArray()) {
+        if ($character -eq [char]'\') { $backslashes++ }
+        elseif ($character -eq [char]'"') {
+            $null = $line.Append([char]'\', $backslashes + 1)
+            $backslashes = 0
+        }
+        else { $backslashes = 0 }
+        $null = $line.Append($character)
+    }
+    if ($quote) { $null = $line.Append([char]'\', $backslashes).Append([char]'"') }
+    $line.ToString()
+}
+
+# The command line of $Program with $Arguments, as meiga writes it: the
+# program in quotes only if it is empty or has spaces or tabs.
+function Get-CommandLine([string]$Program, [string[]]$Arguments) {
+    $line = if ($Program -eq '' -or $Program -match '[ \t]') { "`"$Program`"" } else { $Program }
+    foreach ($argument in $Arguments) { $line += ' ' + (Get-Argument $argument) }
+    $line
+}
+
+# The command line that a tab runs for $Command, if it is wsl.exe from the
+# folder of the system, $System, and its folder is the home one, as meiga
+# writes it (see crates/meiga-core/src/profile.rs): with --cd "~". Nothing
+# for other programs, and for a wsl.exe that has --cd, or ~ as an argument.
+function Get-WslCommand([string]$Command, [string]$System) {
+    if ($Command.Length -lt 1) { return }
+    # The program ends at the first space or quote after its first
+    # character, which can be the opening quote.
+    $start = if ($Command[0] -eq [char]'"') { 1 } else { 0 }
+    $end = $Command.IndexOfAny([char[]]' "', 1)
+    if ($end -lt 0) { $end = $Command.Length }
+    $program = $Command.Substring($start, $end - $start)
+    $slash = $program.LastIndexOfAny([char[]]'\/')
+    $file = $program.Substring($slash + 1)
+    if ($file -ne 'wsl' -and $file -ne 'wsl.exe') { return }
+    if ($slash -ge 0 -and $program.Substring(0, $slash) -ne $System) { return }
+    $arguments = if ($end + 1 -lt $Command.Length) { $Command.Substring($end + 1) } else { '' }
+    if ($arguments.Contains('--cd')) { return }
+    $tilde = $arguments.IndexOf([char]'~')
+    if ($tilde -ge 0 -and ($tilde + 1 -eq $arguments.Length -or $arguments[$tilde + 1] -eq [char]' ')) { return }
+    "`"$program`" --cd `"~`" $arguments"
+}
+```
+
+**As liñas de comandos, coma as escribe meiga** ([Tecnoloxías › A liña de comandos en Windows](../tecnoloxias.md#40-a-liña-de-comandos-en-windows); [Código › meiga-core › `shell.rs`](meiga-core.md#cratesmeiga-coresrcshellrs) e [› `profile.rs`](meiga-core.md#cratesmeiga-coresrcprofilers)):
+
+- **`Get-Argument`** pon un argumento coma o pon meiga: entre comiñas se está baleiro ou ten espazos ou tabuladores; cada comiña, coas barras invertidas de antes dela dobradas e unha máis; e, ao final, as barras de antes da comiña que pecha, dobradas. Así o programa recibe o argumento tal cal, coas regras de `CommandLineToArgvW`.
+- **`Get-CommandLine`** xunta o programa e os seus argumentos: o programa, entre comiñas só se está baleiro ou ten espazos ou tabuladores, coma o `pwsh.exe` de `Program Files`; e cada argumento, con `Get-Argument`, despois dun espazo.
+- **`Get-WslCommand`** dá a liña de comandos que corre unha tab de WSL no cartafol persoal, coma a escribe meiga: se o programa é `wsl` ou `wsl.exe`, sen cartafol ou no do sistema, vai entre comiñas, e con `--cd "~"` antes dos seus argumentos, para que a shell empece no cartafol persoal de Linux, e non no de Windows ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 10). O programa remata no primeiro espazo ou comiña despois do seu primeiro carácter, que pode ser a comiña que abre. Se os argumentos xa levan `--cd`, ou `~` coma argumento, nada, coma para os outros programas: a liña de comandos queda coma estaba.
+
+```powershell
+# The profiles that meiga finds, in the order of its menu, without a
+# configuration, each one with its name, the command line that its tab
+# runs, and its folder, the home one (see crates/meiga-win/src/profiles.rs):
+# PowerShell, Windows PowerShell, Command Prompt, the distributions of WSL
+# and Git Bash, when their programs are there, each name only once.
+function Get-Detected {
+    $system = [Environment]::SystemDirectory
+    $userFolder = [Environment]::GetEnvironmentVariable('USERPROFILE')
+    # Each one: its name, its program, and its arguments.
+    $found = [Collections.Generic.List[object]]::new()
+    $pwsh = Get-PowerShell
+    if ($pwsh) { $found.Add(@('PowerShell', $pwsh, @())) }
+    $windowsPowerShell = "$system\WindowsPowerShell\v1.0\powershell.exe"
+    if ($api::IsFile($windowsPowerShell)) { $found.Add(@('Windows PowerShell', $windowsPowerShell, @())) }
+    $cmd = "$system\cmd.exe"
+    if ($api::IsFile($cmd)) { $found.Add(@('Command Prompt', $cmd, @())) }
+    $wsl = "$system\wsl.exe"
+    if ($api::IsFile($wsl)) {
+        foreach ($distribution in Get-Distributions) { $found.Add(@($distribution, $wsl, @('-d', $distribution))) }
+    }
+    $bash = Get-GitBash
+    if ($bash) { $found.Add(@('Git Bash', $bash, @('-i', '-l'))) }
+    $names = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($candidate in $found) {
+        $profileName, $file, $arguments = $candidate
+        if (-not $names.Add($profileName)) { continue }
+        $command = Get-CommandLine $file $arguments
+        $wslCommand = Get-WslCommand $command $system
+        [pscustomobject]@{
+            Name = $profileName
+            Command = if ($wslCommand) { $wslCommand } else { $command }
+            Folder = $userFolder
+        }
+    }
+}
+```
+
+**Os perfís que atopa meiga: `Get-Detected`,** na orde do menú e sen configuración, cada un co seu nome, a liña de comandos que corre a súa tab e o seu cartafol, o persoal (`USERPROFILE`; decisión 10):
+
+- **PowerShell,** o de `Get-PowerShell`, se o hai;
+- **Windows PowerShell,** `powershell.exe` en `WindowsPowerShell\v1.0` do cartafol do sistema, e **Command Prompt,** `cmd.exe` no cartafol do sistema, se existen;
+- **as distribucións de WSL,** se existe `wsl.exe` no cartafol do sistema: cada unha co seu nome, e `wsl.exe` con `-d` e o seu nome;
+- e **Git Bash,** con `-i` e `-l`: unha shell interactiva e de inicio de sesión (*login*), que le os arquivos de inicio do usuario.
+
+Cada nome vai unha soa vez, o primeiro (`HashSet` con `StringComparer::Ordinal`, que distingue maiúsculas). A liña de comandos é a de `Get-CommandLine` ou, para WSL, a de `Get-WslCommand`. `[Environment]::SystemDirectory` é o cartafol do sistema, coma o que lle dá Windows a meiga.
+
+```powershell
+# The command line of meiga: its frame log, and no program, so that its first
+# tab runs the default profile. Its folder is the one of the check, which no
+# profile has: a tab that started there would not start in its own.
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+$info.WorkingDirectory = $work
+foreach ($variable in $given.Keys) { $info.Environment[$variable] = $given[$variable] }
+$info.ArgumentList.Add('--trace-frames')
+$info.ArgumentList.Add($log)
+$process = $null
+$pointer = $null
+$attached = $false
+$passed = $false
+# How long the shells of the user get to end, once their tabs close.
+$shellSeconds = [Math]::Max(30, 3 * $TimeoutSeconds)
+try {
+    # The profiles that meiga finds, and the ones of its menu with this
+    # config.toml: without Command Prompt, and with Probe at the end, as wide
+    # as the longest name.
+    $detected = @(Get-Detected)
+    $listed = @($detected | Where-Object Name -CNE 'Command Prompt') + $probeProfile
+    $columns = ($listed | ForEach-Object { $_.Name.Length } | Measure-Object -Maximum).Maximum
+
+    $process = [Diagnostics.Process]::Start($info)
+    $started = $process.StartTime
+```
+
+**Abrir meiga.** A liña de comandos leva o rexistro dos fotogramas, e ningún programa: a primeira tab corre o perfil por defecto ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5). O cartafol de meiga, `WorkingDirectory`, é o da comprobación, que non é o de ningún perfil: unha tab que empezase alí, e non no seu, faría fallar `Assert-Launch`. O contorno é o de PowerShell, que `Environment` copia ao principio, coas variábeis de `$given`, que cambian ou se engaden.
+
+- `$process`, `$pointer`, `$attached` e `$passed` créanse antes do `try`, porque os le o `finally`: con `Set-StrictMode`, ler unha variábel que non existe sería un erro.
+- **`$shellSeconds`,** o tempo que teñen as shells do usuario para rematar cando se pecha a súa tab: o triplo de `TimeoutSeconds`, e polo menos 30 s. Non son da comprobación, coma o script de Probe, e o que fan depende de cada equipo.
+- **Os perfís, antes de abrir meiga.** `$detected`, os que atopa meiga, de `Get-Detected`; `$listed`, os do menú con este `config.toml`: sen Command Prompt, e con Probe ao final (decisión 3); e `$columns`, o número de caracteres do nome máis longo, o ancho do menú en celas.
+- `$started`, a hora á que empezou meiga, para `Get-Shells` e `Get-Consoles`, coma en `check-menu.ps1`.
+
+**Os pasos,** oito, numerados no código, cada un coa súa liña `OK:` ao final:
+
+| Paso | Que fai a comprobación | Que ten que pasar |
+|---|---|---|
+| 1 | Abre meiga, e agarda a súa xanela e a caixa de mensaxe. Agarda a que o programa da primeira tab escriba, e pecha a caixa co seu botón. O programa escribe outra vez. | A caixa ábrese coa xanela xa na pantalla e pintada; é da xanela, co título meiga e un botón, e di os dous erros e que meiga os ignorou. O programa escribe mentres está aberta. Cando se pecha, a xanela pinta todo, e os fotogramas só debuxan no terminal e, se o programa deu un título, na primeira tab; tamén cando o programa escribe despois. |
+| 2 | Le o informe do programa da primeira tab. | A primeira tab é a única, e corre Probe, no seu cartafol; o seu programa recibe o contorno dun terminal, e a súa tab móstrase. |
+| 3 | Ctrl+Maiús+Espazo, co Espazo repetido. Maiús e Ctrl soben. ↓, Esc e Z, e o script le as teclas. | O fotograma presenta só o menú, debaixo do + e do ▾, cun elemento por perfil e o ancho do nome máis longo; non se abre ningunha tab. ↓ só debuxa dentro dos resaltes dos dous primeiros elementos, e Esc pecha o menú. O programa recibe Ctrl e Maiús, ao baixar e ao subir, e Z, e ningunha tecla máis. |
+| 4 | O punteiro no ▾, e o botón esquerdo baixa; o botón sobe. O punteiro no segundo elemento. Un clic en Probe. Ctrl+Maiús+W. | O punteiro e o botón que baixa só debuxan o ▾, e a xanela captura o rato. Cando sobe, ábrese o menú, só se debuxan o ▾ e o menú, e a xanela solta o rato. O punteiro no elemento só debuxa o seu resalte. O clic abre unha tab con Probe, no seu cartafol, que se mostra cun só fotograma completo. Ctrl+Maiús+W pecha a tab, e o seu programa remata. |
+| 5 | Para cada perfil que atopa meiga: Ctrl+Maiús+Espazo, ↓ ata el, e Intro; cando a súa shell se calma, Ctrl+Maiús+W. | Ábrese unha tab coa liña de comandos que espera a comprobación, no cartafol persoal, e móstrase. Ctrl+Maiús+W pecha a tab, e o seu programa remata. |
+| 6 | Un clic no +. A tecla de menú, e Intro: *Duplicate tab*. Ctrl+Maiús+W dúas veces. | O + abre unha tab con Probe, no seu cartafol, que se mostra cun só fotograma completo. A copia corre tamén Probe, no mesmo cartafol. Péchanse as dúas, e os seus programas rematan. |
+| 7 | Pecha a xanela. | meiga sae co código 0, e o programa da primeira tab e as consolas rematan. |
+| 8 | Escribe un `config.toml` que non é TOML, e abre meiga outra vez. Pecha a caixa, e despois a xanela. | A caixa di onde está mal o arquivo, e que meiga o ignorou. A primeira tab corre a shell por defecto, no cartafol persoal. meiga sae co código 0, e a shell e as consolas rematan. |
+
+```powershell
+    # 1. Once the window is on the screen and painted, a message box tells
+    # the errors of config.toml. Meanwhile, the program of the first tab
+    # writes on its screen, which the window draws once the box closes.
+    Wait-For { $api::WindowOf($process.Id, 'meiga') -ne [IntPtr]::Zero } { "$exe did not open its window." }
+    $window = $api::WindowOf($process.Id, 'meiga')
+    $processId = [uint32]0
+    $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
+    $dialog = Get-Dialog
+    if (-not $api::IsWindowVisible($window)) {
+        throw "The message box opened before the window of $exe was on the screen."
+    }
+    if (@(Get-Log | Where-Object kind -EQ 'paint').Count -eq 0) {
+        throw "The message box opened before the window of $exe was painted."
+    }
+    $expected = "There are errors in $($config):`n`n$($problems -join "`n")`n`nmeiga ignored them, and uses its default values instead."
+    if ($dialog.Text -cne $expected) {
+        throw "The message box says:`n$($dialog.Text)`n... instead of:`n$expected"
+    }
+    Wait-For { @(Get-Reports | Where-Object { $_.StartsWith('ready ') }).Count -gt 0 } {
+        'While the message box was open, the program of the first tab did not write on its screen.'
+    }
+    # Time for the reader of the tab to read what the program wrote, while
+    # the box is open.
+    Start-Sleep -Milliseconds 500
+    $dpi = $api::GetDpiForWindow($window)
+    $client = Get-Client
+    $bar = Get-Bar 1
+    $terminal = New-Rect 0 $bar.Height $client.Right $client.Bottom
+    Move-Pointer
+    # The title of the window, which does not change while the box is open.
+    $titleBefore = $api::TextOf($window)
+    $start = @(Get-Log).Count
+    Close-Dialog $dialog
+    Wait-For { @(Get-Log | Select-Object -Skip $start | Where-Object { $_.kind -eq 'paint' -and (Test-Full $_) }).Count -gt 0 } {
+        'When the message box closed, the window did not paint all of it.'
+    }
+    Assert-Written $start $titleBefore 'When the message box closed, what the program wrote meanwhile'
+    $start = @(Get-Log).Count
+    $null = Invoke-Step 'write after the message box'
+    Assert-Written $start $titleBefore 'What the program wrote after the message box'
+    $titleNow = $api::TextOf($window)
+    $titled = if ($titleNow -cne $titleBefore) { "; its tab shows the title that the program gave, '$titleNow'" } else { '' }
+    Write-Host "OK: once the window is on the screen and painted, a message box owned by it, with the title meiga and one button, tells the $($problems.Count) errors of config.toml, each with its line and its column, and that meiga ignored them; when it closes, the window paints all of it again, and draws what the program of the first tab wrote meanwhile, and what it writes then$titled."
+```
+
+**1. A caixa de mensaxe.**
+
+- **A xanela, tamén oculta.** `WindowOf` agarda a xanela de meiga, aínda que non estea na pantalla, e `GetWindowThreadProcessId` dá o seu fío, onde `Get-Dialog` busca a caixa.
+- **Cando xa está na pantalla e pintada** (decisión 8). Atopada a caixa, a xanela ten que ser visíbel (`IsWindowVisible`), e o rexistro ten que ter polo menos unha liña `paint`: meiga mostra a xanela e píntaa, e só despois abre a caixa ([Código › meiga › Os eventos](meiga.md#os-eventos)). Mentres a caixa está aberta, o seu bucle de mensaxes repártelle á xanela as súas, coma en [`check-mouse.ps1`](#toolscheck-mouseps1), tamén `WM_PAINT`; pero o código de meiga está ocupado agardando pola caixa, e non pinta nin escribe no rexistro ([Código › meiga-win › `Handler`](meiga-win.md#handler)). Unha liña `paint` é, logo, dun pintado de antes.
+- **O texto, exacto:** `There are errors in`, a ruta do `config.toml`, e os dous erros de `$problems`, un por liña, entre liñas baleiras; e, ao final, `meiga ignored them, and uses its default values instead.` ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). Se non, a mensaxe di o que di a caixa e o que tiña que dicir.
+- **O programa xa corre.** Coa caixa aberta, o script de Probe ten que escribir `ready` no arquivo dos informes: escribiu na súa pantalla (decisión 2, un erro non para nada). Despois, medio segundo, para que o lector da tab lea o que escribiu.
+- **A barra e o terminal.** `$dpi`, a escala da xanela, para `Get-Scaled`; `Get-Bar 1`, a barra cunha tab; e `$terminal`, o resto da área cliente, debaixo da barra. `Move-Pointer` aparta o punteiro, se estaba enriba da xanela: cando se peche a caixa, resaltaría o que tivese debaixo. E `$titleBefore`, o título da xanela, que non cambia mentres a caixa está aberta: meiga colle os títulos no fotograma, e non hai fotogramas.
+- **Ao pecharse a caixa** (`Close-Dialog`), a xanela ten que pintarse enteira: unha liña `paint` que cubra a xanela (`Test-Full`). E os fotogramas, polo menos un, só poden debuxar no terminal (`Assert-Written`): o que escribiu o programa mentres estaba aberta. meiga ponse ao día coma despois da caixa que pregunta antes de pegar ([Código › meiga › `respond`](meiga.md#respond-o-que-pide-a-vista)). Se o programa deu un título mentres tanto, poden debuxar tamén na primeira tab, que o mostra. Pásalle a PowerShell no *runner* da CI, que corre como administrador: ao arrancar, coa caixa aberta, pon `Administrator: ` diante do título da súa consola.
+- **E despois,** o paso 1 do script escribe na terceira fila, e os seus fotogramas tamén só poden debuxar no terminal; e na primeira tab, se o título xa non é `$titleBefore`. PowerShell pon o prefixo nun fío aparte, sen agardar por el, e podería chegar despois de pecharse a caixa.
+- **A liña `OK:`** remata co título que mostra agora a tab, se non é `$titleBefore` (`$titled`). Se non, en `and what it writes then.`
+
+```powershell
+    # 2. The first tab runs Probe, in its folder, with the environment of a
+    # terminal.
+    $report = @(Get-Reports | Where-Object { $_.StartsWith('ready ') })[0].Substring(6) | ConvertFrom-Json
+    $first = [int]$report.pid
+    $shells = @(Get-Shells)
+    if ($shells.Count -ne 1 -or [int]$shells[0].ProcessId -ne $first) {
+        throw "With one tab, the programs of $exe are $(($shells | ForEach-Object { "$($_.ProcessId): $($_.CommandLine)" }) -join '; '), instead of the script of Probe, $first."
+    }
+    Assert-Launch $shells[0] $probeProfile 'The first tab'
+    Assert-Variables $report 'The program of the first tab'
+    Wait-Shown $first @() 'With one tab'
+    Write-Host "OK: the first tab runs Probe, the default profile of config.toml, with the variables of its command line and of its folder expanded, in its folder, whose name is not ASCII; its program gets TERM_PROGRAM=meiga, TERM_PROGRAM_VERSION=$version, COLORTERM=truecolor and WSLENV=$($expectedVariables.WSLENV), and neither WT_SESSION nor WT_PROFILE_ID."
+```
+
+**2. O perfil e o contorno da primeira tab.**
+
+- O informe do script, a liña `ready` sen as seis letras do principio, é JSON: `ConvertFrom-Json` dá un obxecto, cos nomes das variábeis coma propiedades. `$first` é o número do proceso de Probe.
+- **Un só programa,** o de Probe: meiga lanzou un, o da primeira tab. Se non, a mensaxe di os que hai, cos seus números e as súas liñas de comandos.
+- **`Assert-Launch`:** a primeira tab corre Probe, o perfil por defecto (decisión 5), coa liña de comandos e o cartafol expandidos, e no seu cartafol, o da ñ (decisións 3 e 10).
+- **`Assert-Variables`:** o contorno dun terminal (decisión 9).
+- **`Wait-Shown`:** a súa tab é a que se mostra, coa prioridade normal no seu lector.
+
+```powershell
+    # 3. Ctrl+Shift+Space opens the menu of the profiles below the buttons,
+    # with its first item highlighted. Ctrl and Shift go down for the
+    # program, before the menu opens; Space repeats, which does nothing, and
+    # goes up. Then Shift and Ctrl go up for the program, Down moves the
+    # highlight, and Esc closes the menu. Z goes to the program.
+    Join-Input
+    $sizes = Get-MenuSizes $listed.Count
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Keys @(
+        Get-Key $VK_CONTROL $true
+        Get-Key $VK_SHIFT $true
+        Get-Key $VK_SPACE $true
+        Get-Key $VK_SPACE $true $true
+        Get-Key $VK_SPACE $false
+    ) ($ctrlKeys + $shiftKeys)
+    Wait-Quiet 400
+    $frames = @(Get-Frames $start)
+    $areas = @(Get-Areas $frames)
+    if ($areas.Count -ne 1) {
+        Show-Lines $frames
+        throw "Ctrl+Shift+Space drew $($areas.Count) areas instead of the menu of the profiles."
+    }
+    $menuWidth = $areas[0].Right - $areas[0].Left
+    $cell = ($menuWidth - $sizes.Sides) / $columns
+    $menu = Get-Menu $bar.Buttons.Left $bar.Buttons.Bottom $bar.Buttons.Right $bar.Buttons.Top
+    if ((Show-Rect $areas[0]) -ne (Show-Rect $menu) -or $cell -lt 1 -or $cell -ne [Math]::Floor($cell)) {
+        throw "Ctrl+Shift+Space drew $(Show-Rect $areas[0]), and the menu of the profiles has to be $(Show-Rect $menu): below the buttons + and of the profiles, $($sizes.Height) pixels high, for $($listed.Count) profiles, and as wide as $columns cells and $($sizes.Sides) pixels."
+    }
+    if (@(Get-Shells).Count -ne 1) {
+        throw 'Ctrl+Shift+Space, or its repeat, opened a tab.'
+    }
+    Send-ModifiersUp
+    $entries = @(Get-Entries $menu)
+    $start = @(Get-Log).Count
+    Send-Press $VK_DOWN
+    $null = Assert-Inside $start (Get-Union @($entries[0].Highlight, $entries[1].Highlight)) 'Down on the menu of the profiles'
+    $start = @(Get-Log).Count
+    Send-Press $VK_ESCAPE
+    Assert-Only $start $menu 'Esc on the menu of the profiles'
+    Send-Press $VK_Z
+    $keys = (Invoke-Step 'read the keys') -replace '^keys ', ''
+    if ($keys -ne '17+ 16+ 16- 17- 90+ 90-') {
+        throw "The program got the keys '$keys' instead of '17+ 16+ 16- 17- 90+ 90-': Ctrl and Shift, which went down for it before the menu opened, and Z, after the menu closed."
+    }
+    if (@(Get-Shells).Count -ne 1) {
+        throw 'The keys on the menu of the profiles opened a tab.'
+    }
+    Write-Host "OK: Ctrl+Shift+Space opens the menu of the profiles below the buttons + and of the profiles ($menuWidth x $($sizes.Height) pixels, with cells $cell pixels wide), and draws only the menu: $(($listed | ForEach-Object Name) -join ', '); while Space repeats, nothing opens; Down draws only the highlights of the first two items, and Esc closes the menu; the program gets Ctrl and Shift, which went down for it, and no other key of the menu."
+```
+
+**3. Ctrl+Maiús+Espazo.**
+
+- **`Join-Input`:** desde eiquí, a comprobación teclea. `$sizes` son as medidas do menú, cun elemento por perfil de `$listed`.
+- **O atallo, cunha repetición.** Despois de que meiga leve 400 ms sen debuxar, unha soa publicación, co estado das teclas con Ctrl e Maiús abaixo: Ctrl baixa, Maiús baixa, e o Espazo baixa, repítese (`Get-Key` con `$Repeat`) e sobe. O Espazo abre o menú dos perfís co primeiro elemento resaltado (decisión 6), e a súa repetición non escolle nada (decisión 7), aínda que o menú escolle co Espazo, coma con Intro.
+- **Só o menú.** Os fotogramas teñen que presentar unha soa zona, o menú: o seu ancho, `$menuWidth`, sae del, e o das celas, `$cell`, é o ancho sen os lados (`Sides`) entre os caracteres do nome máis longo, `$columns`, coma en `check-menu.ps1` (ver alí *O ancho, do fotograma*). A zona ten que ser o menú que calcula `Get-Menu` debaixo dos dous botóns, desde o lado esquerdo do +, e as celas, un número enteiro de píxeles. Se non, a mensaxe di o que debuxou meiga e o que debía, co alto e o número de perfís: un perfil de máis ou de menos cambia o alto.
+- **Ningunha tab nova:** segue habendo un só programa. Unha repetición que escollese o primeiro perfil abriría unha.
+- **Maiús e Ctrl soben,** nunha publicación sen ningunha tecla abaixo: o fotograma do menú di que meiga xa tratou as teclas que o abriron.
+- **↓** move o resalte do primeiro elemento ao segundo: os fotogramas só poden debuxar dentro dos seus resaltes (`Assert-Inside`). **Esc** pecha o menú, e o fotograma presenta exactamente o seu rectángulo, e nada máis (`Assert-Only`): o que tapaba.
+- **Z,** co menú pechado, vai ao programa: é a marca do final, coma en `check-menu.ps1`. O paso 2 do script le as teclas ata el, e ten que ter lido exactamente `17+ 16+ 16- 17- 90+ 90-`: Ctrl e Maiús, que baixaron para el antes de abrirse o menú, e soben para el ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 7); e Z. Ningunha das do menú: nin o Espazo, nin a súa repetición, nin ↓ nin Esc.
+- Outra vez, ningunha tab nova. A liña `OK:` di as medidas do menú e os perfís, na súa orde.
+
+```powershell
+    # 4. The button of the profiles, with the mouse: the pointer on it, and
+    # its press, draw only the button, which takes the mouse; when the left
+    # button goes up on it, the menu opens below the buttons, and the window
+    # lets the mouse go. A click on Probe opens a tab with it.
+    $point = Get-Center $bar.Profiles
+    $start = @(Get-Log).Count
+    Send-Mouse @(
+        Get-Mouse $WM_MOUSEMOVE 0 $point
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $point
+    )
+    Wait-For { (Get-Capture) -ne [IntPtr]::Zero } { 'A press on the button of the profiles did not capture the mouse.' }
+    $null = Assert-Inside $start $bar.Profiles 'The pointer on the button of the profiles, and its press'
+    $start = @(Get-Log).Count
+    Send-Mouse (Get-Mouse $WM_LBUTTONUP 0 $point)
+    Wait-Menu $start $menu 'The button of the profiles'
+    Wait-Quiet 400
+    $frames = @(Get-Frames $start)
+    $drawn = Get-Union @(Get-Areas $frames)
+    $expected = Get-Union @($bar.Profiles, $menu)
+    if ((Show-Rect $drawn) -ne (Show-Rect $expected)) {
+        Show-Lines $frames
+        throw "The button of the profiles drew up to $(Show-Rect $drawn), instead of only itself and the menu, $(Show-Rect $expected)."
+    }
+    Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The window kept the mouse after the button of the profiles opened the menu.' }
+    $start = @(Get-Log).Count
+    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[1])
+    $null = Assert-Inside $start $entries[1].Highlight 'The pointer on the second item of the menu of the profiles'
+    $start = @(Get-Log).Count
+    Send-Click $entries[-1]
+    $shell = Wait-NewShell @($first) 'A click on Probe'
+    Assert-Launch $shell $probeProfile 'A click on Probe'
+    $copy = [int]$shell.ProcessId
+    Wait-Shown $copy @($first) 'After a click on Probe'
+    Wait-For { Test-Path -LiteralPath "$reports.$copy" } { 'After a click on Probe, the script of Probe did not start.' }
+    Assert-OneFull $start 'A click on Probe'
+    Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The window kept the mouse after a click on an item of the menu of the profiles.' }
+    Send-Shortcut $VK_W
+    Wait-Shown $first @() 'Ctrl+Shift+W on the tab of Probe'
+    Send-ModifiersUp
+    Wait-Ended $copy 'The program of the tab of Probe, after Ctrl+Shift+W'
+    Write-Host 'OK: the pointer on the button of the profiles, and its press, draw only the button; when the left button goes up on it, the menu opens, only the button and the menu are drawn, and the window lets the mouse go; the pointer on an item draws only its highlight, and a click on Probe opens a tab, shown with one full frame, whose program runs the command line of Probe in its folder; Ctrl+Shift+W closes it, and its program ends.'
+```
+
+**4. O ▾, co rato.**
+
+- **O punteiro e o botón que baixa,** nunha publicación, no medio do ▾: a xanela captura o rato, e os fotogramas só debuxan dentro do ▾ (`Assert-Inside`), o seu resalte e o botón premido.
+- **O botón sobe** no ▾: ábrese o menú dos perfís, no mesmo sitio ca co teclado (`Wait-Menu`). Desde que sobe, o rectángulo que xunta as zonas dos fotogramas ten que ser exactamente o que xunta o ▾ e o menú: o botón, que xa non está premido, e o menú, e nada máis. E a xanela solta o rato.
+- **O punteiro no segundo elemento** só debuxa o seu resalte, coma en `check-menu.ps1`.
+- **Un clic en Probe,** o último elemento (`$entries[-1]`): ábrese unha tab, e só unha, que corre a liña de comandos de Probe no seu cartafol (`Assert-Launch`; [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). A tab nova móstrase, e a primeira ocúltase; o script da copia escribe o seu arquivo; desde o clic, un só fotograma completo, o da tab que se mostra ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 5); e a xanela solta o rato.
+- **Ctrl+Maiús+W** pecha a tab nova: móstrase outra vez a primeira, e o programa da tab pechada remata.
+
+```powershell
+    # 5. Ctrl+Shift+Space, Down to each profile that meiga finds, and Enter
+    # open it, in a tab of its own. Once its shell is idle, or has had some
+    # time, Ctrl+Shift+W closes the tab.
+    $opened = @()
+    for ($index = 0; $index -lt $listed.Count - 1; $index++) {
+        $launch = $listed[$index]
+        $what = "Enter on $($launch.Name)"
+        Wait-Quiet 400
+        $start = @(Get-Log).Count
+        Send-Shortcut $VK_SPACE
+        Wait-Menu $start $menu "Ctrl+Shift+Space, before $what,"
+        $messages = @(Get-Key $VK_SHIFT $false; Get-Key $VK_CONTROL $false)
+        for ($down = 0; $down -lt $index; $down++) {
+            $messages += @(Get-Key $VK_DOWN $true) + @(Get-Key $VK_DOWN $false)
+        }
+        $messages += @(Get-Key $VK_RETURN $true) + @(Get-Key $VK_RETURN $false)
+        Send-Keys $messages
+        $shell = Wait-NewShell @($first) $what
+        Assert-Launch $shell $launch $what
+        $id = [int]$shell.ProcessId
+        Wait-Shown $id @($first) "After $what"
+        Wait-Settled $id 10
+        Send-Shortcut $VK_W
+        Wait-Shown $first @() "Ctrl+Shift+W on the tab of $($launch.Name)"
+        Send-ModifiersUp
+        Wait-Ended $id "The program of $($launch.Name), after Ctrl+Shift+W," $shellSeconds
+        $opened += $launch.Name
+    }
+    Write-Host "OK: Ctrl+Shift+Space, Down and Enter open $($opened -join ', '), each in a tab whose program runs the command line that meiga finds for it, in the home folder; Ctrl+Shift+W closes it, and its program ends."
+```
+
+**5. Cada perfil que atopa meiga.** Para cada perfil de `$listed` menos o último, Probe, que xa abriu o paso 4:
+
+- **Ctrl+Maiús+Espazo** (`Send-Shortcut`) abre o menú dos perfís, co primeiro elemento resaltado, e `Wait-Menu` agarda a que se vexa.
+- **Unha soa publicación, sen ningunha tecla abaixo:** Maiús e Ctrl soben; ↓, tantas veces coma a posición do perfil no menú, desde 0; e Intro, que escolle o elemento resaltado.
+- **A tab do perfil:** ábrese unha, que corre a liña de comandos que calcula `Get-Detected`, no cartafol persoal, e as distribucións de WSL, co `--cd "~"` (`Assert-Launch`; [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 4 e 10); e móstrase. `Assert-Launch` le o cartafol en canto aparece o programa: se un arquivo de arranque da shell cambia de cartafol antes, coma un `cd` no `.bashrc` de Git Bash, a comprobación falla. A axuda do script avísao.
+- **A shell arranca.** Antes de pechar a tab, `Wait-Settled` agarda a que a shell leve un segundo sen usar o procesador, ou 10 s como moito: unha shell do usuario pode tardar en cargar o seu perfil.
+- **Ctrl+Maiús+W** pecha a tab: móstrase outra vez a primeira, e a shell ten que rematar, en `$shellSeconds` como moito.
+
+A liña `OK:` di os perfís que abriu, na súa orde.
+
+```powershell
+    # 6. The button + opens a tab with the default profile, Probe; and
+    # Duplicate tab, on that tab, opens another one with the same command
+    # line, in the same folder.
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Click (Get-Center $bar.New)
+    $shell = Wait-NewShell @($first) 'A click on the button +'
+    Assert-Launch $shell $probeProfile 'A click on the button +'
+    $copy = [int]$shell.ProcessId
+    Wait-Shown $copy @($first) 'After a click on the button +'
+    Wait-For { Test-Path -LiteralPath "$reports.$copy" } { 'After a click on the button +, the script of Probe did not start.' }
+    Assert-OneFull $start 'A click on the button +'
+    Send-Press $VK_APPS
+    Wait-Quiet 400
+    Send-Press $VK_RETURN
+    $shell = Wait-NewShell @($first, $copy) 'Duplicate tab, on the tab of Probe'
+    Assert-Launch $shell $probeProfile 'Duplicate tab, on the tab of Probe'
+    $duplicate = [int]$shell.ProcessId
+    Wait-Shown $duplicate @($first, $copy) 'After Duplicate tab'
+    Wait-For { Test-Path -LiteralPath "$reports.$duplicate" } { 'After Duplicate tab, the script of Probe did not start.' }
+    Send-Shortcut @($VK_W, $VK_W)
+    Wait-Shown $first @() 'Ctrl+Shift+W twice'
+    Send-ModifiersUp
+    Wait-Ended $duplicate 'The program of the copy of the tab, after Ctrl+Shift+W'
+    Wait-Ended $copy 'The program of the tab of the button +, after Ctrl+Shift+W'
+    Write-Host 'OK: the button + opens a tab with Probe, the default profile, and Duplicate tab copies it, with the same command line, in the same folder.'
+```
+
+**6. O + e *Duplicate tab*.**
+
+- **Un clic no +,** no seu medio: ábrese unha tab co perfil por defecto, Probe, no seu cartafol ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5), que se mostra cun só fotograma completo, coma no paso 4.
+- **A tecla de menú** abre o menú desa tab, co primeiro elemento resaltado, *Duplicate tab*, e, cando meiga deixa de debuxar, **Intro** escólleo ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 6). Ábrese outra tab, que se mostra, e corre tamén Probe, coa mesma liña de comandos e no mesmo cartafol ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 10). Ata a 2.4, a copia empezaba no cartafol de meiga ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 10).
+- A comprobación agarda o arquivo do script de cada copia, que di que empezou.
+- **Ctrl+Maiús+W, dúas veces,** nunha publicación: pecha a copia, e despois a tab do +. Móstrase outra vez a primeira, e os dous programas rematan.
+
+```powershell
+    # 7. The window closes: meiga ends, and the programs of its tabs and
+    # their consoles too.
+    $null = $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "$exe was still running $TimeoutSeconds s after its window closed."
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0."
+    }
+    Wait-Ended $first 'The program of the first tab'
+    Wait-ConsolesEnded
+    Write-Host 'OK: it ends with exit code 0 when its window closes, and the programs of its tabs and their consoles end too.'
+```
+
+**7. Pechar a xanela.** `WM_CLOSE` pecha a xanela, coma o seu ×: meiga ten que saír co código 0 en `TimeoutSeconds`; o programa da primeira tab, Probe, ten que rematar, porque a súa sesión se pecha coa xanela; e as consolas das tabs, tamén.
+
+```powershell
+    # 8. A config.toml that is not TOML: meiga ignores all of it, and the
+    # message box says so, and where the file is wrong. The first tab runs
+    # the default shell, in the home folder, and not the default profile
+    # that the file says.
+    Split-Input
+    $process.Dispose()
+    $process = $null
+    $brokenLines = @(
+        'default_profile = "Command Prompt"'
+        '[[profiles]]'
+        'hidden = tru'
+    )
+    [IO.File]::WriteAllText($config, ($brokenLines -join "`n") + "`n", $utf8)
+    $default = @($detected | Where-Object Name -CEQ 'PowerShell') + @($detected | Where-Object Name -CEQ 'Windows PowerShell') +
+    $detected | Select-Object -First 1
+    $log = Join-Path $work 'frames-ignored.csv'
+    $info.ArgumentList[1] = $log
+    $process = [Diagnostics.Process]::Start($info)
+    $started = $process.StartTime
+    Wait-For { $api::WindowOf($process.Id, 'meiga') -ne [IntPtr]::Zero } { "$exe did not open its window." }
+    $window = $api::WindowOf($process.Id, 'meiga')
+    $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
+    $dialog = Get-Dialog
+    # Where the value that is not true begins.
+    $head = "There are errors in $($config):`n`nLine 3, column 10: "
+    $tail = "`n`nmeiga ignored the file, and uses its default values."
+    if (-not $dialog.Text.StartsWith($head, [StringComparison]::Ordinal) -or -not $dialog.Text.EndsWith($tail, [StringComparison]::Ordinal)) {
+        throw "With a config.toml that is not TOML, the message box says:`n$($dialog.Text)`n... and it has to start with:`n$head`n... and end with:$tail"
+    }
+    Wait-For { @(Get-Shells).Count -gt 0 } { 'With config.toml ignored, the first tab did not start its program.' }
+    $shells = @(Get-Shells)
+    if ($shells.Count -ne 1) {
+        throw "With config.toml ignored, $exe started $($shells.Count) programs instead of one."
+    }
+    Assert-Launch $shells[0] $default 'With config.toml ignored, the first tab'
+    $id = [int]$shells[0].ProcessId
+    Close-Dialog $dialog
+    Wait-Settled $id 10
+    $null = $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "With config.toml ignored, $exe was still running $TimeoutSeconds s after its window closed."
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "With config.toml ignored, $exe ended with exit code $($process.ExitCode) instead of 0."
+    }
+    Wait-Ended $id "The program of the first tab, $($default.Name)," $shellSeconds
+    Wait-ConsolesEnded
+    Write-Host "OK: with a config.toml that is not TOML, the message box tells where it is wrong, and that meiga ignored the file; the first tab runs the default shell, $($default.Name), in the home folder, and it ends with exit code 0 when its window closes."
+    $passed = $true
+}
+```
+
+**8. Un `config.toml` que non é TOML.**
+
+- **`Split-Input`:** a primeira meiga xa non existe, e a comprobación non teclea máis. `$process` queda en `$null` ata que se abre a segunda: se algo falla antes, o `finally` non a toca.
+- **O arquivo novo,** tres liñas:
+
+  ```toml
+  default_profile = "Command Prompt"
+  [[profiles]]
+  hidden = tru
+  ```
+
+  `tru` non é un valor de TOML: o arquivo non se pode ler, e meiga ignórao enteiro, tamén `default_profile` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 2). Se meiga lese a primeira liña, o perfil por defecto sería Command Prompt.
+- **A shell por defecto,** `$default`: PowerShell, se o atopa meiga, e se non, Windows PowerShell, ou o primeiro perfil (decisión 5). `@(…) + @(…) + $detected` xunta as tres listas, e `Select-Object -First 1` colle o primeiro: a canalización (`|`) recibe a suma enteira.
+- **Outro rexistro,** `frames-ignored.csv`: o segundo argumento de `$info`, o que vai despois de `--trace-frames`. O da primeira meiga queda enteiro, por se hai que miralo.
+- **A caixa:** a comprobación agarda a xanela e a caixa, coma no paso 1, con `Get-Dialog`: da xanela, co título meiga e un só botón. O texto ten que empezar polo arquivo e `Line 3, column 10: `, onde empeza `tru`, e rematar en `meiga ignored the file, and uses its default values.` O do medio é a mensaxe do crate `toml`, hoxe `` invalid boolean, expected `true` ``, que a comprobación non fixa: pode cambiar cunha versión nova del. Fíxaa unha proba de `config.rs`.
+- **A primeira tab,** coa caixa aínda aberta: un só programa, a shell por defecto, no cartafol persoal (`Assert-Launch`).
+- **O final:** pecha a caixa, deixa que a shell arranque, coma no paso 5, e pecha a xanela. meiga ten que saír co código 0, e a shell e as consolas, rematar. Despois, `$passed` di que todo foi ben.
+
+```powershell
+finally {
+    Split-Input
+    if ($process) {
+        if (-not $process.HasExited) {
+            $process.Kill()
+        }
+        $process.Dispose()
+    }
+    if ($null -ne $pointer) {
+        $null = $api::SetCursorPos($pointer.X, $pointer.Y)
+    }
+    $null = $api::SetThreadDpiAwarenessContext($previousDpi)
+    $go.Dispose()
+    $done.Dispose()
+    if ($passed) {
+        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    if (Test-Path -LiteralPath $work) {
+        Write-Host "Kept $work"
+    }
+}
+```
+
+O `finally` é coma o de `check-menu.ps1`, cun cartafol en vez de arquivos soltos:
+
+- Primeiro, `Split-Input`, se a entrada aínda se comparte: se a comprobación fallou antes do paso 8.
+- meiga non queda aberto: se a comprobación fallou no medio, a primeira ou a segunda, remátao (`Kill`).
+- O punteiro volta a onde estaba, se `Move-Pointer` o moveu, e o fío, á súa escala; `Dispose` pecha os eventos.
+- **Se todo foi ben,** bórrase o cartafol da comprobación enteiro, co `APPDATA` e o `config.toml`. **Se algo fallou,** queda, e a comprobación di onde, cunha liña `Kept …`: nel están o `config.toml`, o da primeira meiga ou, desde o paso 8, o que non é TOML; os rexistros dos fotogramas, `frames.csv` e, desde o paso 8, `frames-ignored.csv`; e os informes de Probe, os da primeira tab e os das copias. Tamén o di se o cartafol queda porque non se puido borrar enteiro.
+
+A CI executa este script en cada PR, despois de `check-menu.ps1`, no paso *Check the profiles and the configuration* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
 
 ## `tools/terminal-sample.ps1`
 

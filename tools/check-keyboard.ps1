@@ -217,6 +217,11 @@ $name = "meiga-check-keyboard-$PID"
 $log = Join-Path ([IO.Path]::GetTempPath()) "$name.txt"
 $script = Join-Path ([IO.Path]::GetTempPath()) "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
 
 # The lines that the script wrote. It appends them while the check reads.
@@ -279,6 +284,7 @@ function Send-Key([string]$Key) {
 
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
     '-File', $script, '-Log', $log) {
     $info.ArgumentList.Add($argument)
@@ -407,6 +413,7 @@ finally {
         $null = $api::UnloadKeyboardLayout($loaded)
     }
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     }

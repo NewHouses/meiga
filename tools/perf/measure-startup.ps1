@@ -13,6 +13,9 @@ The first -Warmup runs are not counted: they bring the executable and its
 DLLs into the file cache, so the results describe a normal start and not the
 first one after a reboot.
 
+Every run gets an empty folder as APPDATA, so that meiga has its default
+values, whatever %APPDATA%\meiga\config.toml has.
+
 Prints the lowest, median, 95th percentile and highest times, and saves every
 run as CSV in .perf\, which git ignores because the times describe this
 machine. Numbers in the CSV always use a dot as the decimal separator.
@@ -98,6 +101,7 @@ $invariant = [cultureinfo]::InvariantCulture
 function Measure-Start {
     $info = [Diagnostics.ProcessStartInfo]::new($Path)
     $info.UseShellExecute = $false
+    $info.Environment['APPDATA'] = $appdata
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $process = [Diagnostics.Process]::Start($info)
     try {
@@ -130,13 +134,22 @@ function Measure-Start {
     $clock.Elapsed.TotalMilliseconds
 }
 
-Write-Host "Starting $exe $Warmup + $Runs times..."
-for ($run = 1; $run -le $Warmup; $run++) {
-    $null = Measure-Start
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "meiga-measure-startup-$PID-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
+try {
+    Write-Host "Starting $exe $Warmup + $Runs times..."
+    for ($run = 1; $run -le $Warmup; $run++) {
+        $null = Measure-Start
+    }
+    $start = Get-Date
+    $times = for ($run = 1; $run -le $Runs; $run++) {
+        [pscustomobject]@{ run = $run; ms = Measure-Start }
+    }
 }
-$start = Get-Date
-$times = for ($run = 1; $run -le $Runs; $run++) {
-    [pscustomobject]@{ run = $run; ms = Measure-Start }
+finally {
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # Nearest-rank percentile of the sorted times.

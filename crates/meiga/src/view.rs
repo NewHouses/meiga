@@ -53,6 +53,9 @@ const VK_TAB: u16 = 0x09;
 /// Windows.
 const VK_APPS: u16 = 0x5d;
 const VK_F10: u16 = 0x79;
+/// Space, which with Ctrl and Shift opens the menu of the profiles, as in
+/// Windows Terminal.
+const VK_SPACE: u16 = 0x20;
 /// Page Up, Page Down, End, Home, and the up and down arrows.
 const VK_PRIOR: u16 = 0x21;
 const VK_NEXT: u16 = 0x22;
@@ -314,10 +317,11 @@ impl TerminalView {
     /// one; Ctrl+V pastes; Esc removes the selection, if there is one; on
     /// the primary screen, the keys of the history move its view; Ctrl and
     /// +, - or 0 zoom; and Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab,
-    /// Ctrl+Shift+Tab, the Menu key and Shift+F10 are for the tabs. The
-    /// rest go to the program, as the modes that it turned on say, and a key
-    /// that goes down removes the selection and brings the view back to the
-    /// screen, where the program writes, unless it is a modifier key.
+    /// Ctrl+Shift+Tab, the Menu key, Shift+F10 and Ctrl+Shift+Space are for
+    /// the tabs. The rest go to the program, as the modes that it turned on
+    /// say, and a key that goes down removes the selection and brings the
+    /// view back to the screen, where the program writes, unless it is a
+    /// modifier key.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         if !event.down {
             // A key that goes up is not down any more, whoever gets it.
@@ -342,7 +346,10 @@ impl TerminalView {
         {
             // With a message box, the key goes up in it.
             if !response.dialog {
-                self.taken.push(DownKey::of(event));
+                self.taken.push(DownKey {
+                    shortcut: true,
+                    ..DownKey::of(event)
+                });
             }
             return response;
         }
@@ -385,6 +392,15 @@ impl TerminalView {
         self.held.iter().any(|held| held.key == key)
     }
 
+    /// Whether a shortcut took `key`, which did not go up yet: a menu that
+    /// opens meanwhile does not take its repeats either, as the ones of the
+    /// Space of Ctrl+Shift+Space, which would choose an item.
+    pub fn took_for_a_shortcut(&self, key: u16) -> bool {
+        self.taken
+            .iter()
+            .any(|taken| taken.key == key && taken.shortcut)
+    }
+
     /// What a key that goes down does if meiga takes it.
     fn shortcut(&mut self, window: &Window, event: &KeyEvent) -> Option<Response> {
         let controls = event.controls;
@@ -406,6 +422,8 @@ impl TerminalView {
             // and Shift+F10.
             VK_APPS if !ctrl && !alt => tab(TabAction::ActiveMenu),
             VK_F10 if shift && !ctrl && !alt => tab(TabAction::ActiveMenu),
+            // The menu of the profiles, as in Windows Terminal.
+            VK_SPACE if ctrl && shift && !alt => tab(TabAction::ProfileMenu { keyboard: true }),
             // Ctrl, and Shift or not, but not Alt, nor AltGr.
             VK_C if ctrl && !alt => {
                 clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW)
@@ -819,13 +837,16 @@ const fn is_modifier(key: u16) -> bool {
 }
 
 /// A key that went down, in the lists of the view: its virtual-key code,
-/// and its place on the keyboard.
+/// its place on the keyboard, and whether a shortcut took it.
 #[derive(Clone, Copy, Debug)]
 struct DownKey {
     key: u16,
     /// The scan code, with 0x100 for the extended keys, or 0 if the event
     /// has none, as some messages that other programs post.
     place: u16,
+    /// A shortcut took it, and not a menu: a menu does not take its
+    /// repeats.
+    shortcut: bool,
 }
 
 impl DownKey {
@@ -838,6 +859,7 @@ impl DownKey {
         Self {
             key: event.key,
             place,
+            shortcut: false,
         }
     }
 

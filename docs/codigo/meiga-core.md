@@ -1,12 +1,12 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.4. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez.
+> Estado: subfase 2.5. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra.
 
-**Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
+**Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
 | Arquivo | Contido |
 |---|---|
-| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr` e `unicode-width`. |
+| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr`, `toml` e `unicode-width`. |
 | [`src/lib.rs`](#cratesmeiga-coresrclibrs) | A raíz do crate: os módulos. |
 | [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores, e `Palette`, as cores dun terminal: as 16 do esquema *Campbell*, as 256 do xterm e a da selección. |
 | [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; `GridSize`, o tamaño da grella en celas; e `GridPoint`, unha cela da grella. |
@@ -17,6 +17,10 @@
 | [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
 | [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda en partes, e `WheelRows`, en filas do historial; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
 | [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
+| [`src/config.rs`](#cratesmeiga-coresrcconfigrs) | `parse`: o arquivo de configuración, `config.toml`, lido sen serde, co perfil por defecto e as entradas dos perfís; e `Problem`, cada cousa que ignora, coa súa liña e a súa columna. |
+| [`src/profile.rs`](#cratesmeiga-coresrcprofilers) | `Profiles`: os perfís do menú, as shells que atopa meiga co que cambia, oculta ou engade a configuración, e o perfil por defecto; e `Launch`, o que corre a sesión dunha tab: o nome, a liña de comandos e o cartafol, co `--cd` de WSL. |
+| [`src/environment.rs`](#cratesmeiga-coresrcenvironmentrs) | `Environment`: as variábeis dun contorno, en UTF-16 coma as garda Windows, as `%NOME%` dun texto e o bloque para `CreateProcessW`; e `prepare`, o contorno dos programas das tabs, con `TERM_PROGRAM`, `COLORTERM` e o `WSLENV`. |
+| [`src/sort.rs`](#cratesmeiga-coresrcsortrs) | `insertion_sort_by`: unha ordenación estábel, por inserción, para as listas curtas, máis pequena ca a da biblioteca estándar. |
 | [`src/model/mod.rs`](#cratesmeiga-coresrcmodelmodrs) | O modelo das xanelas e as súas tabs: os identificadores, `TabId` e `WindowId`, que nunca se repiten, e os erros. |
 | [`src/model/window.rs`](#cratesmeiga-coresrcmodelwindowrs) | `Window`: as tabs dunha xanela, na orde da barra, e a activa, a enfocada e as visíbeis; abrir, pechar, tamén varias dunha vez, mover e activar. |
 | [`src/model/tests.rs`](#cratesmeiga-coresrcmodeltestsrs) | As probas do modelo, unha delas con 10 000 cambios ao chou. |
@@ -29,8 +33,8 @@
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
 | [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: a barra de tabs e os menús; e `scale`, que leva as súas medidas ao DPI da xanela. |
-| [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e o botón que abre unha tab, ao DPI da xanela; e `Part`, a parte da barra que hai debaixo dun punto. |
-| [`src/ui/menu.rs`](#cratesmeiga-coresrcuimenurs) | `Menu`: as entradas dun menú, elementos e liñas, e o resalte, que moven o teclado e o punteiro; e `Layout`: onde van o menú e as súas entradas, ao DPI da xanela, e a entrada que hai debaixo dun punto. |
+| [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e os botóns que abren unha tab e o menú dos perfís, ao DPI da xanela; e `Part`, a parte da barra que hai debaixo dun punto. |
+| [`src/ui/menu.rs`](#cratesmeiga-coresrcuimenurs) | `Menu`: as entradas dun menú, elementos, tamén en negra, e liñas, e o resalte, que moven o teclado e o punteiro; e `Layout`: onde van o menú e as súas entradas, ao DPI da xanela, e a entrada que hai debaixo dun punto. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
 | [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
 | [`examples/tabs.rs`](#cratesmeiga-coreexamplestabsrs) | Un exemplo de consola para probar o modelo das tabs a man. |
@@ -53,6 +57,8 @@ publish.workspace = true
 alacritty_terminal.workspace = true
 # Finds ESC fast in the scanner that reads the output before the parser.
 memchr.workspace = true
+# Reads config.toml.
+toml.workspace = true
 # The width of each character in cells, as alacritty_terminal measures it.
 unicode-width.workspace = true
 
@@ -66,9 +72,10 @@ workspace = true
 - `[dependencies]`, coas versións e as opcións do `Cargo.toml` raíz ([Código › workspace](workspace.md#cargotoml-raíz)):
   - desde a subfase 1.5, **`alacritty_terminal`**, o núcleo do terminal, que trae o seu parser, `vte` ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Só o usa o módulo `term`;
   - desde a 1.5, **`memchr`**, que busca un byte nun texto moitos bytes á vez, con instrucións SIMD: o escáner busca así o seguinte ESC. `vte` faino igual co mesmo crate, así que non engade ningún crate novo;
+  - desde a 2.5, **`toml`**, o parser de TOML, sen serde: `default-features = false`, e só as *features* `parse` e `std` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 1). Só o usa o módulo `config`, que le con el o `config.toml`: o parser dá cada chave e cada valor co seu sitio no arquivo, e meiga colle a man o que coñece ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Compílanse catro crates máis: `toml_parser`, o parser; `winnow`, a biblioteca de parsers coa que está feito; `toml_datetime`, as datas de TOML; e `serde_spanned`, o `Spanned` que garda o sitio de cada valor, que sen as súas *features* non usa serde. En `meiga.exe`, o parser, con eles, ocupa uns 123 KB;
   - desde a 1.3, **`unicode-width`**, que dá o ancho de cada carácter en celas, como o mide `alacritty_terminal` ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)).
 
-  Os tres son código Rust que non usa APIs de ningún sistema desde o que chama meiga, así que respectan as regras deste crate. `alacritty_terminal` ten tamén un PTY propio con código de Windows, que meiga non usa e que o ligador elimina.
+  Os catro son código Rust que non usa APIs de ningún sistema desde o que chama meiga, así que respectan as regras deste crate. `alacritty_terminal` ten tamén un PTY propio con código de Windows, que meiga non usa e que o ligador elimina.
 - `[lints] workspace = true`: aplica as regras de calidade comúns.
 
 ## `crates/meiga-core/src/lib.rs`
@@ -84,14 +91,18 @@ workspace = true
 #![forbid(unsafe_code)]
 
 pub mod color;
+pub mod config;
 pub mod damage;
+pub mod environment;
 pub mod geometry;
 pub mod input;
 pub mod model;
 pub mod mouse;
 pub mod pacing;
 pub mod paste;
+pub mod profile;
 pub mod shell;
+pub mod sort;
 pub mod term;
 pub mod text;
 pub mod ui;
@@ -100,7 +111,7 @@ pub mod ui;
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, `mouse` e `paste`, na 1.8, `model`, na 2.1, e `ui`, na 2.3. `term`, desde a 1.5, `model` e `ui` teñen submódulos, así que van en cartafoles: os módulos están en `src/term/mod.rs`, en `src/model/mod.rs` e en `src/ui/mod.rs`.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, `mouse` e `paste`, na 1.8, `model`, na 2.1, `ui`, na 2.3, e `config`, `environment`, `profile` e `sort`, na 2.5. `term`, desde a 1.5, `model` e `ui` teñen submódulos, así que van en cartafoles: os módulos están en `src/term/mod.rs`, en `src/model/mod.rs` e en `src/ui/mod.rs`.
 - As dependencias, como `alacritty_terminal`, poden ter `unsafe` dentro: `forbid` só se aplica ao código deste crate.
 
 ## `crates/meiga-core/src/color.rs`
@@ -591,7 +602,7 @@ pub fn fit(text: &str, columns: usize, out: &mut Vec<CellChar>) {
 
 ## `crates/meiga-core/src/shell.rs`
 
-Desde a subfase 1.6: a liña de comandos dun programa. `meiga.exe` recibe o programa que ten que lanzar e os seus argumentos xa divididos (`meiga [opcións] [--] [programa [argumentos]]`), pero a sesión lánzao con `CreateProcessW`, que recibe un só texto: hai que xuntalos outra vez, de forma que o programa os divida igual ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows), [ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Úsao `Options::parse` ([Código › meiga › `options.rs`](meiga.md#cratesmeigasrcoptionsrs)).
+Desde a subfase 1.6: a liña de comandos dun programa. `meiga.exe` recibe o programa que ten que lanzar e os seus argumentos xa divididos (`meiga [opcións] [--] [programa [argumentos]]`), pero a sesión lánzao con `CreateProcessW`, que recibe un só texto: hai que xuntalos outra vez, de forma que o programa os divida igual ([Tecnoloxías › A liña de comandos](../tecnoloxias.md#40-a-liña-de-comandos-en-windows), [ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Úsao `Options::parse` ([Código › meiga › `options.rs`](meiga.md#cratesmeigasrcoptionsrs)) e, desde a subfase 2.5, `profiles::detect`, que fai así as liñas de comandos dos perfís que atopa, coas rutas completas dos seus programas ([Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs)).
 
 Está en `meiga-core`, e non nun crate de Windows, aínda que as regras son as de Windows: só traballa con texto, sen chamar a ningunha API, así que se proba sen lanzar ningún programa. O módulo é para as shells e as súas liñas de comandos; desde a subfase 2.3 ten dúas funcións: `command_line` e `program_name`, o nome do programa dunha liña de comandos.
 
@@ -699,7 +710,7 @@ pub fn program_name(command_line: &str) -> &str {
 }
 ```
 
-**`program_name`**, desde a subfase 2.3, dá o nome do programa dunha liña de comandos: o que mostra unha tab mentres o seu programa non lle dá un título, coma `pwsh` ou `cmd` ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). Cada tab cólleo ao abrirse, da liña de comandos que lanzou a súa sesión, ou que intentou lanzar por última vez, que lle devolve `session::start`: a do programa que se lle deu a `meiga.exe`, na primeira tab, ou a da shell por defecto ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs) e [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Paso a paso:
+**`program_name`**, desde a subfase 2.3, dá o nome do programa dunha liña de comandos: o que mostra unha tab mentres o seu programa non lle dá un título, coma `pwsh` ou `cmd` ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). Ata a 2.4, cada tab collíao ao abrirse, da liña de comandos que lanzou a súa sesión, ou que intentou lanzar por última vez, que lle devolvía `session::start`: a do programa que se lle deu a `meiga.exe`, na primeira tab, ou a da shell por defecto. Desde a 2.5, as tabs dos perfís mostran o nome do seu perfil, coma «PowerShell» ou «Ubuntu», e `program_name` só dá o do programa da liña de comandos de meiga, na primeira tab, a través de [`Launch::command_line`](#como-empeza-launch-e-command_line) ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 11; [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Paso a paso:
 
 1. Salta os espazos e os tabuladores do principio.
 2. Colle o primeiro argumento coma o le `CreateProcessW`, o mesmo que escribe `command_line`: se empeza por comiñas, ata as seguintes, ou ata o final se non as hai; se non, ata o primeiro espazo ou tabulador. Sen ningunha barra invertida especial.
@@ -1640,6 +1651,1064 @@ fn trim(text: &str) -> &str {
 | `without_bracketed_paste_a_single_line_loses_the_blanks_at_its_end` | Sen *bracketed paste*, `  ls -l \t\r\n` queda en `  ls -l`, cos espazos do principio; unha liña só de brancos non envía nada; varias liñas quedan coma están, cun CR ao final de cada unha; e co *bracketed paste*, unha liña conserva os seus brancos e o seu fin de liña. |
 | `an_empty_clipboard_only_goes_with_bracketed_paste` | Un portapapeis baleiro non envía nada sen *bracketed paste*, e só as marcas con el. |
 
+## `crates/meiga-core/src/config.rs`
+
+Desde a subfase 2.5: o arquivo de configuración, `%APPDATA%\meiga\config.toml`, co perfil por defecto e as entradas que cambian, ocultan ou engaden perfís ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 1, 2 e 3; [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)). O arquivo é opcional, e meiga leo unha vez, ao arrancar: o programa ábreo e dálle os seus bytes a `parse` ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). Este módulo non abre ningún arquivo, só le bytes, así que se proba con textos.
+
+```toml
+default_profile = "Ubuntu"
+
+[[profiles]]
+name = "Command Prompt"
+hidden = true
+
+[[profiles]]
+name = "Build"
+command = 'pwsh -NoExit -File "%USERPROFILE%\build.ps1"'
+directory = 'C:\src\meiga'
+```
+
+Este arquivo, o do comentario do módulo (`//!`), fai de Ubuntu o perfil por defecto, oculta o Command Prompt e engade un perfil, «Build», que corre un script de PowerShell nun cartafol. As cadeas entre comiñas simples van tal cal, sen escapes: así se escriben as rutas de Windows ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)).
+
+**Un erro non para nada** ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 2). meiga ignora o que está mal, e segue co resto:
+
+| Que está mal | Que ignora meiga |
+|---|---|
+| O arquivo pasa de 1 MiB, non é texto UTF-8 ou non é TOML, coma con `hidden = tru` ou cunha chave repetida | O arquivo enteiro, e usa os seus valores por defecto. |
+| Un valor doutro tipo, coma `hidden = "yes"`, ou unha cadea baleira | Ese valor. |
+| Unha chave que meiga non coñece, coma `colour` | Esa chave. |
+| Unha entrada de `[[profiles]]` sen `name`, cun `name` mal ou co nome doutra | A entrada enteira. |
+
+Cada un é un `Problem`, coa súa liña e a súa columna, que a xanela mostra nunha caixa de mensaxe cando xa está na pantalla (decisión 8). Así, unha errata nunha entrada non desfai o resto do arquivo, ao contrario ca no Windows Terminal, que cun erro de sintaxe ou de tipo usa só os seus valores por defecto.
+
+**Sen serde.** O crate `toml` adoita encher as estruturas dun programa con serde e `derive`, pero así a lectura para no primeiro erro, e o código ocupa máis: nun programa de proba, 193 KB, fronte aos 116 KB do parser só ([ADR 0022 › Alternativas consideradas](../adr/0022-os-perfis-e-a-configuracion.md#alternativas-consideradas)). meiga usa só o parser: `DeTable::parse` dá a táboa do arquivo, con cada chave e cada valor nun `Spanned`, que garda o rango de bytes do arquivo onde está; e o lector deste módulo, `Reader`, colle a man os valores que coñece, e anota un erro, co seu sitio, por cada cousa que ignora.
+
+### `Position`, `Problem` e `Setting`
+
+```rust
+pub const MAX_SIZE: usize = 1 << 20;
+
+const BOM: &[u8] = b"\xef\xbb\xbf";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Position {
+    pub line: u32,
+    pub column: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Problem {
+    pub at: Option<Position>,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Setting<T> {
+    pub value: T,
+    pub at: Position,
+}
+```
+
+- **`MAX_SIZE`**: o arquivo máis grande que le meiga, 1 MiB (1 048 576 bytes). Unha configuración ten uns centos de bytes: o límite só evita ler e analizar ao arrancar un arquivo enorme, que non sería unha configuración. É público: o programa le como moito un byte máis, que abonda para saber que o arquivo pasa do límite sen lelo enteiro.
+- **`BOM`**: a marca de orde dos bytes de UTF-8 (*byte order mark*), `EF BB BF`, que algúns editores escriben ao principio dun arquivo.
+- **`Position`**: un sitio do arquivo, a liña e a columna, as dúas desde 1, coma nos editores. A columna conta caracteres, e non bytes ([`position`](#a-liña-e-a-columna-position)). `PartialOrd` e `Ord`, derivados, comparan os campos na súa orde: primeiro a liña, e despois a columna. É `Copy`: dous `u32`.
+- **`Problem`**: algo mal na configuración, que meiga ignora: onde está (`at`), se está nun sitio do arquivo, e a mensaxe, en inglés coma o resto da interface. `Problem::new` acepta coma mensaxe calquera texto que se converta nun `String` (`impl Into<String>`): un texto fixo ou un `format!`.
+- **`Setting<T>`**: un valor do arquivo e o seu sitio. Só o garda `default_profile`: o seu erro chega despois, cando [`Profiles::merge`](#os-perfís-do-menú-profiles-e-merge) ve que non é un perfil visíbel, e necesita o sitio do valor.
+
+```rust
+impl fmt::Display for Problem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.at {
+            Some(at) => write!(
+                f,
+                "Line {}, column {}: {}",
+                at.line, at.column, self.message
+            ),
+            None => f.write_str(&self.message),
+        }
+    }
+}
+```
+
+`Display` escribe un erro coma unha liña da caixa: `` Line 3, column 10: invalid boolean, expected `true` `` ou, se non ten sitio, só a mensaxe, coma `the file has more than 1 MiB` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 8).
+
+### `ProfileEntry` e `Config`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProfileEntry {
+    pub name: String,
+    pub command: Option<String>,
+    pub directory: Option<String>,
+    pub hidden: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Config {
+    pub default_profile: Option<Setting<String>>,
+    pub profiles: Vec<ProfileEntry>,
+}
+```
+
+O que di o arquivo, coas chaves que coñece meiga ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 3):
+
+| Chave | Valor | Que é |
+|---|---|---|
+| `default_profile` | Unha cadea | O nome do perfil por defecto, o que abren o +, Ctrl+Maiús+T e a primeira tab (decisión 5). |
+| `[[profiles]]` | Unha lista de táboas | As entradas que cambian, ocultan ou engaden perfís, na orde do arquivo: os `ProfileEntry`. |
+| `name` | Unha cadea | O nome dun perfil que atopa meiga, para cambialo ou ocultalo, ou o dun perfil novo. Sen el, non hai entrada. |
+| `command` | Unha cadea | A liña de comandos, coma a le o programa, coas variábeis `%NOME%`. Un perfil novo necesítaa. |
+| `directory` | Unha cadea | O cartafol onde empeza, coas variábeis `%NOME%`; `~` é o persoal. |
+| `hidden` | `true` ou `false` | Se o menú o deixa fóra. Sen el, `false`. |
+
+- Os textos gárdanse coma no arquivo: as variábeis expándeas `Profiles::merge`, co contorno de meiga, e `~` convérteo `Folder::of` ([`profile.rs`](#cratesmeiga-coresrcprofilers)).
+- **`Config`** deriva `Default`: sen arquivo, ou cun arquivo que meiga ignora enteiro, a configuración é a baleira, sen perfil por defecto nin entradas.
+- As táboas en liña tamén son entradas: `profiles = [{ name = "a" }, { name = "b", hidden = false }]` é o mesmo ca dúas `[[profiles]]`. Para o parser, os dous son unha lista de táboas.
+- Os atallos, as cores e `max_fps` chegarán na 2.6 e na 8.4 (decisión 3): ata entón, son chaves que meiga non coñece.
+
+### Ler o arquivo: `parse`
+
+```rust
+pub fn parse(bytes: &[u8]) -> Result<(Config, Vec<Problem>), Problem> {
+    if bytes.len() > MAX_SIZE {
+        return Err(Problem::new(None, "the file has more than 1 MiB"));
+    }
+    let bytes = bytes.strip_prefix(BOM).unwrap_or(bytes);
+    let text = str::from_utf8(bytes).map_err(|error| {
+        // The text is valid up to where the error is.
+        let valid = str::from_utf8(&bytes[..error.valid_up_to()]).unwrap_or_default();
+        Problem::new(
+            Some(position(valid, valid.len())),
+            "the file is not UTF-8 text",
+        )
+    })?;
+    let table = DeTable::parse(text).map_err(|error| {
+        let at = error.span().map(|span| position(text, span.start));
+        Problem::new(at, error.message())
+    })?;
+    let mut reader = Reader {
+        text,
+        problems: Vec::new(),
+    };
+    let config = reader.config(table.get_ref());
+    let mut problems = reader.problems;
+    sort(&mut problems);
+    Ok((config, problems))
+}
+```
+
+**`parse`** le a configuración en `bytes`, o contido do arquivo. Devolve a configuración, cos erros do que ignorou, na orde do arquivo; ou, nun `Err`, o erro que fai ignorala enteira. Paso a paso:
+
+1. **O tamaño.** Con máis de `MAX_SIZE` bytes, o arquivo ignórase enteiro, cun erro sen sitio. Mírase primeiro, antes de percorrer o texto.
+2. **A marca.** Se o arquivo empeza polo BOM, quítase (`strip_prefix`): con ela ou sen ela, é o mesmo arquivo, e as columnas da primeira liña cóntanse sen ela.
+3. **UTF-8.** `str::from_utf8` comproba que o arquivo é texto UTF-8. Se non o é, o erro di onde: `valid_up_to` dá cantos bytes do principio son válidos, e o erro vai ao final dese texto, no primeiro byte que non vale. Ese texto sempre é válido, así que `unwrap_or_default` non actúa nunca: só evita un `unwrap`.
+4. **TOML.** `DeTable::parse` le a táboa do texto. Un erro de sintaxe, coma `hidden = tru`, ou unha chave repetida, fai ignorar o arquivo enteiro, coa mensaxe do parser (`message`) e o sitio onde empeza o erro (`span`), se o dá. `get_ref` dá a táboa que garda o `Spanned`.
+5. **Os valores.** O `Reader` percorre a táboa, colle o que coñece e anota os erros do que ignora.
+6. **A orde.** [`sort`](#os-erros-na-orde-do-arquivo-sort) pon os erros na orde do arquivo.
+
+- `map_err` converte os erros de `std` e de `toml` nun `Problem`, e o `?` devólveo no momento, coma o `Err` de `parse`.
+- O programa mostra nunha caixa os erros, ou o erro que fai ignorar o arquivo, e di que fixo: ignoralos, ou ignorar o arquivo, e usar os seus valores por defecto ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)).
+
+### Os erros na orde do arquivo: `sort`
+
+```rust
+pub fn sort(problems: &mut [Problem]) {
+    let key = |problem: &Problem| (problem.at.is_none(), problem.at);
+    insertion_sort_by(problems, |a, b| key(a).cmp(&key(b)));
+}
+```
+
+**`sort`** pon os erros na orde do arquivo: polo seu sitio, e os que non teñen ningún, ao final.
+
+- **Por que hai que ordenalos.** A táboa que dá `DeTable::parse` é un `Map` de `toml`, que é un `BTreeMap` sen a *feature* `preserve_order`, e meiga non a activa: dá as chaves na orde dos seus nomes, e non na do arquivo. Así, `colour` vai antes ca `default_profile`, aínda que estea despois no arquivo, e, nunha entrada, `command` vai antes ca `name`. O lector atopa os erros nesa orde.
+- **A chave** de cada erro é `(problem.at.is_none(), problem.at)`: primeiro os que teñen sitio, porque `false` vai antes ca `true`, pola liña e a columna; despois, os que non teñen, coma `all the profiles are hidden, so meiga shows them all`. Dous `Option` compáranse polos seus valores, e dous `Position`, pola liña e despois pola columna.
+- **Estábel**: dous erros no mesmo sitio quedan na orde na que se atoparon ([`sort.rs`](#cratesmeiga-coresrcsortrs)).
+- É pública: o programa xunta os erros do arquivo cos de `Profiles::merge`, e ordénaos outra vez con ela. Unha soa función para os dous sitios compila unha soa copia da ordenación ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 12).
+
+### O lector: `Reader`
+
+```rust
+struct Reader<'a> {
+    text: &'a str,
+    problems: Vec<Problem>,
+}
+
+type Key<'i> = Spanned<std::borrow::Cow<'i, str>>;
+type Value<'i> = Spanned<DeValue<'i>>;
+```
+
+- **`Reader`**, privado: o texto do arquivo, para dar o sitio de cada erro, e os erros que anota.
+- **`Key`** e **`Value`**: unha chave e un valor da táboa, cada un nun `Spanned`: `get_ref` dá a chave ou o valor, e `span`, o rango de bytes do arquivo onde está. A chave é un `Cow<str>`, que pode ser un anaco do propio texto, sen copialo, coma os textos dos menús ([`Entry`](#entry-os-elementos-e-as-liñas)). `DeValue` é un valor de TOML: unha cadea, un número, un booleano, unha data, unha lista ou unha táboa.
+
+```rust
+fn config(&mut self, table: &DeTable<'_>) -> Config {
+    let mut config = Config::default();
+    for (key, value) in table {
+        match key.get_ref().as_ref() {
+            "default_profile" => {
+                config.default_profile = self.string(key, value).map(|name| Setting {
+                    value: name,
+                    at: self.at(value.span()),
+                });
+            }
+            "profiles" => config.profiles = self.profiles(key, value),
+            _ => self.unknown(key),
+        }
+    }
+    config
+}
+```
+
+- **`config`**: a táboa principal do arquivo. Cada chave que coñece vai ao seu campo, e calquera outra é un erro no sitio da chave: `` unknown key `colour` ``.
+- `default_profile` garda o seu valor co sitio do valor, e non co da chave, coma os erros dos valores: en `default_profile = "Ubuntu"`, a columna 19.
+
+```rust
+fn profiles(&mut self, key: &Key<'_>, value: &Value<'_>) -> Vec<ProfileEntry> {
+    let DeValue::Array(array) = value.get_ref() else {
+        self.problem(
+            value.span(),
+            format!(
+                "`{}` has to be an array of tables ([[profiles]]), not {}",
+                key.get_ref(),
+                kind(value.get_ref())
+            ),
+        );
+        return Vec::new();
+    };
+    let mut entries = Vec::<ProfileEntry>::with_capacity(array.len());
+    for item in array {
+        let DeValue::Table(table) = item.get_ref() else {
+            self.problem(
+                item.span(),
+                format!("a profile has to be a table, not {}", kind(item.get_ref())),
+            );
+            continue;
+        };
+        let Some((entry, name)) = self.profile(table, item.span()) else {
+            continue;
+        };
+        if entries.iter().any(|other| other.name == entry.name) {
+            self.problem(
+                name,
+                format!("another profile is already named `{}`", entry.name),
+            );
+        } else {
+            entries.push(entry);
+        }
+    }
+    entries
+}
+```
+
+**`profiles`**: as entradas de `[[profiles]]`.
+
+1. `profiles` ten que ser unha lista. Se non o é, coma en `profiles = { name = "a" }`, é un erro, e non hai ningunha entrada. `let … else` colle a lista co patrón, ou sae da función.
+2. Cada elemento ten que ser unha táboa. Un que non o é, coma en `profiles = ["cmd"]`, é un erro, e sáltase.
+3. `profile` le a táboa. Sen nome, non hai entrada.
+4. **Un nome repetido.** Se outra entrada xa ten ese nome, esta ignórase enteira, cun erro no seu nome: `` another profile is already named `a` ``. A primeira queda. Os nomes distinguen maiúsculas, coma ao buscar os perfís: `a` e `A` son dous. Así, cada perfil recibe como moito unha entrada, e non dúas que se contradín.
+
+- `with_capacity(array.len())` reserva unha vez para todas as entradas. Mirar o nome nas anteriores percorre a lista, con `any`: con poucas entradas, nada.
+
+```rust
+fn profile(
+    &mut self,
+    table: &DeTable<'_>,
+    span: Range<usize>,
+) -> Option<(ProfileEntry, Range<usize>)> {
+    let mut name = None;
+    let mut named = false;
+    let (mut command, mut directory, mut hidden) = (None, None, false);
+    for (key, value) in table {
+        match key.get_ref().as_ref() {
+            "name" => {
+                named = true;
+                name = self.string(key, value).map(|name| (name, value.span()));
+            }
+            "command" => command = self.string(key, value),
+            "directory" => directory = self.string(key, value),
+            "hidden" => hidden = self.boolean(key, value).unwrap_or(hidden),
+            _ => self.unknown(key),
+        }
+    }
+    // A name that is wrong already has its problem.
+    if !named {
+        self.problem(span, "a profile needs a `name`");
+    }
+    let (name, at) = name?;
+    Some((
+        ProfileEntry {
+            name,
+            command,
+            directory,
+            hidden,
+        },
+        at,
+    ))
+}
+```
+
+**`profile`**: unha entrada, que ocupa `span` no arquivo. Devolve a entrada e o sitio do seu nome, para o erro dun nome repetido; ou `None`, sen nome.
+
+- Cada chave que coñece garda o seu valor, se está ben. Un valor mal só se perde el: `command = ""` deixa a entrada sen `command`, e `hidden = "yes"`, con `hidden` en `false`, o valor que tiña (`unwrap_or(hidden)`).
+- **Sen nome.** `named` distingue as dúas maneiras de non ter nome. Sen a chave `name`, o erro vai no sitio da entrada, que nunha `[[profiles]]` é a súa cabeceira: `` Line 1, column 1: a profile needs a `name` ``. Cun `name` mal, coma `name = 7`, `string` xa anotou o seu erro, e non hai outro: o comentario lémbrao. Nos dous casos, `name?` devolve `None`, e a entrada enteira ignórase: sen nome, non se sabe que perfil cambia.
+
+```rust
+fn string(&mut self, key: &Key<'_>, value: &Value<'_>) -> Option<String> {
+    match value.get_ref() {
+        DeValue::String(text) if text.is_empty() => {
+            self.problem(value.span(), format!("`{}` cannot be empty", key.get_ref()));
+            None
+        }
+        DeValue::String(text) => Some(text.to_string()),
+        other => {
+            self.problem(
+                value.span(),
+                format!(
+                    "`{}` has to be a string, not {}",
+                    key.get_ref(),
+                    kind(other)
+                ),
+            );
+            None
+        }
+    }
+}
+
+fn unknown(&mut self, key: &Key<'_>) {
+    self.problem(key.span(), format!("unknown key `{}`", key.get_ref()));
+}
+
+fn problem(&mut self, span: Range<usize>, message: impl Into<String>) {
+    let at = self.at(span);
+    self.problems.push(Problem::new(Some(at), message));
+}
+
+fn at(&self, span: Range<usize>) -> Position {
+    position(self.text, span.start)
+}
+```
+
+- **`string`**: o texto dun valor, se é unha cadea que non está baleira. Unha cadea baleira non é un nome, nin unha liña de comandos, nin un cartafol: é un erro, `` `command` cannot be empty ``, coma un valor doutro tipo, `` `directory` has to be a string, not an array ``. `to_string` copia o texto nun `String`, que xa non depende do arquivo.
+- **`boolean`** fai o mesmo con `true` e `false`: `` `hidden` has to be true or false, not a string ``.
+- **`unknown`**: o erro dunha chave que meiga non coñece, no sitio da chave.
+- **`problem`** anota un erro no comezo de `span`, e **`at`** dá ese sitio.
+
+```rust
+const fn kind(value: &DeValue<'_>) -> &'static str {
+    match value {
+        DeValue::String(_) => "a string",
+        DeValue::Integer(_) => "an integer",
+        DeValue::Float(_) => "a float",
+        DeValue::Boolean(_) => "a boolean",
+        DeValue::Datetime(_) => "a date",
+        DeValue::Array(_) => "an array",
+        DeValue::Table(_) => "a table",
+    }
+}
+```
+
+**`kind`**: que é un valor, coma o din os erros (`not an integer`), cunha frase para cada tipo de TOML. É unha `const fn`.
+
+### A liña e a columna: `position`
+
+```rust
+fn position(text: &str, offset: usize) -> Position {
+    let mut offset = offset.min(text.len());
+    while !text.is_char_boundary(offset) {
+        offset -= 1;
+    }
+    let before = &text[..offset];
+    let start = before.rfind('\n').map_or(0, |newline| newline + 1);
+    let line = before.bytes().filter(|&byte| byte == b'\n').count() + 1;
+    let column = before[start..].chars().count() + 1;
+    Position {
+        line: u32::try_from(line).unwrap_or(u32::MAX),
+        column: u32::try_from(column).unwrap_or(u32::MAX),
+    }
+}
+```
+
+**`position`** dá a liña e a columna do byte `offset` de `text`. O parser e `from_utf8` contan en bytes, e os editores, en liñas e caracteres:
+
+1. O byte queda dentro do texto (`min`) e, se cae no medio dun carácter de varios bytes, recúa ata o seu comezo: así, `&text[..offset]` nunca corta un carácter, que sería un *panic*.
+2. A liña: os LF de antes, máis 1. Un arquivo con CR LF conta igual: o CR queda ao final da liña anterior.
+3. A columna: os caracteres desde o último LF, máis 1. `chars().count()` conta caracteres, e non bytes: `Ñ` ocupa dous bytes en UTF-8, pero é unha columna, coma nos editores ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 2).
+
+- Cada erro percorre o texto ata o seu sitio, sen gardar onde empeza cada liña: cun arquivo pequeno e uns poucos erros, abonda.
+- `try_from` deixa a liña e a columna en `u32::MAX` se non cupesen nun `u32`, en vez de cortalas; con 1 MiB, nunca pasa.
+
+**Probas.** Seis. `read` le un texto que ten que ser unha configuración, e dá os seus erros coma texto; `fails`, o erro dun arquivo que meiga ignora enteiro; e `entry`, unha entrada só co nome.
+
+| Proba | Que comproba |
+|---|---|
+| `an_empty_file_says_nothing` | Un arquivo baleiro, e un só cun comentario e CR LF, dan a configuración por defecto, sen erros. |
+| `it_takes_the_default_profile_and_the_profiles_in_their_order` | O arquivo do exemplo: `Ubuntu`, na liña 1, columna 19, e as dúas entradas na súa orde, coas comiñas e as barras invertidas das cadeas entre comiñas simples tal cal. E as táboas en liña, `profiles = [{ name = "a" }, { name = "b", hidden = false }]`, son dúas entradas. |
+| `wrong_values_and_unknown_keys_are_ignored_with_their_place` | Nun arquivo con CR LF, un `default_profile` que é un número, unha chave `colour`, un `command` baleiro, un `hidden = "yes"`, unha chave `shortcut` e un `directory` que é unha lista dan seis erros, na orde do arquivo, cada un co seu sitio: o do valor nos valores, e o da chave nas chaves. O que está ben queda: as dúas entradas, sen eses valores, e sen perfil por defecto. |
+| `a_profile_needs_a_name_of_its_own` | Unha entrada sen `name` dá o erro na súa cabeceira, `Line 1, column 1`; unha con `name = 7`, só o do tipo; e a segunda chamada `a`, `` another profile is already named `a` `` no seu nome, e ignórase, co seu `hidden`. `profiles = { name = "a" }`, unha táboa, non é unha lista de táboas, e `profiles2`, na liña seguinte, é unha chave que meiga non coñece; e `profiles = ["cmd"]` ten un elemento que non é unha táboa. |
+| `a_file_that_is_not_toml_is_ignored_whole` | `hidden = tru` dá o erro do parser, `` Line 3, column 10: invalid boolean, expected `true` ``; unha cadea entre comiñas simples que non se pecha despois dun `Ñ`, o erro ao final da liña, na columna 21, que en bytes sería a 22; e unha chave repetida, un erro na liña 2, columna 1. |
+| `the_file_is_utf8_with_or_without_its_mark_and_not_too_large` | Co BOM, o arquivo lese igual, e `default_profile = "ñ"` ten o valor na columna 19; un byte que non é UTF-8 (`E1`), `Line 2, column 20: the file is not UTF-8 text`; e un arquivo de `MAX_SIZE + 1` bytes, `the file has more than 1 MiB`, pero un de `MAX_SIZE`, non. |
+
+**Como se comproba.** Ademais destas probas, `check-profiles.ps1` dálle a meiga na CI un `config.toml` con dous erros, unha chave que non coñece e un `hidden` que non é `true` nin `false`, e comproba a caixa que os mostra, coa liña e a columna de cada un; e despois, un arquivo que non é TOML ([Código › ferramentas](ferramentas.md#toolscheck-profilesps1)). Unha copia de meiga estragada a propósito que conta as columnas en bytes pasa a comprobación, porque o seu `config.toml` só ten ASCII antes dos seus erros, pero falla `a_file_that_is_not_toml_is_ignored_whole`; e unha que as conta desde 0 falla as dúas.
+
+## `crates/meiga-core/src/profile.rs`
+
+Desde a subfase 2.5: os perfís das tabs ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md); [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)). Un perfil é unha forma de abrir unha tab: un nome, que mostran o menú dos perfís e a tab, ata que o seu programa pon un título; unha liña de comandos; e o cartafol onde empeza, o persoal se a configuración non di outro ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Este módulo xunta as shells que atopa meiga, que lle dá `meiga-win` ([Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs)), co que cambia, oculta ou engade o `config.toml` ([`config.rs`](#cratesmeiga-coresrcconfigrs)); escolle o perfil por defecto; e di como empeza unha sesión cada perfil, cos de WSL no cartafol persoal de Linux. Non le o rexistro nin mira ningún arquivo: recibe as shells xa atopadas, así que se proba coas dun equipo inventado.
+
+### Os nomes dos perfís
+
+```rust
+pub const POWERSHELL: &str = "PowerShell";
+pub const WINDOWS_POWERSHELL: &str = "Windows PowerShell";
+pub const COMMAND_PROMPT: &str = "Command Prompt";
+pub const GIT_BASH: &str = "Git Bash";
+```
+
+Os nomes dos perfís que atopa meiga, os mesmos do Windows Terminal, na orde do menú; as distribucións de WSL, entre Command Prompt e Git Bash, levan o seu propio, coma `Ubuntu` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 4). `profiles::detect` dállos aos seus perfís, e [`merge`](#os-perfís-do-menú-profiles-e-merge) busca con eles o perfil por defecto. Son os nomes que se escriben no `config.toml` para cambiar ou ocultar un deses perfís: `name = "Command Prompt"`.
+
+### `Folder`, `Profile` e `Launch`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Folder {
+    Home,
+    Path(String),
+}
+
+impl Folder {
+    pub fn of(directory: String) -> Self {
+        if directory == "~" {
+            Self::Home
+        } else {
+            Self::Path(directory)
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Profile {
+    pub name: String,
+    pub command: String,
+    pub folder: Folder,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Launch {
+    pub name: String,
+    pub command: String,
+    pub folder: Option<String>,
+}
+```
+
+| Tipo | Que é |
+|---|---|
+| `Folder` | Onde empeza un perfil: `Home`, o cartafol persoal, que nos de WSL é o de Linux, e nos outros, o do usuario en Windows, `%USERPROFILE%`; ou `Path`, un cartafol de Windows ou, nos de WSL, calquera que acepte `wsl.exe --cd`. |
+| `Profile` | Un perfil do menú: o seu nome; a liña de comandos, co programa e os seus argumentos entre comiñas coma os le o programa; e o cartafol. |
+| `Launch` | O que corre unha sesión: o nome que mostra a súa tab mentres o programa non pon un título, a liña de comandos, e o cartafol de Windows onde empeza, ou `None`, o de meiga. |
+
+- **`Folder::of`** fai o cartafol dun `directory` do arquivo, xa coas variábeis expandidas: `~` é o persoal, e calquera outro texto, tamén `~/src`, é un `Path`. Move o texto ao `Path`, sen copialo.
+- **Por que `Home`, e non a ruta.** O cartafol persoal depende do programa: nos de WSL é o de Linux, que só coñece `wsl.exe`, e nos outros, o de Windows. Un perfil di «o persoal», e [`launch`](#como-empeza-launch-e-command_line) decide cal.
+- **Por que dous tipos.** `Profile` é o que mostra o menú e cambia a configuración; `Launch`, o que necesita a sesión, xa coa liña de comandos de WSL e un cartafol de Windows. Cada tab garda o seu `Launch`: a barra mostra o seu `name` mentres o programa non pon un título ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 11), e *Duplicate tab* lanza outra vez o mesmo, co mesmo nome, a mesma liña de comandos e o mesmo cartafol (decisión 10; [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+
+### Como empeza: `launch` e `command_line`
+
+```rust
+impl Profile {
+    pub fn launch(&self, home: Option<&str>, system: &str) -> Launch {
+        let command = wsl_command(&self.command, &self.folder, system);
+        let folder = match (&self.folder, &command) {
+            // WSL has the folder in its command line, and starts in the home
+            // folder, which no folder of Linux keeps in use.
+            (_, Some(_)) | (Folder::Home, None) => home.map(str::to_owned),
+            (Folder::Path(path), None) => Some(path.clone()),
+        };
+        Launch {
+            name: self.name.clone(),
+            command: command.unwrap_or_else(|| self.command.clone()),
+            folder,
+        }
+    }
+}
+```
+
+**`launch`** di como empeza unha sesión do perfil, con `home`, o cartafol persoal do usuario en Windows, se Windows dá un, e `system`, o cartafol do sistema, onde está `wsl.exe` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 10):
+
+| O perfil | A liña de comandos | O cartafol de Windows |
+|---|---|---|
+| O `wsl.exe` do sistema, sen `--cd` nin `~` | A súa, co cartafol do perfil coma `--cd`: en `Home`, `~`, o persoal de Linux ([`wsl_command`](#wsl-e-o-seu-cartafol-wsl_command)). | O persoal. |
+| Calquera outro, en `Home` | A súa. | O persoal. |
+| Calquera outro, nun `Path` | A súa. | Ese cartafol. |
+
+- **WSL, co cartafol na liña de comandos.** `CreateProcessW` só acepta cartafoles de Windows, e o persoal de Linux só o coñece `wsl.exe`. Así que o cartafol vai coma `--cd`, e o proceso de `wsl.exe` empeza no persoal de Windows: coma di o comentario, así non deixa en uso ningún cartafol de Linux.
+- Un `wsl.exe` que xa leva `--cd` ou `~` é «calquera outro»: a súa liña de comandos queda, e empeza no cartafol de Windows do perfil.
+- Sen `USERPROFILE`, `home` é `None`, e a sesión empeza no cartafol de meiga.
+- `clone` copia o nome e a liña de comandos: o perfil queda no menú, e o `Launch` vai á tab. O programa chámao co perfil escollido no menú, e co por defecto para o +, Ctrl+Maiús+T e a primeira tab ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)).
+
+```rust
+impl Launch {
+    pub fn command_line(command: &str) -> Self {
+        Self {
+            name: shell::program_name(command).to_owned(),
+            command: command.to_owned(),
+            folder: None,
+        }
+    }
+}
+```
+
+**`command_line`**: o `Launch` do programa da liña de comandos de meiga, que vai á primeira tab en vez do perfil por defecto (decisión 5). O seu nome é o do programa, coma ata a 2.4 o de todas as tabs ([`program_name`](#cratesmeiga-coresrcshellrs)), e empeza no cartafol de meiga, `None`, onde estaba o usuario ao lanzalo (decisión 10). Úsao o programa ao abrir a primeira tab ([Código › meiga › `app.rs`](meiga.md#cratesmeigasrcapprs)).
+
+### Os perfís do menú: `Profiles` e `merge`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Profiles {
+    list: Vec<Profile>,
+    default: usize,
+}
+
+impl Profiles {
+    pub fn list(&self) -> &[Profile] {
+        &self.list
+    }
+
+    pub const fn default_index(&self) -> usize {
+        self.default
+    }
+
+    pub fn default_profile(&self) -> &Profile {
+        &self.list[self.default]
+    }
+}
+```
+
+- **`list`**: os perfís visíbeis, na orde do menú. Nunca está baleira. O menú dos perfís ten un elemento por perfil, co seu nome, e escollelo abre unha tab con el ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+- **`default`**: a posición do perfil por defecto na lista. `default_index` dálla ao menú, que pon ese elemento en negra ([`Entry::bold`](#entry-os-elementos-e-as-liñas)), e `default_profile` dá o perfil, o que abren o +, Ctrl+Maiús+T e a primeira tab.
+- Os campos son privados, e ningún método deixa a lista baleira nin o por defecto fóra dela: `default_profile` le `&self.list[self.default]` sen comprobar nada.
+
+```rust
+pub fn merge(
+    detected: Vec<Profile>,
+    config: &Config,
+    environment: &Environment,
+) -> (Self, Vec<Problem>) {
+    let mut profiles: Vec<(Profile, bool)> = detected
+        .into_iter()
+        .map(|profile| (profile, false))
+        .collect();
+    for entry in &config.profiles {
+        let command = entry
+            .command
+            .as_deref()
+            .map(|text| environment.expand(text));
+        let folder = entry
+            .directory
+            .as_deref()
+            .map(|text| Folder::of(environment.expand(text)));
+        if let Some((profile, hidden)) = profiles
+            .iter_mut()
+            .find(|(profile, _)| profile.name == entry.name)
+        {
+            if let Some(command) = command {
+                profile.command = command;
+            }
+            if let Some(folder) = folder {
+                profile.folder = folder;
+            }
+            *hidden = entry.hidden;
+        } else if let Some(command) = command {
+            let name = entry.name.clone();
+            let folder = folder.unwrap_or(Folder::Home);
+            profiles.push((
+                Profile {
+                    name,
+                    command,
+                    folder,
+                },
+                entry.hidden,
+            ));
+        }
+    }
+```
+
+**`merge`** xunta os perfís que atopou meiga, `detected`, na súa orde, coas entradas do arquivo ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 3). Devolve os perfís e os erros que só se ven eiquí:
+
+1. Cada perfil atopado vai cun `false`: non está oculto.
+2. Para cada entrada, na orde do arquivo, `command` e `directory` expanden as súas variábeis `%NOME%` co contorno de meiga ([`expand`](#expandir-as-variábeis-expand)), e `directory` pasa a ser un `Folder`.
+3. **Co nome dun perfil**, a entrada cambia a súa liña de comandos e o seu cartafol, se os leva, e decide se está oculto: unha entrada sen `hidden` déixao visíbel.
+4. **Cun nome novo e `command`**, engade un perfil ao final, despois dos atopados, no persoal se non leva `directory`; tamén oculto, se o di.
+5. **Cun nome novo e sen `command`**, nada, e sen erro: é unha entrada para outro equipo, que ten esa shell. Así, o mesmo arquivo vale nos dous.
+
+- **Os nomes non se repiten.** `profiles::detect` non repite ningún, e `config::parse` ignora as entradas co nome doutra: cada entrada atopa como moito un perfil, e un perfil engadido nunca ten o nome doutro. Os nomes distinguen maiúsculas: unha entrada `ubuntu` non cambia `Ubuntu` e, se leva `command`, engade outro perfil.
+- `iter_mut().find` busca o perfil, e dá referencias mutábeis ao perfil e ao seu `bool`, para cambialos no sitio.
+- O `bool` vai xunto a cada perfil, nunha tupla, e non en `Profile`: só importa mentres se fai a lista, e os perfís que saen xa son os visíbeis.
+
+```rust
+    let mut problems = Vec::new();
+    let mut list: Vec<Profile> = profiles
+        .iter()
+        .filter(|(_, hidden)| !hidden)
+        .map(|(profile, _)| profile.clone())
+        .collect();
+    if list.is_empty() && !profiles.is_empty() {
+        problems.push(Problem::new(
+            None,
+            "all the profiles are hidden, so meiga shows them all",
+        ));
+        list = profiles
+            .iter()
+            .map(|(profile, _)| profile.clone())
+            .collect();
+    }
+    if list.is_empty() {
+        // No shell was found: Command Prompt, which every Windows has.
+        list.push(Profile {
+            name: COMMAND_PROMPT.to_owned(),
+            command: "cmd.exe".to_owned(),
+            folder: Folder::Home,
+        });
+    }
+```
+
+6. **A lista**: os perfís que non están ocultos, na súa orde.
+7. **Todos ocultos.** Un menú baleiro non abriría nada, e o + non tería perfil. É un erro, sen sitio, porque non está nun lugar do arquivo, e móstranse todos, coma se ningún estivese oculto (decisión 5).
+8. **Ningún perfil.** Se meiga non atopou ningunha shell, nin o arquivo engadiu ningunha, Command Prompt, `cmd.exe`, que ten calquera Windows. Sen ruta: `CreateProcessW` búscao, tamén no cartafol do sistema.
+
+```rust
+    let index_of = |name: &str| list.iter().position(|profile| profile.name == name);
+    let chosen = config.default_profile.as_ref().and_then(|setting| {
+        let index = index_of(&setting.value);
+        if index.is_none() {
+            let name = &setting.value;
+            let message = if profiles.iter().any(|(profile, _)| profile.name == *name) {
+                format!("the profile `{name}` is hidden, so it cannot be the default one")
+            } else {
+                let names: Vec<&str> =
+                    list.iter().map(|profile| profile.name.as_str()).collect();
+                format!(
+                    "there is no profile named `{name}`; the profiles are: {}",
+                    names.join(", ")
+                )
+            };
+            problems.push(Problem::new(Some(setting.at), message));
+        }
+        index
+    });
+    let default = chosen
+        .or_else(|| index_of(POWERSHELL))
+        .or_else(|| index_of(WINDOWS_POWERSHELL))
+        .unwrap_or(0);
+    (Self { list, default }, problems)
+}
+```
+
+9. **O perfil por defecto** ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5): o de `default_profile`, se está na lista; se non, PowerShell, Windows PowerShell ou o primeiro, coma no Windows Terminal. Concreta a decisión 12 do [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md): as tabs novas corren o perfil por defecto, e non sempre PowerShell.
+10. **Un `default_profile` que non está na lista** é un erro, no sitio do seu valor: se é un perfil oculto, `` the profile `Command Prompt` is hidden, so it cannot be the default one ``; e, se non existe, `` there is no profile named `ubuntu`; the profiles are: … ``, cos nomes dos visíbeis, para escoller un. Por iso `config::parse` garda o sitio deste valor nun [`Setting`](#position-problem-e-setting): o erro só se sabe eiquí, despois de xuntar os perfís.
+
+- `and_then` só busca se o arquivo ten `default_profile`, e cada `or_else` só busca se o anterior non atopou nada.
+- O programa xunta estes erros cos do arquivo, e móstraos na mesma caixa (decisión 8; [Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)).
+- **Cada vez que se abre o menú dos perfís**, o programa atopa outra vez as shells, e volta chamar `merge` coa mesma configuración, para mostrar as que se instalaron mentres tanto (decisión 4). Os erros, que xa mostrou ao arrancar, descártaos.
+
+### WSL e o seu cartafol: `wsl_command`
+
+```rust
+fn wsl_command(command: &str, folder: &Folder, system: &str) -> Option<String> {
+    // The program ends at the first space or quote after its first
+    // character, which can be the opening quote.
+    let start = usize::from(command.starts_with('"'));
+    let end = command
+        .get(1..)?
+        .find([' ', '"'])
+        .map_or(command.len(), |at| at + 1);
+    let program = command.get(start..end)?;
+    let (parent, file) = match program.rsplit_once(['\\', '/']) {
+        Some((parent, file)) => (Some(parent), file),
+        None => (None, program),
+    };
+    if !file.eq_ignore_ascii_case("wsl") && !file.eq_ignore_ascii_case("wsl.exe") {
+        return None;
+    }
+    // Another program with that name.
+    if parent.is_some_and(|parent| !parent.eq_ignore_ascii_case(system)) {
+        return None;
+    }
+    let arguments = command.get(end + 1..).unwrap_or_default();
+    if arguments.contains("--cd") {
+        return None;
+    }
+    if let Some(tilde) = arguments.find('~')
+        && arguments[tilde + 1..]
+            .chars()
+            .next()
+            .is_none_or(|c| c == ' ')
+    {
+        return None;
+    }
+    let directory = match folder {
+        Folder::Home => "~".to_owned(),
+        // `wsl.exe --cd` takes these as folders of Linux.
+        Folder::Path(path) if path.starts_with("//wsl$") || path.starts_with("//wsl.localhost") => {
+            path.replace('/', "\\")
+        }
+        Folder::Path(path) => path.clone(),
+    };
+    Some(format!(r#""{program}" --cd "{directory}" {arguments}"#))
+}
+```
+
+**`wsl_command`**, privada: a liña de comandos que empeza `command` en `folder`, se é o `wsl.exe` do cartafol do sistema, coma fai o Windows Terminal (`MangleStartingDirectoryForWSL`): co cartafol coma `--cd`, porque WSL pode empezar nun cartafol de Linux, e `CreateProcessW` non. `None` cos outros programas, e cun `wsl.exe` que xa leva `--cd`, ou `~` coma argumento, que empeza no persoal. Paso a paso:
+
+1. **O programa**, desde o principio ata o primeiro espazo ou comiñas despois do primeiro carácter, que poden ser as comiñas que o abren; sen elas. `start` é 1 se empeza por comiñas, e `end`, onde remata. `get` dá `None`, e non un *panic*, cunha liña baleira. Nun programa entre comiñas, tamén o remata un espazo: unha ruta con espazos, coma `"C:\Program Files\…"`, queda cortada, pero tampouco sería a do cartafol do sistema.
+2. **O arquivo**, despois da última barra, ten que chamarse `wsl` ou `wsl.exe`, en maiúsculas ou en minúsculas.
+3. **O seu cartafol**, se o leva, ten que ser o do sistema, sen distinguir maiúsculas: `C:\tools\wsl.exe` é outro programa co mesmo nome. Sen cartafol, `wsl` e `wsl.exe` son o do sistema, onde os atopa `CreateProcessW`.
+4. **Os argumentos**, despois do espazo ou das comiñas que rematan o programa. Se xa levan `--cd`, ou un `~` só, ao final ou antes dun espazo, quen escribiu a liña xa escolleu onde empeza, e queda como está. Só conta o primeiro `~`, coma no Windows Terminal: en `wsl ls ~/src`, `~/src` é un argumento, e non o persoal.
+5. **O cartafol**: en `Home`, `~`; un que empeza por `//wsl$` ou `//wsl.localhost`, un cartafol de Linux visto desde Windows, coas barras invertidas, que é como o recoñece `wsl.exe --cd`; e calquera outro, tal cal: un de Windows, coma `C:\src`, ou un de Linux, coma `/tmp`.
+6. **A liña nova**: o programa entre comiñas, `--cd` co cartafol entre comiñas, e os argumentos.
+
+| Liña de comandos | Cartafol | Liña nova |
+|---|---|---|
+| `C:\WINDOWS\system32\wsl.exe -d Ubuntu` | `Home` | `"C:\WINDOWS\system32\wsl.exe" --cd "~" -d Ubuntu` |
+| `wsl` | `C:\src` | `"wsl" --cd "C:\src" `, cun espazo ao final |
+| `"c:\windows\SYSTEM32\WSL.EXE" -e bash` | `Home` | `"c:\windows\SYSTEM32\WSL.EXE" --cd "~"  -e bash`, con dous espazos antes de `-e` |
+| `wsl.exe` | `//wsl$/Ubuntu/home` | `"wsl.exe" --cd "\\wsl$\Ubuntu\home" ` |
+| `wsl ls ~/src` | `Home` | `"wsl" --cd "~" ls ~/src` |
+| `cmd.exe /c wsl.exe`, `C:\tools\wsl.exe -d Ubuntu`, `wsl --cd /tmp`, `wsl ~` e `wsl ~ -d Ubuntu` | Calquera | A mesma: outro programa, un `wsl.exe` doutro cartafol, un que xa ten `--cd` e dous que xa empezan no persoal. |
+
+- **Os espazos de máis.** Os argumentos empezan despois do carácter que remata o programa: cun programa entre comiñas, polo espazo que o segue, e a liña nova leva dous espazos seguidos; sen argumentos, remata nun espazo. Non cambian nada: os argumentos sepáranse con calquera número de espazos.
+- `if let … && …` (unha cadea de `let`) mira o `~` e o carácter que o segue nunha soa condición: `is_none_or` é certo ao final do texto, onde non hai ningún, e cun espazo.
+- `eq_ignore_ascii_case` compara sen distinguir maiúsculas só en ASCII: abonda para `wsl.exe` e para o cartafol do sistema.
+
+**Probas.** Seis. `detected` dá os perfís dun equipo con todas as shells: PowerShell 7 en `%ProgramFiles%`, Windows PowerShell e Command Prompt no cartafol do sistema, Ubuntu e Git Bash; `entry`, unha entrada só co nome; `names`, os nomes da lista; `default_named`, un `default_profile` na liña 1, columna 19; e `environment`, un contorno só con `USERPROFILE`.
+
+| Proba | Que comproba |
+|---|---|
+| `without_a_configuration_powershell_is_the_default` | Sen configuración, os perfís son os atopados, sen erros, e o por defecto é PowerShell; sen el, Windows PowerShell, o primeiro; sen os dous, Command Prompt, tamén o primeiro; e, sen ningunha shell, a lista só ten Command Prompt, `cmd.exe`. |
+| `the_configuration_changes_hides_and_adds_profiles` | Un arquivo oculta Command Prompt, dálle a Ubuntu un cartafol con `%USERPROFILE%`, engade «Build», cunha liña de comandos con `%USERPROFILE%`, e cambia a liña de comandos de PowerShell e o seu cartafol, `~`; e unha entrada «Debian», oculta e sen `command` nin perfil dese nome, ignórase sen erro. Os perfís son PowerShell, Windows PowerShell, Ubuntu, Git Bash e Build, coas variábeis expandidas, e o por defecto, Build. |
+| `a_default_profile_that_is_hidden_or_not_there_is_a_problem` | Sen PowerShell e con Command Prompt oculto, un `default_profile` que é Command Prompt dá o erro do perfil oculto; e `ubuntu`, en minúsculas, o do perfil que non existe, cos nomes dos visíbeis: os nomes distinguen maiúsculas. Nos dous casos, o por defecto é Windows PowerShell. |
+| `if_all_the_profiles_are_hidden_they_are_all_shown` | Cos cinco ocultos, un erro sen sitio, e móstranse todos, co por defecto, PowerShell. |
+| `profiles_start_in_the_home_folder_or_in_theirs` | Un perfil en `Home` empeza no cartafol persoal, e un nun `Path`, nese cartafol; sen cartafol persoal, no de meiga. E o programa da liña de comandos de meiga, `"C:\tools\my app.exe" -x`, chámase `my app`, coa mesma liña de comandos, e empeza no cartafol de meiga. |
+| `wsl_gets_its_folder_as_cd_as_in_windows_terminal` | Os casos da táboa de [`wsl_command`](#wsl-e-o-seu-cartafol-wsl_command), co cartafol de Windows de cada un: o persoal nos que reciben `--cd` e nos que quedan como están en `Home`, e `C:\src` en `wsl --cd /tmp` cun `Path`. |
+
+**Como se comproba.** Ademais destas probas, `check-profiles.ps1` comproba na CI que a primeira tab corre o perfil por defecto do seu `config.toml`, coas variábeis da súa liña de comandos e do seu cartafol expandidas, nese cartafol; que o menú dos perfís non ten o perfil oculto; que cada perfil que atopa meiga corre a liña de comandos que espera, no cartafol persoal, e os de WSL, con `--cd "~"`; e que *Duplicate tab* repite a liña de comandos e o cartafol ([Código › ferramentas](ferramentas.md#toolscheck-profilesps1)). As copias de meiga estragadas a propósito que ignoran o cartafol, as variábeis, o perfil por defecto ou `hidden`, ou que lanzan WSL sen `--cd`, fallan a comprobación.
+
+## `crates/meiga-core/src/environment.rs`
+
+Desde a subfase 2.5: o contorno dos programas das tabs ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 9; [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)): o de meiga, coma llo dá Windows ao arrancar, coas variábeis que lles din aos programas en que terminal corren, e sen as do Windows Terminal, que meiga herda cando se abre desde el. O programa fai o bloque unha vez, ao arrancar, e dállo a todas as sesións ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)), e `Conpty::spawn` pásallo a `CreateProcessW` con `CREATE_UNICODE_ENVIRONMENT` ([Código › meiga-win › `conpty.rs`](meiga-win.md#cratesmeiga-winsrcconptyrs)). Ler o contorno de meiga, con `GetEnvironmentStringsW`, é traballo de `meiga-win` ([› `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs)): este módulo só traballa coas variábeis, así que se proba con contornos feitos a man.
+
+**As variábeis de Windows** ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Cada unha é un texto `NOME=valor`. Un nome pode ter calquera carácter menos `=` e o nulo, e un valor, calquera menos o nulo. Os nomes non distinguen maiúsculas, e poden empezar por `=`: Windows garda o cartafol actual de cada unidade en variábeis coma `=C:`, que usa `cmd`. meiga gárdaas coma as ten Windows, en UTF-16: así, cada variábel volta ao bloque tal cal, tamén se non é UTF-16 válido.
+
+### As variábeis: `Environment`
+
+```rust
+pub const TERM_PROGRAM: &str = "TERM_PROGRAM";
+pub const TERM_PROGRAM_VERSION: &str = "TERM_PROGRAM_VERSION";
+pub const COLORTERM: &str = "COLORTERM";
+
+const WINDOWS_TERMINAL: [&str; 2] = ["WT_SESSION", "WT_PROFILE_ID"];
+
+const WSLENV: &str = "WSLENV";
+
+const NAME: &str = "meiga";
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Environment {
+    vars: Vec<Vec<u16>>,
+}
+```
+
+| Constante | Que é |
+|---|---|
+| `TERM_PROGRAM`, `TERM_PROGRAM_VERSION` e `COLORTERM` | Os nomes das variábeis que lle din a un programa en que terminal corre, coma en VS Code e WezTerm: o seu nome, a súa versión, e que mostra cores de 24 bits. |
+| `WINDOWS_TERMINAL` | As do Windows Terminal: un programa que as ve cre que corre nel. |
+| `WSLENV` | A variábel que nomea as que WSL pasa de Windows aos programas de Linux ([`wslenv`](#o-contorno-dos-programas-prepare-e-wslenv)). |
+| `NAME` | O valor de `TERM_PROGRAM`: `meiga`. |
+
+**`Environment`** é un conxunto de variábeis, cada unha coma `NOME=valor`, en UTF-16 e sen o seu nulo, nun `Vec`. Deriva `Default`, un contorno baleiro, coma o das probas.
+
+```rust
+pub fn from_block(block: &[u16]) -> Self {
+    let vars = block
+        .split(|&unit| unit == 0)
+        .take_while(|var| !var.is_empty())
+        .map(<[u16]>::to_vec)
+        .collect();
+    Self { vars }
+}
+
+pub fn get(&self, name: &str) -> Option<String> {
+    let var = &self.vars[self.position(name)?];
+    let value = var.get(name_length(var) + 1..).unwrap_or_default();
+    Some(String::from_utf16_lossy(value))
+}
+
+pub fn set(&mut self, name: &str, value: &str) {
+    let var = name
+        .encode_utf16()
+        .chain(Some(u16::from(b'=')))
+        .chain(value.encode_utf16())
+        .collect();
+    match self.position(name) {
+        Some(index) => self.vars[index] = var,
+        None => self.vars.push(var),
+    }
+}
+
+pub fn remove(&mut self, name: &str) {
+    if let Some(index) = self.position(name) {
+        self.vars.remove(index);
+    }
+}
+```
+
+- **`from_block`**: as variábeis dun bloque coma o dá `GetEnvironmentStringsW`: cada unha remata nun nulo, e unha baleira remata o bloque. `split` parte o bloque nos nulos, `take_while` para na primeira variábel baleira, e `to_vec` copia cada unha, porque o bloque de Windows hai que soltalo despois.
+- **`get`**: o valor dunha variábel, sen distinguir maiúsculas no nome: `PATH` atopa `Path`. O valor empeza despois do primeiro `=` que segue ao nome: en `x=a=b`, o de `x` é `a=b`. Un carácter que non é UTF-16 válido pasa a ser U+FFFD (`from_utf16_lossy`), porque un `String` sempre é texto válido. Unha variábel sen `=`, que Windows non dá, tería un valor baleiro (`unwrap_or_default`).
+- **`set`**: pon `name=value` no sitio da variábel que ten ese nome, en maiúsculas ou en minúsculas, ou ao final, se non hai ningunha. O nome queda coma se lle dá: despois de `set("PATH", …)`, a variábel chámase `PATH`, e non `Path`. `encode_utf16` converte o texto, e `chain` xúntao co `=` e co valor, sen textos intermedios.
+- **`remove`**: quita a variábel, se está.
+
+### Expandir as variábeis: `expand`
+
+```rust
+pub fn expand(&self, text: &str) -> String {
+    let mut expanded = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find('%') {
+        expanded.push_str(&rest[..start]);
+        let after = &rest[start + 1..];
+        let Some(end) = after.find('%') else {
+            rest = &rest[start..];
+            break;
+        };
+        let name = &after[..end];
+        let value = if name.is_empty() {
+            None
+        } else {
+            self.get(name)
+        };
+        match value {
+            Some(value) => {
+                expanded.push_str(&value);
+                rest = &after[end + 1..];
+            }
+            None => {
+                expanded.push('%');
+                rest = after;
+            }
+        }
+    }
+    expanded.push_str(rest);
+    expanded
+}
+```
+
+**`expand`** substitúe cada `%NOME%` de `text` polo valor da variábel, coma `ExpandEnvironmentStringsW`. Úsao `Profiles::merge` con `command` e con `directory` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 3). Paso a paso:
+
+1. Copia o texto ata o seguinte `%`.
+2. Busca o `%` que o pecha. Se non hai, o resto, desde o primeiro, queda tal cal.
+3. O que hai entre os dous é o nome. Se hai unha variábel con ese nome, sen distinguir maiúsculas, vai o seu valor, e segue despois do segundo `%`. O valor non se volta expandir: un `%` dentro del queda.
+4. Se non hai ningunha, ou se o nome está baleiro (`%%`), o primeiro `%` queda tal cal, e o segundo pode empezar o nome seguinte.
+
+Nun contorno con `USERPROFILE`, o cartafol persoal, e `A=x`:
+
+| Texto | Queda | Por que |
+|---|---|---|
+| `%userprofile%\src\%A%` | O cartafol persoal, e `\src\x` | Os nomes non distinguen maiúsculas. |
+| `%NONE%A%` | `%NONEx` | `NONE` non é unha variábel: o seu primeiro `%` queda, e o segundo empeza `%A%`. |
+| `100%` | `100%` | Un `%` sen outro queda tal cal. |
+| `%%A%` | `%x` | `%%` é un nome baleiro, que non é unha variábel: o primeiro queda, e o segundo empeza `%A%`. |
+| `ñ%A%ñ` | `ñxñ` | `find` dá posicións onde empeza un carácter: os de varios bytes non se cortan. |
+
+- `with_capacity(text.len())` reserva o tamaño do texto, o habitual se as variábeis non son longas.
+- `let … else` colle a posición do segundo `%`, ou deixa o resto e sae do bucle.
+
+### O bloque: `block`
+
+```rust
+pub fn block(&self) -> Vec<u16> {
+    let mut vars: Vec<&[u16]> = self.vars.iter().map(Vec::as_slice).collect();
+    insertion_sort_by(&mut vars, |first, second| compare_names(first, second));
+    let length = vars.iter().map(|var| var.len() + 1).sum::<usize>();
+    let mut block = Vec::with_capacity(length + 2);
+    for var in vars {
+        block.extend_from_slice(var);
+        block.push(0);
+    }
+    // An empty block has two nulls too.
+    if block.is_empty() {
+        block.push(0);
+    }
+    block.push(0);
+    block
+}
+```
+
+**`block`**: as variábeis coma as recibe `CreateProcessW` con `CREATE_UNICODE_ENVIRONMENT`: cada unha rematada nun nulo, e outro nulo ao final.
+
+- **Ordenadas polo nome, sen distinguir maiúsculas**, coma pide Windows nos bloques do contorno ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Os nomes compáranse coma maiúsculas ([`compare_names`](#os-nomes-name_length-compare_names-e-uppercase)): `=` vai antes ca as letras; `_`, despois delas, porque está despois de `Z`, aínda que estea antes de `a`; e `Ñ`, despois de `z`. Por exemplo: `=D:`, `a`, `A_B`, `b`, `z` e `Ñ`.
+- **Ordenadas por inserción** ([`sort.rs`](#cratesmeiga-coresrcsortrs)): o contorno que dá Windows xa vén case ordenado, e só se moven as variábeis que engade `set` ao final, que recúan ata o seu sitio. Ordénanse referencias ás variábeis (`&[u16]`), sen copialas: cada unha cópiase unha vez, no bloque.
+- O bloque reserva dunha vez o que ocupa: `length`, as variábeis cos seus nulos, e os dous do final.
+- **Un contorno sen variábeis** dá tamén dous nulos, coma di o comentario: `Conpty::spawn` só acepta un bloque que remata en dous nulos, porque Windows le o bloque ata a primeira variábel baleira, e sen eles pasaría do seu final ([Código › meiga-win › `conpty.rs`](meiga-win.md#cratesmeiga-winsrcconptyrs)).
+
+### Os nomes: `name_length`, `compare_names` e `uppercase`
+
+```rust
+fn position(&self, name: &str) -> Option<usize> {
+    self.vars
+        .iter()
+        .position(|var| uppercase(&var[..name_length(var)]).eq(uppercase_str(name)))
+}
+```
+
+```rust
+fn name_length(var: &[u16]) -> usize {
+    var.iter()
+        .skip(1)
+        .position(|&unit| unit == u16::from(b'='))
+        .map_or(var.len(), |at| at + 1)
+}
+
+fn compare_names(first: &[u16], second: &[u16]) -> Ordering {
+    let first = uppercase(&first[..name_length(first)]);
+    first.cmp(uppercase(&second[..name_length(second)]))
+}
+
+fn uppercase(name: &[u16]) -> impl Iterator<Item = char> + '_ {
+    char::decode_utf16(name.iter().copied())
+        .map(|c| c.unwrap_or(char::REPLACEMENT_CHARACTER))
+        .flat_map(char::to_uppercase)
+}
+
+fn uppercase_str(name: &str) -> impl Iterator<Item = char> + '_ {
+    name.chars().flat_map(char::to_uppercase)
+}
+```
+
+- **`position`**, o método privado que usan `get`, `set` e `remove`: onde está a variábel `name`, comparando os nomes coma maiúsculas.
+- **`name_length`**: onde remata o nome dun `NOME=valor`: no primeiro `=` despois do primeiro carácter, que pode ser o `=` dun nome coma `=C:`. `skip(1)` sáltao, e `at + 1` volta contalo. Sen `=`, todo é o nome.
+- **`compare_names`**: a orde de dúas variábeis polos seus nomes, coma maiúsculas.
+- **`uppercase`**: os caracteres dun nome en UTF-16, en maiúsculas. `decode_utf16` xunta as dúas unidades dos caracteres que ocupan dúas, e un que non é válido pasa a ser U+FFFD. **`uppercase_str`** fai o mesmo cun `&str`.
+- **Sen textos novos.** `eq` e `cmp` de `Iterator` comparan os caracteres un a un, mentres saen dos iteradores: ningunha comparación reserva memoria.
+- **As maiúsculas de Unicode.** `to_uppercase` usa as táboas de Unicode, e non só ASCII: `ñ` e `Ñ` son o mesmo nome, coma en Windows. Dá un iterador, porque algúns caracteres son varios en maiúsculas, e `flat_map` xúntaos. Comparar só en ASCII aforraría só 6 656 bytes de `meiga.exe`, medidos na 2.5: quedou a comparación de Unicode.
+
+### O contorno dos programas: `prepare` e `wslenv`
+
+```rust
+pub fn prepare(environment: &mut Environment, version: &str) {
+    for name in WINDOWS_TERMINAL {
+        environment.remove(name);
+    }
+    environment.set(TERM_PROGRAM, NAME);
+    environment.set(TERM_PROGRAM_VERSION, version);
+    environment.set(COLORTERM, "truecolor");
+    let current = environment.get(WSLENV);
+    let wslenv = wslenv(
+        current.as_deref(),
+        &[TERM_PROGRAM, TERM_PROGRAM_VERSION, COLORTERM],
+        &WINDOWS_TERMINAL,
+    );
+    environment.set(WSLENV, &wslenv);
+}
+```
+
+**`prepare`** fai de `environment` o contorno dos programas das tabs ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 9). O programa chámao unha vez, ao arrancar, cunha copia do contorno de meiga e coa súa versión, `CARGO_PKG_VERSION`, e garda o bloque:
+
+| Variábel | Valor | Por que |
+|---|---|---|
+| `WT_SESSION` e `WT_PROFILE_ID` | Ningún | Son do Windows Terminal, e meiga herdaas cando se abre desde el: con elas, os seus programas crerían que corren no Windows Terminal. |
+| `TERM_PROGRAM` | `meiga` | O terminal no que corre o programa, coma `vscode` en VS Code. |
+| `TERM_PROGRAM_VERSION` | A versión de meiga | Coma en VS Code e WezTerm. |
+| `COLORTERM` | `truecolor` | Que o terminal mostra cores de 24 bits ([Tecnoloxías › A paleta](../tecnoloxias.md#37-a-paleta-e-os-estilos-das-celas)). |
+| `WSLENV` | O que tiña, cos tres nomes anteriores e sen os do Windows Terminal | Para que WSL lles pase as tres variábeis aos programas de Linux. |
+
+- **Os valores que xa había cámbianse**: un programa que corre en meiga non corre en VS Code, aínda que meiga se abrise desde el, e `COLORTERM=24bit` pasa a ser `truecolor`.
+- **Sen `TERM`.** O ConPTY fala cos programas de Windows, que non o usan, e WSL pono para os de Linux.
+- **O contorno de meiga, unha vez.** As tabs reciben o contorno que tiña meiga ao arrancar, co que lle deu quen o lanzou, coma o `APPDATA` das comprobacións; o Windows Terminal faino de novo desde o rexistro para cada tab. Un `PATH` que cambia despois non chega ás tabs novas ata reiniciar meiga ([ADR 0022 › Consecuencias](../adr/0022-os-perfis-e-a-configuracion.md#consecuencias)).
+
+```rust
+fn wslenv(current: Option<&str>, add: &[&str], drop: &[&str]) -> String {
+    let named = |item: &str, name: &str| {
+        item.split_once('/')
+            .map_or(item, |(item, _)| item)
+            .eq_ignore_ascii_case(name)
+    };
+    let mut items: Vec<&str> = current
+        .unwrap_or_default()
+        .split(':')
+        .filter(|item| !item.is_empty() && !drop.iter().any(|name| named(item, name)))
+        .collect();
+    for name in add {
+        if !items.iter().any(|item| named(item, name)) {
+            items.push(name);
+        }
+    }
+    items.join(":")
+}
+```
+
+**`wslenv`**, privada: o valor novo do `WSLENV`. O `WSLENV` nomea as variábeis que WSL pasa de Windows aos programas de Linux, separadas por `:`, cada unha cunhas opcións despois dunha `/`, coma `USERPROFILE/p`, que traduce a ruta ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Paso a paso:
+
+1. Parte o valor de agora nos `:`, e quita os elementos baleiros, coma o de `::` ou o dun `:` ao final, e os de `drop`, coas súas opcións: tamén `WT_SESSION/u`.
+2. Engade ao final os nomes de `add` que aínda non están, con ou sen opcións. Os que xa están quedan coma estaban, coas súas opcións e as súas maiúsculas: se o `WSLENV` xa ten `term_program/u`, quen o puxo escolleu como pasa, e meiga respéctao.
+3. Xunta outra vez os elementos con `:`.
+
+- **`named`** di se un elemento é a variábel `name`: o seu nome, sen as opcións, que separa `split_once('/')`, e sen distinguir maiúsculas en ASCII.
+- **Ao final**, coma WezTerm, e non diante, coma o Windows Terminal: Microsoft recomenda engadir os nomes aos que xa ten o `WSLENV`, e non cambialos.
+- Sen `WSLENV`, o valor novo só ten os tres nomes.
+
+**Probas.** Cinco. `environment` fai un contorno cun bloque coma o de Windows, e `vars` le as variábeis dun bloque, despois de comprobar que remata en dous nulos.
+
+| Proba | Que comproba |
+|---|---|
+| `names_do_not_distinguish_case_and_can_start_with_an_equals_sign` | Nun contorno con `=C:`, `Path`, `EMPTY=` e `x=a=b`: `=c:` atopa `=C:`; `PATH`, `Path`; `empty`, un valor baleiro; `X`, `a=b`, porque o primeiro `=` despois do nome o remata; e `missing`, nada. Despois de cambiar `PATH`, engadir `New` e quitar `=C:`, o bloque ten `EMPTY=`, `New=1`, `PATH=C:\bin` e `x=a=b`. |
+| `the_block_goes_in_the_order_of_the_names_and_ends_with_two_nulls` | `b`, `A_B`, `a`, `=D:`, `Ñ` e `z` van no bloque coma `=D:`, `a`, `A_B`, `b`, `z` e `Ñ`; un contorno baleiro dá dous nulos; e un bloque de Windows remata na súa primeira variábel baleira: o que vai despois non se le. |
+| `variables_expand_as_windows_expands_them` | Os textos da táboa de [`expand`](#expandir-as-variábeis-expand), e un baleiro. |
+| `the_programs_know_that_they_run_in_meiga_and_not_in_windows_terminal` | Un contorno con `WT_SESSION`, `wt_profile_id`, en minúsculas, `WSLENV=WT_SESSION:WT_PROFILE_ID:`, coma o deixa o Windows Terminal cando estaba baleiro, e `COLORTERM=24bit` ten despois de `prepare` `COLORTERM=truecolor`, `Path`, `TERM_PROGRAM=meiga`, `TERM_PROGRAM_VERSION` coa versión e o `WSLENV` só cos tres nomes; e un contorno sen `WSLENV` recíbeo cos tres. |
+| `wslenv_keeps_what_it_has_and_its_flags` | `USERPROFILE/p:term_program/u` queda, e só recibe `TERM_PROGRAM_VERSION` e `COLORTERM` ao final; `A::WT_SESSION/u:B` perde o elemento baleiro e `WT_SESSION/u`, e recibe `C`; e sen `WSLENV`, só `C`. |
+
+**Como se comproba.** Ademais destas probas, `check-profiles.ps1` dálle a meiga na CI as variábeis do Windows Terminal, `TERM_PROGRAM=vscode`, `COLORTERM=24bit` e `WSLENV=WT_SESSION:COLORTERM/u:WT_PROFILE_ID/p:MEIGA_CHECK_WORK/p`, e comproba que o programa da primeira tab recibe `TERM_PROGRAM=meiga`, a versión de meiga, `COLORTERM=truecolor` e `WSLENV=COLORTERM/u:MEIGA_CHECK_WORK/p:TERM_PROGRAM:TERM_PROGRAM_VERSION`, sen `WT_SESSION` nin `WT_PROFILE_ID` ([Código › ferramentas](ferramentas.md#toolscheck-profilesps1)). As copias de meiga estragadas a propósito que non poñen `TERM_PROGRAM`, que deixan as variábeis do Windows Terminal ou que non cambian o `WSLENV` fallan a comprobación.
+
+## `crates/meiga-core/src/sort.rs`
+
+Desde a subfase 2.5: unha ordenación para as listas curtas de meiga: as variábeis do contorno, os erros da configuración, as versións de PowerShell e as distribucións de WSL ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 12; [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)).
+
+**Por que unha propia.** As ordenacións da biblioteca estándar están feitas para listas longas. `sort_by`, a estábel, é *driftsort*, que xunta varios algoritmos, coma un *quicksort* e outro para os anacos pequenos (*smallsort*); e, coma calquera función xenérica, compílase unha vez para cada tipo que ordena e cada comparación ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Na 2.5, mentres se facía o código, `meiga.exe` tiña cinco copias dela, uns 33 KB. Unha ordenación por inserción ocupa uns centos de bytes por copia e, con unhas decenas de elementos, é tan rápida coma ela; cunha lista que xa está case ordenada, coma o contorno que dá Windows, máis. Cos cinco sitios ordenando con ela, e os dous que ordenan erros cunha soa función, [`config::sort`](#os-erros-na-orde-do-arquivo-sort), `meiga.exe` quedou 32 768 bytes máis pequeno.
+
+```rust
+pub fn insertion_sort_by<T>(items: &mut [T], mut compare: impl FnMut(&T, &T) -> Ordering) {
+    for end in 1..items.len() {
+        // The items before `end` are sorted: the one at `end` goes back past
+        // the ones that go after it.
+        let mut at = end;
+        while at > 0 && compare(&items[at - 1], &items[at]) == Ordering::Greater {
+            items.swap(at - 1, at);
+            at -= 1;
+        }
+    }
+}
+```
+
+**`insertion_sort_by`** ordena `items` coma os ordena `compare`, coma `slice::sort_by`. Paso a paso, coma di o comentario:
+
+1. As posicións antes de `end` xa están ordenadas: ao principio, só a primeira.
+2. O elemento en `end` recúa, cambiando o sitio co anterior (`swap`), mentres o anterior vai despois del.
+3. Cando chega ao seu sitio, as posicións ata `end` están ordenadas, e segue co seguinte.
+
+- **Estábel.** Un elemento só recúa mentres o anterior vai despois del (`Greater`): ante un igual, para. Así, dous elementos iguais quedan na orde na que estaban, coma con `sort_by`: dous erros no mesmo sitio, na orde na que se atoparon.
+- **Canto traballa.** Cunha lista xa ordenada, unha comparación por elemento, e ningún cambio de sitio; cun elemento fóra do seu sitio, tantos cambios coma posicións recúa; e, no peor caso, cunha lista ao revés, uns n²/2. Con listas de decenas de elementos, nada.
+- **Sen reservar memoria**: os elementos cambian de sitio dentro da mesma lista.
+- `compare` é `FnMut`: calquera función ou *closure* que compare dous elementos, tamén unha que cambie algo seu ao chamala. É xenérica, coma `sort_by`: cada uso compila a súa copia, pero pequena.
+
+| Quen a usa | Que ordena |
+|---|---|
+| [`config::sort`](#os-erros-na-orde-do-arquivo-sort) | Os erros da configuración, na orde do arquivo. |
+| [`Environment::block`](#o-bloque-block) | As variábeis do contorno, polo nome, sen distinguir maiúsculas. |
+| `profiles::detect`, en `meiga-win` | As versións de PowerShell, a máis nova primeiro, e as distribucións de WSL, a por defecto primeiro e as outras polo nome ([Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs)). |
+
+**Probas.** Dúas:
+
+| Proba | Que comproba |
+|---|---|
+| `it_sorts_as_the_stable_sort_of_the_standard_library` | Listas de 0 a 39 elementos, con chaves do 0 ao 7, saídas dunha secuencia *xorshift* fixa, e a posición de cada elemento: quedan igual ca con `sort_by_key` da biblioteca estándar, que é estábel. Con tantas chaves repetidas, os elementos iguais só quedan na orde das súas posicións se a ordenación é estábel. |
+| `it_follows_the_order_that_it_is_given` | `[3, 1, 4, 1, 5, 9, 2, 6]`, coa comparación ao revés, queda `[9, 6, 5, 4, 3, 2, 1, 1]`. |
+
 ## `crates/meiga-core/src/model/mod.rs`
 
 Desde a subfase 2.1, o modelo das xanelas e as súas tabs: que tabs ten cada xanela, en que orde, cal está activa, e que pasa ao abrir, pechar, mover ou activar unha, sen ningunha interface ([ADR 0018](../adr/0018-o-modelo-das-tabs.md)). Na 2.1 só o usan as súas probas e o exemplo `tabs`; desde a 2.2, o programa terá unha sesión e unha vista en cada tab. Desde a 2.4, pecha tamén varias tabs dunha vez, para o menú dunha tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 11).
@@ -2117,7 +3186,7 @@ Mentres le a saída, `alacritty_terminal` avisa do que pasa chamando a `send_eve
 | `PtyWrite` | Unha resposta para o programa: os atributos do dispositivo (DA1 e DA2), o estado e a posición do cursor (DSR), o tamaño en celas… Engádese a `responses`. |
 | `ColorRequest(index, answer)` | Desde a subfase 1.6: unha pregunta por unha cor (OSC 4, 10, 11 ou 12 con `?`). Anótase en `questions` (`Question::Color`), coa posición na que irá a súa resposta: o final de `responses` nese momento. |
 | `TextAreaSizeRequest` | Desde a 1.6: unha pregunta polo tamaño da grella en píxeles (`CSI 14 t`). Anótase igual (`Question::TextAreaSize`). |
-| `Title` | O título que lle dá o programa á xanela (OSC 0 e 2). Un título baleiro é como non ter ningún: desde a subfase 2.3, a tab mostra o nome do seu programa ([`program_name`](#cratesmeiga-coresrcshellrs)). |
+| `Title` | O título que lle dá o programa á xanela (OSC 0 e 2). Un título baleiro é como non ter ningún: desde a subfase 2.3, a tab mostra o nome do seu programa ([`program_name`](#cratesmeiga-coresrcshellrs)) e, desde a 2.5, o do seu perfil, ou o do programa da liña de comandos de meiga ([`Launch`](#folder-profile-e-launch)). |
 | `ResetTitle` | O programa recuperou un título gardado (`ESC [ 23 t`) que era ningún. |
 | `Bell` | A campá (BEL). |
 | `ClipboardStore(Clipboard, …)` | Texto para o portapapeis (OSC 52). Windows non ten selección primaria: só se garda o do portapapeis. |
@@ -3696,14 +4765,14 @@ fn coord(value: u64) -> i32 {
 
 ## `crates/meiga-core/src/ui/tabbar.rs`
 
-Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), [Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)). Para un número de tabs, un ancho e un DPI, di onde van as tabs, os seus títulos, os seus botóns de pechar (×) e os separadores entre elas, e o botón que abre unha tab (+); e que parte da barra hai debaixo dun punto. A barra do programa debúxaa con estes rectángulos, segue con eles o rato e marca as zonas que cambian ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), [Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)). Para un número de tabs, un ancho e un DPI, di onde van as tabs, os seus títulos, os seus botóns de pechar (×) e os separadores entre elas, o botón que abre unha tab (+) e, desde a 2.5, xunto a el, o que abre o menú dos perfís (▾) ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6); e que parte da barra hai debaixo dun punto. A barra do programa debúxaa con estes rectángulos, segue con eles o rato e marca as zonas que cambian ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
 
 **A forma da barra**, coas medidas do Windows Terminal en píxeles a escala 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisións 1, 2 e 3; [Tecnoloxías › As barras de tabs](../tecnoloxias.md#55-as-barras-de-tabs-chrome-e-o-windows-terminal)):
 
 - unha franxa de 32 píxeles de alto, de todo o ancho da xanela, enriba do terminal e sempre visíbel, tamén cunha soa tab;
 - as tabs, unha tras outra desde a esquerda, todas do mesmo ancho, ata 240. Se non caben, encóllense todas por igual, sen mínimo: o mínimo e o desprazamento da barra chegan na subfase 2.8;
-- o +, un cadrado de 28, xusto despois da última tab;
-- 4 píxeles de separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do +;
+- o +, un cadrado de 28, xusto despois da última tab e, desde a 2.5, unido a el, o ▾, de 24 de ancho e tan alto coma el, coma o botón dividido do Windows Terminal;
+- 4 píxeles de separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +);
 - cada tab debúxase desde esa separación de enriba ata o bordo de abaixo da barra, para que a activa, coa cor do fondo do terminal, se vexa unida a el; pero, para o rato, ocupa todo o alto da barra;
 - o ×, un cadrado de 24 á dereita da tab, a 4 píxeles do seu bordo dereito e centrado no seu alto, se cabe; e o título, desde 8 píxeles do bordo esquerdo da tab ata o ×;
 - e todas as medidas, escaladas co DPI da xanela, redondeadas e de polo menos un píxel.
@@ -3724,8 +4793,11 @@ Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-b
 | O + | `new_tab()` | (728, 4, 756, 32) |
 | O que resalta nel o punteiro | `new_highlight()` | (730, 6, 754, 30) |
 | O seu signo + | `plus()` | (736, 12, 747, 23) |
+| O ▾ | `profiles()` | (756, 4, 780, 32) |
+| O que resalta nel o punteiro | `profiles_highlight()` | (758, 6, 778, 30) |
+| A súa frecha | `chevron()` | (764, 16, 772, 20) |
 
-Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `top`, `right`, `bottom`), e os dous últimos non se inclúen: a primeira tab remata no píxel 243, e a segunda empeza no 244. Á dereita do +, de 756 a 800, a barra está baleira.
+Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `top`, `right`, `bottom`), e os dous últimos non se inclúen: a primeira tab remata no píxel 243, e a segunda empeza no 244. Á dereita do ▾, de 780 a 800, a barra está baleira.
 
 ### As medidas
 
@@ -3740,6 +4812,9 @@ const CROSS: u32 = 8;
 const NEW: u32 = 28;
 const NEW_HIGHLIGHT: u32 = 24;
 const PLUS: u32 = 10;
+const PROFILES: u32 = 24;
+const PROFILES_HIGHLIGHT: u32 = 20;
+const CHEVRON: u32 = 4;
 const SEPARATOR: u32 = 16;
 const STROKE: u32 = 1;
 ```
@@ -3750,7 +4825,7 @@ As medidas, en píxeles a escala 100 %, que é 96 DPI ([`BASE_DPI`](#os-axudante
 |---|---|---|
 | `HEIGHT` | 32 | O alto da barra, o da fila de tabs do Windows Terminal. |
 | `MAX_TAB` | 240 | O ancho máximo dunha tab: o `TabViewItemMaxWidth` do `TabView` de WinUI, que usa o Windows Terminal. |
-| `GAP` | 4 | A separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do +. Tamén a que queda á dereita do ×. |
+| `GAP` | 4 | A separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +). Tamén a que queda á dereita do ×. |
 | `PADDING` | 8 | Desde o bordo esquerdo dunha tab ata o seu título. Nunha tab sen ×, tamén desde o título ata o bordo dereito. |
 | `CLOSE` | 24 | O lado do ×, un cadrado á dereita da tab: todo el recibe o rato. |
 | `CLOSE_HIGHLIGHT` | 20 | O lado do cadrado que resalta o punteiro, no medio do ×. |
@@ -3758,8 +4833,11 @@ As medidas, en píxeles a escala 100 %, que é 96 DPI ([`BASE_DPI`](#os-axudante
 | `NEW` | 28 | O lado do +, un cadrado tan alto coma as tabs. |
 | `NEW_HIGHLIGHT` | 24 | O lado do cadrado que resalta o punteiro, no medio do +. |
 | `PLUS` | 10 | O lado do signo +, no medio do botón. Medra un píxel se non ten a paridade do trazo ([`new`](#crear-e-cambiar-new-height_at-e-resize)). |
+| `PROFILES` | 24 | Desde a 2.5: o ancho do ▾, que abre o menú dos perfís, á dereita do + e tan alto coma el. Todo el recibe o rato. |
+| `PROFILES_HIGHLIGHT` | 20 | O ancho do rectángulo que resalta o punteiro, no medio do ▾. O seu alto é o do resalte do +, `NEW_HIGHLIGHT`. |
+| `CHEVRON` | 4 | O alto da frecha do ▾, que mide o dobre de ancho, 8, para que as súas dúas liñas se xunten a calquera escala ([`chevron`](#o-botón-dos-perfís-profiles-profiles_highlight-e-chevron)). |
 | `SEPARATOR` | 16 | O alto das liñas que separan dúas tabs inactivas, no medio do alto das tabs. Teñen un píxel de ancho a calquera escala. |
-| `STROKE` | 1 | O grosor das liñas da cruz e do signo +. |
+| `STROKE` | 1 | O grosor das liñas da cruz e do signo + e, desde a 2.5, da frecha do ▾. |
 
 Son privadas: fóra do módulo só se ven escaladas, a través de `Layout`.
 
@@ -3771,6 +4849,7 @@ pub enum Part {
     Tab(usize),
     Close(usize),
     New,
+    Profiles,
     Empty,
 }
 ```
@@ -3782,9 +4861,10 @@ A parte da barra que hai nun punto, a resposta de [`part_at`](#o-que-hai-debaixo
 | `Tab(índice)` | A tab nesa posición, desde 0 e na orde da barra, fóra do seu ×: tamén na separación de enriba, por riba do que se debuxa. |
 | `Close(índice)` | O × da tab nesa posición. |
 | `New` | O +, en todo o alto da barra. |
-| `Empty` | A barra fóra das tabs e do +: á esquerda da primeira tab, entre a última e o +, e á dereita do +. |
+| `Profiles` | Desde a 2.5: o ▾, tamén en todo o alto da barra. |
+| `Empty` | A barra fóra das tabs e dos botóns: á esquerda da primeira tab, entre a última e o +, e á dereita do ▾. |
 
-- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6): desde a subfase 2.4, o dereito abre o menú da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5).
+- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6): desde a subfase 2.4, o dereito abre o menú da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5), e, desde a 2.5, o esquerdo, ao soltarse enriba do ▾ no que se premeu, o menú dos perfís.
 - É `Copy`, coma os tipos de [`mouse.rs`](#button-modifiers-wheel-e-mouseaction): uns poucos bytes, que van por valor.
 
 ### `Layout`: os campos
@@ -3802,6 +4882,9 @@ pub struct Layout {
     new: u32,
     new_highlight: u32,
     plus: u32,
+    profiles: u32,
+    profiles_highlight: u32,
+    chevron: u32,
     separator: u32,
     stroke: u32,
     width: u32,
@@ -3843,7 +4926,7 @@ pub const fn stroke(&self) -> u32 {
 
 - **As medidas escálanse unha vez**, ao facer a disposición, e non en cada consulta. Cambiar o ancho ou o número de tabs só volta calcular o ancho das tabs ([`resize`](#crear-e-cambiar-new-height_at-e-resize)), e cambiar o DPI fai outra disposición.
 - Os campos son privados: ningún método deixa o ancho das tabs sen corresponder ao ancho da barra e ao número de tabs. Lense con `height`, `width`, `tabs`, `tab_width` e `stroke`, que son `const fn`. O alto da barra é tamén onde empeza o terminal.
-- Deriva o mesmo ca `Part`. É `Copy`: catorce números de 32 bits e un `usize`, que a barra do programa copia ao debuxar cada tab.
+- Deriva o mesmo ca `Part`. É `Copy`: dezasete números de 32 bits, catorce ata a 2.4, e un `usize`, que a barra do programa copia ao debuxar cada tab.
 
 ### Crear e cambiar: `new`, `height_at` e `resize`
 
@@ -3863,6 +4946,9 @@ pub fn new(dpi: u32, width: u32, tabs: usize) -> Self {
         new: size(NEW),
         new_highlight: size(NEW_HIGHLIGHT),
         plus: plus + plus.abs_diff(stroke) % 2,
+        profiles: size(PROFILES),
+        profiles_highlight: size(PROFILES_HIGHLIGHT),
+        chevron: size(CHEVRON),
         separator: size(SEPARATOR),
         stroke,
         width,
@@ -3900,7 +4986,8 @@ fn fit_tabs(&self) -> u32 {
     let room = self
         .width
         .saturating_sub(3 * self.gap)
-        .saturating_sub(self.new);
+        .saturating_sub(self.new)
+        .saturating_sub(self.profiles);
     let tabs = u32::try_from(self.tabs.max(1)).unwrap_or(u32::MAX);
     (room / tabs).min(self.max_tab)
 }
@@ -3908,11 +4995,11 @@ fn fit_tabs(&self) -> u32 {
 
 - **`bar`**: a barra enteira, desde (0, 0), co ancho da xanela e o alto da barra. A barra do programa mira con ela se un punto está na barra ([`contains_point`](#cratesmeiga-coresrcgeometryrs)), e márcaa enteira cando cambia a disposición.
 - **`fit_tabs`**, privada: o ancho de cada tab, o máximo se caben e, se non, todas iguais, tan anchas como caiban ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3):
-  1. O sitio das tabs é o ancho da barra menos tres separacións, á esquerda da primeira tab, entre a última e o + e á dereita do +, e menos o +: a 100 %, en 800 píxeles, 800 − 3 × 4 − 28 = 760.
-  2. Repártese entre as tabs, e cada unha ten como moito `max_tab`: con tres, 253, que quedan en 240; con dez, 76; con trinta, 25.
-  3. O que sobra da división queda á dereita do +, coa barra baleira.
+  1. O sitio das tabs é o ancho da barra menos tres separacións, á esquerda da primeira tab, entre a última e o + e á dereita do ▾, e menos os dous botóns: a 100 %, en 800 píxeles, 800 − 3 × 4 − 28 − 24 = 736. Ata a 2.4, sen o ▾, 760.
+  2. Repártese entre as tabs, e cada unha ten como moito `max_tab`: con tres, 245, que quedan en 240; con dez, 73; con trinta, 24.
+  3. O que sobra da división queda á dereita do ▾, coa barra baleira.
 
-  **Sen mínimo:** con moitas tabs, estréitanse ata quedar sen × e sen título, e, nunha xanela máis estreita ca o + e as súas separacións, ata 0. O mínimo e o desprazamento da barra chegan na subfase 2.8 ([ADR 0020 › Consecuencias](../adr/0020-a-barra-de-tabs.md#consecuencias)). `saturating_sub` deixa o sitio en 0 en vez de desbordar, `max(1)` evita dividir entre 0 sen tabs, e un número de tabs que non cabe nun `u32` dá tabs de ancho 0.
+  **Sen mínimo:** con moitas tabs, estréitanse ata quedar sen × e sen título, e, nunha xanela máis estreita ca os dous botóns e as súas separacións, ata 0. O mínimo e o desprazamento da barra chegan na subfase 2.8 ([ADR 0020 › Consecuencias](../adr/0020-a-barra-de-tabs.md#consecuencias)). `saturating_sub` deixa o sitio en 0 en vez de desbordar, `max(1)` evita dividir entre 0 sen tabs, e un número de tabs que non cabe nun `u32` dá tabs de ancho 0.
 
 ```rust
 pub fn tab(&self, index: usize) -> Rect {
@@ -3971,7 +5058,7 @@ pub fn cross(&self, index: usize) -> Option<Rect> {
 2. Se así empezase a menos de `gap` píxeles do bordo esquerdo, non cabe: a tab é máis estreita ca o × e as dúas separacións dos seus lados, 32 píxeles a 100 %, e queda sen el ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3). Esa tab péchase co botón do medio.
 3. Vai centrado no alto da tab que se debuxa ([`tab_height`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)): na primeira tab do exemplo, (216, 6, 240, 30), con 2 píxeles por riba e 2 por debaixo.
 
-- **`close_highlight`** e **`cross`**: o cadrado que resalta o punteiro, de 20 a 100 %, e o da cruz, de 8, no medio do × ([`centered`](#os-axudantes-scale-coord-e-centered)); `None` se a tab non ten ×. A barra do programa debuxa a cruz coma dúas diagonais de `stroke` píxeles de grosor, en chanzos dun píxel.
+- **`close_highlight`** e **`cross`**: o cadrado que resalta o punteiro, de 20 a 100 %, e o da cruz, de 8, no medio do × ([`centered`](#os-axudantes-scale-coord-centered-e-centered_size)); `None` se a tab non ten ×. A barra do programa debuxa a cruz coma dúas diagonais de `stroke` píxeles de grosor, en chanzos dun píxel, coma, desde a 2.5, a frecha do ▾.
 - Para o rato, o × é todo o seu cadrado, aínda que o punteiro só resalte o do medio ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)).
 
 ### O título e os separadores: `title` e `separator`
@@ -4001,7 +5088,7 @@ pub fn separator(&self, index: usize) -> Option<Rect> {
 }
 ```
 
-- **`title`**: o sitio do título da tab en `index`: desde `padding` píxeles do seu bordo esquerdo ata o ×, ou, se a tab non ten ×, ata `padding` píxeles do bordo dereito; e o alto da tab que se debuxa. Nunca vai ao revés: se non hai sitio, `right.max(left)` deixa un rectángulo baleiro. No exemplo, (12, 4, 216, 32); con trinta tabs de 25, sen ×, (12, 4, 21, 32); e con tabs de ancho 0, (12, 4, 12, 32), baleiro.
+- **`title`**: o sitio do título da tab en `index`: desde `padding` píxeles do seu bordo esquerdo ata o ×, ou, se a tab non ten ×, ata `padding` píxeles do bordo dereito; e o alto da tab que se debuxa. Nunca vai ao revés: se non hai sitio, `right.max(left)` deixa un rectángulo baleiro. No exemplo, (12, 4, 216, 32); con trinta tabs de 24, sen ×, (12, 4, 20, 32); e con tabs de ancho 0, (12, 4, 12, 32), baleiro.
   - A barra do programa corta o título ás columnas que caben neste rectángulo ([`text::fit`](#cratesmeiga-coresrctextrs)) e debúxao centrado no alto da tab, recortado a el. Cando un título cambia, só redebuxa este rectángulo (decisión 8).
 - **`separator`**: a liña á esquerda da tab en `index`, entre ela e a anterior: un píxel de ancho, na primeira columna da tab, e `separator` de alto, centrada no alto da tab que se debuxa. No exemplo, a da segunda tab é (244, 10, 245, 26). A primeira tab non ten ningunha, nin hai ningunha despois da última: `None`. A barra do programa só a debuxa entre dúas tabs que non están activas nin resaltadas.
 
@@ -4028,8 +5115,36 @@ pub fn plus(&self) -> Rect {
 }
 ```
 
-- **`new_tab`**: o +, un cadrado de `new` píxeles, `gap` píxeles despois da última tab: onde empezaría unha tab máis (`tab(self.tabs)`), máis a separación. Vai á altura das tabs, desde `gap` por debaixo do bordo de arriba: a 100 %, de 4 a 32. No exemplo, (728, 4, 756, 32); con dez tabs de 76, (768, 4, 796, 32), e os 4 píxeles que quedan ata o 800 son a separación da dereita.
+- **`new_tab`**: o +, un cadrado de `new` píxeles, `gap` píxeles despois da última tab: onde empezaría unha tab máis (`tab(self.tabs)`), máis a separación. Vai á altura das tabs, desde `gap` por debaixo do bordo de arriba: a 100 %, de 4 a 32. No exemplo, (728, 4, 756, 32); con dez tabs de 73, (738, 4, 766, 32), co ▾ en (766, 4, 790, 32), e os 10 píxeles que quedan ata o 800 son a separación da dereita e os 6 que sobran da división.
 - **`new_highlight`** e **`plus`**: o cadrado que resalta o punteiro, de 24 a 100 %, e o do signo +, de 11, no medio do botón: no exemplo, (730, 6, 754, 30) e (736, 12, 747, 23).
+
+### O botón dos perfís: `profiles`, `profiles_highlight` e `chevron`
+
+Desde a subfase 2.5: o ▾, que abre o menú dos perfís, unido ao +, coma o botón dividido do Windows Terminal ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6; [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Concreta a decisión 9 do [ADR 0020](../adr/0020-a-barra-de-tabs.md), na que o + abría o shell por defecto: agora abre o perfil por defecto, e o ▾, calquera.
+
+```rust
+pub fn profiles(&self) -> Rect {
+    let new = self.new_tab();
+    Rect::new(
+        new.right,
+        new.top,
+        new.right + coord(self.profiles.into()),
+        new.bottom,
+    )
+}
+
+pub fn profiles_highlight(&self) -> Rect {
+    centered_size(self.profiles(), self.profiles_highlight, self.new_highlight)
+}
+
+pub fn chevron(&self) -> Rect {
+    centered_size(self.profiles(), 2 * self.chevron, self.chevron)
+}
+```
+
+- **`profiles`**: o ▾, unido ao +, sen separación: empeza no seu bordo dereito, co seu alto, e mide `profiles` de ancho, 24 a 100 %. No exemplo, (756, 4, 780, 32). Os dous vense coma un botón dividido, pero cada un ten o seu resalte e a súa acción: o + abre unha tab co perfil por defecto, e o ▾, o menú dos perfís, que se abre debaixo dos dous ([`Anchor::Below`](#onde-se-abre-anchor-e-place); [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+- **`profiles_highlight`**: o rectángulo que resalta o punteiro, no medio do ▾: `profiles_highlight` de ancho, 20 a 100 %, e tan alto coma o resalte do +, 24, para que os dous queden á mesma altura. Entre os dous resaltes quedan 4 píxeles sen resaltar, 2 de cada botón. No exemplo, (758, 6, 778, 30).
+- **`chevron`**: o rectángulo da frecha, que apunta abaixo: `chevron` de alto, 4 a 100 %, e o dobre de ancho, no medio do botón. No exemplo, (764, 16, 772, 20). A barra do programa debúxaa coma a cruz do ×: dúas liñas de `stroke` píxeles, en chanzos dun píxel, desde as dúas esquinas de arriba, a 45 graos, ata o bordo de abaixo. Nun cadrado, crúzanse; nun rectángulo dúas veces máis ancho ca alto, xúntanse no medio do bordo de abaixo, a calquera escala: 10 × 5 a 125 % (120 DPI), e 12 × 6 a 150 % (144 DPI).
 
 ### O que hai debaixo dun punto: `part_at`
 
@@ -4041,6 +5156,10 @@ pub fn part_at(&self, at: Point) -> Option<Part> {
     let new = self.new_tab();
     if (new.left..new.right).contains(&at.x) {
         return Some(Part::New);
+    }
+    let profiles = self.profiles();
+    if (profiles.left..profiles.right).contains(&at.x) {
+        return Some(Part::Profiles);
     }
     let gap = coord(self.gap.into());
     if self.tab_width == 0 || at.x < gap {
@@ -4062,12 +5181,12 @@ pub fn part_at(&self, at: Point) -> Option<Part> {
 }
 ```
 
-**`part_at`** dá a parte da barra no píxel `at`, en coordenadas da área cliente, ou `None` fóra da barra. As tabs e o + ocupan todo o alto da barra:
+**`part_at`** dá a parte da barra no píxel `at`, en coordenadas da área cliente, ou `None` fóra da barra. As tabs e os botóns ocupan todo o alto da barra:
 
 1. Fóra da barra, `None`.
-2. Nas columnas do +, `New`. `(new.left..new.right).contains(&at.x)` mira só a columna, cun rango de enteiros que inclúe `left` e non `right`, coma os rectángulos.
+2. Nas columnas do +, `New`; e, desde a 2.5, nas do ▾, `Profiles`. `(new.left..new.right).contains(&at.x)` mira só a columna, cun rango de enteiros que inclúe `left` e non `right`, coma os rectángulos: a columna 756, a primeira do ▾, xa non é do +.
 3. Sen sitio para as tabs (`tab_width` 0), ou á esquerda da primeira, `Empty`.
-4. A tab sae dunha división: a distancia desde o bordo esquerdo da primeira tab, entre o ancho dunha. Despois da última, entre ela e o + ou á dereita do +, `Empty`.
+4. A tab sae dunha división: a distancia desde o bordo esquerdo da primeira tab, entre o ancho dunha. Despois da última, entre ela e o + ou á dereita do ▾, `Empty`.
 5. Na tab, `Close` se o punto está no seu × (`contains_point`); se non, `Tab`, tamén por riba e por debaixo do × e na separación de enriba.
 
 - **Unha división, e non unha busca:** as tabs son todas iguais, así que a tab dun punto sae dunha conta, sexan dez ou cen.
@@ -4085,10 +5204,11 @@ No exemplo, `the_part_under_the_pointer` comproba:
 | (243, 20) e (244, 20) | `Tab(0)` e `Tab(1)` | O último píxel da primeira tab e o primeiro da segunda. |
 | (723, 20) e (725, 20) | `Tab(2)` e `Empty` | O último píxel da terceira, e a separación entre ela e o +. |
 | (728, 0) e (755, 31) | `New` | As esquinas do +, tamén por riba do cadrado que se debuxa. |
-| (756, 20) e (2, 20) | `Empty` | Á dereita do + e á esquerda da primeira tab. |
+| (756, 20) e (779, 0) | `Profiles` | O primeiro píxel do ▾, xusto despois do último do +, e a súa esquina de arriba á dereita, tamén por riba do que se debuxa. |
+| (780, 20) e (2, 20) | `Empty` | Á dereita do ▾ e á esquerda da primeira tab. |
 | (100, 32), (−1, 10) e (800, 10) | `None` | Debaixo da barra, á esquerda e á dereita dela. |
 
-### Os axudantes: `scale`, `coord` e `centered`
+### Os axudantes: `scale`, `coord`, `centered` e `centered_size`
 
 ```rust
 use super::{coord, scale};
@@ -4096,24 +5216,29 @@ use super::{coord, scale};
 
 ```rust
 fn centered(rect: Rect, side: u32) -> Rect {
-    let side = coord(side.into());
-    let left = rect.left + (coord(rect.width().into()) - side) / 2;
-    let top = rect.top + (coord(rect.height().into()) - side) / 2;
-    Rect::new(left, top, left + side, top + side)
+    centered_size(rect, side, side)
+}
+
+fn centered_size(rect: Rect, width: u32, height: u32) -> Rect {
+    let (width, height) = (coord(width.into()), coord(height.into()));
+    let left = rect.left + (coord(rect.width().into()) - width) / 2;
+    let top = rect.top + (coord(rect.height().into()) - height) / 2;
+    Rect::new(left, top, left + width, top + height)
 }
 ```
 
 - **`scale`** e **`coord`** chegan do módulo pai, `ui`, con `use super::{coord, scale};`: ata a 2.3 estaban neste arquivo, e desde a 2.4 están en `ui/mod.rs`, porque os usan tamén os menús ([Os axudantes](#os-axudantes-base_dpi-scale-e-coord)). `scale` dá as medidas da barra ao DPI da xanela, en [`new`](#crear-e-cambiar-new-height_at-e-resize) e en `height_at`; e `coord` converte en coordenadas os números de píxeles das súas contas, que así non desbordan con ningún índice de tab.
-- **`centered`**: o cadrado de `side` píxeles no medio de `rect`. Se o que sobra é impar, o píxel de máis queda á dereita e debaixo: o signo + de 11 no + de 28 deixa 8 píxeles á esquerda e por riba, e 9 á dereita e por debaixo. Úsano `close_highlight`, `cross`, `new_highlight` e `plus`.
+- **`centered_size`**, desde a 2.5: o rectángulo de `width` por `height` píxeles no medio de `rect`. Se o que sobra é impar, o píxel de máis queda á dereita e debaixo: o signo + de 11 no + de 28 deixa 8 píxeles á esquerda e por riba, e 9 á dereita e por debaixo. Úsano `profiles_highlight` e `chevron`, que non son cadrados.
+- **`centered`**: o cadrado de `side` píxeles no medio de `rect`, coma un `centered_size` cos dous lados iguais; ata a 2.4 facía as contas el. Úsano `close_highlight`, `cross`, `new_highlight` e `plus`.
 
 **Probas.** Cinco, con coordenadas exactas. `three` fai a barra do exemplo: tres tabs en 800 píxeles a 96 DPI.
 
 | Proba | Que comproba |
 |---|---|
-| `tabs_are_as_wide_as_in_windows_terminal_and_the_button_follows_them` | A barra do exemplo, de 32 de alto, tamén con `height_at(96)`, en (0, 0, 800, 32); as tabs de 240, a primeira en (4, 4, 244, 32) e a terceira en (484, 4, 724, 32); e o + en (728, 4, 756, 32), co resalte en (730, 6, 754, 30) e o signo de 11 píxeles en (736, 12, 747, 23), para que os dous brazos dunha liña de 1 teñan 5. |
+| `tabs_are_as_wide_as_in_windows_terminal_and_the_buttons_follow_them` | A barra do exemplo, de 32 de alto, tamén con `height_at(96)`, en (0, 0, 800, 32); as tabs de 240, a primeira en (4, 4, 244, 32) e a terceira en (484, 4, 724, 32); o + en (728, 4, 756, 32), co resalte en (730, 6, 754, 30) e o signo de 11 píxeles en (736, 12, 747, 23), para que os dous brazos dunha liña de 1 teñan 5; e, desde a 2.5, unido a el, o ▾ en (756, 4, 780, 32), co resalte en (758, 6, 778, 30) e a frecha en (764, 16, 772, 20). Ata a 2.4 chamábase `tabs_are_as_wide_as_in_windows_terminal_and_the_button_follows_them`. |
 | `a_tab_has_its_title_and_then_its_close_button` | O × da primeira tab en (216, 6, 240, 30), o seu resalte en (218, 8, 238, 28) e a cruz en (224, 14, 232, 22); o título, (12, 4, 216, 32), ata o ×; o separador da segunda tab, na súa primeira columna, (244, 10, 245, 26), e ningún na primeira nin despois da última; e o que cambia co aspecto da primeira, (4, 0, 245, 32). |
-| `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button` | Na mesma barra, dez tabs miden 76 (800 − 3 × 4 − 28 = 760, entre 10), e o + vai en (768, 4, 796, 32); trinta, 25, sen ×, co título en (12, 4, 21, 32); e nunha xanela de 20 píxeles, máis estreita ca o +, as tabs miden 0, e o título da segunda está baleiro, (12, 4, 12, 32). |
-| `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 1920 píxeles con dúas tabs: a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, e a barra de 40. |
+| `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button` | Na mesma barra, dez tabs miden 73 (800 − 3 × 4 − 28 − 24 = 736, entre 10), o + vai en (738, 4, 766, 32) e o ▾, en (766, 4, 790, 32); trinta, 24, sen ×, co título en (12, 4, 20, 32); e nunha xanela de 20 píxeles, máis estreita ca os botóns, as tabs miden 0, e o título da segunda está baleiro, (12, 4, 12, 32). |
+| `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 1920 píxeles con dúas tabs: a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o ▾ en (774, 6, 810, 48), co resalte en (777, 9, 807, 45) e a frecha en (786, 24, 798, 30), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, a frecha de 10 × 5, o dobre de ancha ca alta coma a calquera escala, e a barra de 40. |
 | `the_part_under_the_pointer` | Os puntos da táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at). |
 
 ## `crates/meiga-core/src/ui/menu.rs`
@@ -4123,7 +5248,7 @@ Desde a subfase 2.4: un menú sobre a xanela, sen Windows ([ADR 0021](../adr/002
 - **`Menu`**: as entradas, elementos e liñas que os agrupan, e o resalte, que moven o punteiro e o teclado;
 - **`Layout`**: onde van o menú e cada entrada, para un DPI, un tamaño das celas do texto e un sitio onde abrilo, dentro da xanela; e que entrada hai debaixo dun punto.
 
-Vale para calquera menú, cunha acción en cada elemento, do tipo que escolla quen o usa ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 1): o primeiro é o menú dunha tab, e despois virán o dos perfís (2.5) e o explorador (5.2). Coma a barra, só fai contas, e próbase só, con coordenadas exactas. O menú que se ve e se usa, `MenuView`, está no programa: debúxao con estes rectángulos, leva a el o teclado e o rato, e marca as zonas que cambian ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)); e o menú da tab, cos seus elementos e as súas accións, ábreo [`tabs.rs`](meiga.md#cratesmeigasrctabsrs).
+Vale para calquera menú, cunha acción en cada elemento, do tipo que escolla quen o usa ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 1): o primeiro foi o menú dunha tab; o segundo, desde a subfase 2.5, o dos perfís ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6); e despois virá o explorador (5.2). Coma a barra, só fai contas, e próbase só, con coordenadas exactas. O menú que se ve e se usa, `MenuView`, está no programa: debúxao con estes rectángulos, leva a el o teclado e o rato, e marca as zonas que cambian ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)); e o menú da tab e o dos perfís, cos seus elementos e as súas accións, ábreos [`tabs.rs`](meiga.md#cratesmeigasrctabsrs).
 
 **A forma do menú**, coas medidas dos menús de WinUI (`MenuFlyout`), coma o da tab no Windows Terminal, co rato e co teclado, en píxeles a escala 100 % ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisións 1, 3 e 4):
 
@@ -4189,6 +5314,7 @@ pub enum Entry<A> {
         label: Cow<'static, str>,
         action: A,
         enabled: bool,
+        bold: bool,
     },
     Separator,
 }
@@ -4198,11 +5324,11 @@ Unha entrada dun menú:
 
 | Variante | Que é |
 |---|---|
-| `Item` | Un elemento: o seu texto (`label`), a acción que pide cando se escolle (`action`) e se se pode escoller (`enabled`). Un elemento desactivado vese, co texto máis apagado, pero non se resalta nin se escolle ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 2). |
+| `Item` | Un elemento: o seu texto (`label`), a acción que pide cando se escolle (`action`), se se pode escoller (`enabled`) e, desde a subfase 2.5, se o seu texto vai en negra (`bold`): a escolla por defecto, coma o perfil que abre o +. Un elemento desactivado vese, co texto máis apagado, pero non se resalta nin se escolle ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 2). |
 | `Separator` | Unha liña entre dous grupos de elementos. |
 
-- **A acción** é do tipo `A`, o que escolla quen usa o menú: o menú dunha tab leva en cada elemento unha `TabAction` coa súa tab, e as probas, números. O menú non sabe que fai cada elemento: só di cal se escolleu ([Escoller](#escoller-action-e-chosen)).
-- **O texto** é un `Cow<'static, str>`, de `std::borrow` (*clone-on-write*), que garda ou un texto fixo do programa, un `&'static str`, coma os do menú da tab, sen copialo, ou un `String`, feito ao abrir o menú. Lese igual nos dous casos, coma un `&str`.
+- **A acción** é do tipo `A`, o que escolla quen usa o menú: o menú dunha tab leva en cada elemento unha `TabAction` coa súa tab, o dos perfís, unha coa posición do seu perfil, e as probas, números. O menú non sabe que fai cada elemento: só di cal se escolleu ([Escoller](#escoller-action-e-chosen)).
+- **O texto** é un `Cow<'static, str>`, de `std::borrow` (*clone-on-write*), que garda ou un texto fixo do programa, un `&'static str`, coma os do menú da tab, sen copialo, ou un `String`, feito ao abrir o menú, coma os nomes dos perfís. Lese igual nos dous casos, coma un `&str`.
 - Deriva `Clone`, `Debug`, `PartialEq` e `Eq`, se a acción os ten; non `Copy`, porque o texto pode ser un `String`.
 
 ```rust
@@ -4211,6 +5337,25 @@ pub fn item(label: impl Into<Cow<'static, str>>, action: A, enabled: bool) -> Se
         label: label.into(),
         action,
         enabled,
+        bold: false,
+    }
+}
+
+#[must_use]
+pub fn bold(self) -> Self {
+    match self {
+        Self::Item {
+            label,
+            action,
+            enabled,
+            ..
+        } => Self::Item {
+            label,
+            action,
+            enabled,
+            bold: true,
+        },
+        Self::Separator => Self::Separator,
     }
 }
 
@@ -4226,11 +5371,15 @@ pub const fn is_enabled(&self) -> bool {
 }
 ```
 
-- **`item`** fai un elemento. `impl Into<Cow<'static, str>>` acepta un `&'static str` ou un `String`, e `into` convérteo nun `Cow`: o menú dunha tab fai así os seus, coma `Entry::item("Close tab", TabAction::CloseTab(id), true)`.
+- **`item`** fai un elemento, sen negra. `impl Into<Cow<'static, str>>` acepta un `&'static str` ou un `String`, e `into` convérteo nun `Cow`: o menú dunha tab fai así os seus, coma `Entry::item("Close tab", TabAction::CloseTab(id), true)`, e o dos perfís, cos nomes, coma `Entry::item(profile.name.clone(), TabAction::OpenProfile(index), true)`.
+- **`bold`**, desde a 2.5: a mesma entrada, co texto en negra se é un elemento; unha liña queda igual. Recibe a entrada, e devolve outra co mesmo texto e a mesma acción, movidos sen copialos; `..` descarta o `bold` de antes. Así se encadea: o menú dos perfís pono no perfil por defecto, `item.bold()`, coma o Windows Terminal ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). `#[must_use]`: o compilador avisa se se chama sen usar a entrada que devolve, que levaría a negra.
 - **`label`**: o texto dun elemento, coma un `&str`, ou `None` nunha liña. A disposición mide os textos con el, e o menú do programa debúxaos.
-- **`is_enabled`**: se é un elemento que se pode escoller; unha liña, nunca. `matches!` compara a entrada co patrón, un `Item` con `enabled` en `true`, sen movela. É unha `const fn`.
+- **`is_enabled`**: se é un elemento que se pode escoller; unha liña, nunca. `matches!` compara a entrada co patrón, un `Item` con `enabled` en `true`, sen movela. É unha `const fn`. A negra non ten un método coma este: o menú do programa le `bold` no patrón co que colle o texto e `enabled` de cada elemento.
+- **A negra non cambia a disposición.** O menú do programa debuxa cada carácter na súa cela, coa mesma fonte en negra, así que [`Layout::new`](#facer-o-menú-layoutnew) mide igual un texto en negra e un normal ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)).
 
 **O menú dunha tab** ten cinco entradas, en inglés, coma o resto da interface: *Duplicate tab*, unha liña, *Close tab*, *Close other tabs*, que só se pode escoller con máis dunha tab, e *Close tabs to the right*, que non se pode escoller na última ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 2). Cada elemento leva unha `TabAction` coa tab do menú, coma `TabAction::Duplicate(id)` ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+
+**O menú dos perfís**, desde a 2.5, ten un elemento por perfil visíbel, co seu nome, na orde da lista, todos activados e sen liñas; o perfil por defecto vai en negra ([`Profiles`](#os-perfís-do-menú-profiles-e-merge); [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). Cada elemento leva unha `TabAction::OpenProfile` coa posición do seu perfil, e ábrese debaixo dos dous botóns, o + e o ▾ ([`Anchor::Below`](#onde-se-abre-anchor-e-place)).
 
 ### `Menu`: as entradas e o resalte
 
@@ -4355,7 +5504,7 @@ pub fn chosen(&self) -> Option<A> {
 
 - **`action`**: a acción do elemento en `index`, se se pode escoller. O patrón só casa cun `Item` con `enabled` en `true`: unha liña, un elemento desactivado ou unha posición despois da última dan `None`. O menú do programa pídea para o elemento onde sobe o botón: un clic nun desactivado non escolle nada, e o menú segue aberto ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 8).
 - **`chosen`**: a acción do elemento resaltado, a que escollen Intro e Espazo (decisión 7); sen resalte, `None`.
-- **`*action` copia a acción**, e por iso os métodos de `Menu` piden `A: Copy`: o menú non a perde nin a presta, e quen o usa pode pechalo antes de facela. `TabAction`, a do menú da tab, é `Copy`: uns poucos bytes.
+- **`*action` copia a acción**, e por iso os métodos de `Menu` piden `A: Copy`: o menú non a perde nin a presta, e quen o usa pode pechalo antes de facela. `TabAction`, a do menú da tab e, desde a 2.5, a do dos perfís, é `Copy`: uns poucos bytes.
 
 ### Onde se abre: `Anchor` e `place`
 
@@ -4370,7 +5519,7 @@ pub enum Anchor {
 | Variante | Onde se abre o menú |
 |---|---|
 | `At(punto)` | Coa súa esquina de arriba á esquerda no punto: onde está o punteiro cando o botón dereito sobe nunha tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5). |
-| `Below(rectángulo)` | Debaixo desa parte da xanela, desde o seu lado esquerdo: a tab que se mostra, coma a debuxa a barra ([`tab`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)), cando o abren a tecla de menú ou Maiús+F10 (decisión 6). O menú empeza entón no bordo de abaixo da barra. |
+| `Below(rectángulo)` | Debaixo desa parte da xanela, desde o seu lado esquerdo: a tab que se mostra, coma a debuxa a barra ([`tab`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)), cando o abren a tecla de menú ou Maiús+F10 (decisión 6). O menú empeza entón no bordo de abaixo da barra. Desde a subfase 2.5, tamén o menú dos perfís, que abren o ▾ e Ctrl+Maiús+Espazo: debaixo dos dous botóns, o + e o ▾, xuntos, desde o lado esquerdo do + ou, se non cabe, rematando no dereito do ▾ ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). Na barra do [exemplo de `tabbar.rs`](#cratesmeiga-coresrcuitabbarrs), os dous ocupan (728, 4, 780, 32). |
 
 ```rust
 fn place(anchor: Anchor, size: Size, bounds: Rect) -> Point {
@@ -4537,7 +5686,7 @@ pub fn new<A>(
 }
 ```
 
-**`new`** fai o menú de `entries` a `dpi`, co texto en celas de `cell` píxeles, onde di `anchor`, dentro de `bounds`, a área cliente da xanela. O menú dunha tab dálle as celas da fonte da barra, Cascadia Mono a 9 puntos, e o DPI da xanela ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). Paso a paso:
+**`new`** fai o menú de `entries` a `dpi`, co texto en celas de `cell` píxeles, onde di `anchor`, dentro de `bounds`, a área cliente da xanela. O menú dunha tab e, desde a 2.5, o dos perfís danlle as celas da fonte da barra, Cascadia Mono a 9 puntos, e o DPI da xanela ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). Paso a paso:
 
 1. **As medidas.** Escala cada unha con [`scale`](#os-axudantes-base_dpi-scale-e-coord), a través da *closure* `size`, coma a barra. O sitio dun elemento, `item`, é o seu resalte co espazo de enriba e o de abaixo: 32 a 100 %, e 48 a 150 %; e o dunha liña, `separator`, a liña cos seus dous espazos: 3, e 6.
 2. **O ancho.** `columns` son as celas do texto máis longo: `filter_map` salta as liñas, que non teñen texto, `text::width` conta as celas de cada un ([`text.rs`](#cratesmeiga-coresrctextrs)), e `max` colle o maior; sen elementos, 0. O texto ocupa `columns` celas de `cell.width` píxeles, e arredor del, a cada lado, van o espazo ata o resalte, o espazo ata o bordo e o bordo: `chrome`, 32 a 100 % e 50 a 150 %. Despois, `min` déixao como moito tan ancho coma a xanela: os textos que non caben córtaos con «…» o menú do programa (decisión 1).
@@ -4643,6 +5792,8 @@ No exemplo, `the_pointer_is_on_an_item_anywhere_in_its_room` comproba:
 | `the_keyboard_skips_what_cannot_be_chosen_and_goes_round` | Sen resalte, `Next` vai a *Duplicate tab*; despois salta a liña e o elemento desactivado, e do último volta ao primeiro; `Previous` volta do primeiro ao último, e despois vai a *Close tab*; `First` vai ao primeiro e, outra vez, non cambia nada; `Last` vai ao último, e `chosen` dá a súa acción; e, sen resalte, `Previous` vai ao último. |
 | `the_pointer_only_highlights_what_can_be_chosen` | O punteiro sobre *Close tab* resáltao, e `chosen` dá a súa acción; outra vez, non cambia nada; sobre a liña, quita o resalte; e sobre o elemento desactivado, e despois da última entrada, non resalta nada. `action` non dá a acción do desactivado, e si a do último. |
 | `a_menu_without_items_to_choose_highlights_nothing` | Cun elemento desactivado e unha liña, `Next` e `Last` non resaltan nada; e `label` dá o texto do elemento, e nada na liña. |
+
+Os elementos en negra, desde a 2.5, non teñen proba eiquí, porque a negra non cambia ningún rectángulo: próbaa o menú do programa, que debuxa o mesmo texto en normal e en negra, e comproba que o da negra se aparta máis do fondo, polo menos un 10 % (`the_text_of_a_bold_item_is_bold`, en [Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)).
 
 ## `crates/meiga-core/tests/recordings.rs`
 

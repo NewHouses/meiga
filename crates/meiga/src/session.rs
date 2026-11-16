@@ -2,21 +2,17 @@
 //! reader thread that gives its output to the terminal of the tab, and what
 //! that thread shares with the window.
 
-use std::io;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use meiga_core::geometry::GridSize;
 use meiga_core::model::TabId;
+use meiga_core::profile::Launch;
 use meiga_core::term::{Changes, Terminal};
 use meiga_win::Error;
-use meiga_win::conpty::{Conpty, Input, Output, Pty};
+use meiga_win::conpty::{Command, Conpty, Input, Output, Pty};
 use meiga_win::window::Waker;
-
-/// The programs that run when the command line does not give one: PowerShell
-/// 7 and, if it is not installed, Windows PowerShell.
-const DEFAULT_SHELLS: [&str; 2] = ["pwsh", "powershell"];
 
 /// What the reader thread of the session and the window share, behind a
 /// mutex: the terminal, and what the window has been woken up for.
@@ -148,57 +144,45 @@ pub fn lock(shared: &Mutex<Shared>) -> MutexGuard<'_, Shared> {
     shared.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// Runs `command`, or else the default shell, in a session of `size`, whose
-/// output goes to the terminal of `shared`. Its reader thread wakes `waker`
-/// up with the identifier of the tab of the session, `tab`. Returns the
-/// command line that it ran, or tried last, and the session.
+/// Runs what `launch` says in a session of `size`, with the variables of
+/// `environment`, an environment block, and gives its output to the
+/// terminal of `shared`. Its reader thread wakes `waker` up with the
+/// identifier of the tab of the session, `tab`.
 ///
 /// If the program cannot start, the error is what the terminal shows: which
-/// program, and why.
-pub fn start<'a>(
-    command: Option<&'a str>,
+/// program, in which folder, and why.
+pub fn start(
+    launch: &Launch,
+    environment: &[u16],
     size: GridSize,
     shared: &Arc<Mutex<Shared>>,
     waker: &Waker,
     tab: TabId,
-) -> (&'a str, Result<Pty, String>) {
-    let conpty = Conpty::load();
-    let reader = || Reader {
+) -> Result<Pty, String> {
+    let reader = Reader {
         shared: Arc::clone(shared),
         waker: waker.clone(),
         tab,
         answers: Vec::new(),
     };
-    let (program, started) = match command {
-        Some(command) => (command, conpty.spawn(command, size, reader())),
-        None => {
-            let [first, second] = DEFAULT_SHELLS;
-            match conpty.spawn(first, size, reader()) {
-                Err(error) if is_not_found(&error) => {
-                    (second, conpty.spawn(second, size, reader()))
-                }
-                started => (first, started),
-            }
-        }
+    let command = Command {
+        line: &launch.command,
+        folder: launch.folder.as_deref(),
+        environment: Some(environment),
     };
-    (
-        program,
-        started.map_err(|error| start_error(program, &error)),
-    )
+    Conpty::load()
+        .spawn(&command, size, reader)
+        .map_err(|error| start_error(launch, &error))
 }
 
-/// Whether the program of a session could not start because it does not
-/// exist.
-fn is_not_found(error: &Error) -> bool {
-    error
-        .os_error()
-        .is_some_and(|error| error.kind() == io::ErrorKind::NotFound)
-}
-
-/// What the terminal shows when `command` cannot start: why, without the
+/// What the terminal shows when `launch` cannot start: why, without the
 /// cursor, since nothing can be typed.
-fn start_error(command: &str, error: &Error) -> String {
-    format!("[could not start `{command}`: {error}]\x1b[?25l")
+fn start_error(launch: &Launch, error: &Error) -> String {
+    let command = &launch.command;
+    match &launch.folder {
+        Some(folder) => format!("[could not start `{command}` in `{folder}`: {error}]\x1b[?25l"),
+        None => format!("[could not start `{command}`: {error}]\x1b[?25l"),
+    }
 }
 
 /// Gives the output of the program to the terminal, on the reader thread of

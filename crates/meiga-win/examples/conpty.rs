@@ -28,7 +28,7 @@ use std::time::Instant;
 
 use meiga_core::geometry::GridSize;
 use meiga_core::term::recording::Recorder;
-use meiga_win::conpty::{Conpty, Input, Output, Source};
+use meiga_win::conpty::{Command, Conpty, Input, Output, Source};
 
 /// The size of the pseudoconsole: the default of a console window.
 const SIZE: GridSize = GridSize::new(120, 30);
@@ -182,7 +182,7 @@ fn main() -> ExitCode {
         quiet: options.quiet,
         recording,
     };
-    let pty = match conpty.spawn(&command_line, SIZE, printer) {
+    let pty = match conpty.spawn(&Command::new(&command_line), SIZE, printer) {
         Ok(pty) => pty,
         Err(error) => {
             eprintln!("{error}");

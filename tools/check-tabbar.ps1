@@ -50,11 +50,11 @@ leave: the check does not count on the highlights staying. It types
 Ctrl+Tab as check-tabs.ps1 does: meanwhile, it also sets the key state of
 the thread of the window, which it shares.
 
-It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal,
-which is also the default shell of the new tab. The new tab loads the
-profile of PowerShell: the check waits until its shell stops using the
-processor, but a profile that draws something seconds after the prompt can
-make the check fail.
+It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
+The new tab runs the default profile of meiga, which is PowerShell 7 if
+meiga finds it, and loads the profile of PowerShell: the check waits until
+its shell stops using the processor, but a profile that draws something
+seconds after the prompt can make the check fail.
 
 If a check fails, the script ends meiga.exe and keeps the frame log and the
 reports of the script.
@@ -377,6 +377,11 @@ $log = Join-Path $temp "$name.csv"
 $reports = Join-Path $temp "$name.txt"
 $script = Join-Path $temp "$name.ps1"
 Set-Content -LiteralPath $script -Value $program -Encoding utf8NoBOM
+# meiga reads its configuration from %APPDATA%\meiga\config.toml: an empty
+# folder instead gives it its default values, whatever the user has there.
+# The programs in its tabs get that folder too.
+$appdata = Join-Path ([IO.Path]::GetTempPath()) "$name-appdata"
+$null = New-Item -ItemType Directory -Force -Path $appdata
 Remove-Item -LiteralPath $reports -ErrorAction SilentlyContinue
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
@@ -657,7 +662,8 @@ function Get-Bar([int]$Count) {
     $padding = & $scale 8
     $closeSide = & $scale 24
     $newSide = & $scale 28
-    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide) / $Count))
+    $profilesSide = & $scale 24
+    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
@@ -754,6 +760,7 @@ function Clear-Highlight($Bar) {
 
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
 $info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
 foreach ($argument in '--trace-frames', $log, 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', $script, '-Name', $name, '-Log', $reports) {
     $info.ArgumentList.Add($argument)
@@ -975,6 +982,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     if ($passed) {
         Remove-Item -LiteralPath $log, $reports -ErrorAction SilentlyContinue
     }

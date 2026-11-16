@@ -2,7 +2,8 @@
 //! frame and its entries, drawn over the tab bar and the terminal; the
 //! highlight, which follows the pointer and the arrows; and the item that a
 //! click, Enter or Space chooses. What goes where, and which items can be
-//! highlighted, is `meiga_core::ui::menu`.
+//! highlighted, is `meiga_core::ui::menu`. The text of an item that is the
+//! default choice, as the default profile, is bold.
 //!
 //! While it is open, it gets all the mouse and the keyboard. A button that
 //! goes down outside it closes it, and does nothing else; Esc closes it too.
@@ -256,7 +257,13 @@ impl<A: Copy> MenuView<A> {
         );
         let cell = font.cell();
         for (index, entry) in menu.entries().iter().enumerate() {
-            let Entry::Item { label, enabled, .. } = entry else {
+            let Entry::Item {
+                label,
+                enabled,
+                bold,
+                ..
+            } = entry
+            else {
                 canvas.fill(layout.line(index), LINE);
                 continue;
             };
@@ -278,7 +285,10 @@ impl<A: Copy> MenuView<A> {
                 &mut canvas.clipped(room),
                 Point::new(room.left, top),
                 cells,
-                FontStyle::REGULAR,
+                FontStyle {
+                    bold: *bold,
+                    italic: false,
+                },
                 if *enabled { TEXT } else { DISABLED },
                 background,
             );
@@ -575,5 +585,47 @@ mod tests {
         assert!(text_in(layout.text(2), TEXT, BACKGROUND));
         assert!(!text_in(layout.text(2), DISABLED, BACKGROUND));
         assert!(text_in(layout.text(3), DISABLED, BACKGROUND));
+    }
+
+    #[test]
+    fn the_text_of_a_bold_item_is_bold() {
+        let fonts = FontSystem::new().unwrap();
+        let mut font = Font::new(&fonts, &FONT_FAMILIES, 9.0, 96).unwrap();
+        let mut view = MenuView::new();
+        view.open(
+            vec![
+                Entry::item("PowerShell", 1, true),
+                Entry::item("PowerShell", 2, true).bold(),
+            ],
+            96,
+            font.cell(),
+            Anchor::At(Point::new(0, 0)),
+            Rect::new(0, 0, 200, 100),
+            false,
+        );
+        let layout = view.shown.as_ref().unwrap().layout.clone();
+        let size = Size::new(200, 100);
+        let mut pixels = vec![0; size.area() as usize];
+        let mut canvas = Canvas::new(&mut pixels, size, 200).unwrap();
+        view.draw(&mut canvas, &mut font);
+        // How far its pixels are from the background, in all.
+        let ink = |area: Rect| -> u32 {
+            let [_, r, g, b] = pixel(BACKGROUND).to_be_bytes();
+            (area.top..area.bottom)
+                .flat_map(|y| (area.left..area.right).map(move |x| (x, y)))
+                .map(|(x, y)| {
+                    let [_, pr, pg, pb] = pixels[y as usize * 200 + x as usize].to_be_bytes();
+                    u32::from(pr.abs_diff(r))
+                        + u32::from(pg.abs_diff(g))
+                        + u32::from(pb.abs_diff(b))
+                })
+                .sum()
+        };
+        let (regular, bold) = (ink(layout.text(0)), ink(layout.text(1)));
+        assert!(regular > 0);
+        assert!(
+            bold > regular * 11 / 10,
+            "{bold} is not much more than {regular}"
+        );
     }
 }

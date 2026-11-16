@@ -1,15 +1,16 @@
 //! The tab bar, at the top of the window, as in Windows Terminal: a tab for
-//! each session, with its title, or the name of its program, and its close
-//! button, and the button that opens a tab, after the last one (ADR 0020).
-//! It is always there, also with one tab.
+//! each session, with its title, or the name of its profile, and its close
+//! button; and after the last one, the button that opens a tab with the
+//! default profile, joined to the one that opens the menu of the profiles
+//! (ADR 0020 and 0022). It is always there, also with one tab.
 //!
 //! The pointer highlights the tab and the button under it. The left button
-//! shows a tab as soon as it goes down on it, as in Chrome. The close
-//! button and the button that opens a tab act when the left button goes up
-//! on the same button where it went down: moving away first takes the
-//! click back. The middle button closes the tab where it goes down and up,
-//! and the right one opens its menu, where it goes up, without showing it
-//! (ADR 0021). The wheel and the other clicks do nothing yet.
+//! shows a tab as soon as it goes down on it, as in Chrome. The buttons act
+//! when the left button goes up on the same button where it went down:
+//! moving away first takes the click back. The middle button closes the tab
+//! where it goes down and up, and the right one opens its menu, where it
+//! goes up, without showing it (ADR 0021). The wheel and the other clicks
+//! do nothing yet.
 //!
 //! The bar only draws what changed: a title, the highlight of a tab or of a
 //! button, and all of it when its layout changes.
@@ -42,7 +43,7 @@ const BUTTON_HOVERED: Rgb = Rgb::new(0x2b, 0x2f, 0x37);
 const BUTTON_PRESSED: Rgb = Rgb::new(0x3a, 0x3f, 0x49);
 
 /// What the tab of a content shows: the title of its program or, without
-/// one, the name of the program.
+/// one, the name of its profile.
 pub trait Label {
     fn label(&self) -> &str;
 }
@@ -54,6 +55,7 @@ enum Target {
     Tab(TabId),
     Close(TabId),
     New,
+    Profiles,
 }
 
 impl Target {
@@ -61,7 +63,7 @@ impl Target {
     const fn tab(self) -> Option<TabId> {
         match self {
             Target::Tab(id) | Target::Close(id) => Some(id),
-            Target::New => None,
+            Target::New | Target::Profiles => None,
         }
     }
 }
@@ -74,6 +76,8 @@ enum Press {
     Close(TabId),
     /// The left button, on the button that opens a tab.
     New,
+    /// The left button, on the button that opens the menu of the profiles.
+    Profiles,
     /// The middle button, on a tab.
     Middle(TabId),
     /// The right button, on a tab.
@@ -141,6 +145,12 @@ impl TabBar {
     /// The tab at `index`, as the bar draws it.
     pub fn tab(&self, index: usize) -> Rect {
         self.layout.tab(index)
+    }
+
+    /// The buttons that open a tab and the menu of the profiles, which
+    /// opens below them.
+    pub fn buttons(&self) -> Rect {
+        self.layout.new_tab().union(self.layout.profiles())
     }
 
     /// The font of the titles, which the menus use too.
@@ -220,6 +230,7 @@ impl TabBar {
             (Button::Left, Target::Tab(id)) => return Some(TabAction::Activate(id)),
             (Button::Left, Target::Close(id)) => Press::Close(id),
             (Button::Left, Target::New) => Press::New,
+            (Button::Left, Target::Profiles) => Press::Profiles,
             (Button::Middle, Target::Tab(id) | Target::Close(id)) => Press::Middle(id),
             (Button::Right, Target::Tab(id) | Target::Close(id)) => Press::Right(id),
             _ => return None,
@@ -231,7 +242,8 @@ impl TabBar {
 
     /// `button` went up where the pointer is. Returns what its press asks
     /// of the tabs, if it went down on the same place: to close a tab, to
-    /// open one, or to open the menu of a tab where the pointer is.
+    /// open one, or to open the menu of the profiles, or the one of a tab
+    /// where the pointer is.
     pub fn up<T>(&mut self, tabs: &model::Window<T>, button: Button) -> Option<TabAction> {
         let press = self.pressed?;
         let on_tab = |id| self.hover.is_some_and(|hover| hover.tab() == Some(id));
@@ -242,6 +254,8 @@ impl TabBar {
             (Press::New, Button::Left) => {
                 (self.hover == Some(Target::New)).then_some(TabAction::New)
             }
+            (Press::Profiles, Button::Left) => (self.hover == Some(Target::Profiles))
+                .then_some(TabAction::ProfileMenu { keyboard: false }),
             (Press::Middle(id), Button::Middle) => on_tab(id).then_some(TabAction::CloseTab(id)),
             (Press::Right(id), Button::Right) => self
                 .pointer
@@ -310,6 +324,9 @@ impl TabBar {
         if clip.intersects(self.layout.new_tab()) {
             self.draw_new(canvas);
         }
+        if clip.intersects(self.layout.profiles()) {
+            self.draw_profiles(canvas);
+        }
     }
 
     /// Draws the tab at `index`, which looks as `look`, with the separator
@@ -359,7 +376,7 @@ impl TabBar {
             canvas.fill(highlight, fill);
         }
         if let Some(cross) = layout.cross(index) {
-            draw_cross(canvas, cross, layout.stroke(), color);
+            draw_diagonals(canvas, cross, layout.stroke(), color);
         }
     }
 
@@ -374,6 +391,19 @@ impl TabBar {
             TEXT
         };
         draw_plus(canvas, self.layout.plus(), self.layout.stroke(), color);
+    }
+
+    /// Draws the button that opens the menu of the profiles.
+    fn draw_profiles(&self, canvas: &mut Canvas<'_>) {
+        if let Some(fill) = self.button_color(Target::Profiles, Press::Profiles) {
+            canvas.fill(self.layout.profiles_highlight(), fill);
+        }
+        let color = if self.hover == Some(Target::Profiles) {
+            HOVERED_TEXT
+        } else {
+            TEXT
+        };
+        draw_diagonals(canvas, self.layout.chevron(), self.layout.stroke(), color);
     }
 
     /// The colour of the highlight of the button `target`, which `press`
@@ -397,6 +427,7 @@ impl TabBar {
             Part::Tab(index) => id(index).map(Target::Tab),
             Part::Close(index) => id(index).map(Target::Close),
             Part::New => Some(Target::New),
+            Part::Profiles => Some(Target::Profiles),
             Part::Empty => None,
         }
     }
@@ -420,6 +451,7 @@ impl TabBar {
             match target {
                 Target::Close(id) => self.damage_close(tabs, id),
                 Target::New => self.damage(self.layout.new_tab()),
+                Target::Profiles => self.damage(self.layout.profiles()),
                 Target::Tab(_) => {}
             }
         }
@@ -430,6 +462,7 @@ impl TabBar {
         match press {
             Press::Close(id) => self.damage_close(tabs, id),
             Press::New => self.damage(self.layout.new_tab()),
+            Press::Profiles => self.damage(self.layout.profiles()),
             Press::Middle(_) | Press::Right(_) => {}
         }
     }
@@ -450,12 +483,14 @@ impl TabBar {
     }
 }
 
-/// Draws a cross in the square `rect`, with lines `stroke` pixels thick, as
-/// steps of a pixel: at 45 degrees they are as sharp as straight ones.
-fn draw_cross(canvas: &mut Canvas<'_>, rect: Rect, stroke: u32, color: Rgb) {
-    // A cross is a few pixels.
-    let (side, stroke) = (rect.width() as i32, stroke as i32);
-    for step in 0..=side - stroke {
+/// Draws the lines from the two top corners of `rect` down at 45 degrees to
+/// its bottom, `stroke` pixels thick, as steps of a pixel: at 45 degrees
+/// they are as sharp as straight ones. In a square, they make a cross; in a
+/// rectangle twice as wide as it is high, a chevron that points down.
+fn draw_diagonals(canvas: &mut Canvas<'_>, rect: Rect, stroke: u32, color: Rgb) {
+    // A cross or a chevron is a few pixels.
+    let (height, stroke) = (rect.height() as i32, stroke as i32);
+    for step in 0..=height - stroke {
         let top = rect.top + step;
         canvas.fill(
             Rect::new(
@@ -546,13 +581,21 @@ mod tests {
         );
         bar.left(&tabs);
         assert_eq!(damage(&mut bar), [Rect::new(484, 0, 725, 32)]);
-        // The button that opens a tab, and the empty bar.
+        // The button that opens a tab, the one that opens the menu of the
+        // profiles, joined to it, and the empty bar.
         assert!(bar.moved(&tabs, Point::new(740, 10)));
         assert_eq!(damage(&mut bar), [Rect::new(728, 4, 756, 32)]);
+        bar.moved(&tabs, Point::new(770, 10));
+        assert_eq!(
+            damage(&mut bar),
+            [Rect::new(728, 4, 756, 32), Rect::new(756, 4, 780, 32)]
+        );
         bar.moved(&tabs, Point::new(780, 10));
-        assert_eq!(damage(&mut bar), [Rect::new(728, 4, 756, 32)]);
+        assert_eq!(damage(&mut bar), [Rect::new(756, 4, 780, 32)]);
         assert!(!bar.moved(&tabs, Point::new(790, 10)));
         assert!(!bar.has_damage());
+        // The menu of the profiles opens below both.
+        assert_eq!(bar.buttons(), Rect::new(728, 4, 780, 32));
     }
 
     #[test]
@@ -599,6 +642,23 @@ mod tests {
         bar.moved(&tabs, Point::new(300, 10));
         bar.moved(&tabs, Point::new(745, 25));
         assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::New));
+
+        // The button that opens the menu of the profiles, which is not the
+        // one that opens a tab, although they are joined.
+        bar.moved(&tabs, Point::new(770, 10));
+        damage(&mut bar);
+        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(damage(&mut bar), [Rect::new(756, 4, 780, 32)]);
+        bar.moved(&tabs, Point::new(750, 10));
+        assert_eq!(bar.up(&tabs, Button::Left), None);
+        bar.moved(&tabs, Point::new(760, 10));
+        bar.down(&tabs, Button::Left);
+        let action = bar.up(&tabs, Button::Left);
+        assert_eq!(action, Some(TabAction::ProfileMenu { keyboard: false }));
+        bar.moved(&tabs, Point::new(750, 10));
+        bar.down(&tabs, Button::Left);
+        bar.moved(&tabs, Point::new(760, 10));
+        assert_eq!(bar.up(&tabs, Button::Left), None);
     }
 
     #[test]
@@ -647,10 +707,12 @@ mod tests {
         bar.down(&tabs, Button::Right);
         bar.moved(&tabs, Point::new(100, 40));
         assert_eq!(bar.up(&tabs, Button::Right), None);
-        // Not on the button that opens a tab.
-        bar.moved(&tabs, Point::new(740, 20));
-        assert_eq!(bar.down(&tabs, Button::Right), None);
-        assert!(!bar.is_pressed());
+        // Not on the buttons that open a tab and the menu of the profiles.
+        for x in [740, 770] {
+            bar.moved(&tabs, Point::new(x, 20));
+            assert_eq!(bar.down(&tabs, Button::Right), None);
+            assert!(!bar.is_pressed());
+        }
     }
 
     #[test]
@@ -711,7 +773,7 @@ mod tests {
 
     #[test]
     fn the_active_tab_has_the_colours_of_the_terminal() {
-        // Tabs of 190 pixels, and the pointer on the fourth.
+        // Tabs of 184 pixels, and the pointer on the fourth.
         let (mut bar, tabs) = bar(&["pwsh", "cmd", "wsl", "ssh"]);
         bar.moved(&tabs, Point::new(600, 20));
         let pixels = draw(&mut bar, &tabs);
@@ -724,33 +786,41 @@ mod tests {
         assert_eq!(at(&pixels, 250, 31), pixel(BAR));
         // A separator only between two plain tabs: the second and the
         // third.
-        assert_eq!(at(&pixels, 384, 18), pixel(SEPARATOR));
-        assert_eq!(at(&pixels, 194, 18), pixel(BAR));
-        assert_eq!(at(&pixels, 574, 18), pixel(HOVERED_TAB));
+        assert_eq!(at(&pixels, 372, 18), pixel(SEPARATOR));
+        assert_eq!(at(&pixels, 188, 18), pixel(BAR));
+        assert_eq!(at(&pixels, 556, 18), pixel(HOVERED_TAB));
         // Each title, in the colours of its tab.
         for (title, text, background) in [
             (
-                Rect::new(12, 4, 166, 32),
+                Rect::new(12, 4, 160, 32),
                 palette.foreground,
                 palette.background,
             ),
-            (Rect::new(202, 4, 356, 32), TEXT, BAR),
-            (Rect::new(582, 4, 736, 32), HOVERED_TEXT, HOVERED_TAB),
+            (Rect::new(196, 4, 344, 32), TEXT, BAR),
+            (Rect::new(564, 4, 712, 32), HOVERED_TEXT, HOVERED_TAB),
         ] {
             assert!(text_in(&pixels, title, text, background), "{title:?}");
         }
         // The crosses, as steps, in the colour of the text of their tabs.
-        for (x, y) in [(174, 14), (181, 14), (177, 17), (178, 17), (181, 21)] {
+        for (x, y) in [(168, 14), (175, 14), (171, 17), (172, 17), (175, 21)] {
             assert_eq!(at(&pixels, x, y), pixel(palette.foreground));
         }
-        assert_eq!(at(&pixels, 175, 14), pixel(palette.background));
-        assert_eq!(at(&pixels, 364, 14), pixel(TEXT));
-        assert_eq!(at(&pixels, 744, 14), pixel(HOVERED_TEXT));
-        // The plus, with arms of 5 pixels around its middle, (781, 17).
-        for (x, y) in [(776, 17), (786, 17), (781, 12), (781, 22), (781, 17)] {
+        assert_eq!(at(&pixels, 169, 14), pixel(palette.background));
+        assert_eq!(at(&pixels, 352, 14), pixel(TEXT));
+        assert_eq!(at(&pixels, 720, 14), pixel(HOVERED_TEXT));
+        // The plus, with arms of 5 pixels around its middle, (757, 17).
+        for (x, y) in [(752, 17), (762, 17), (757, 12), (757, 22), (757, 17)] {
             assert_eq!(at(&pixels, x, y), pixel(TEXT));
         }
-        for (x, y) in [(780, 16), (787, 17), (781, 23)] {
+        for (x, y) in [(756, 16), (763, 17), (757, 23)] {
+            assert_eq!(at(&pixels, x, y), pixel(BAR));
+        }
+        // The chevron, from (780, 16) to (788, 20): two lines as steps,
+        // which meet in the middle of its bottom.
+        for (x, y) in [(780, 16), (787, 16), (783, 19), (784, 19)] {
+            assert_eq!(at(&pixels, x, y), pixel(TEXT));
+        }
+        for (x, y) in [(781, 16), (783, 18), (783, 20)] {
             assert_eq!(at(&pixels, x, y), pixel(BAR));
         }
     }
@@ -758,8 +828,9 @@ mod tests {
     #[test]
     fn buttons_are_highlighted_under_the_pointer_and_while_pressed() {
         // The highlight of the close button of the second tab goes from
-        // (458, 8) to (478, 28), and the one of the button that opens a
-        // tab from (730, 6) to (754, 30).
+        // (458, 8) to (478, 28), the one of the button that opens a tab
+        // from (730, 6) to (754, 30), and the one of the button that opens
+        // the menu of the profiles from (758, 6) to (778, 30).
         let (mut bar, tabs) = three();
         bar.moved(&tabs, Point::new(460, 20));
         assert_eq!(at(&draw(&mut bar, &tabs), 458, 8), pixel(BUTTON_HOVERED));
@@ -772,6 +843,18 @@ mod tests {
         assert_eq!(at(&pixels, 730, 6), pixel(BAR));
         assert_eq!(bar.up(&tabs, Button::Left), None);
         assert_eq!(at(&draw(&mut bar, &tabs), 730, 6), pixel(BUTTON_HOVERED));
+        // The pointer on the chevron gives it the colour of the hovered
+        // text, (764, 16) being its first pixel.
+        bar.moved(&tabs, Point::new(770, 10));
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 730, 6), pixel(BAR));
+        assert_eq!(at(&pixels, 757, 6), pixel(BAR));
+        assert_eq!(at(&pixels, 758, 6), pixel(BUTTON_HOVERED));
+        assert_eq!(at(&pixels, 764, 16), pixel(HOVERED_TEXT));
+        bar.down(&tabs, Button::Left);
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 777, 29), pixel(BUTTON_PRESSED));
+        assert_eq!(at(&pixels, 764, 16), pixel(HOVERED_TEXT));
     }
 
     /// Whether `area` has text of `text` on `background`: some of its

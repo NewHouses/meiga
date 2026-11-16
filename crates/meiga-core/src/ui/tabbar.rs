@@ -1,13 +1,15 @@
 //! The layout of the tab bar: where each tab, its title and its close
-//! button go, and the button that opens a tab, and what is under a point
-//! (ADR 0020).
+//! button go, and the buttons that open a tab and the menu of the profiles,
+//! and what is under a point (ADR 0020 and 0022).
 //!
 //! The sizes are the ones of Windows Terminal (decided with the user), in
 //! pixels at a scale of 100 %: a bar 32 high, as its row of tabs, and tabs up
 //! to 240 wide, as `TabViewItemMaxWidth` of the TabView of WinUI that it
 //! uses, all of the same width. When they do not fit, they all shrink alike,
 //! without a minimum: the minimum, and moving along the bar, come in
-//! subphase 2.8. The button that opens a tab goes right after the last one.
+//! subphase 2.8. The button that opens a tab goes right after the last one
+//! and, joined to it, the one that opens the menu of the profiles, as the
+//! split button of Windows Terminal.
 //!
 //! For the mouse, a tab takes the whole height of the bar. It is drawn from
 //! a gap below the top of the bar down to its bottom, so that the active
@@ -21,7 +23,8 @@ const HEIGHT: u32 = 32;
 /// The widest tab.
 const MAX_TAB: u32 = 240;
 /// The space above the tabs, on the left of the first one, between the last
-/// one and the button that opens a tab, and on the right of that button.
+/// one and the button that opens a tab, and on the right of the button of
+/// the profiles, which is joined to that one.
 const GAP: u32 = 4;
 /// The space between the left side of a tab and its title.
 const PADDING: u32 = 8;
@@ -38,6 +41,13 @@ const CROSS: u32 = 8;
 const NEW: u32 = 28;
 const NEW_HIGHLIGHT: u32 = 24;
 const PLUS: u32 = 10;
+/// The button that opens the menu of the profiles: as high as the one that
+/// opens a tab, and narrower, with a highlight as high as the one of the
+/// plus. Its chevron, in the middle, is twice as wide as it is high, so
+/// that its two lines meet at any scale.
+const PROFILES: u32 = 24;
+const PROFILES_HIGHLIGHT: u32 = 20;
+const CHEVRON: u32 = 4;
 /// How long the separators between inactive tabs are, in the middle of
 /// their height. They are one pixel wide at any scale.
 const SEPARATOR: u32 = 16;
@@ -53,7 +63,9 @@ pub enum Part {
     Close(usize),
     /// The button that opens a tab.
     New,
-    /// The bar outside the tabs and the button.
+    /// The button that opens the menu of the profiles.
+    Profiles,
+    /// The bar outside the tabs and the buttons.
     Empty,
 }
 
@@ -72,6 +84,10 @@ pub struct Layout {
     new: u32,
     new_highlight: u32,
     plus: u32,
+    profiles: u32,
+    profiles_highlight: u32,
+    /// The height of the chevron.
+    chevron: u32,
     separator: u32,
     stroke: u32,
     /// The width of the bar: the one of the window.
@@ -98,6 +114,9 @@ impl Layout {
             new: size(NEW),
             new_highlight: size(NEW_HIGHLIGHT),
             plus: plus + plus.abs_diff(stroke) % 2,
+            profiles: size(PROFILES),
+            profiles_highlight: size(PROFILES_HIGHLIGHT),
+            chevron: size(CHEVRON),
             separator: size(SEPARATOR),
             stroke,
             width,
@@ -241,8 +260,30 @@ impl Layout {
         centered(self.new_tab(), self.plus)
     }
 
+    /// The button that opens the menu of the profiles, joined to the one
+    /// that opens a tab.
+    pub fn profiles(&self) -> Rect {
+        let new = self.new_tab();
+        Rect::new(
+            new.right,
+            new.top,
+            new.right + coord(self.profiles.into()),
+            new.bottom,
+        )
+    }
+
+    /// The part of that button that the pointer highlights.
+    pub fn profiles_highlight(&self) -> Rect {
+        centered_size(self.profiles(), self.profiles_highlight, self.new_highlight)
+    }
+
+    /// The rectangle of its chevron, which points down.
+    pub fn chevron(&self) -> Rect {
+        centered_size(self.profiles(), 2 * self.chevron, self.chevron)
+    }
+
     /// The part of the bar at `at`, or `None` outside the bar. Tabs and the
-    /// button that opens one take the whole height of the bar.
+    /// buttons take the whole height of the bar.
     pub fn part_at(&self, at: Point) -> Option<Part> {
         if !self.bar().contains_point(at) {
             return None;
@@ -250,6 +291,10 @@ impl Layout {
         let new = self.new_tab();
         if (new.left..new.right).contains(&at.x) {
             return Some(Part::New);
+        }
+        let profiles = self.profiles();
+        if (profiles.left..profiles.right).contains(&at.x) {
+            return Some(Part::Profiles);
         }
         let gap = coord(self.gap.into());
         if self.tab_width == 0 || at.x < gap {
@@ -281,7 +326,8 @@ impl Layout {
         let room = self
             .width
             .saturating_sub(3 * self.gap)
-            .saturating_sub(self.new);
+            .saturating_sub(self.new)
+            .saturating_sub(self.profiles);
         let tabs = u32::try_from(self.tabs.max(1)).unwrap_or(u32::MAX);
         (room / tabs).min(self.max_tab)
     }
@@ -289,10 +335,15 @@ impl Layout {
 
 /// The square of `side` pixels in the middle of `rect`.
 fn centered(rect: Rect, side: u32) -> Rect {
-    let side = coord(side.into());
-    let left = rect.left + (coord(rect.width().into()) - side) / 2;
-    let top = rect.top + (coord(rect.height().into()) - side) / 2;
-    Rect::new(left, top, left + side, top + side)
+    centered_size(rect, side, side)
+}
+
+/// The rectangle of `width` by `height` pixels in the middle of `rect`.
+fn centered_size(rect: Rect, width: u32, height: u32) -> Rect {
+    let (width, height) = (coord(width.into()), coord(height.into()));
+    let left = rect.left + (coord(rect.width().into()) - width) / 2;
+    let top = rect.top + (coord(rect.height().into()) - height) / 2;
+    Rect::new(left, top, left + width, top + height)
 }
 
 #[cfg(test)]
@@ -305,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn tabs_are_as_wide_as_in_windows_terminal_and_the_button_follows_them() {
+    fn tabs_are_as_wide_as_in_windows_terminal_and_the_buttons_follow_them() {
         let layout = three();
         assert_eq!(layout.height(), 32);
         assert_eq!(Layout::height_at(96), 32);
@@ -317,6 +368,10 @@ mod tests {
         assert_eq!(layout.new_highlight(), Rect::new(730, 6, 754, 30));
         // 11 pixels, so that both arms of a line of 1 have 5.
         assert_eq!(layout.plus(), Rect::new(736, 12, 747, 23));
+        // The button of the profiles, joined to it.
+        assert_eq!(layout.profiles(), Rect::new(756, 4, 780, 32));
+        assert_eq!(layout.profiles_highlight(), Rect::new(758, 6, 778, 30));
+        assert_eq!(layout.chevron(), Rect::new(764, 16, 772, 20));
     }
 
     #[test]
@@ -336,14 +391,15 @@ mod tests {
     #[test]
     fn tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button() {
         let mut layout = three();
-        // 800 - 3 gaps of 4 - the button of 28 = 760.
+        // 800 - 3 gaps of 4 - the buttons of 28 and 24 = 736.
         layout.resize(800, 10);
-        assert_eq!(layout.tab_width(), 76);
-        assert_eq!(layout.new_tab(), Rect::new(768, 4, 796, 32));
+        assert_eq!(layout.tab_width(), 73);
+        assert_eq!(layout.new_tab(), Rect::new(738, 4, 766, 32));
+        assert_eq!(layout.profiles(), Rect::new(766, 4, 790, 32));
         layout.resize(800, 30);
-        assert_eq!(layout.tab_width(), 25);
+        assert_eq!(layout.tab_width(), 24);
         assert_eq!(layout.close(0), None);
-        assert_eq!(layout.title(0), Rect::new(12, 4, 21, 32));
+        assert_eq!(layout.title(0), Rect::new(12, 4, 20, 32));
         // A window narrower than the button: the tabs have no room.
         layout.resize(20, 2);
         assert_eq!(layout.tab_width(), 0);
@@ -358,11 +414,19 @@ mod tests {
         assert_eq!(layout.tab(1), Rect::new(366, 6, 726, 48));
         assert_eq!(layout.close(1), Some(Rect::new(684, 9, 720, 45)));
         assert_eq!(layout.new_tab(), Rect::new(732, 6, 774, 48));
+        assert_eq!(layout.profiles(), Rect::new(774, 6, 810, 48));
+        assert_eq!(layout.profiles_highlight(), Rect::new(777, 9, 807, 45));
+        assert_eq!(layout.chevron(), Rect::new(786, 24, 798, 30));
         assert_eq!(layout.stroke(), 2);
         // 15 pixels, and one more for arms of 7 on both sides of a line of
         // 2.
         assert_eq!(layout.plus().width(), 16);
         assert_eq!(Layout::new(120, 800, 1).plus().width(), 13);
+        // 5 pixels high, and twice as wide, as at every scale.
+        assert_eq!(
+            Layout::new(120, 800, 1).chevron().size(),
+            crate::geometry::Size::new(10, 5)
+        );
         assert_eq!(Layout::height_at(120), 40);
     }
 
@@ -383,7 +447,9 @@ mod tests {
         assert_eq!(part(725, 20), Some(Part::Empty));
         assert_eq!(part(728, 0), Some(Part::New));
         assert_eq!(part(755, 31), Some(Part::New));
-        assert_eq!(part(756, 20), Some(Part::Empty));
+        assert_eq!(part(756, 20), Some(Part::Profiles));
+        assert_eq!(part(779, 0), Some(Part::Profiles));
+        assert_eq!(part(780, 20), Some(Part::Empty));
         assert_eq!(part(2, 20), Some(Part::Empty));
         assert_eq!(part(100, 32), None);
         assert_eq!(part(-1, 10), None);

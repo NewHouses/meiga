@@ -200,8 +200,8 @@ impl Window {
         unsafe { IsIconic(self.handle) != 0 }
     }
 
-    /// Shows the window, paints it, and delivers its events to `handler`
-    /// until the window closes.
+    /// Shows the window, paints it, tells `handler` with [`Event::Shown`],
+    /// and delivers its events to it until the window closes.
     ///
     /// While nothing happens, the thread sleeps inside
     /// `MsgWaitForMultipleObjectsEx`, waiting for a message or for the frame
@@ -227,6 +227,7 @@ impl Window {
         let result = if unsafe { UpdateWindow(self.handle) } == 0 {
             Err(Error::last("UpdateWindow"))
         } else {
+            state.dispatch(Event::Shown);
             self.pump(&state)
         };
         if let Some(failure) = state.failure.take() {
@@ -374,6 +375,24 @@ impl Window {
             )
         };
         chosen == IDOK
+    }
+
+    /// Shows `text` in a message box with OK, in front of the window, and
+    /// waits until the user closes it. As with [`Window::confirm`], the
+    /// events of the window do not reach the handler meanwhile.
+    pub fn alert(&self, title: &str, text: &str) {
+        let title = wide(title);
+        let text = wide(text);
+        // SAFETY: the window is of this thread, and both strings are
+        // null-terminated and outlive the call.
+        unsafe {
+            MessageBoxW(
+                self.handle,
+                text.as_ptr(),
+                title.as_ptr(),
+                MB_OK | MB_ICONWARNING,
+            )
+        };
     }
 
     /// What wakes this window up from another thread.
