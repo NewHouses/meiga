@@ -1,12 +1,14 @@
 //! The shells that the tabs run (ADR 0022): the profiles, which meiga finds
 //! and `config.toml` changes, hides or adds; the default one, which the
-//! button + opens; and the environment of their programs.
+//! button + opens; and the environment of their programs. And the shortcuts,
+//! which `config.toml` changes too (ADR 0023).
 //!
 //! meiga reads `%APPDATA%\meiga\config.toml` once, when it starts, and
 //! finds the shells then and each time that the menu of the profiles opens,
-//! so that it shows the ones that were installed meanwhile. If the file has
-//! problems, the window tells them once it is on the screen; meiga ignores
-//! what is wrong, or the whole file if it cannot read it, and goes on.
+//! or that a shortcut opens a profile, so that it shows the ones that were
+//! installed meanwhile. If the file has problems, the window tells them
+//! once it is on the screen; meiga ignores what is wrong, or the whole file
+//! if it cannot read it, and goes on.
 
 use std::fs::File;
 use std::io::{self, Read};
@@ -14,6 +16,7 @@ use std::io::{self, Read};
 use meiga_core::config::{self, Config, MAX_SIZE, Problem};
 use meiga_core::environment::{self, Environment};
 use meiga_core::profile::{Launch, Profiles};
+use meiga_core::shortcut::Shortcuts;
 use meiga_win::profiles;
 
 /// The most problems that the message box shows: the others are only
@@ -102,6 +105,12 @@ impl Shells {
     /// The environment block of the programs of the tabs.
     pub fn environment(&self) -> &[u16] {
         &self.block
+    }
+
+    /// The shortcuts of meiga, with the ones of the configuration over
+    /// them.
+    pub fn shortcuts(&self) -> Shortcuts {
+        Shortcuts::new(&self.config.shortcuts)
     }
 }
 

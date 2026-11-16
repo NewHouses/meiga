@@ -385,6 +385,7 @@ mod tests {
                     ..entry("Debian")
                 },
             ],
+            ..Config::default()
         };
         let (profiles, problems) = Profiles::merge(detected(), &config, &environment());
         assert!(problems.is_empty());
@@ -413,6 +414,7 @@ mod tests {
                     hidden: true,
                     ..entry(COMMAND_PROMPT)
                 }],
+                ..Config::default()
             };
             // Without PowerShell, the default one is Windows PowerShell.
             let (profiles, problems) =
@@ -445,6 +447,7 @@ mod tests {
                     ..entry(&profile.name)
                 })
                 .collect(),
+            ..Config::default()
         };
         let (profiles, problems) = Profiles::merge(detected(), &config, &environment());
         assert_eq!(

@@ -13,6 +13,7 @@ use std::time::Instant;
 use meiga_core::color::{Palette, Rgb};
 use meiga_core::geometry::{GridSize, Point, Rect, Size};
 use meiga_core::input::{ControlKeys, KeyEncoder, KeyEvent, focus_sequence};
+use meiga_core::shortcut::{Action, Chord, Shortcuts};
 use meiga_core::term::{Cell, CellFlags, Columns, Cursor, CursorShape, MIN_SIZE, Screen, Scroll};
 use meiga_core::text::CellChar;
 use meiga_render::{Canvas, Decorations, Font, FontStyle, FontSystem};
@@ -41,37 +42,8 @@ const DIM: u8 = 85;
 /// The dots per inch at a scale of 100 %.
 const BASE_DPI: u32 = 96;
 
-/// The virtual-key codes of the keys that meiga takes for itself.
-const VK_C: u16 = 0x43;
-const VK_V: u16 = 0x56;
+/// Esc, which removes the selection, if there is one, before any shortcut.
 const VK_ESCAPE: u16 = 0x1b;
-/// T, W and Tab, of the shortcuts of the tabs.
-const VK_T: u16 = 0x54;
-const VK_W: u16 = 0x57;
-const VK_TAB: u16 = 0x09;
-/// The Menu key, and F10, which with Shift opens the menu too, as in
-/// Windows.
-const VK_APPS: u16 = 0x5d;
-const VK_F10: u16 = 0x79;
-/// Space, which with Ctrl and Shift opens the menu of the profiles, as in
-/// Windows Terminal.
-const VK_SPACE: u16 = 0x20;
-/// Page Up, Page Down, End, Home, and the up and down arrows.
-const VK_PRIOR: u16 = 0x21;
-const VK_NEXT: u16 = 0x22;
-const VK_END: u16 = 0x23;
-const VK_HOME: u16 = 0x24;
-const VK_UP: u16 = 0x26;
-const VK_DOWN: u16 = 0x28;
-/// The 0, the + and the - keys of the main keyboard and of the numeric
-/// keypad. On the main keyboard, the + and the - are the keys with + and -
-/// of the Spanish layout, and with = and - of the US one.
-const VK_0: u16 = 0x30;
-const VK_NUMPAD0: u16 = 0x60;
-const VK_ADD: u16 = 0x6b;
-const VK_SUBTRACT: u16 = 0x6d;
-const VK_OEM_PLUS: u16 = 0xbb;
-const VK_OEM_MINUS: u16 = 0xbd;
 
 /// The terminal of the tab that the window shows, as the window shows it.
 pub struct TerminalView {
@@ -104,6 +76,8 @@ pub struct TerminalView {
     screen: Screen,
     caret: Caret,
     mouse: Mouse,
+    /// The keys that meiga takes for itself, and what each one does.
+    shortcuts: Shortcuts,
     /// The keys that meiga took when they went down: when they go up, the
     /// program does not get them either.
     taken: Vec<DownKey>,
@@ -140,13 +114,15 @@ pub struct Woken {
 
 impl TerminalView {
     /// The view of the terminal of a tab, drawn with `font`, of `fonts`, in
-    /// an area of `client` pixels of a window at `dpi`.
+    /// an area of `client` pixels of a window at `dpi`, which takes the keys
+    /// of `shortcuts`.
     pub fn new(
         terminal: TabTerminal,
         fonts: FontSystem,
         font: Font,
         dpi: u32,
         client: Size,
+        shortcuts: Shortcuts,
     ) -> Self {
         let TabTerminal { shared, input } = terminal;
         let grid = lock(&shared).terminal.size();
@@ -166,6 +142,7 @@ impl TerminalView {
             screen: Screen::new(),
             caret: Caret::new(dpi, Instant::now()),
             mouse: Mouse::new(dpi, client),
+            shortcuts,
             taken: Vec::new(),
             held: Vec::new(),
             run: Vec::new(),
@@ -313,15 +290,12 @@ impl TerminalView {
         self.resized(self.client);
     }
 
-    /// A key went down or up. Ctrl+C copies the selection, if there is
-    /// one; Ctrl+V pastes; Esc removes the selection, if there is one; on
-    /// the primary screen, the keys of the history move its view; Ctrl and
-    /// +, - or 0 zoom; and Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab,
-    /// Ctrl+Shift+Tab, the Menu key, Shift+F10 and Ctrl+Shift+Space are for
-    /// the tabs. The rest go to the program, as the modes that it turned on
-    /// say, and a key that goes down removes the selection and brings the
-    /// view back to the screen, where the program writes, unless it is a
-    /// modifier key.
+    /// A key went down or up. Esc removes the selection, if there is one,
+    /// and the keys of the shortcuts do their actions (ADR 0023): copying
+    /// and pasting, the history, the zoom, the menus and the tabs. The rest
+    /// go to the program, as the modes that it turned on say, and a key
+    /// that goes down removes the selection and brings the view back to the
+    /// screen, where the program writes, unless it is a modifier key.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         if !event.down {
             // A key that goes up is not down any more, whoever gets it.
@@ -334,12 +308,13 @@ impl TerminalView {
                 return Response::default();
             }
         } else if self.taken.iter().any(|taken| taken.key == event.key) {
-            // Nor while it repeats. The ones that move the view, zoom or go
-            // to the next tab do it again while they repeat.
-            if repeats(event.key) {
-                return self.shortcut(window, event).unwrap_or_default();
-            }
-            return Response::default();
+            // Nor while it repeats. The shortcuts that go to the next or the
+            // previous tab, move the view of the history or zoom do it again
+            // while they repeat.
+            return match self.action(event) {
+                Some(action) if action.repeats() => self.act(window, action).unwrap_or_default(),
+                _ => Response::default(),
+            };
         }
         if event.down
             && let Some(response) = self.shortcut(window, event)
@@ -401,34 +376,54 @@ impl TerminalView {
             .any(|taken| taken.key == key && taken.shortcut)
     }
 
-    /// What a key that goes down does if meiga takes it.
+    /// What a key that goes down does if meiga takes it: Esc removes the
+    /// selection, if there is one, and the key of a shortcut does its
+    /// action, if it can.
     fn shortcut(&mut self, window: &Window, event: &KeyEvent) -> Option<Response> {
         let controls = event.controls;
-        let (ctrl, alt, shift) = (controls.ctrl(), controls.alt(), controls.shift());
+        if event.key == VK_ESCAPE
+            && !controls.ctrl()
+            && !controls.alt()
+            && !controls.shift()
+            && lock(&self.shared).terminal.clear_selection()
+        {
+            return Some(Response::REDRAW);
+        }
+        let action = self.action(event)?;
+        self.act(window, action)
+    }
+
+    /// The action of the shortcut of a key that goes down, if it has one.
+    fn action(&self, event: &KeyEvent) -> Option<Action> {
+        self.shortcuts.action(Chord::of(event)?)
+    }
+
+    /// Does what `action` asks. Returns `None` if it cannot, and then the
+    /// key goes to the program: copying without a selection, and moving the
+    /// view of the history on the alternate screen, which has none. The
+    /// actions of the tabs go to them.
+    fn act(&mut self, window: &Window, action: Action) -> Option<Response> {
         let tab = |action| {
             Some(Response {
                 tab: Some(action),
                 ..Response::default()
             })
         };
-        match event.key {
-            // The tabs, with fixed shortcuts until subphase 2.6, as in
-            // Windows Terminal. Ctrl+T and Ctrl+W go to the program.
-            VK_T if ctrl && shift && !alt => tab(TabAction::New),
-            VK_W if ctrl && shift && !alt => tab(TabAction::Close),
-            VK_TAB if ctrl && !alt && shift => tab(TabAction::Previous),
-            VK_TAB if ctrl && !alt => tab(TabAction::Next),
-            // The menu of the tab, as the menus of Windows: the Menu key,
-            // and Shift+F10.
-            VK_APPS if !ctrl && !alt => tab(TabAction::ActiveMenu),
-            VK_F10 if shift && !ctrl && !alt => tab(TabAction::ActiveMenu),
-            // The menu of the profiles, as in Windows Terminal.
-            VK_SPACE if ctrl && shift && !alt => tab(TabAction::ProfileMenu { keyboard: true }),
-            // Ctrl, and Shift or not, but not Alt, nor AltGr.
-            VK_C if ctrl && !alt => {
-                clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW)
-            }
-            VK_V if ctrl && !alt => {
+        match action {
+            Action::NewTab => tab(TabAction::New),
+            Action::CloseTab => tab(TabAction::Close),
+            Action::NextTab => tab(TabAction::Next),
+            Action::PreviousTab => tab(TabAction::Previous),
+            Action::Tab(index) => tab(TabAction::Nth(usize::from(index))),
+            Action::LastTab => tab(TabAction::Last),
+            Action::Profile(index) => tab(TabAction::Profile(usize::from(index))),
+            Action::ProfileMenu => tab(TabAction::ProfileMenu { keyboard: true }),
+            Action::TabMenu => tab(TabAction::ActiveMenu),
+            Action::DuplicateTab => tab(TabAction::DuplicateActive),
+            Action::CloseOtherTabs => tab(TabAction::CloseAllButActive),
+            Action::CloseTabsToTheRight => tab(TabAction::CloseRightOfActive),
+            Action::Copy => clipboard::copy(window, &self.shared, true).then_some(Response::REDRAW),
+            Action::Paste => {
                 let cleared = lock(&self.shared).terminal.clear_selection();
                 let pasted = self.input.as_ref().map_or_else(Response::default, |input| {
                     clipboard::paste(window, &self.shared, input)
@@ -438,24 +433,17 @@ impl TerminalView {
                     ..pasted
                 })
             }
-            VK_ESCAPE if !ctrl && !alt && !shift => lock(&self.shared)
-                .terminal
-                .clear_selection()
-                .then_some(Response::REDRAW),
-            // The history, as in Windows Terminal: Shift and Page Up or Page
-            // Down, with Ctrl or without it, by pages; and Ctrl+Shift with
-            // the arrows, by rows, or with Home and End, to its ends.
-            VK_PRIOR if shift && !alt => self.scroll_history(Scroll::PageUp),
-            VK_NEXT if shift && !alt => self.scroll_history(Scroll::PageDown),
-            VK_UP if ctrl && shift && !alt => self.scroll_history(Scroll::Rows(1)),
-            VK_DOWN if ctrl && shift && !alt => self.scroll_history(Scroll::Rows(-1)),
-            VK_HOME if ctrl && shift && !alt => self.scroll_history(Scroll::Top),
-            VK_END if ctrl && shift && !alt => self.scroll_history(Scroll::Bottom),
-            // The zoom: Ctrl alone.
-            VK_OEM_PLUS | VK_ADD if ctrl && !alt && !shift => Some(self.zoom(1)),
-            VK_OEM_MINUS | VK_SUBTRACT if ctrl && !alt && !shift => Some(self.zoom(-1)),
-            VK_0 | VK_NUMPAD0 if ctrl && !alt && !shift => Some(self.set_points(FONT_POINTS)),
-            _ => None,
+            // The history, as in Windows Terminal: by rows, by pages, or to
+            // its ends.
+            Action::ScrollUp => self.scroll_history(Scroll::Rows(1)),
+            Action::ScrollDown => self.scroll_history(Scroll::Rows(-1)),
+            Action::ScrollPageUp => self.scroll_history(Scroll::PageUp),
+            Action::ScrollPageDown => self.scroll_history(Scroll::PageDown),
+            Action::ScrollToTop => self.scroll_history(Scroll::Top),
+            Action::ScrollToBottom => self.scroll_history(Scroll::Bottom),
+            Action::ZoomIn => Some(self.zoom(1)),
+            Action::ZoomOut => Some(self.zoom(-1)),
+            Action::ZoomReset => Some(self.set_points(FONT_POINTS)),
         }
     }
 
@@ -796,26 +784,6 @@ pub fn grid_size(client: Size, cell: Size, bar: u32) -> GridSize {
     GridSize::new(
         cells(client.width.saturating_sub(bar), cell.width).max(MIN_SIZE.columns),
         cells(client.height, cell.height).max(MIN_SIZE.rows),
-    )
-}
-
-/// Whether the action of `key`, when meiga takes it, goes on while it
-/// repeats: the keys that move the view of the history, the ones that
-/// zoom, and Tab, which goes from tab to tab.
-const fn repeats(key: u16) -> bool {
-    matches!(
-        key,
-        VK_PRIOR
-            | VK_NEXT
-            | VK_END
-            | VK_HOME
-            | VK_UP
-            | VK_DOWN
-            | VK_OEM_PLUS
-            | VK_OEM_MINUS
-            | VK_ADD
-            | VK_SUBTRACT
-            | VK_TAB
     )
 }
 
