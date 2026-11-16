@@ -17,8 +17,8 @@
 //! capital letters from small ones. A key is a letter, a digit, `f1` to
 //! `f24`, or one of the names of [`NAMES`]. Keys go by their virtual-key
 //! code, which says what the key is in the layout of the keyboard, and not by
-//! the character that it writes: `ctrl+shift+1` is the same chord with any
-//! layout, though the 1 with Shift writes `!` in some and `"` in others.
+//! the character that it writes: `ctrl+shift+2` is the same chord with any
+//! layout, though the 2 with Shift writes `@` in some and `"` in others.
 //!
 //! AltGr, which Windows gives as the left Ctrl and the right Alt, writes
 //! characters: no shortcut has it, as in Windows Terminal.
@@ -105,14 +105,6 @@ impl Chord {
             modifiers: modifiers & (Self::CTRL | Self::ALT | Self::SHIFT),
             key,
         }
-    }
-
-    pub const fn modifiers(self) -> u8 {
-        self.modifiers
-    }
-
-    pub const fn key(self) -> u16 {
-        self.key
     }
 
     /// The chord of a key that goes down, or `None` if no shortcut can have
@@ -212,13 +204,19 @@ fn key_code(name: &str) -> Option<u16> {
         };
     }
     if let Some(number) = strip_prefix_ignore_case(name, "f").and_then(number) {
-        return (1..=24).contains(&number).then_some(VK_F1 + number - 1);
+        return match number {
+            1..=24 => Some(VK_F1 + number - 1),
+            _ => None,
+        };
     }
     if let Some(digit) = strip_prefix_ignore_case(name, "numpad")
         .map(|rest| rest.strip_prefix('_').unwrap_or(rest))
         .and_then(number)
     {
-        return (digit <= 9).then_some(VK_NUMPAD0 + digit);
+        return match digit {
+            0..=9 => Some(VK_NUMPAD0 + digit),
+            _ => None,
+        };
     }
     NAMES
         .iter()
@@ -549,6 +547,12 @@ mod tests {
             error("numpad10"),
             ChordError::Unknown("numpad10".to_owned())
         );
+        // Numbers that do not fit next to the first code are not keys either.
+        assert_eq!(error("f65535"), ChordError::Unknown("f65535".to_owned()));
+        assert_eq!(
+            error("numpad65535"),
+            ChordError::Unknown("numpad65535".to_owned())
+        );
         assert_eq!(error("win+e"), ChordError::Windows);
         assert_eq!(error("alt+f4"), ChordError::ForWindows);
         assert_eq!(error("alt+shift+space"), ChordError::ForWindows);
@@ -680,24 +684,22 @@ mod tests {
 
     #[test]
     fn only_moving_between_tabs_the_history_and_the_zoom_repeat() {
-        let repeating: Vec<_> = Shortcuts::default()
-            .list()
-            .iter()
-            .filter(|(_, action)| action.repeats())
-            .map(|&(_, action)| action)
-            .collect();
-        assert!(repeating.contains(&Action::NextTab));
-        assert!(repeating.contains(&Action::ZoomOut));
-        for action in [
-            Action::NewTab,
-            Action::CloseTab,
-            Action::Tab(0),
-            Action::Profile(0),
-            Action::DuplicateTab,
-            Action::Paste,
-            Action::ZoomReset,
-        ] {
-            assert!(!action.repeats(), "{action:?}");
+        let repeating = [
+            "next_tab",
+            "previous_tab",
+            "scroll_up",
+            "scroll_down",
+            "scroll_page_up",
+            "scroll_page_down",
+            "scroll_to_top",
+            "scroll_to_bottom",
+            "zoom_in",
+            "zoom_out",
+        ];
+        for (name, action) in ACTIONS {
+            assert_eq!(action.repeats(), repeating.contains(&name), "{name}");
         }
+        assert!(!Action::Tab(0).repeats());
+        assert!(!Action::Profile(0).repeats());
     }
 }

@@ -295,7 +295,8 @@ impl TerminalView {
     /// and pasting, the history, the zoom, the menus and the tabs. The rest
     /// go to the program, as the modes that it turned on say, and a key
     /// that goes down removes the selection and brings the view back to the
-    /// screen, where the program writes, unless it is a modifier key.
+    /// screen, where the program writes, unless it is a modifier key. A key
+    /// that went down for the program is its own until it goes up.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         if !event.down {
             // A key that goes up is not down any more, whoever gets it.
@@ -316,7 +317,12 @@ impl TerminalView {
                 _ => Response::default(),
             };
         }
+        // A key that went down for the program repeats and goes up for it,
+        // also with the modifier keys pressed meanwhile: with Ctrl pressed
+        // while PageDown is held in less, Ctrl+PageDown would show another
+        // tab, and less would never get PageDown going up.
         if event.down
+            && !self.holds_key(event.key)
             && let Some(response) = self.shortcut(window, event)
         {
             // With a message box, the key goes up in it.

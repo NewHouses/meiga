@@ -1,8 +1,8 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.5. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra.
+> Estado: subfase 2.6. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo.
 
-**Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
+**Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato, e, desde a subfase 2.6, os atallos de teclado; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
 | Arquivo | Contido |
 |---|---|
@@ -14,13 +14,14 @@
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
 | [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella; e `fit`, as celas dun texto que caben nunhas columnas, cortado con «…». |
 | [`src/shell.rs`](#cratesmeiga-coresrcshellrs) | `command_line`: a liña de comandos dun programa cos seus argumentos, entre comiñas segundo as regras de Windows; e `program_name`, o nome do programa dunha liña de comandos, o que mostra unha tab sen título. |
-| [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
+| [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, coas súas teclas modificadoras, `ControlKeys`, que din tamén se o Ctrl e o Alt son os de AltGr; e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
 | [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda en partes, e `WheelRows`, en filas do historial; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
 | [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
-| [`src/config.rs`](#cratesmeiga-coresrcconfigrs) | `parse`: o arquivo de configuración, `config.toml`, lido sen serde, co perfil por defecto e as entradas dos perfís; e `Problem`, cada cousa que ignora, coa súa liña e a súa columna. |
+| [`src/config.rs`](#cratesmeiga-coresrcconfigrs) | `parse`: o arquivo de configuración, `config.toml`, lido sen serde, co perfil por defecto, as entradas dos perfís e, desde a 2.6, os atallos de `[shortcuts]`; e `Problem`, cada cousa que ignora, coa súa liña e a súa columna. |
 | [`src/profile.rs`](#cratesmeiga-coresrcprofilers) | `Profiles`: os perfís do menú, as shells que atopa meiga co que cambia, oculta ou engade a configuración, e o perfil por defecto; e `Launch`, o que corre a sesión dunha tab: o nome, a liña de comandos e o cartafol, co `--cd` de WSL. |
 | [`src/environment.rs`](#cratesmeiga-coresrcenvironmentrs) | `Environment`: as variábeis dun contorno, en UTF-16 coma as garda Windows, as `%NOME%` dun texto e o bloque para `CreateProcessW`; e `prepare`, o contorno dos programas das tabs, con `TERM_PROGRAM`, `COLORTERM` e o `WSLENV`. |
 | [`src/sort.rs`](#cratesmeiga-coresrcsortrs) | `insertion_sort_by`: unha ordenación estábel, por inserción, para as listas curtas, máis pequena ca a da biblioteca estándar. |
+| [`src/shortcut.rs`](#cratesmeiga-coresrcshortcutrs) | Os atallos de teclado: `Chord`, unha combinación, as teclas modificadoras e unha tecla, a dunha tecla que baixa ou a dun texto coma `ctrl+shift+t`; `Action`, o que fai un atallo, co seu nome no arquivo; e `Shortcuts`, os atallos de meiga cos do `config.toml` por riba, e a acción de cada combinación. |
 | [`src/model/mod.rs`](#cratesmeiga-coresrcmodelmodrs) | O modelo das xanelas e as súas tabs: os identificadores, `TabId` e `WindowId`, que nunca se repiten, e os erros. |
 | [`src/model/window.rs`](#cratesmeiga-coresrcmodelwindowrs) | `Window`: as tabs dunha xanela, na orde da barra, e a activa, a enfocada e as visíbeis; abrir, pechar, tamén varias dunha vez, mover e activar. |
 | [`src/model/tests.rs`](#cratesmeiga-coresrcmodeltestsrs) | As probas do modelo, unha delas con 10 000 cambios ao chou. |
@@ -102,6 +103,7 @@ pub mod pacing;
 pub mod paste;
 pub mod profile;
 pub mod shell;
+pub mod shortcut;
 pub mod sort;
 pub mod term;
 pub mod text;
@@ -111,7 +113,7 @@ pub mod ui;
 - `lib.rs` é a raíz dunha biblioteca: o compilador empeza por este arquivo, e desde el decláranse os demais módulos.
 - As liñas que empezan por `//!` son **documentación do crate**. `cargo doc` convérteas en documentación HTML.
 - `#![forbid(unsafe_code)]` é un **atributo interno** (`#!`), que se aplica a todo o crate. Prohíbe calquera bloque `unsafe` en `meiga-core`. Co nivel `forbid`, ningún módulo pode desactivar a regra cun `#[allow]`. Así, esta parte do programa, que será a máis grande, conta con todas as garantías de seguridade de memoria de Rust.
-- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, `mouse` e `paste`, na 1.8, `model`, na 2.1, `ui`, na 2.3, e `config`, `environment`, `profile` e `sort`, na 2.5. `term`, desde a 1.5, `model` e `ui` teñen submódulos, así que van en cartafoles: os módulos están en `src/term/mod.rs`, en `src/model/mod.rs` e en `src/ui/mod.rs`.
+- `pub mod color;` declara o módulo `color`, que está en `src/color.rs`. Con `pub`, os outros crates poden usalo como `meiga_core::color`. O mesmo cos demais; `shell` chegou na subfase 1.6, `input`, na 1.7, `mouse` e `paste`, na 1.8, `model`, na 2.1, `ui`, na 2.3, `config`, `environment`, `profile` e `sort`, na 2.5, e `shortcut`, na 2.6. `term`, desde a 1.5, `model` e `ui` teñen submódulos, así que van en cartafoles: os módulos están en `src/term/mod.rs`, en `src/model/mod.rs` e en `src/ui/mod.rs`.
 - As dependencias, como `alacritty_terminal`, poden ter `unsafe` dentro: `forbid` só se aplica ao código deste crate.
 
 ## `crates/meiga-core/src/color.rs`
@@ -776,7 +778,7 @@ impl ControlKeys {
         self.contains(Self::SHIFT)
     }
 
-    const fn alt_gr(self) -> bool {
+    pub const fn alt_gr(self) -> bool {
         let all = Self::LEFT_ALT.0 | Self::RIGHT_ALT.0 | Self::LEFT_CTRL.0 | Self::RIGHT_CTRL.0;
         self.0 & all == Self::LEFT_CTRL.0 | Self::RIGHT_ALT.0
     }
@@ -800,7 +802,7 @@ impl BitOrAssign for ControlKeys {
 - As teclas modificadoras e as de bloqueo dun evento, cos bits que usa Windows nos eventos da consola (`dwControlKeyState`). Gardar os mesmos bits fai que o win32-input-mode os envíe tal cal, con `bits`.
 - `ENHANCED` marca unha **tecla estendida**, das que non tiñan os primeiros teclados do PC: as frechas, Insert, Supr, Inicio, Fin, RePáx e AvPáx de fóra do teclado numérico, o Ctrl e o Alt dereitos, e o Intro e a `/` do teclado numérico ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)).
 - `alt` e `ctrl` son certos con calquera dos dous, o esquerdo ou o dereito; `contains`, se están todas as de outro valor. `BitOr` e `BitOrAssign` permiten xuntalas con `|` e `|=`.
-- **`alt_gr`**, privada, di se o Ctrl e o Alt premidos son só os de AltGr: Windows dá AltGr coma o Ctrl esquerdo e o Alt dereito. Se ademais está o Ctrl dereito ou o Alt esquerdo, hai un Ctrl ou un Alt de verdade. Úsaa [`push_vt_character`](#keyencoder).
+- **`alt_gr`** di se o Ctrl e o Alt premidos son só os de AltGr: Windows dá AltGr coma o Ctrl esquerdo e o Alt dereito. Se ademais está o Ctrl dereito ou o Alt esquerdo, hai un Ctrl ou un Alt de verdade. Úsaa [`push_vt_character`](#keyencoder) e, desde a subfase 2.6, [`Chord::of`](#a-combinación-dunha-tecla-chordof), para que AltGr non dispare ningún atallo ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 10). Ata a 2.5 era privada; desde a 2.6 é pública, coma as outras. `check-shortcuts.ps1` comproba na CI que AltGr+2 chega ao programa, mentres Ctrl+Alt+2, co Alt esquerdo, é un atallo do seu `config.toml` ([Código › ferramentas › `check-shortcuts.ps1`](ferramentas.md#toolscheck-shortcutsps1)).
 - É un *newtype* sobre `u16`: o número non se confunde con outro, e os bits só se nomean coas constantes. As funcións son `const`, así que tamén se poden usar para definir outras constantes, coma nas probas.
 
 ### `KeyEvent`
@@ -828,7 +830,7 @@ Unha tecla que baixou ou subiu, coma a describe Windows:
 | `controls` | As teclas modificadoras e de bloqueo. |
 | `repeat` | Cantas veces baixou: máis dunha se o teclado a repetiu máis rápido do que a xanela a colleu. |
 
-É `Copy`, de 12 bytes: vai por valor no evento da xanela, `Event::Key` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)). Desde a subfase 1.8, a roda do rato tamén crea eventos de tecla: as frechas, na pantalla alternativa ([`arrow_keys`](#cratesmeiga-coresrcmousers)).
+É `Copy`, de 12 bytes: vai por valor no evento da xanela, `Event::Key` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)). Desde a subfase 1.8, a roda do rato tamén crea eventos de tecla: as frechas, na pantalla alternativa ([`arrow_keys`](#cratesmeiga-coresrcmousers)). E desde a 2.6, cada tecla que baixa ten a súa combinación, [`Chord::of`](#a-combinación-dunha-tecla-chordof), coa que a vista busca o seu atallo.
 
 ### `KeyEncoder`
 
@@ -1653,7 +1655,7 @@ fn trim(text: &str) -> &str {
 
 ## `crates/meiga-core/src/config.rs`
 
-Desde a subfase 2.5: o arquivo de configuración, `%APPDATA%\meiga\config.toml`, co perfil por defecto e as entradas que cambian, ocultan ou engaden perfís ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 1, 2 e 3; [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)). O arquivo é opcional, e meiga leo unha vez, ao arrancar: o programa ábreo e dálle os seus bytes a `parse` ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). Este módulo non abre ningún arquivo, só le bytes, así que se proba con textos.
+Desde a subfase 2.5: o arquivo de configuración, `%APPDATA%\meiga\config.toml`, co perfil por defecto e as entradas que cambian, ocultan ou engaden perfís ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 1, 2 e 3; [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración)). Desde a 2.6, tamén os atallos que engaden, cambian ou liberan os de meiga, na táboa `[shortcuts]` ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisións 1 e 3; [Arquitectura › Os atallos de teclado](../arquitectura.md#os-atallos-de-teclado)). O arquivo é opcional, e meiga leo unha vez, ao arrancar: o programa ábreo e dálle os seus bytes a `parse` ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). Este módulo non abre ningún arquivo, só le bytes, así que se proba con textos.
 
 ```toml
 default_profile = "Ubuntu"
@@ -1666,18 +1668,24 @@ hidden = true
 name = "Build"
 command = 'pwsh -NoExit -File "%USERPROFILE%\build.ps1"'
 directory = 'C:\src\meiga'
+
+[shortcuts]
+"ctrl+t" = "new_tab"
+"ctrl+6" = "none"
 ```
 
-Este arquivo, o do comentario do módulo (`//!`), fai de Ubuntu o perfil por defecto, oculta o Command Prompt e engade un perfil, «Build», que corre un script de PowerShell nun cartafol. As cadeas entre comiñas simples van tal cal, sen escapes: así se escriben as rutas de Windows ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)).
+Este arquivo, o do comentario do módulo (`//!`), fai de Ubuntu o perfil por defecto, oculta o Command Prompt e engade un perfil, «Build», que corre un script de PowerShell nun cartafol; e, desde a 2.6, fai de Ctrl+T outro atallo para abrir unha tab, ademais de Ctrl+Maiús+T, e libera Ctrl+6, que con meiga mostra a sexta tab, para que chegue outra vez ao programa ([`shortcut.rs`](#cratesmeiga-coresrcshortcutrs)). As cadeas entre comiñas simples van tal cal, sen escapes: así se escriben as rutas de Windows ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). As combinacións van entre comiñas: TOML non admite un `+` nunha chave sen elas.
 
-**Un erro non para nada** ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 2). meiga ignora o que está mal, e segue co resto:
+**Un erro non para nada** ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 2; [ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 3). meiga ignora o que está mal, e segue co resto:
 
 | Que está mal | Que ignora meiga |
 |---|---|
-| O arquivo pasa de 1 MiB, non é texto UTF-8 ou non é TOML, coma con `hidden = tru` ou cunha chave repetida | O arquivo enteiro, e usa os seus valores por defecto. |
+| O arquivo pasa de 1 MiB, non é texto UTF-8 ou non é TOML, coma con `hidden = tru` ou cunha chave repetida, tamén unha combinación escrita dúas veces exactamente igual | O arquivo enteiro, e usa os seus valores por defecto. |
 | Un valor doutro tipo, coma `hidden = "yes"`, ou unha cadea baleira | Ese valor. |
 | Unha chave que meiga non coñece, coma `colour` | Esa chave. |
 | Unha entrada de `[[profiles]]` sen `name`, cun `name` mal ou co nome doutra | A entrada enteira. |
+| Unha entrada de `[shortcuts]` cunha combinación mal, coma `"ctrl+a+b"`, ou cunha acción mal, coma `"quit"`, un número ou unha cadea baleira | Esa entrada. |
+| Unha combinación que xa tiña unha entrada anterior, escrita doutra maneira, coma `"Ctrl+T"` despois de `"ctrl+t"` | A entrada seguinte: vale a primeira. |
 
 Cada un é un `Problem`, coa súa liña e a súa columna, que a xanela mostra nunha caixa de mensaxe cando xa está na pantalla (decisión 8). Así, unha errata nunha entrada non desfai o resto do arquivo, ao contrario ca no Windows Terminal, que cun erro de sintaxe ou de tipo usa só os seus valores por defecto.
 
@@ -1747,24 +1755,26 @@ pub struct ProfileEntry {
 pub struct Config {
     pub default_profile: Option<Setting<String>>,
     pub profiles: Vec<ProfileEntry>,
+    pub shortcuts: Vec<shortcut::Entry>,
 }
 ```
 
-O que di o arquivo, coas chaves que coñece meiga ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 3):
+O que di o arquivo, coas chaves que coñece meiga ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 3; e, desde a 2.6, [ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 1):
 
 | Chave | Valor | Que é |
 |---|---|---|
-| `default_profile` | Unha cadea | O nome do perfil por defecto, o que abren o +, Ctrl+Maiús+T e a primeira tab (decisión 5). |
+| `default_profile` | Unha cadea | O nome do perfil por defecto, o que abren o +, Ctrl+Maiús+T e a primeira tab ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5). |
 | `[[profiles]]` | Unha lista de táboas | As entradas que cambian, ocultan ou engaden perfís, na orde do arquivo: os `ProfileEntry`. |
 | `name` | Unha cadea | O nome dun perfil que atopa meiga, para cambialo ou ocultalo, ou o dun perfil novo. Sen el, non hai entrada. |
 | `command` | Unha cadea | A liña de comandos, coma a le o programa, coas variábeis `%NOME%`. Un perfil novo necesítaa. |
 | `directory` | Unha cadea | O cartafol onde empeza, coas variábeis `%NOME%`; `~` é o persoal. |
 | `hidden` | `true` ou `false` | Se o menú o deixa fóra. Sen el, `false`. |
+| `[shortcuts]` | Unha táboa | Desde a 2.6: os atallos que engaden, cambian ou liberan os de meiga, cunha combinación de chave e o nome dunha acción, ou `"none"`, de valor. Son os [`shortcut::Entry`](#os-atallos-entry-e-shortcuts), na orde do arquivo, cada combinación unha vez ([`shortcuts`](#os-atallos-do-arquivo-shortcuts)). |
 
-- Os textos gárdanse coma no arquivo: as variábeis expándeas `Profiles::merge`, co contorno de meiga, e `~` convérteo `Folder::of` ([`profile.rs`](#cratesmeiga-coresrcprofilers)).
-- **`Config`** deriva `Default`: sen arquivo, ou cun arquivo que meiga ignora enteiro, a configuración é a baleira, sen perfil por defecto nin entradas.
-- As táboas en liña tamén son entradas: `profiles = [{ name = "a" }, { name = "b", hidden = false }]` é o mesmo ca dúas `[[profiles]]`. Para o parser, os dous son unha lista de táboas.
-- Os atallos, as cores e `max_fps` chegarán na 2.6 e na 8.4 (decisión 3): ata entón, son chaves que meiga non coñece.
+- Os textos gárdanse coma no arquivo: as variábeis expándeas `Profiles::merge`, co contorno de meiga, e `~` convérteo `Folder::of` ([`profile.rs`](#cratesmeiga-coresrcprofilers)). Os atallos, en cambio, gárdanse xa lidos, coma combinacións e accións: o programa só ten que xuntalos cos de meiga, con [`Shortcuts::new`](#os-atallos-entry-e-shortcuts).
+- **`Config`** deriva `Default`: sen arquivo, ou cun arquivo que meiga ignora enteiro, a configuración é a baleira, sen perfil por defecto, entradas nin atallos.
+- As táboas en liña tamén son entradas: `profiles = [{ name = "a" }, { name = "b", hidden = false }]` é o mesmo ca dúas `[[profiles]]`. Para o parser, os dous son unha lista de táboas. Igual cos atallos: `shortcuts = { "ctrl+shift+u" = "profile_4" }` é o mesmo ca unha táboa `[shortcuts]` con esa liña.
+- Os atallos chegaron na 2.6, coa táboa `[shortcuts]`, e concretan a decisión 3 do ADR 0022. As cores e `max_fps` chegarán na 8.4 (decisión 3): ata entón, son chaves que meiga non coñece.
 
 ### Ler o arquivo: `parse`
 
@@ -1820,7 +1830,7 @@ pub fn sort(problems: &mut [Problem]) {
 
 **`sort`** pon os erros na orde do arquivo: polo seu sitio, e os que non teñen ningún, ao final.
 
-- **Por que hai que ordenalos.** A táboa que dá `DeTable::parse` é un `Map` de `toml`, que é un `BTreeMap` sen a *feature* `preserve_order`, e meiga non a activa: dá as chaves na orde dos seus nomes, e non na do arquivo. Así, `colour` vai antes ca `default_profile`, aínda que estea despois no arquivo, e, nunha entrada, `command` vai antes ca `name`. O lector atopa os erros nesa orde.
+- **Por que hai que ordenalos.** A táboa que dá `DeTable::parse` é un `Map` de `toml`, que é un `BTreeMap` sen a *feature* `preserve_order`, e meiga non a activa: dá as chaves na orde dos seus nomes, e non na do arquivo. Así, `colour` vai antes ca `default_profile`, aínda que estea despois no arquivo, e, nunha entrada, `command` vai antes ca `name`. O lector atopa os erros nesa orde. E desde a 2.6, cando a orde decide algo, ordena el antes: as entradas de `[shortcuts]`, das que vale a primeira de cada combinación ([`shortcuts`](#os-atallos-do-arquivo-shortcuts)).
 - **A chave** de cada erro é `(problem.at.is_none(), problem.at)`: primeiro os que teñen sitio, porque `false` vai antes ca `true`, pola liña e a columna; despois, os que non teñen, coma `all the profiles are hidden, so meiga shows them all`. Dous `Option` compáranse polos seus valores, e dous `Position`, pola liña e despois pola columna.
 - **Estábel**: dous erros no mesmo sitio quedan na orde na que se atoparon ([`sort.rs`](#cratesmeiga-coresrcsortrs)).
 - É pública: o programa xunta os erros do arquivo cos de `Profiles::merge`, e ordénaos outra vez con ela. Unha soa función para os dous sitios compila unha soa copia da ordenación ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 12).
@@ -1852,6 +1862,7 @@ fn config(&mut self, table: &DeTable<'_>) -> Config {
                 });
             }
             "profiles" => config.profiles = self.profiles(key, value),
+            "shortcuts" => config.shortcuts = self.shortcuts(key, value),
             _ => self.unknown(key),
         }
     }
@@ -1859,7 +1870,7 @@ fn config(&mut self, table: &DeTable<'_>) -> Config {
 }
 ```
 
-- **`config`**: a táboa principal do arquivo. Cada chave que coñece vai ao seu campo, e calquera outra é un erro no sitio da chave: `` unknown key `colour` ``.
+- **`config`**: a táboa principal do arquivo. Cada chave que coñece vai ao seu campo, e calquera outra é un erro no sitio da chave: `` unknown key `colour` ``. Desde a 2.6, `shortcuts` vai a `config.shortcuts`, que le [`shortcuts`](#os-atallos-do-arquivo-shortcuts); ata entón, era unha chave que meiga non coñecía.
 - `default_profile` garda o seu valor co sitio do valor, e non co da chave, coma os erros dos valores: en `default_profile = "Ubuntu"`, a columna 19.
 
 ```rust
@@ -2009,6 +2020,84 @@ const fn kind(value: &DeValue<'_>) -> &'static str {
 
 **`kind`**: que é un valor, coma o din os erros (`not an integer`), cunha frase para cada tipo de TOML. É unha `const fn`.
 
+### Os atallos do arquivo: `shortcuts`
+
+Desde a subfase 2.6: as entradas de `[shortcuts]`, cada unha cunha combinación de chave e o nome dunha acción de valor ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisións 1 e 3). Este método do lector le as combinacións e as accións con [`shortcut.rs`](#cratesmeiga-coresrcshortcutrs), e deixa como moito unha entrada por combinación.
+
+```rust
+fn shortcuts(&mut self, key: &Key<'_>, value: &Value<'_>) -> Vec<shortcut::Entry> {
+    let DeValue::Table(table) = value.get_ref() else {
+        self.problem(
+            value.span(),
+            format!(
+                "`{}` has to be a table ([shortcuts]), not {}",
+                key.get_ref(),
+                kind(value.get_ref())
+            ),
+        );
+        return Vec::new();
+    };
+    // The table gives its keys in the order of their text: the entries
+    // go in the order of the file, so that the first one of a chord
+    // counts.
+    let mut items: Vec<(&Key<'_>, &Value<'_>)> = table.iter().collect();
+    insertion_sort_by(&mut items, |a, b| a.0.span().start.cmp(&b.0.span().start));
+    let mut entries = Vec::<(shortcut::Entry, u32)>::with_capacity(items.len());
+```
+
+1. **Unha táboa.** `shortcuts` ten que ser unha táboa: `[shortcuts]` ou, en liña, `shortcuts = { "ctrl+shift+u" = "profile_4" }`. Se non o é, coma en `shortcuts = ["ctrl+t"]`, é un erro no sitio do valor, `` `shortcuts` has to be a table ([shortcuts]), not an array ``, e non hai ningún atallo.
+2. **A orde do arquivo.** A táboa dá as súas chaves na orde dos seus textos, coma di o comentario ([`sort`](#os-erros-na-orde-do-arquivo-sort)): `"Ctrl+T"` iría antes ca `"alt+a"` e ca `"ctrl+t"`, porque as maiúsculas van antes ca as minúsculas. `items` garda cada entrada coma un par de referencias, á chave e ao valor, e [`insertion_sort_by`](#cratesmeiga-coresrcsortrs) ordénaas polo byte onde empeza cada chave, `span().start`: así quedan na orde do arquivo, e vale a primeira entrada de cada combinación.
+3. **`entries`** gardará as entradas que están ben, cada unha coa liña da súa chave, para o erro das que a repitan. `with_capacity` reserva unha vez para todas.
+
+```rust
+    for (key, value) in items {
+        let text = key.get_ref();
+        let chord = match Chord::parse(text) {
+            Ok(chord) => chord,
+            Err(_) if text.trim().is_empty() => {
+                self.problem(key.span(), "a shortcut cannot be empty");
+                continue;
+            }
+            Err(error) => {
+                self.problem(key.span(), format!("`{text}` is not a shortcut: {error}"));
+                continue;
+            }
+        };
+        let Some(name) = self.string(key, value) else {
+            continue;
+        };
+        let action = match Action::parse(&name) {
+            Ok(action) => action,
+            Err(error) => {
+                self.problem(value.span(), format!("`{name}` {error}"));
+                continue;
+            }
+        };
+        if let Some((_, line)) = entries.iter().find(|(entry, _)| entry.chord == chord) {
+            let message = format!("`{text}` repeats the shortcut of line {line}");
+            self.problem(key.span(), message);
+            continue;
+        }
+        let line = self.at(key.span()).line;
+        entries.push((shortcut::Entry { chord, action }, line));
+    }
+    entries.into_iter().map(|(entry, _)| entry).collect()
+}
+```
+
+4. **A combinación.** [`Chord::parse`](#ler-unha-combinación-chordparse) le a chave. Se está mal, a entrada ignórase, cun erro no sitio da chave: se a chave está baleira, ou só ten brancos, `a shortcut cannot be empty`; se non, o texto da chave e o motivo ([`ChordError`](#por-que-non-é-unha-combinación-chorderror)), coma `` `ctrl+a+b` is not a shortcut: it has more than one key ``.
+5. **O nome da acción.** O valor ten que ser unha cadea que non está baleira ([`string`](#o-lector-reader)), co erro de sempre no sitio do valor, que eiquí nomea a combinación: `` `ctrl+e` has to be a string, not an integer ``.
+6. **A acción.** [`Action::parse`](#os-nomes-das-accións-actions-none-e-actionparse) le o nome. Se está mal, o erro vai no sitio do valor, co nome e o motivo ([`ActionError`](#por-que-non-é-unha-acción-actionerror)): `` `quit` is not an action ``. `none` está ben: é unha entrada sen acción, que libera a combinación.
+7. **Unha combinación repetida.** Se unha entrada anterior xa ten a mesma combinación, esta ignórase, cun erro no sitio da súa chave que di a liña da primeira: `` `Ctrl+T` repeats the shortcut of line 2 ``. Dúas combinacións son a mesma se teñen os mesmos modificadores e a mesma tecla, escritas como sexa: `"ctrl+t"`, `"Ctrl+T"` e `"T + CTRL"`.
+8. Se todo está ben, a entrada gárdase, coa liña da súa chave, que dá `at`.
+9. **As entradas**, sen as liñas: `into_iter` e `map` quitan o número a cada unha, e `collect` fai o vector.
+
+- **Só se ignora a entrada mal** (decisión 3), coma nos perfís, e cada entrada dá como moito un erro, o primeiro: unha combinación mal cunha acción mal só dá o da combinación.
+- **Só as entradas que están ben contan para as repeticións.** Unha combinación cunha acción mal, coma `"ctrl+y" = "nwe_tab"`, non fai repetida a seguinte, `"Ctrl+Y" = "duplicate_tab"`, que vale. As entradas con `none` si contan.
+- **Escrita exactamente igual**, unha combinación dúas veces son a mesma chave para TOML, e `DeTable::parse` falla: o arquivo enteiro ignórase ([`parse`](#ler-o-arquivo-parse)), coma con calquera chave repetida.
+- **Vale a primeira**, coma cun perfil co nome doutro ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 2). `find` percorre as entradas anteriores: con poucas, nada.
+- Os atallos non se aplican eiquí: `Config::shortcuts` garda as entradas, e o programa pono por riba dos de meiga con [`Shortcuts::new`](#os-atallos-entry-e-shortcuts), que, con cada combinación unha vez, non ten que decidir cal vale.
+
 ### A liña e a columna: `position`
 
 ```rust
@@ -2037,18 +2126,22 @@ fn position(text: &str, offset: usize) -> Position {
 - Cada erro percorre o texto ata o seu sitio, sen gardar onde empeza cada liña: cun arquivo pequeno e uns poucos erros, abonda.
 - `try_from` deixa a liña e a columna en `u32::MAX` se non cupesen nun `u32`, en vez de cortalas; con 1 MiB, nunca pasa.
 
-**Probas.** Seis. `read` le un texto que ten que ser unha configuración, e dá os seus erros coma texto; `fails`, o erro dun arquivo que meiga ignora enteiro; e `entry`, unha entrada só co nome.
+**Probas.** Oito. `read` le un texto que ten que ser unha configuración, e dá os seus erros coma texto; `fails`, o erro dun arquivo que meiga ignora enteiro; `entry`, unha entrada só co nome; e, desde a 2.6, `shortcut`, unha entrada de `[shortcuts]`, cunha combinación que ten que estar ben e unha acción.
 
 | Proba | Que comproba |
 |---|---|
 | `an_empty_file_says_nothing` | Un arquivo baleiro, e un só cun comentario e CR LF, dan a configuración por defecto, sen erros. |
-| `it_takes_the_default_profile_and_the_profiles_in_their_order` | O arquivo do exemplo: `Ubuntu`, na liña 1, columna 19, e as dúas entradas na súa orde, coas comiñas e as barras invertidas das cadeas entre comiñas simples tal cal. E as táboas en liña, `profiles = [{ name = "a" }, { name = "b", hidden = false }]`, son dúas entradas. |
+| `it_takes_the_default_profile_and_the_profiles_in_their_order` | O arquivo do exemplo, sen os atallos: `Ubuntu`, na liña 1, columna 19, e as dúas entradas na súa orde, coas comiñas e as barras invertidas das cadeas entre comiñas simples tal cal, e ningún atallo. E as táboas en liña, `profiles = [{ name = "a" }, { name = "b", hidden = false }]`, son dúas entradas. |
 | `wrong_values_and_unknown_keys_are_ignored_with_their_place` | Nun arquivo con CR LF, un `default_profile` que é un número, unha chave `colour`, un `command` baleiro, un `hidden = "yes"`, unha chave `shortcut` e un `directory` que é unha lista dan seis erros, na orde do arquivo, cada un co seu sitio: o do valor nos valores, e o da chave nas chaves. O que está ben queda: as dúas entradas, sen eses valores, e sen perfil por defecto. |
 | `a_profile_needs_a_name_of_its_own` | Unha entrada sen `name` dá o erro na súa cabeceira, `Line 1, column 1`; unha con `name = 7`, só o do tipo; e a segunda chamada `a`, `` another profile is already named `a` `` no seu nome, e ignórase, co seu `hidden`. `profiles = { name = "a" }`, unha táboa, non é unha lista de táboas, e `profiles2`, na liña seguinte, é unha chave que meiga non coñece; e `profiles = ["cmd"]` ten un elemento que non é unha táboa. |
+| `shortcuts_go_in_the_order_of_the_file_and_the_first_of_a_chord_counts` | Desde a 2.6. `"ctrl+t" = "new_tab"`, `"ctrl+6" = "none"` e `"alt+a" = "tab_2"` quedan na orde do arquivo, con `NewTab`, sen acción e con `Tab(1)`; e `"Ctrl+T"`, despois, que na orde dos textos iría primeiro, é un erro: `` Line 5, column 1: `Ctrl+T` repeats the shortcut of line 2 ``. Unha táboa en liña, `shortcuts = { "ctrl+shift+u" = "profile_4" }`, tamén vale, con `Profile(3)`; e o mesmo texto dúas veces non é TOML: o arquivo enteiro ignórase, cun erro na liña 3, columna 1. |
+| `wrong_shortcuts_are_ignored_with_their_place` | Desde a 2.6. Nove erros, na orde do arquivo: catro na columna 1, a da combinación, `ctrl+a+b`, con dúas teclas, unha chave baleira, `win+e` e `alt+f4`; e cinco na columna 12, a da acción, `quit`, `tab_0`, un número, unha cadea baleira e `nwe_tab`. Só queda `"Ctrl+Y" = "duplicate_tab"`, despois de `"ctrl+y" = "nwe_tab"`: vale a primeira entrada dunha combinación que está ben. E `shortcuts = ["ctrl+t"]`, unha lista, dá un erro na columna 13, e ningún atallo. |
 | `a_file_that_is_not_toml_is_ignored_whole` | `hidden = tru` dá o erro do parser, `` Line 3, column 10: invalid boolean, expected `true` ``; unha cadea entre comiñas simples que non se pecha despois dun `Ñ`, o erro ao final da liña, na columna 21, que en bytes sería a 22; e unha chave repetida, un erro na liña 2, columna 1. |
 | `the_file_is_utf8_with_or_without_its_mark_and_not_too_large` | Co BOM, o arquivo lese igual, e `default_profile = "ñ"` ten o valor na columna 19; un byte que non é UTF-8 (`E1`), `Line 2, column 20: the file is not UTF-8 text`; e un arquivo de `MAX_SIZE + 1` bytes, `the file has more than 1 MiB`, pero un de `MAX_SIZE`, non. |
 
 **Como se comproba.** Ademais destas probas, `check-profiles.ps1` dálle a meiga na CI un `config.toml` con dous erros, unha chave que non coñece e un `hidden` que non é `true` nin `false`, e comproba a caixa que os mostra, coa liña e a columna de cada un; e despois, un arquivo que non é TOML ([Código › ferramentas](ferramentas.md#toolscheck-profilesps1)). Unha copia de meiga estragada a propósito que conta as columnas en bytes pasa a comprobación, porque o seu `config.toml` só ten ASCII antes dos seus erros, pero falla `a_file_that_is_not_toml_is_ignored_whole`; e unha que as conta desde 0 falla as dúas.
+
+Desde a 2.6, `check-shortcuts.ps1` dálle a meiga na CI un `config.toml` cunha táboa `[shortcuts]` con catro erros: unha combinación con dúas teclas, `"ctrl+t+w"`; unha acción que non existe, `open_explorer`; `profile_0`; e `"Alt+O"`, despois de `"alt+o"`. Comproba a caixa que os mostra, cada un coa súa liña e a súa columna, a da combinación ou a da acción; e, despois, que Alt+O pecha as outras tabs, coma di a súa primeira liña, e non a tab que se mostra, coma diría a segunda ([Código › ferramentas › `check-shortcuts.ps1`](ferramentas.md#toolscheck-shortcutsps1)). As copias de meiga estragadas a propósito que non len `[shortcuts]`, que non anotan o erro dunha combinación, que poñen o erro dunha acción no sitio da combinación, ou nas que vale a última entrada dunha combinación, fallan a comprobación.
 
 ## `crates/meiga-core/src/profile.rs`
 
@@ -2181,7 +2274,7 @@ impl Profiles {
 }
 ```
 
-- **`list`**: os perfís visíbeis, na orde do menú. Nunca está baleira. O menú dos perfís ten un elemento por perfil, co seu nome, e escollelo abre unha tab con el ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+- **`list`**: os perfís visíbeis, na orde do menú. Nunca está baleira. O menú dos perfís ten un elemento por perfil, co seu nome, e escollelo abre unha tab con el ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Desde a subfase 2.6, os atallos `profile_1`…`profile_9`, Ctrl+Maiús+1…9, abren os perfís deses sitios da lista ([`Action`](#as-accións-action)).
 - **`default`**: a posición do perfil por defecto na lista. `default_index` dálla ao menú, que pon ese elemento en negra ([`Entry::bold`](#entry-os-elementos-e-as-liñas)), e `default_profile` dá o perfil, o que abren o +, Ctrl+Maiús+T e a primeira tab.
 - Os campos son privados, e ningún método deixa a lista baleira nin o por defecto fóra dela: `default_profile` le `&self.list[self.default]` sen comprobar nada.
 
@@ -2306,7 +2399,7 @@ pub fn merge(
 
 - `and_then` só busca se o arquivo ten `default_profile`, e cada `or_else` só busca se o anterior non atopou nada.
 - O programa xunta estes erros cos do arquivo, e móstraos na mesma caixa (decisión 8; [Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)).
-- **Cada vez que se abre o menú dos perfís**, o programa atopa outra vez as shells, e volta chamar `merge` coa mesma configuración, para mostrar as que se instalaron mentres tanto (decisión 4). Os erros, que xa mostrou ao arrancar, descártaos.
+- **Cada vez que se abre o menú dos perfís** e, desde a subfase 2.6, cada vez que un atallo abre un perfil, coma Ctrl+Maiús+1 ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 6), o programa atopa outra vez as shells, e volta chamar `merge` coa mesma configuración, para mostrar ou abrir as que se instalaron mentres tanto (decisión 4). Os erros, que xa mostrou ao arrancar, descártaos.
 
 ### WSL e o seu cartafol: `wsl_command`
 
@@ -2377,7 +2470,7 @@ fn wsl_command(command: &str, folder: &Folder, system: &str) -> Option<String> {
 - `if let … && …` (unha cadea de `let`) mira o `~` e o carácter que o segue nunha soa condición: `is_none_or` é certo ao final do texto, onde non hai ningún, e cun espazo.
 - `eq_ignore_ascii_case` compara sen distinguir maiúsculas só en ASCII: abonda para `wsl.exe` e para o cartafol do sistema.
 
-**Probas.** Seis. `detected` dá os perfís dun equipo con todas as shells: PowerShell 7 en `%ProgramFiles%`, Windows PowerShell e Command Prompt no cartafol do sistema, Ubuntu e Git Bash; `entry`, unha entrada só co nome; `names`, os nomes da lista; `default_named`, un `default_profile` na liña 1, columna 19; e `environment`, un contorno só con `USERPROFILE`.
+**Probas.** Seis. `detected` dá os perfís dun equipo con todas as shells: PowerShell 7 en `%ProgramFiles%`, Windows PowerShell e Command Prompt no cartafol do sistema, Ubuntu e Git Bash; `entry`, unha entrada só co nome; `names`, os nomes da lista; `default_named`, un `default_profile` na liña 1, columna 19; e `environment`, un contorno só con `USERPROFILE`. As tres probas que fan unha configuración a man dan os campos que usan, e os outros con `..Config::default()`: desde a 2.6, `Config` ten tamén os atallos, que quedan baleiros.
 
 | Proba | Que comproba |
 |---|---|
@@ -2667,9 +2760,9 @@ fn wslenv(current: Option<&str>, add: &[&str], drop: &[&str]) -> String {
 
 ## `crates/meiga-core/src/sort.rs`
 
-Desde a subfase 2.5: unha ordenación para as listas curtas de meiga: as variábeis do contorno, os erros da configuración, as versións de PowerShell e as distribucións de WSL ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 12; [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)).
+Desde a subfase 2.5: unha ordenación para as listas curtas de meiga: as variábeis do contorno, os erros da configuración, as versións de PowerShell e as distribucións de WSL e, desde a 2.6, os atallos do `config.toml` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 12; [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)).
 
-**Por que unha propia.** As ordenacións da biblioteca estándar están feitas para listas longas. `sort_by`, a estábel, é *driftsort*, que xunta varios algoritmos, coma un *quicksort* e outro para os anacos pequenos (*smallsort*); e, coma calquera función xenérica, compílase unha vez para cada tipo que ordena e cada comparación ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Na 2.5, mentres se facía o código, `meiga.exe` tiña cinco copias dela, uns 33 KB. Unha ordenación por inserción ocupa uns centos de bytes por copia e, con unhas decenas de elementos, é tan rápida coma ela; cunha lista que xa está case ordenada, coma o contorno que dá Windows, máis. Cos cinco sitios ordenando con ela, e os dous que ordenan erros cunha soa función, [`config::sort`](#os-erros-na-orde-do-arquivo-sort), `meiga.exe` quedou 32 768 bytes máis pequeno.
+**Por que unha propia.** As ordenacións da biblioteca estándar están feitas para listas longas. `sort_by`, a estábel, é *driftsort*, que xunta varios algoritmos, coma un *quicksort* e outro para os anacos pequenos (*smallsort*); e, coma calquera función xenérica, compílase unha vez para cada tipo que ordena e cada comparación ([Tecnoloxías › Xenéricos e contadores atómicos](../tecnoloxias.md#53-xenéricos-e-contadores-atómicos)). Na 2.5, mentres se facía o código, `meiga.exe` tiña cinco copias dela, uns 33 KB. Unha ordenación por inserción ocupa uns centos de bytes por copia e, con unhas decenas de elementos, é tan rápida coma ela; cunha lista que xa está case ordenada, coma o contorno que dá Windows, máis. Na 2.5, cos cinco sitios ordenando con ela, e os dous que ordenan erros cunha soa función, [`config::sort`](#os-erros-na-orde-do-arquivo-sort), `meiga.exe` quedou 32 768 bytes máis pequeno. Na 2.6 chegou un sexto, os atallos do arquivo, cunha copia máis, tamén pequena.
 
 ```rust
 pub fn insertion_sort_by<T>(items: &mut [T], mut compare: impl FnMut(&T, &T) -> Ordering) {
@@ -2699,6 +2792,7 @@ pub fn insertion_sort_by<T>(items: &mut [T], mut compare: impl FnMut(&T, &T) -> 
 | Quen a usa | Que ordena |
 |---|---|
 | [`config::sort`](#os-erros-na-orde-do-arquivo-sort) | Os erros da configuración, na orde do arquivo. |
+| [`Reader::shortcuts`](#os-atallos-do-arquivo-shortcuts), en `config.rs` | Desde a 2.6: as entradas de `[shortcuts]`, na orde do arquivo, para que valla a primeira de cada combinación. |
 | [`Environment::block`](#o-bloque-block) | As variábeis do contorno, polo nome, sen distinguir maiúsculas. |
 | `profiles::detect`, en `meiga-win` | As versións de PowerShell, a máis nova primeiro, e as distribucións de WSL, a por defecto primeiro e as outras polo nome ([Código › meiga-win › `profiles.rs`](meiga-win.md#cratesmeiga-winsrcprofilesrs)). |
 
@@ -2708,6 +2802,664 @@ pub fn insertion_sort_by<T>(items: &mut [T], mut compare: impl FnMut(&T, &T) -> 
 |---|---|
 | `it_sorts_as_the_stable_sort_of_the_standard_library` | Listas de 0 a 39 elementos, con chaves do 0 ao 7, saídas dunha secuencia *xorshift* fixa, e a posición de cada elemento: quedan igual ca con `sort_by_key` da biblioteca estándar, que é estábel. Con tantas chaves repetidas, os elementos iguais só quedan na orde das súas posicións se a ordenación é estábel. |
 | `it_follows_the_order_that_it_is_given` | `[3, 1, 4, 1, 5, 9, 2, 6]`, coa comparación ao revés, queda `[9, 6, 5, 4, 3, 2, 1, 1]`. |
+
+## `crates/meiga-core/src/shortcut.rs`
+
+Desde a subfase 2.6: os atallos de teclado, as teclas que meiga colle para si e o que fai cada unha ([ADR 0023](../adr/0023-os-atallos-de-teclado.md); [Arquitectura › Os atallos de teclado](../arquitectura.md#os-atallos-de-teclado); [Tecnoloxías › Os atallos de teclado](../tecnoloxias.md#58-os-atallos-de-teclado-as-teclas-virtuais-altgr-e-os-doutros-programas)). Un atallo é unha combinación, unhas teclas modificadoras e unha tecla, e unha acción. meiga ten os seus, coma o Windows Terminal e Chrome, e a táboa `[shortcuts]` do `config.toml` engade outros, cámbialles a acción ou libéraos ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 1):
+
+```toml
+[shortcuts]
+"ctrl+t" = "new_tab"            # another shortcut for an action
+"ctrl+6" = "none"               # Ctrl+6 reaches the program again
+"ctrl+shift+u" = "profile_4"
+```
+
+Este arquivo, o do comentario do módulo (`//!`), fai de Ctrl+T outro atallo para abrir unha tab, ademais de Ctrl+Maiús+T; libera Ctrl+6, que con meiga mostra a sexta tab, para que chegue outra vez ao programa; e fai que Ctrl+Maiús+U abra o cuarto perfil do menú dos perfís.
+
+**A sintaxe** é a do Windows Terminal, coma di o comentario do módulo ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 2): as teclas modificadoras `ctrl`, `alt` e `shift`, en calquera orde, e unha tecla, unidas con `+`, sen distinguir maiúsculas. A tecla é unha letra, un díxito, `f1`–`f24`, `numpad0`–`numpad9` ou un dos nomes de [`NAMES`](#as-teclas-virtuais-e-os-seus-nomes-names), e vai polo seu código de tecla virtual, que di que tecla é na distribución do teclado, e non polo carácter que escribe: `ctrl+shift+2` é a mesma combinación con calquera distribución, aínda que o 2 con Maiús escriba `@` nunhas e `"` noutras, coma no teclado estadounidense e no español ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)). AltGr, que Windows dá coma o Ctrl esquerdo e o Alt dereito, escribe caracteres: ningún atallo o ten, coma no Windows Terminal (decisión 10).
+
+O módulo ten tres partes:
+
+| Parte | Que é |
+|---|---|
+| [`Chord`](#a-combinación-chord) | Unha combinación: a dunha tecla que baixa, ou a dun texto do arquivo. |
+| [`Action`](#as-accións-action) | O que fai un atallo, co seu nome no arquivo. |
+| [`Shortcuts`](#os-atallos-entry-e-shortcuts) | Os atallos dunha xanela, os de meiga, [`defaults`](#os-atallos-de-meiga-defaults), cos do arquivo por riba, e a acción de cada combinación. |
+
+Non le o arquivo nin o teclado. `config.rs` le a táboa, e garda as súas entradas ([`shortcuts`](#os-atallos-do-arquivo-shortcuts)); o programa fai con elas os atallos da xanela, unha vez, ao crear as súas tabs; e a vista do terminal busca a combinación de cada tecla que baixa, e fai a súa acción ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). Así que se proba con textos e con eventos de tecla feitos a man. Usa [`KeyEvent`](#keyevent), de `input.rs`, para a combinación dunha tecla, e `std::fmt`, para as mensaxes dos erros.
+
+### As teclas virtuais e os seus nomes: `NAMES`
+
+```rust
+const VK_TAB: u16 = 0x09;
+const VK_SPACE: u16 = 0x20;
+const VK_PRIOR: u16 = 0x21;
+const VK_NEXT: u16 = 0x22;
+const VK_END: u16 = 0x23;
+const VK_HOME: u16 = 0x24;
+const VK_UP: u16 = 0x26;
+const VK_DOWN: u16 = 0x28;
+const VK_APPS: u16 = 0x5d;
+const VK_NUMPAD0: u16 = 0x60;
+const VK_ADD: u16 = 0x6b;
+const VK_SUBTRACT: u16 = 0x6d;
+const VK_F1: u16 = 0x70;
+const VK_F4: u16 = 0x73;
+const VK_F10: u16 = 0x79;
+const VK_OEM_PLUS: u16 = 0xbb;
+const VK_OEM_MINUS: u16 = 0xbd;
+```
+
+**Os `VK_…`**: os códigos de tecla virtual que usan os atallos de meiga, cos nomes e os valores de Windows: Tab, Espazo, RePáx (`PRIOR`), AvPáx (`NEXT`), Fin, Inicio, ↑, ↓, a tecla de menú (`APPS`), o 0, o + e o − do teclado numérico (`NUMPAD0`, `ADD` e `SUBTRACT`), F1, F4 e F10, e as teclas que escriben + e - (`OEM_PLUS` e `OEM_MINUS`). Úsanos `NAMES`, [`key_code`](#o-código-dunha-tecla-key_code-strip_prefix_ignore_case-e-number), [`Chord::parse`](#ler-unha-combinación-chordparse) e [`defaults`](#os-atallos-de-meiga-defaults). Son privados. `meiga-core` non depende de `windows-sys`, e o módulo `vk` de `input.rs`, cos códigos que trata á parte a codificación VT, é privado: coma el, este módulo define os seus ([`input.rs`](#os-axudantes-das-secuencias)).
+
+```rust
+pub const NAMES: [(&str, u16); 32] = [
+    ("enter", 0x0d),
+    ("tab", VK_TAB),
+    ("space", VK_SPACE),
+    ("backspace", 0x08),
+    ("menu", VK_APPS),
+    ("app", VK_APPS),
+    ("insert", 0x2d),
+    ("delete", 0x2e),
+    ("home", VK_HOME),
+    ("end", VK_END),
+    ("pgdn", VK_NEXT),
+    ("pagedown", VK_NEXT),
+    ("pgup", VK_PRIOR),
+    ("pageup", VK_PRIOR),
+    ("esc", 0x1b),
+    ("escape", 0x1b),
+    ("left", 0x25),
+    ("right", 0x27),
+    ("up", VK_UP),
+    ("down", VK_DOWN),
+    ("numpad_plus", VK_ADD),
+    ("numpad_add", VK_ADD),
+    ("numpad_minus", VK_SUBTRACT),
+    ("numpad_subtract", VK_SUBTRACT),
+    ("numpad_multiply", 0x6a),
+    ("numpad_divide", 0x6f),
+    ("numpad_period", 0x6e),
+    ("numpad_decimal", 0x6e),
+    ("plus", VK_OEM_PLUS),
+    ("comma", 0xbc),
+    ("minus", VK_OEM_MINUS),
+    ("period", 0xbe),
+];
+```
+
+**`NAMES`**: os nomes das teclas que non son unha letra, un díxito nin unha tecla de función, cos seus códigos. Son os do Windows Terminal, sen os das teclas do navegador (decisión 2):
+
+| Nomes | Tecla | Código |
+|---|---|---|
+| `enter` | Intro | `0x0D` |
+| `tab` | Tab | `0x09` |
+| `space` | Espazo | `0x20` |
+| `backspace` | Retroceso | `0x08` |
+| `menu`, `app` | A tecla de menú | `0x5D` |
+| `insert`, `delete` | Insert e Supr | `0x2D` e `0x2E` |
+| `home`, `end` | Inicio e Fin | `0x24` e `0x23` |
+| `pgdn`, `pagedown` | AvPáx | `0x22` |
+| `pgup`, `pageup` | RePáx | `0x21` |
+| `esc`, `escape` | Esc | `0x1B` |
+| `left`, `right`, `up`, `down` | As frechas | `0x25`, `0x27`, `0x26` e `0x28` |
+| `numpad_plus`, `numpad_add` | O + do teclado numérico | `0x6B` |
+| `numpad_minus`, `numpad_subtract` | O − do teclado numérico | `0x6D` |
+| `numpad_multiply`, `numpad_divide` | O * e a / do teclado numérico | `0x6A` e `0x6F` |
+| `numpad_period`, `numpad_decimal` | A tecla decimal do teclado numérico | `0x6E` |
+| `plus`, `comma`, `minus`, `period` | As teclas que escriben `+`, `,`, `-` e `.` en calquera distribución | `0xBB`, `0xBC`, `0xBD` e `0xBE` |
+
+- Os nomes van en minúsculas, pero [`key_code`](#o-código-dunha-tecla-key_code-strip_prefix_ignore_case-e-number) compáraos sen distinguir maiúsculas: `PageUp` tamén vale. Algunhas teclas teñen dous nomes, coma `pgup` e `pageup`.
+- Non están as letras, os díxitos, `f1`–`f24` nin `numpad0`–`numpad9`, que `key_code` calcula.
+- A tecla `+` chámase `plus`: o `+` separa as partes dunha combinación.
+- É pública, pero polo de agora só a usan este módulo e as súas probas.
+
+### A combinación: `Chord`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Chord {
+    modifiers: u8,
+    key: u16,
+}
+```
+
+```rust
+pub const CTRL: u8 = 1;
+pub const ALT: u8 = 2;
+pub const SHIFT: u8 = 4;
+
+pub const fn new(modifiers: u8, key: u16) -> Self {
+    Self {
+        modifiers: modifiers & (Self::CTRL | Self::ALT | Self::SHIFT),
+        key,
+    }
+}
+```
+
+- **`Chord`**: unha combinación, as teclas modificadoras que están abaixo e a tecla que baixa. `modifiers` garda Ctrl, Alt e Maiús en tres bits, `CTRL`, `ALT` e `SHIFT`, ou ningún; e `key`, o código de tecla virtual da tecla. Non distingue o Ctrl esquerdo do dereito, nin o Alt: `ctrl+t` vale cos dous Ctrl.
+- **`new`** fai unha combinación, e quítalles aos modificadores calquera outro bit (`&`): dúas combinacións coas mesmas teclas son sempre iguais. Os campos son privados, así que toda combinación pasa por el.
+- **Ningún método dá os campos**: ningún código os necesita, porque as combinacións compáranse enteiras.
+- É `Copy`, e vai por valor. `PartialEq` e `Eq` comparan os dous campos: así atopa [`Shortcuts::action`](#os-atallos-entry-e-shortcuts) a combinación dunha tecla entre as dos atallos, e `config.rs`, unha combinación repetida ([`shortcuts`](#os-atallos-do-arquivo-shortcuts)). `Hash` deixaría usala de chave nun mapa, pero os atallos van nunha lista.
+- Todas as funcións de `Chord` son `const fn`, menos `parse`.
+
+### A combinación dunha tecla: `Chord::of`
+
+```rust
+pub const fn of(event: &KeyEvent) -> Option<Self> {
+    let controls = event.controls;
+    if event.key == 0 || controls.alt_gr() {
+        return None;
+    }
+    let mut modifiers = 0;
+    if controls.ctrl() {
+        modifiers |= Self::CTRL;
+    }
+    if controls.alt() {
+        modifiers |= Self::ALT;
+    }
+    if controls.shift() {
+        modifiers |= Self::SHIFT;
+    }
+    Some(Self::new(modifiers, event.key))
+}
+```
+
+**`of`** dá a combinación dunha tecla que baixa: Ctrl, Alt e Maiús, os que están abaixo, e a súa tecla ([`ControlKeys`](#controlkeys)). Dá `None` se ningún atallo a pode ter: cun carácter sen tecla, dun IME ou do panel de emoji, que chega coma a tecla 0 ([`KeyEvent`](#keyevent)); e cunha tecla con AltGr, tamén con Maiús. [`alt_gr`](#controlkeys) di se o Ctrl e o Alt que están abaixo son só os de AltGr, o Ctrl esquerdo e o Alt dereito. AltGr escribe caracteres, coma `@`, `#`, `€` ou os corchetes no teclado español, e nunca dispara un atallo ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 10).
+
+- **Calquera outro Ctrl e Alt é Ctrl+Alt.** Cos dous Ctrl e o Alt dereito, ou co Ctrl dereito e o Alt esquerdo, xa non é só AltGr, e a combinación dispara os atallos `ctrl+alt+…` que poña o arquivo. O Windows Terminal mira só que estean o Ctrl esquerdo e o Alt dereito, e non os outros dous (decisión 10).
+- As teclas de bloqueo e a marca das teclas estendidas non contan: Ctrl+Maiús+T é a mesma combinación co Bloq Num activado.
+- Non mira se a tecla baixa: a vista chámaa só coas que baixan, tamén cando repiten ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
+- É unha `const fn`, coma `alt_gr`, `ctrl`, `alt` e `shift`.
+
+### Ler unha combinación: `Chord::parse`
+
+```rust
+pub fn parse(text: &str) -> Result<Self, ChordError> {
+    let mut modifiers = 0;
+    let mut key = None;
+    for part in text.split('+') {
+        let part = part.trim();
+        if part.is_empty() {
+            return Err(ChordError::Empty);
+        }
+        if part.eq_ignore_ascii_case("ctrl") {
+            modifiers |= Self::CTRL;
+        } else if part.eq_ignore_ascii_case("alt") {
+            modifiers |= Self::ALT;
+        } else if part.eq_ignore_ascii_case("shift") {
+            modifiers |= Self::SHIFT;
+        } else if part.eq_ignore_ascii_case("win") {
+            return Err(ChordError::Windows);
+        } else {
+            let code = key_code(part).ok_or_else(|| ChordError::Unknown(part.to_owned()))?;
+            if key.replace(code).is_some() {
+                return Err(ChordError::TwoKeys);
+            }
+        }
+    }
+    let key = key.ok_or(ChordError::NoKey)?;
+    // Windows closes the window with Alt+F4, and opens its menu with
+    // Alt+Space: meiga never gets them (ADR 0014).
+    if modifiers & (Self::ALT | Self::CTRL) == Self::ALT && matches!(key, VK_F4 | VK_SPACE) {
+        return Err(ChordError::ForWindows);
+    }
+    Ok(Self::new(modifiers, key))
+}
+```
+
+**`parse`** le unha combinación escrita coma no Windows Terminal, coma `ctrl+shift+t`. Paso a paso:
+
+1. **As partes.** `split('+')` parte o texto en cada `+`, e `trim` quita os brancos arredor de cada parte, que non contan: `Shift + CTRL + T` é `ctrl+shift+t`.
+2. **Unha parte baleira** é un erro, `Empty`: `""`, `ctrl+` ou `ctrl++`. Por iso a tecla + escríbese `plus`.
+3. **Os modificadores.** `ctrl`, `alt` e `shift`, sen distinguir maiúsculas (`eq_ignore_ascii_case`), engaden o seu bit. Repetidos, son o mesmo: `ctrl+ctrl+t` é `ctrl+t`.
+4. **`win`** é un erro, `Windows`: as teclas Windows son de Windows (decisión 2).
+5. **A tecla.** Calquera outra parte é a tecla: [`key_code`](#o-código-dunha-tecla-key_code-strip_prefix_ignore_case-e-number) dá o seu código, ou é un erro, `Unknown`, coa parte. Unha segunda tecla é outro erro, `TwoKeys`: `replace` garda a nova en `key`, e devolve a que había.
+6. **Sen tecla**, só con modificadores, é un erro, `NoKey`.
+7. **Alt+F4 e Alt+Espazo**, con Maiús ou sen el, son un erro, `ForWindows`: Windows pecha a xanela con Alt+F4 e abre o seu menú con Alt+Espazo, e meiga non os recibe nunca, coma di o comentario ([ADR 0014](../adr/0014-o-teclado.md), decisión 5). A condición, Alt sen Ctrl, é a mesma coa que o teclado da xanela llos deixa a Windows ([Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)). Con Ctrl, son outras combinacións: `ctrl+alt+f4` vale.
+8. **A combinación**, con `new`.
+
+- O erro é o da primeira parte mal, de esquerda a dereita: `return` e `?` devólveno no momento.
+- Máis permisiva ca o Windows Terminal, que distingue maiúsculas nos nomes das teclas, salvo nas letras, e non admite brancos (decisión 2). Pero con menos teclas: sen `win`, nin `vk()`, `sc()` ou un carácter calquera, que depende da distribución do teclado.
+- `ok_or_else` só fai o erro, e copia a parte nun `String` con `to_owned`, cando a parte non é unha tecla.
+
+### Por que non é unha combinación: `ChordError`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ChordError {
+    Empty,
+    NoKey,
+    TwoKeys,
+    Unknown(String),
+    Windows,
+    ForWindows,
+}
+
+impl fmt::Display for ChordError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Empty => f.write_str("a part is empty (the key + is `plus`)"),
+            Self::NoKey => f.write_str("it has no key, only modifier keys"),
+            Self::TwoKeys => f.write_str("it has more than one key"),
+            Self::Unknown(part) => write!(f, "`{part}` is not a key"),
+            Self::Windows => f.write_str("the Windows keys are for Windows"),
+            Self::ForWindows => f.write_str("Alt+F4 and Alt+Space are for Windows"),
+        }
+    }
+}
+```
+
+| Variante | Cando | Mensaxe |
+|---|---|---|
+| `Empty` | Non hai nada entre dous `+`, ou antes ou despois dun. | `` a part is empty (the key + is `plus`) `` |
+| `NoKey` | Só ten modificadores, coma `ctrl+shift`. | `it has no key, only modifier keys` |
+| `TwoKeys` | Ten máis dunha tecla, coma `ctrl+a+b`. | `it has more than one key` |
+| `Unknown` | Unha parte non é un modificador nin unha tecla, coma `hyper`, `ñ` ou `f25`. Garda a parte. | `` `hyper` is not a key `` |
+| `Windows` | Ten unha tecla Windows, `win`. | `the Windows keys are for Windows` |
+| `ForWindows` | É Alt+F4 ou Alt+Espazo, con Maiús ou sen el. | `Alt+F4 and Alt+Space are for Windows` |
+
+- `Display` escribe o motivo, en inglés coma o resto da interface. O erro da caixa de mensaxe leva diante a combinación: `` `ctrl+a+b` is not a shortcut: it has more than one key `` ([`shortcuts`](#os-atallos-do-arquivo-shortcuts)).
+- Non é `Copy`: `Unknown` leva un `String`.
+
+### O código dunha tecla: `key_code`, `strip_prefix_ignore_case` e `number`
+
+```rust
+fn key_code(name: &str) -> Option<u16> {
+    let bytes = name.as_bytes();
+    if let [byte] = bytes {
+        return match byte.to_ascii_uppercase() {
+            byte @ (b'0'..=b'9' | b'A'..=b'Z') => Some(u16::from(byte)),
+            _ => None,
+        };
+    }
+    if let Some(number) = strip_prefix_ignore_case(name, "f").and_then(number) {
+        return match number {
+            1..=24 => Some(VK_F1 + number - 1),
+            _ => None,
+        };
+    }
+    if let Some(digit) = strip_prefix_ignore_case(name, "numpad")
+        .map(|rest| rest.strip_prefix('_').unwrap_or(rest))
+        .and_then(number)
+    {
+        return match digit {
+            0..=9 => Some(VK_NUMPAD0 + digit),
+            _ => None,
+        };
+    }
+    NAMES
+        .iter()
+        .find(|(known, _)| known.eq_ignore_ascii_case(name))
+        .map(|&(_, code)| code)
+}
+```
+
+**`key_code`** dá o código de tecla virtual da tecla `name`, sen distinguir maiúsculas, ou `None`. Proba catro formas, nesta orde:
+
+1. **Un só byte**: unha letra ou un díxito, que teñen de código o seu carácter en ASCII, en maiúsculas: `t` e `T` son `0x54`, e `1`, `0x31`. O patrón `[byte]` casa cun texto dun só byte, e `byte @ (…)` colle o byte en maiúsculas se está nun dos dous rangos. Calquera outro carácter, coma `,` ou `-`, non é unha tecla: escríbese co seu nome, `comma` ou `minus`. Un carácter de varios bytes en UTF-8, coma `ñ`, non entra eiquí nin está entre os nomes: tampouco é unha tecla.
+2. **`f` e un número** do 1 ao 24: F1–F24, que teñen códigos seguidos desde `VK_F1`, `0x70`; F24 é `0x87`. Outro número, coma `f0`, `f25` ou `f65535`, non é unha tecla: o `match` dá `None`, e `return` sae sen mirar os nomes, onde tampouco está.
+3. **`numpad` e un díxito**, con `_` ou sen el: o díxito do teclado numérico, `VK_NUMPAD0` máis o díxito. `numpad7` e `numpad_7` son `0x67`; `numpad10` e `numpad65535` non son teclas. `strip_prefix('_')` quita o guión baixo, se o hai, e `unwrap_or` deixa o resto como estaba se non.
+4. **Os nomes** de [`NAMES`](#as-teclas-virtuais-e-os-seus-nomes-names), sen distinguir maiúsculas: o primeiro que coincide. Eiquí chegan tamén `numpad_plus` e os outros nomes do teclado numérico, porque `plus` non é un número; e `f` só, dun byte, é a tecla F, do primeiro paso.
+
+- **O `match` mira o número antes de sumalo.** `number`, máis abaixo, acepta calquera número que caiba nun `u16`, ata 65 535, e as sumas, `VK_F1 + number - 1` e `VK_NUMPAD0 + digit`, tamén son `u16`: cun número coma 65 535, pasarían do máximo (*overflow*), con `f` desde o 65 424, e con `numpad` desde o 65 440. Por iso a suma vai no brazo do rango, e só se fai despois de comprobalo. `(1..=24).contains(&number).then_some(VK_F1 + number - 1)` diría o mesmo, pero `then_some` recibe o seu valor xa calculado, mesmo cando vai dar `None`: a suma faríase sempre. Nunha compilación de depuración, coma a das probas, o *overflow* sería un *panic*; e en *release*, que non o comproba, a suma daría a volta, e `then_some` tiraría ese valor errado.
+
+```rust
+fn strip_prefix_ignore_case<'a>(text: &'a str, prefix: &str) -> Option<&'a str> {
+    let start = text.get(..prefix.len())?;
+    start
+        .eq_ignore_ascii_case(prefix)
+        .then(|| &text[prefix.len()..])
+}
+
+fn number(digits: &str) -> Option<u16> {
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok()
+}
+```
+
+- **`strip_prefix_ignore_case`**: `text` sen `prefix` ao principio, se empeza por el, sen distinguir maiúsculas: `F12` dá `12`. `str::strip_prefix` distingue maiúsculas, e por iso esta. `get(..prefix.len())` dá `None`, e non un *panic*, se o texto é máis curto ca o prefixo, ou se ese byte cae no medio dun carácter de varios bytes; `then` só corta o texto se o principio coincide. O resultado é un anaco do mesmo texto, co seu tempo de vida, `'a`, sen copialo.
+- **`number`**: o número que escriben `digits`, se todos son díxitos, e non demasiados para un `u16`, ata 65 535. `str::parse` aceptaría un `+` diante, coma en `+1`, e por iso se miran antes os bytes; con demasiados díxitos falla, e `ok` dá `None`. Os ceros diante non contan: `f01` é F1. Úsana `key_code` e [`Action::parse`](#os-nomes-das-accións-actions-none-e-actionparse).
+
+### As accións: `Action`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Action {
+    NewTab,
+    CloseTab,
+    NextTab,
+    PreviousTab,
+    Tab(u16),
+    LastTab,
+    Profile(u16),
+    ProfileMenu,
+    TabMenu,
+    DuplicateTab,
+    CloseOtherTabs,
+    CloseTabsToTheRight,
+    Copy,
+    Paste,
+    ScrollUp,
+    ScrollDown,
+    ScrollPageUp,
+    ScrollPageDown,
+    ScrollToTop,
+    ScrollToBottom,
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
+}
+```
+
+O que fai un atallo, co seu nome no `config.toml` ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 4):
+
+| Acción | Nome | Que fai |
+|---|---|---|
+| `NewTab` | `new_tab` | Abre unha tab co perfil por defecto, coma o botón +. |
+| `CloseTab` | `close_tab` | Pecha a tab que se mostra. |
+| `NextTab` | `next_tab` | Mostra a tab seguinte, ou a primeira despois da última. |
+| `PreviousTab` | `previous_tab` | Mostra a anterior, ou a última antes da primeira. |
+| `Tab(n)` | `tab_1`, `tab_2`… | Mostra a tab dese sitio da barra, contado desde 0: `tab_1` é `Tab(0)`. Se alí non hai ningunha, non pasa nada. |
+| `LastTab` | `last_tab` | Mostra a última tab. |
+| `Profile(n)` | `profile_1`, `profile_2`… | Abre unha tab co perfil dese sitio do menú dos perfís, contado desde 0: `profile_1` é `Profile(0)`. |
+| `ProfileMenu` | `profile_menu` | Abre o menú dos perfís, coma o botón que está xunto ao +. |
+| `TabMenu` | `tab_menu` | Abre o menú da tab que se mostra, debaixo dela. |
+| `DuplicateTab` | `duplicate_tab` | Duplica a tab que se mostra, coma o seu menú. |
+| `CloseOtherTabs` | `close_other_tabs` | Pecha todas as tabs menos a que se mostra, coma o seu menú. |
+| `CloseTabsToTheRight` | `close_tabs_to_the_right` | Pecha as tabs á dereita da que se mostra, coma o seu menú. |
+| `Copy` | `copy` | Copia a selección, se a hai. |
+| `Paste` | `paste` | Pega o portapapeis. |
+| `ScrollUp` e `ScrollDown` | `scroll_up` e `scroll_down` | Move a vista do historial unha fila arriba ou abaixo. |
+| `ScrollPageUp` e `ScrollPageDown` | `scroll_page_up` e `scroll_page_down` | Unha páxina arriba ou abaixo. |
+| `ScrollToTop` e `ScrollToBottom` | `scroll_to_top` e `scroll_to_bottom` | Ao principio do historial, ou ao final. |
+| `ZoomIn` e `ZoomOut` | `zoom_in` e `zoom_out` | Fai a fonte un punto máis grande, ou máis pequena. |
+| `ZoomReset` | `zoom_reset` | Leva a fonte ao seu tamaño do principio. |
+
+- **O que fai cada unha é cousa do programa**: a vista do terminal fai as do portapapeis, o historial e o zoom, e pásalles as outras ás tabs ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs) e [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Este módulo só as nomea.
+- **A tecla vai ao programa** cando a acción non se pode facer: copiar sen selección, e mover o historial na pantalla alternativa, que non ten historial (decisión 4). Así, Ctrl+C sen selección segue chegando ao programa.
+- **`Tab` e `Profile`** levan un sitio, desde 0, nun `u16`. Unha tab ou un perfil que non existe non fai nada, e a tecla tampouco lle chega ao programa: é a dun atallo de meiga, teña ou non onde ir (decisión 11).
+- É `Copy`: vai por valor nos atallos e nas entradas do arquivo.
+
+### Os nomes das accións: `ACTIONS`, `NONE` e `Action::parse`
+
+```rust
+const ACTIONS: [(&str, Action); 21] = [
+    ("new_tab", Action::NewTab),
+    ("close_tab", Action::CloseTab),
+    ("next_tab", Action::NextTab),
+    ("previous_tab", Action::PreviousTab),
+    ("last_tab", Action::LastTab),
+    ("profile_menu", Action::ProfileMenu),
+    ("tab_menu", Action::TabMenu),
+    ("duplicate_tab", Action::DuplicateTab),
+    ("close_other_tabs", Action::CloseOtherTabs),
+    ("close_tabs_to_the_right", Action::CloseTabsToTheRight),
+    ("copy", Action::Copy),
+    ("paste", Action::Paste),
+    ("scroll_up", Action::ScrollUp),
+    ("scroll_down", Action::ScrollDown),
+    ("scroll_page_up", Action::ScrollPageUp),
+    ("scroll_page_down", Action::ScrollPageDown),
+    ("scroll_to_top", Action::ScrollToTop),
+    ("scroll_to_bottom", Action::ScrollToBottom),
+    ("zoom_in", Action::ZoomIn),
+    ("zoom_out", Action::ZoomOut),
+    ("zoom_reset", Action::ZoomReset),
+];
+
+pub const NONE: &str = "none";
+```
+
+- **`ACTIONS`**: os nomes das 21 accións sen número, coma os escribe o `config.toml`: en minúsculas, cun `_` entre as palabras (decisión 2). É privada.
+- **`NONE`**: `none`, o nome que libera unha combinación: a súa tecla vai entón ao programa. É pública, pero polo de agora só a usa `parse`.
+
+```rust
+pub fn parse(name: &str) -> Result<Option<Self>, ActionError> {
+    if name == NONE {
+        return Ok(None);
+    }
+    if let Some((_, action)) = ACTIONS.iter().find(|(known, _)| *known == name) {
+        return Ok(Some(*action));
+    }
+    let numbered = |prefix: &str, action: fn(u16) -> Self| {
+        let digits = name.strip_prefix(prefix)?;
+        Some(match number(digits) {
+            Some(0) => Err(ActionError::FromOne),
+            Some(place) => Ok(Some(action(place - 1))),
+            None => Err(ActionError::Unknown),
+        })
+    };
+    numbered("tab_", Self::Tab)
+        .or_else(|| numbered("profile_", Self::Profile))
+        .unwrap_or(Err(ActionError::Unknown))
+}
+```
+
+**`parse`** le o nome dunha acción, coma o escribe o `config.toml`. Devolve `Ok(Some(acción))`; `Ok(None)` con `none`, que libera a combinación; ou un erro. Paso a paso:
+
+1. `none`: `Ok(None)`.
+2. Un nome de `ACTIONS`: `find` percorre a lista.
+3. `tab_` ou `profile_` e un número desde 1: `Tab` ou `Profile`, co número menos 1, o sitio contado desde 0. `tab_0` e `profile_0` teñen un erro de seu, `FromOne`, que lembra que se contan desde 1. Calquera outra cousa despois do prefixo é `Unknown`: `tab_`, `tab_x`, `tab_+1` ou `tab_99999`, que non cabe nun `u16` ([`number`](#o-código-dunha-tecla-key_code-strip_prefix_ignore_case-e-number)).
+4. Calquera outro nome: `Unknown`.
+
+- **Distingue maiúsculas**, ao contrario ca as combinacións: `New_Tab`, `None` e `Tab_1` non son accións. As accións escríbense en minúsculas (decisión 2).
+- **`numbered`**, unha *closure*, proba un prefixo: o `?` sae dela con `None` se o nome non empeza por el, e entón `or_else` proba o seguinte; se ningún coincide, `unwrap_or` dá `Unknown`. Recibe a variante, `Self::Tab` ou `Self::Profile`, coma unha función `fn(u16) -> Self`: o nome dunha variante cun campo é tamén a función que a fai.
+- O número máis grande é 65 535: `tab_65535` é `Tab(65534)`.
+
+### As que repiten: `Action::repeats`
+
+```rust
+pub const fn repeats(self) -> bool {
+    matches!(
+        self,
+        Self::NextTab
+            | Self::PreviousTab
+            | Self::ScrollUp
+            | Self::ScrollDown
+            | Self::ScrollPageUp
+            | Self::ScrollPageDown
+            | Self::ScrollToTop
+            | Self::ScrollToBottom
+            | Self::ZoomIn
+            | Self::ZoomOut
+    )
+}
+```
+
+**`repeats`**: se a acción se fai outra vez mentres se mantén a súa tecla, cada vez que o teclado a repite ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 12): a tab seguinte e a anterior, as seis do historial, e o zoom, menos o tamaño do principio. As outras, non: unha tecla mantida abre unha soa tab, pecha unha soa ou pega unha vez.
+
+- As teclas dun atallo non lle chegan ao programa mentres repiten nin cando soben, repitan ou non a acción: iso faino a vista, que apunta as teclas que colle ata que soben ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
+- Ata a 2.5, a vista decidía pola tecla: repetían RePáx, AvPáx, Inicio, Fin, ↑, ↓, as teclas do zoom e Tab. Desde a 2.6, unha combinación pode ter calquera acción, e decide a acción.
+- `matches!` compara a acción cos patróns. É unha `const fn`.
+
+### Por que non é unha acción: `ActionError`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActionError {
+    Unknown,
+    FromOne,
+}
+
+impl fmt::Display for ActionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Unknown => "is not an action",
+            Self::FromOne => "is not an action: the tabs and the profiles count from 1",
+        })
+    }
+}
+```
+
+- **`Unknown`**: un nome que non é unha acción. **`FromOne`**: `tab_0` ou `profile_0`.
+- `Display` escribe o motivo sen o nome, que pon diante `config.rs` ([`shortcuts`](#os-atallos-do-arquivo-shortcuts)): `` `quit` is not an action ``, ou `` `tab_0` is not an action: the tabs and the profiles count from 1 ``. O `match` escolle o texto, e un só `write_str` escríbeo.
+- É `Copy`: non leva datos.
+
+### Os atallos: `Entry` e `Shortcuts`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Entry {
+    pub chord: Chord,
+    pub action: Option<Action>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Shortcuts {
+    list: Vec<(Chord, Action)>,
+}
+
+impl Default for Shortcuts {
+    fn default() -> Self {
+        Self { list: defaults() }
+    }
+}
+```
+
+- **`Entry`**: unha entrada de `[shortcuts]`, coma a deixa `config.rs` ([`shortcuts`](#os-atallos-do-arquivo-shortcuts)): a combinación e a súa acción, ou `None` se a combinación queda libre, e a súa tecla vai ao programa. Os campos son públicos: `Config::shortcuts` garda unha lista delas.
+- **`Shortcuts`**: os atallos dunha xanela, unha acción por cada combinación que colle meiga, nunha lista de pares. Unha lista, e non un mapa: buscar nela percorre unhas cincuenta combinacións, e só cando baixa unha tecla; en repouso, nada.
+- **`Default`**: os atallos de meiga sen arquivo, os de [`defaults`](#os-atallos-de-meiga-defaults). Polo de agora só o usan as probas: o programa usa sempre `new`, tamén cunha lista baleira.
+
+```rust
+pub fn new(entries: &[Entry]) -> Self {
+    let mut list = defaults();
+    for entry in entries {
+        list.retain(|(chord, _)| *chord != entry.chord);
+        if let Some(action) = entry.action {
+            list.push((entry.chord, action));
+        }
+    }
+    Self { list }
+}
+
+pub fn action(&self, chord: Chord) -> Option<Action> {
+    self.list
+        .iter()
+        .find(|(known, _)| *known == chord)
+        .map(|&(_, action)| action)
+}
+
+pub fn list(&self) -> &[(Chord, Action)] {
+    &self.list
+}
+```
+
+**`new`**: os atallos de meiga cos de `entries` por riba, na súa orde ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 1). Cada entrada quita primeiro calquera par coa súa combinación (`retain`) e despois, se ten acción, pon o seu ao final:
+
+| Entrada | Que fai |
+|---|---|
+| Unha combinación nova cunha acción, `"ctrl+t" = "new_tab"` | Engádea. Ctrl+T abre unha tab, e Ctrl+Maiús+T tamén: unha acción que recibe outra combinación mantén as súas. |
+| Unha combinación de meiga cunha acción, `"ctrl+shift+w" = "close_other_tabs"` | Cámbialle a acción. |
+| Unha combinación de meiga con `none`, `"ctrl+6" = "none"` | Libéraa: a súa tecla vai ao programa. |
+| Unha combinación que meiga non ten, con `none` | Nada. |
+
+- **Cada combinación queda como moito unha vez**: as de meiga non se repiten, e cada entrada quita a súa antes de poñela. Se `entries` tivese a mesma combinación dúas veces, valería a última; pero `config::parse` só deixa a primeira de cada combinación, e as outras son erros (decisión 3).
+- **`action`**: a acción de `chord`, se meiga a colle, ou `None`, e a tecla vai ao programa. `find` percorre a lista ata a súa combinación, e `map` copia a acción do par.
+- **`list`**: todas as combinacións que colle meiga, e as súas accións. Polo de agora só a usan as probas.
+- O programa fai os atallos dunha xanela unha vez, ao crear as súas tabs, coa configuración que leu ao arrancar, e dállos á vista do terminal ([Código › meiga › `shells.rs`](meiga.md#cratesmeigasrcshellsrs)). Un cambio no arquivo necesita reiniciar meiga, ata que chegue a recarga, na 8.4.
+
+### Os atallos de meiga: `defaults`
+
+```rust
+fn defaults() -> Vec<(Chord, Action)> {
+    const CTRL: u8 = Chord::CTRL;
+    const SHIFT: u8 = Chord::SHIFT;
+    let key = |modifiers, key: u8| Chord::new(modifiers, u16::from(key));
+    let mut list = vec![
+        (key(CTRL | SHIFT, b'T'), Action::NewTab),
+        (key(CTRL | SHIFT, b'W'), Action::CloseTab),
+        (Chord::new(CTRL, VK_TAB), Action::NextTab),
+        (Chord::new(CTRL | SHIFT, VK_TAB), Action::PreviousTab),
+        (Chord::new(CTRL, VK_NEXT), Action::NextTab),
+        (Chord::new(CTRL, VK_PRIOR), Action::PreviousTab),
+        (key(CTRL, b'9'), Action::LastTab),
+        (Chord::new(CTRL | SHIFT, VK_SPACE), Action::ProfileMenu),
+        (Chord::new(0, VK_APPS), Action::TabMenu),
+        (Chord::new(SHIFT, VK_APPS), Action::TabMenu),
+        (Chord::new(SHIFT, VK_F10), Action::TabMenu),
+        (key(CTRL | SHIFT, b'D'), Action::DuplicateTab),
+        (key(CTRL, b'C'), Action::Copy),
+        (key(CTRL | SHIFT, b'C'), Action::Copy),
+        (key(CTRL, b'V'), Action::Paste),
+        (key(CTRL | SHIFT, b'V'), Action::Paste),
+        (Chord::new(CTRL | SHIFT, VK_UP), Action::ScrollUp),
+        (Chord::new(CTRL | SHIFT, VK_DOWN), Action::ScrollDown),
+        (Chord::new(SHIFT, VK_PRIOR), Action::ScrollPageUp),
+        (Chord::new(CTRL | SHIFT, VK_PRIOR), Action::ScrollPageUp),
+        (Chord::new(SHIFT, VK_NEXT), Action::ScrollPageDown),
+        (Chord::new(CTRL | SHIFT, VK_NEXT), Action::ScrollPageDown),
+        (Chord::new(CTRL | SHIFT, VK_HOME), Action::ScrollToTop),
+        (Chord::new(CTRL | SHIFT, VK_END), Action::ScrollToBottom),
+        (Chord::new(CTRL, VK_OEM_PLUS), Action::ZoomIn),
+        (Chord::new(CTRL, VK_ADD), Action::ZoomIn),
+        (Chord::new(CTRL, VK_OEM_MINUS), Action::ZoomOut),
+        (Chord::new(CTRL, VK_SUBTRACT), Action::ZoomOut),
+        (key(CTRL, b'0'), Action::ZoomReset),
+        (Chord::new(CTRL, VK_NUMPAD0), Action::ZoomReset),
+    ];
+    for place in 0..8 {
+        list.push((key(CTRL, b'1' + place), Action::Tab(u16::from(place))));
+    }
+    for place in 0..9 {
+        list.push((
+            key(CTRL | SHIFT, b'1' + place),
+            Action::Profile(u16::from(place)),
+        ));
+    }
+    list
+}
+```
+
+**`defaults`**: os atallos de meiga, os do Windows Terminal para as tabs, os perfís, os menús, copiar e pegar, o historial e o zoom, e os de Chrome para mostrar unha tab polo seu sitio, a última, a anterior e a seguinte ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisións 4 a 9):
+
+| Combinacións | Acción |
+|---|---|
+| Ctrl+Maiús+T | `NewTab` |
+| Ctrl+Maiús+W | `CloseTab` |
+| Ctrl+Tab e Ctrl+AvPáx | `NextTab` |
+| Ctrl+Maiús+Tab e Ctrl+RePáx | `PreviousTab` |
+| Ctrl+1…Ctrl+8 | `Tab(0)`…`Tab(7)` |
+| Ctrl+9 | `LastTab` |
+| Ctrl+Maiús+1…Ctrl+Maiús+9 | `Profile(0)`…`Profile(8)` |
+| Ctrl+Maiús+Espazo | `ProfileMenu` |
+| A tecla de menú, só ou con Maiús, e Maiús+F10 | `TabMenu` |
+| Ctrl+Maiús+D | `DuplicateTab` |
+| Ctrl+C e Ctrl+Maiús+C | `Copy` |
+| Ctrl+V e Ctrl+Maiús+V | `Paste` |
+| Ctrl+Maiús+↑ e Ctrl+Maiús+↓ | `ScrollUp` e `ScrollDown` |
+| Maiús+RePáx e Ctrl+Maiús+RePáx | `ScrollPageUp` |
+| Maiús+AvPáx e Ctrl+Maiús+AvPáx | `ScrollPageDown` |
+| Ctrl+Maiús+Inicio e Ctrl+Maiús+Fin | `ScrollToTop` e `ScrollToBottom` |
+| Ctrl e a tecla `+`, e Ctrl e o + do teclado numérico | `ZoomIn` |
+| Ctrl e a tecla `-`, e Ctrl e o − do teclado numérico | `ZoomOut` |
+| Ctrl+0, e Ctrl e o 0 do teclado numérico | `ZoomReset` |
+
+- **47 combinacións**: as 30 do `vec!`, e as 8 de Ctrl+1…8 e as 9 de Ctrl+Maiús+1…9, que engaden os dous `for`. `b'1' + place` é o díxito de cada sitio, coma byte.
+- **`key`**, unha *closure*, fai a combinación dunha letra ou dun díxito co seu byte en ASCII, coma `b'T'`, que é o seu código; as outras teclas van con `Chord::new` e as constantes `VK_…`. `CTRL` e `SHIFT` son nomes curtos para `Chord::CTRL` e `Chord::SHIFT`.
+- **Todas as teclas que xa collía meiga** son atallos, e o arquivo pode cambialas (decisión 9): copiar e pegar, desde a 1.8; o historial e o zoom, desde a 1.9; Ctrl+Maiús+T, Ctrl+Maiús+W, Ctrl+Tab e Ctrl+Maiús+Tab, desde a 2.2; o menú da tab, desde a 2.4; e o dos perfís, desde a 2.5. Son novas Ctrl+1…9, Ctrl+Maiús+1…9, Ctrl+RePáx, Ctrl+AvPáx e Ctrl+Maiús+D.
+- **Ctrl+T e Ctrl+W non están**: van ao programa (decisión 9). Tampouco están Esc, que, cunha selección, quítaa a vista antes de mirar os atallos, nin Maiús+Insert nin F10 só, que van ao programa.
+- **Ningunha ten Alt**: as combinacións con Alt seguen indo ao programa, salvo as que o arquivo faga atallos (decisión 2, que concreta a decisión 5 do [ADR 0014](../adr/0014-o-teclado.md)). Ctrl+1…9 non levan Alt, porque Ctrl+Alt é o AltGr dos teclados que o usan para escribir, e só usan os díxitos da fila de arriba: os do teclado numérico pode engadilos o arquivo (decisión 5).
+- **O zoom si ten o teclado numérico**, `VK_ADD`, `VK_SUBTRACT` e `VK_NUMPAD0`, coma desde a 1.9 ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 12).
+- **`close_other_tabs` e `close_tabs_to_the_right` non teñen combinación**: o arquivo pode darlles unha; se non, fanse co menú da tab.
+- Cada chamada fai unha lista nova: o programa chámaa unha vez por xanela, a través de `Shortcuts::new`.
+
+**Probas.** Sete. `chord` le unha combinación que ten que estar ben, e `event` fai unha tecla que baixa, cun código e unhas teclas modificadoras, sen carácter nin código de exploración.
+
+| Proba | Que comproba |
+|---|---|
+| `chords_are_written_as_in_windows_terminal` | `ctrl+shift+t` é Ctrl, Maiús e a tecla `0x54`, a T. `Shift + CTRL + T`, en calquera orde, con maiúsculas e con brancos, é o mesmo, e `ctrl+ctrl+t` é `ctrl+t`. `alt+shift+1`, `f1` e `ctrl+F24` (`0x87`) dan os seus códigos, e `numpad7` e `numpad_7`, `0x67`. `ctrl+pgup` e `ctrl+PageUp` son a mesma combinación, coma `menu` e `app`, e `ctrl+numpad_add` e `ctrl+numpad_plus`; e `ctrl+plus` é Ctrl e `VK_OEM_PLUS`. Alt+F4 con Ctrl, `ctrl+alt+f4`, vale, porque non é o de Windows; e cada nome de `NAMES`, en maiúsculas, dá o seu código. |
+| `wrong_chords_say_why` | `""`, `ctrl+` e `ctrl++` teñen unha parte baleira; `ctrl+shift`, ningunha tecla; e `ctrl+a+b`, dúas. `hyper`, `ñ`, `f0`, `f25` e `numpad10` non son teclas; e, coma di o comentario, tampouco o son `f65535` e `numpad65535`, cuns números que non caben despois do primeiro código: sen o `match` de [`key_code`](#o-código-dunha-tecla-key_code-strip_prefix_ignore_case-e-number), a súa suma faría un *panic* na proba. `win+e` ten unha tecla Windows; e `alt+f4` e `alt+shift+space` son de Windows. E a mensaxe de `hyper`: `` `hyper` is not a key ``. |
+| `a_key_that_goes_down_has_the_chord_of_its_modifier_keys_but_altgr_none` | O Ctrl esquerdo e Maiús, co Bloq Num activado, coa T, son `ctrl+shift+t`; e o Ctrl dereito e o Alt esquerdo co 1, `ctrl+alt+1`. AltGr, o Ctrl esquerdo e o Alt dereito, co 1, non ten combinación, nin con Maiús; pero os dous Ctrl co Alt dereito, si: `ctrl+alt+1`. Un carácter sen tecla, a tecla 0, tampouco ten. |
+| `actions_are_read_by_their_names` | `none` libera a combinación; `new_tab`, `tab_1`, `tab_12` e `profile_9` son `NewTab`, `Tab(0)`, `Tab(11)` e `Profile(8)`; `tab_0` e `profile_0` din que se contan desde 1; `tab_`, `tab_+1`, `tab_x`, `tab_99999`, `New_Tab`, `None` e un nome baleiro non son accións; e cada nome de `ACTIONS` dá a súa acción. |
+| `the_shortcuts_of_meiga_leave_ctrl_t_and_ctrl_w_to_the_program` | Os atallos de meiga: Ctrl+Maiús+T e Ctrl+Maiús+W, pero non Ctrl+T nin Ctrl+W; Ctrl+Tab, Ctrl+Maiús+Tab, Ctrl+AvPáx e Ctrl+RePáx; Ctrl+1 e Ctrl+8, a primeira e a oitava tab, e Ctrl+9, a última; Ctrl+Maiús+1 e Ctrl+Maiús+9, o primeiro e o noveno perfil, pero non Ctrl+Alt+1; Ctrl+Maiús+D e Ctrl+Maiús+Espazo; a tecla de menú, só e con Maiús, e Maiús+F10, pero non F10; Ctrl+C e Ctrl+Maiús+V, pero non Maiús+Insert; Maiús+RePáx, Ctrl+Maiús+AvPáx e Ctrl+Maiús+Inicio; Ctrl e o − e o 0 do teclado numérico; e non Ctrl+Maiús e a tecla `+`. E ningunha combinación ten dúas accións. |
+| `the_file_adds_changes_and_frees_shortcuts` | Catro entradas: `ctrl+t` con `NewTab`, que se engade, e Ctrl+Maiús+T segue abrindo unha tab; `ctrl+6` sen acción, que se libera, mentres Ctrl+5 segue mostrando a quinta tab; `ctrl+shift+w` con `CloseOtherTabs`, que cambia de acción; e `ctrl+alt+x` sen acción, que meiga non tiña, e non cambia nada. A lista ten tantos atallos coma a de meiga: un máis e un menos. |
+| `only_moving_between_tabs_the_history_and_the_zoom_repeat` | Todas as accións con nome, as 21 de `ACTIONS`: `repeats` é certo se, e só se, o nome está en `repeating`, `next_tab`, `previous_tab`, as seis `scroll_…`, `zoom_in` e `zoom_out`; as outras once, coma `new_tab`, `paste` ou `zoom_reset`, non repiten. Se unha falla, a mensaxe di o seu nome. E `Tab(0)` e `Profile(0)`, que non teñen un nome en `ACTIONS`, tampouco repiten. |
+
+**Como se comproba.** Ademais destas probas, `check-shortcuts.ps1` tecléalle a meiga na CI as combinacións, cun `config.toml` que libera Ctrl+6, dálle a Ctrl+Alt+2 a segunda tab e a Ctrl+8 a última, no canto da oitava, e a Alt+O e a Alt+R `close_other_tabs` e `close_tabs_to_the_right`, dúas accións sen combinación de seu ([Código › ferramentas › `check-shortcuts.ps1`](ferramentas.md#toolscheck-shortcutsps1)). O programa de cada tab apunta os códigos das teclas que recibe, ao baixar e ao subir, e a comprobación mira, entre outras cousas, que Ctrl+T, Ctrl+W e Ctrl+6 chegan enteiras ao programa; que Ctrl+Maiús+T abre unha soa tab mentres a T repite; que AltGr+2, o Ctrl esquerdo e o Alt dereito, chega ao programa, mentres Ctrl+Alt+2, co Alt esquerdo, mostra a segunda tab; que Ctrl+Maiús+D duplica a tab que se mostra, Ctrl+1, Ctrl+2 e Ctrl+3 mostran as tabs deses sitios, e Ctrl+9 a última; que Ctrl+4, con tres tabs, e Ctrl+Maiús+3, con dous perfís, non fan nada, e o seu díxito non chega ao programa; que Ctrl+AvPáx e Ctrl+RePáx dan a volta á barra, e Ctrl+RePáx segue mentres repite; que Ctrl+Maiús+2 e Ctrl+Maiús+1 abren os perfís deses sitios do menú; que Ctrl+8 mostra a última de cinco tabs; e que Alt+R pecha as tabs da dereita e Alt+O as outras, e o programa só recibe o Alt. As copias de meiga estragadas a propósito que collen Ctrl+T, que non liberan as combinacións con `none`, que non engaden as entradas do arquivo ou deixan diante as de meiga, que non miran Maiús ou AltGr en `Chord::of`, nas que `new_tab` repite ou `previous_tab` non, ou sen Ctrl+Maiús+D, Ctrl+RePáx e Ctrl+AvPáx, ou con Ctrl+9 coma a novena tab, fallan a comprobación.
 
 ## `crates/meiga-core/src/model/mod.rs`
 

@@ -10,19 +10,21 @@ own, whose config.toml has two profiles, Probe, the default one, and Probe 2,
 which run the same PowerShell script, and hides the shells that meiga finds:
 the menu of the profiles has only those two. Its table [shortcuts] frees
 Ctrl+6, gives Ctrl+Alt+2 the second tab, Ctrl+8 the last tab instead of the
-eighth, and Alt+O close_other_tabs, an action without a shortcut of its own;
-and it has four errors: a chord with two keys, an action that does not
-exist, profile_0, and Alt+O again, after its first line. The script of each
-tab writes in a file of its own the keys that its program gets.
+eighth, and Alt+O and Alt+R close_other_tabs and close_tabs_to_the_right,
+two actions without a shortcut of their own; and it has four errors: a
+chord with two keys, an action that does not exist, profile_0, and Alt+O
+again, after its first line. The script of each tab writes in a file of its
+own the keys that its program gets.
 
 The check types the keys in the window as check-profiles.ps1 does: it posts
 their messages while the thread of the window is suspended, with the key
 state that they need, which it shares with that thread. A chord goes as a
 keyboard sends it: its modifier keys go down, its key goes down and up, and
-its modifier keys go up; with Alt and without Ctrl, as system keys. After
-the keys whose effect it cannot see, it types Z, and waits until the
-program of the tab that is shown gets it: then the window has taken all the
-keys before it. It checks that:
+its modifier keys go up; with Alt and without Ctrl, as system keys, but for
+Alt going up, which Windows sends as a key that is not a system one after
+another key. After the keys whose effect it cannot see, it types Z, and
+waits until the program of the tab that is shown gets it: then the window
+has taken all the keys before it. It checks that:
 
 - a message box tells the errors of [shortcuts], each with its line and its
   column, and that meiga ignored them;
@@ -38,13 +40,20 @@ keys before it. It checks that:
   tabs, while the copy, in the middle, is shown, draws nothing, and its 4
   does not reach the program;
 - Ctrl+PageDown and Ctrl+PageUp show the next and the previous tab, round
-  the bar, and PageUp goes on while it repeats;
+  the bar, and PageUp goes on while it repeats; and PageDown, down for the
+  program before Ctrl, goes to it while it repeats as Ctrl+PageDown and
+  when it goes up, and shows no tab: a key that went down for the program
+  is its own until it goes up;
 - Ctrl+Shift+2 and Ctrl+Shift+1 open Probe 2 and Probe, the profiles at
-  those places of the menu, at the end; and Ctrl+Shift+3, with two
-  profiles, opens nothing, and its 3 does not reach the program;
+  those places of the menu, at the end, where Ctrl+4 and Ctrl+5 show them;
+  and Ctrl+Shift+3, with two profiles, opens nothing, and its 3 does not
+  reach the program;
 - Ctrl+8 shows the last of five tabs, as config.toml says;
-- Alt+O closes the other tabs, as its first line in config.toml says, and
-  their programs end; the program of the tab gets Alt, and not O;
+- Alt+R, with the third of five tabs shown, closes the two on its right,
+  and the two on its left stay; Alt+O, with the one in the middle shown,
+  closes the other two, on both sides, as its first line in config.toml
+  says; their programs end, and the program of the tab gets Alt, and not R
+  nor O;
 - Ctrl+Shift+W closes the last tab, and with it the window: meiga.exe ends
   with exit code 0, and the program of the tab and the consoles end too.
 
@@ -366,6 +375,7 @@ $VK_MENU = 0x12
 $VK_PRIOR = 0x21
 $VK_NEXT = 0x22
 $VK_Z = 0x5A
+$VK_LCONTROL = 0xA2
 $THREAD_PRIORITY_NORMAL = 0
 $THREAD_PRIORITY_BELOW_NORMAL = -1
 # The console of each tab: the one of the ConPTY of meiga, or the one of
@@ -496,6 +506,7 @@ $configLines = @(
     '"ctrl+alt+2" = "tab_2"'
     '"ctrl+8" = "last_tab"'
     '"alt+o" = "close_other_tabs"'
+    '"alt+r" = "close_tabs_to_the_right"'
     '"ctrl+t+w" = "new_tab"'
     '"ctrl+shift+e" = "open_explorer"'
     '"ctrl+shift+0" = "profile_0"'
@@ -778,7 +789,9 @@ function Get-Key([int]$Code, [bool]$Down, [bool]$System = $false, [bool]$Extende
 # "AltGr+2" or "Ctrl+PageDown", and the keys that are down meanwhile: its
 # modifier keys go down, its key goes down, again $Repeats times, and up, and
 # its modifier keys go up, the other way round. With Alt and without Ctrl,
-# they are system keys, as Windows sends them.
+# they are system keys, as Windows sends them, but for Alt going up: after
+# another key, Windows sends it as a key that is not a system one, and then
+# it does not open the menu of the window.
 function Get-Chord([string]$Chord, [int]$Repeats = 0) {
     $parts = $Chord -split '\+'
     $modifiers = @(foreach ($part in ($parts | Select-Object -SkipLast 1)) {
@@ -796,7 +809,7 @@ function Get-Chord([string]$Chord, [int]$Repeats = 0) {
         Get-Key $code $true $system $extended
         for ($repeat = 0; $repeat -lt $Repeats; $repeat++) { Get-Key $code $true $system $extended $true }
         Get-Key $code $false $system $extended
-        foreach ($modifier in $reversed) { Get-Key $modifier.Code $false $system $modifier.Extended }
+        foreach ($modifier in $reversed) { Get-Key $modifier.Code $false ($system -and $modifier.Code -ne $VK_MENU) $modifier.Extended }
     )
     [pscustomobject]@{ Messages = [long[]]$messages; Down = [int[]]$down; System = $system }
 }
@@ -886,7 +899,8 @@ function Show-Tab([string]$Chord, [int]$Id, [int[]]$Hidden, [int]$Repeats = 0) {
 
 # Types $Chord, with $Repeats repeats of its key, which opens a tab whose
 # program runs $Command, and shows it, while the tabs of $Known are hidden.
-# Returns the process of its program, once it reads its keys.
+# Returns the process of its program, once it reads its keys, and has got Z
+# after the chord: then the window has taken all its keys.
 function Open-Tab([string]$Chord, [string]$Command, [int[]]$Known, [int]$Repeats = 0) {
     Send-Chord $Chord $Repeats
     $shell = Wait-NewShell $Known $Chord
@@ -896,6 +910,7 @@ function Open-Tab([string]$Chord, [string]$Command, [int[]]$Known, [int]$Repeats
     $id = [int]$shell.ProcessId
     Wait-For { Test-Path -LiteralPath (Get-KeyFile $id) } { "After $Chord, the script of the new tab did not start." }
     Wait-Shown $id $Known "After $Chord"
+    $null = Sync-Keys $id
     $id
 }
 
@@ -952,7 +967,8 @@ try {
     Wait-Shown $first @() 'After Ctrl+T, Ctrl+W and Ctrl+6'
     Write-Host 'OK: Ctrl+T and Ctrl+W reach the program, and so does Ctrl+6, which config.toml frees; no tab opens nor closes.'
 
-    # 3. Ctrl+Shift+T opens one tab, also while T repeats.
+    # 3. Ctrl+Shift+T opens one tab, also while T repeats: twice, so that
+    # the second repeat finds T still taken after the first one.
     $second = Open-Tab 'Ctrl+Shift+T' $probeLine @($first) -Repeats 2
     Wait-Quiet 400
     if (@(Get-Shells).Count -ne 2) {
@@ -993,10 +1009,39 @@ try {
     Show-Tab 'Ctrl+PageDown' $first @($second, $copy)
     Show-Tab 'Ctrl+PageUp' $second @($first, $copy)
     Show-Tab 'Ctrl+PageUp' $first @($second, $copy) -Repeats 1
-    Write-Host 'OK: Ctrl+PageDown and Ctrl+PageUp show the next and the previous tab, round the bar, and PageUp goes on while it repeats.'
+    # A key that went down for the program is its own until it goes up:
+    # PageDown goes down for the program of the first tab and, with Ctrl
+    # down then, it repeats as Ctrl+PageDown, and goes up. The program gets
+    # all of them, and no tab is shown.
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    $from = Sync-Keys $first
+    Send-Keys (@(Get-Key $VK_NEXT $true $false $true) + @(Get-Key $VK_Z $true) + @(Get-Key $VK_Z $false))
+    $got = Wait-Mark $first $from 'PageDown'
+    if ($got -cne '34+') {
+        throw "With PageDown, the program got the keys '$got' instead of '34+'."
+    }
+    $from = (Get-KeyText $first).Length
+    $held = @(
+        Get-Key $VK_CONTROL $true
+        Get-Key $VK_NEXT $true $false $true $true
+        Get-Key $VK_NEXT $false $false $true
+        Get-Key $VK_CONTROL $false
+        Get-Key $VK_Z $true
+        Get-Key $VK_Z $false
+    )
+    Send-Keys $held @($VK_CONTROL, $VK_LCONTROL, $VK_NEXT)
+    $got = Wait-Mark $first $from 'With Ctrl, while PageDown was down'
+    if ($got -cne '17+ 34+ 34- 17-') {
+        throw "With Ctrl, while PageDown was down for it, the program got the keys '$got' instead of '17+ 34+ 34- 17-'."
+    }
+    Assert-NothingDrawn $start 'Ctrl, while PageDown was down for the program,'
+    Wait-Shown $first @($second, $copy) 'After Ctrl, while PageDown was down'
+    Write-Host 'OK: Ctrl+PageDown and Ctrl+PageUp show the next and the previous tab, round the bar, and PageUp goes on while it repeats; PageDown, down for the program before Ctrl, goes to it while it repeats and when it goes up, and shows no tab.'
 
     # 7. Ctrl+Shift+2 and Ctrl+Shift+1 open the second and the first profile
-    # of the menu at the end; with two profiles, Ctrl+Shift+3 opens nothing.
+    # of the menu at the end, where Ctrl+4 and Ctrl+5 show them; with two
+    # profiles, Ctrl+Shift+3 opens nothing.
     $fourth = Open-Tab 'Ctrl+Shift+2' $probe2Line @($first, $copy, $second)
     $fifth = Open-Tab 'Ctrl+Shift+1' $probeLine @($first, $copy, $second, $fourth)
     $others = @($first, $copy, $second, $fourth)
@@ -1008,6 +1053,8 @@ try {
         throw "Ctrl+Shift+3, with two profiles, opened a tab: $exe has $(@(Get-Shells).Count) programs."
     }
     Wait-Shown $fifth $others 'After Ctrl+Shift+3'
+    Show-Tab 'Ctrl+4' $fourth @($first, $copy, $second, $fifth)
+    Show-Tab 'Ctrl+5' $fifth $others
     Write-Host 'OK: Ctrl+Shift+2 and Ctrl+Shift+1 open Probe 2 and Probe, the profiles at those places of the menu, at the end; Ctrl+Shift+3, with two profiles, opens nothing, and its 3 does not reach the program.'
 
     # 8. Ctrl+8 shows the last of five tabs, as config.toml says.
@@ -1015,16 +1062,26 @@ try {
     Show-Tab 'Ctrl+8' $fifth $others
     Write-Host 'OK: Ctrl+8 shows the last of five tabs, as config.toml says, instead of the eighth.'
 
-    # 9. Alt+O closes the other tabs, as the first line of its chord says.
-    Assert-Keys $fifth 'Alt+O' '18+ 18-'
-    foreach ($other in $others) {
+    # 9. Alt+R closes the tabs on the right of the third tab, as config.toml
+    # says, and the two on its left stay: Ctrl+2 shows the copy, in the
+    # middle. Then Alt+O closes the other tabs, on both sides, as the first
+    # line of its chord says.
+    Show-Tab 'Ctrl+3' $second @($first, $copy, $fourth, $fifth)
+    Assert-Keys $second 'Alt+R' '18+ 18-'
+    foreach ($right in $fourth, $fifth) {
+        Wait-Ended $right 'The program of a tab that Alt+R closed'
+    }
+    Wait-Shown $second @($first, $copy) 'After Alt+R'
+    Show-Tab 'Ctrl+2' $copy @($first, $second)
+    Assert-Keys $copy 'Alt+O' '18+ 18-'
+    foreach ($other in $first, $second) {
         Wait-Ended $other 'The program of a tab that Alt+O closed'
     }
-    Wait-Shown $fifth @() 'After Alt+O'
+    Wait-Shown $copy @() 'After Alt+O'
     Wait-For { @(Get-Shells).Count -eq 1 -and @(Get-Consoles).Count -eq 1 } {
         "After Alt+O, $exe has $(@(Get-Shells).Count) programs and $(@(Get-Consoles).Count) consoles instead of one."
     }
-    Write-Host 'OK: Alt+O closes the other tabs, as its first line in config.toml says, and their programs end; the program of the tab gets Alt, and not O.'
+    Write-Host 'OK: Alt+R closes the tabs on the right of the tab that is shown, and the ones on its left stay; Alt+O closes the other tabs, on both sides, as its first line in config.toml says; their programs end, and the program of the tab gets Alt, and not R nor O.'
 
     # 10. Ctrl+Shift+W closes the last tab, and the window.
     Send-Chord 'Ctrl+Shift+W'
@@ -1034,7 +1091,7 @@ try {
     if ($process.ExitCode -ne 0) {
         throw "$exe ended with exit code $($process.ExitCode) instead of 0."
     }
-    Wait-Ended $fifth 'The program of the last tab'
+    Wait-Ended $copy 'The program of the last tab'
     Wait-ConsolesEnded
     Write-Host 'OK: Ctrl+Shift+W closes the last tab, and the window: it ends with exit code 0, and the program of the tab and the consoles end too.'
     $passed = $true

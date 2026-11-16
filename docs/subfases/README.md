@@ -34,6 +34,7 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 2.3 | Barra de tabs básica | [PR #22](https://github.com/NewHouses/meiga/pull/22) | [2.3-barra.md](2.3-barra.md) |
 | 2.4 | Lista e menús reutilizábeis | [PR #23](https://github.com/NewHouses/meiga/pull/23) | [2.4-menus.md](2.4-menus.md) |
 | 2.5 | Perfís e configuración | [PR #24](https://github.com/NewHouses/meiga/pull/24) | [2.5-perfis.md](2.5-perfis.md) |
+| 2.6 | Atallos de teclado | [PR #25](https://github.com/NewHouses/meiga/pull/25) | [2.6-atallos.md](2.6-atallos.md) |
 
 ## Mantemento
 

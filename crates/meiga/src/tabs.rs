@@ -495,8 +495,7 @@ impl Tabs {
             TabAction::Menu(id, at) => return self.open_menu(window, id, Anchor::At(at), false),
             TabAction::ActiveMenu => {
                 let tab = self.bar.tab(self.tabs.active_index());
-                let id = self.tabs.active().id();
-                return self.open_menu(window, id, Anchor::Below(tab), true);
+                return self.open_menu(window, active, Anchor::Below(tab), true);
             }
         };
         match switch {
