@@ -295,13 +295,16 @@ impl Output for Reader {
 /// Windows Terminal: a line with its exit code, in a row of its own if
 /// `new_line`, with the default colours and characters, and below it what
 /// the user can do then. Neither the line-drawing characters, the insert
-/// mode nor a screen without wrapping that the program left change how it
-/// reads; they do not move the cursor. The cursor is hidden: nothing can be
-/// typed any more. The ConPTY does not turn off the mouse nor the bracketed
-/// paste of a program that ends: they are turned off, so that the mouse
-/// selects text again.
+/// mode, a screen without wrapping nor a scrolling region that the program
+/// left change how it reads: below a region, the last row does not scroll,
+/// and the hint would cover the line. The region goes back to the whole
+/// screen between `ESC 7` and `ESC 8`, which keep the cursor where the
+/// program left it. The cursor is hidden: nothing can be typed any more.
+/// The ConPTY does not turn off the mouse nor the bracketed paste of a
+/// program that ends: they are turned off, so that the mouse selects text
+/// again.
 fn end(exit: Exit, new_line: bool) -> String {
-    const READABLE: &str = "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h";
+    const READABLE: &str = "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\x1b7\x1b[r\x1b8";
     const RESET: &str = "\x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l";
     let new_line = if new_line { "\r\n" } else { "" };
     match exit {
@@ -414,13 +417,14 @@ mod tests {
 
         assert_eq!(
             end(Exit::Code(3), false),
-            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h[process exited with code 3 (0x00000003)]\r\n\
+            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\x1b7\x1b[r\x1b8\
+             [process exited with code 3 (0x00000003)]\r\n\
              You can now close this tab with Ctrl+D, or press Enter to restart.\
              \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
         assert_eq!(
             end(Exit::Unknown, true),
-            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\r\n[process exited]\r\n\
+            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\x1b7\x1b[r\x1b8\r\n[process exited]\r\n\
              You can now close this tab with Ctrl+D, or press Enter to restart.\
              \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
@@ -449,14 +453,15 @@ mod tests {
     }
 
     #[test]
-    fn the_end_reads_well_whatever_characters_and_modes_the_program_left() {
+    fn the_end_reads_well_whatever_characters_modes_and_region_the_program_left() {
         let mut shared = Shared::new(Terminal::new(GridSize::new(30, 6)));
         // The line-drawing characters in the two sets, the second one in
-        // use, the insert mode and no wrapping, with the cursor above a row
-        // with text.
+        // use, the insert mode, no wrapping, and a scrolling region of the
+        // first two rows, with the cursor at the end of the second one,
+        // above a row with text: a new line there would scroll the region.
         shared
             .terminal
-            .feed(b"ola\r\nxyz\x1b[1;4H\x1b(0\x1b)0\x0e\x1b[4h\x1b[?7l");
+            .feed(b"ola\r\nabc\r\nxyz\x1b[1;2r\x1b[2;4H\x1b(0\x1b)0\x0e\x1b[4h\x1b[?7l");
         shared.end(Exit::Unknown);
         let mut screen = Screen::new();
         shared.terminal.copy_damage(&mut screen);
@@ -465,11 +470,11 @@ mod tests {
             rows,
             [
                 "ola",
+                "abc",
                 "[process exited]",
                 &HINT[..30],
                 &HINT[30..60],
-                &HINT[60..],
-                ""
+                &HINT[60..]
             ]
         );
     }
