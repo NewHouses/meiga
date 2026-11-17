@@ -693,6 +693,74 @@ fn a_reset_on_the_alternate_screen_leaves_an_empty_primary_screen_with_history()
     assert_eq!(terminal.history().rows, 2);
 }
 
+#[test]
+fn a_restart_moves_the_screen_to_the_history_and_leaves_a_new_terminal() {
+    let size = GridSize::new(20, 4);
+    let new = Terminal::new(size);
+    // A program that changed what a new one expects, and ended with the
+    // view of the history up.
+    let mut terminal = Terminal::new(size);
+    terminal.feed(b"1\r\n2\r\n3\r\n4\r\n5\r\n6");
+    terminal.feed(
+        b"\x1b[3;5H\x1b[31;1m\x1b7\x1b[3g\x1b)0\x0e\x1b[2;3r\x1b[?6h\x1b[?7l\x1b[4h\x1b[20h\
+          \x1b[4 q\x1b[?25l\x1b]4;1;rgb:12/34/56\x07\x1b]0;vello\x07",
+    );
+    terminal.scroll(Scroll::Rows(1));
+    terminal.restart();
+    assert_eq!(terminal.history(), History { rows: 6, offset: 0 });
+    assert_eq!(texts(&mut terminal), ["", "", "", ""]);
+    assert_eq!(terminal.cursor(), new.cursor());
+    assert_eq!(terminal.modes(), new.modes());
+    assert_eq!(terminal.palette(), new.palette());
+    assert_eq!(terminal.title(), None);
+    terminal.scroll(Scroll::Top);
+    assert_eq!(texts(&mut terminal), ["1", "2", "3", "4"]);
+    terminal.scroll(Scroll::Bottom);
+
+    // ASCII, with the default colours, and a tab stop every 8 columns.
+    terminal.feed(b"q\tx");
+    let screen = copy(&mut terminal);
+    assert_eq!(screen.row_text(0), "q       x");
+    assert_eq!(screen.row(0)[0], narrow('q'));
+    // Without inserting, and the rows from the top of the screen.
+    terminal.feed(b"\x1b[1;1Hy\x1b[4;1Hlast");
+    assert_eq!(texts(&mut terminal)[..], ["y       x", "", "", "last"]);
+    // A line feed without a carriage return, and wrapping.
+    terminal.feed(b"\x1b[2;3H\n");
+    assert_eq!(cursor_at(&terminal), (2, 2));
+    terminal.feed(b"\x1b[2;1Habcdefghijklmnopqrstuvw");
+    assert_eq!(texts(&mut terminal)[1..3], ["abcdefghijklmnopqrst", "uvw"]);
+    // The saved cursor is the one at the top-left corner.
+    terminal.feed(b"\x1b8z");
+    let screen = copy(&mut terminal);
+    assert_eq!(screen.row(0)[0], narrow('z'));
+
+    // On the alternate screen, with the keys and the mouse of the program,
+    // and a synchronized update open with a question.
+    let mut terminal = Terminal::new(size);
+    terminal.feed(b"un\x1b[?1049h\x1b[?1h\x1b=\x1b[?1002;1006h\x1b[?1004h\x1b[?2004h\x1b[?9001h");
+    terminal.feed(b"\x1b[?1007l\x1b]10;rgb:ab/cd/ef\x07ALT\x1b[?2026h\x1b[c");
+    assert!(responses(&mut terminal).is_empty());
+    terminal.restart();
+    assert!(responses(&mut terminal).is_empty());
+    assert_eq!(terminal.sync_deadline(), None);
+    assert_eq!(terminal.modes(), new.modes());
+    assert_eq!(terminal.palette(), new.palette());
+    assert_eq!(terminal.history().rows, 1);
+    assert_eq!(texts(&mut terminal), ["", "", "", ""]);
+}
+
+#[test]
+fn the_cursor_is_at_the_start_of_its_row_also_with_the_view_up() {
+    let mut terminal = ten_lines();
+    assert!(!terminal.at_row_start());
+    terminal.scroll(Scroll::Top);
+    assert_eq!(terminal.cursor().column, 0);
+    assert!(!terminal.at_row_start());
+    terminal.feed(b"\r\n");
+    assert!(terminal.at_row_start());
+}
+
 /// A terminal of 10 × 3 with the lines 1 to 10: 7 of them in the history.
 fn ten_lines() -> Terminal {
     let mut terminal = Terminal::new(GridSize::new(10, 3));

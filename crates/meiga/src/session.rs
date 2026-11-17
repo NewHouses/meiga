@@ -2,6 +2,7 @@
 //! reader thread that gives its output to the terminal of the tab, and what
 //! that thread shares with the window.
 
+use std::fmt;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
@@ -10,7 +11,6 @@ use meiga_core::geometry::GridSize;
 use meiga_core::model::TabId;
 use meiga_core::profile::Launch;
 use meiga_core::term::{Changes, Terminal};
-use meiga_win::Error;
 use meiga_win::conpty::{Command, Conpty, Input, Output, Pty};
 use meiga_win::window::Waker;
 
@@ -26,7 +26,8 @@ use meiga_win::window::Waker;
 /// synchronized update in time, and for the title, which the tab bar shows
 /// for every tab (ADR 0020). What a hidden tab copied to the clipboard
 /// waits until the tab is shown, and is dropped then (ADR 0019), also in a
-/// synchronized update that its program has not ended yet (ADR 0020).
+/// synchronized update that its program has not ended yet (ADR 0020). The
+/// end of the program always wakes the window up, once (ADR 0024).
 pub struct Shared {
     pub terminal: Terminal,
     /// The screen may have changed since the window last copied it.
@@ -39,6 +40,27 @@ pub struct Shared {
     /// The window knows when the synchronized update that the program has
     /// open ends, and ends it then, even while it is minimized.
     sync_noted: bool,
+    /// The program ended, and the window has not taken it yet.
+    exit: Option<Exit>,
+}
+
+/// How the program of a session ended.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Exit {
+    /// With this exit code.
+    Code(u32),
+    /// It was still running some seconds after ConPTY closed its output: it
+    /// left its console (`FreeConsole`), or ConPTY failed.
+    Unknown,
+}
+
+impl Exit {
+    /// Whether it is a clean end, which closes the tab: only the exit code
+    /// 0, as in Windows Terminal (ADR 0024). An end without an exit code is
+    /// not one.
+    pub const fn is_clean(self) -> bool {
+        matches!(self, Self::Code(0))
+    }
 }
 
 impl Shared {
@@ -49,6 +71,7 @@ impl Shared {
             title_changed: false,
             clipboard_changed: false,
             sync_noted: false,
+            exit: None,
         }
     }
 
@@ -119,6 +142,38 @@ impl Shared {
             .then(|| self.terminal.take_clipboard())
             .flatten()
     }
+
+    /// Notes that the program ended with `exit`, which the window takes with
+    /// [`Shared::take_exit`]. If it is not a clean end, the terminal shows
+    /// how it ended, and what the user can do then (ADR 0024); a clean end
+    /// closes the tab, so it shows nothing.
+    fn end(&mut self, exit: Exit) {
+        if !exit.is_clean() {
+            // In a row of its own, also when the view shows the history.
+            let new_line = !self.terminal.at_row_start();
+            let changes = self.terminal.feed(end(exit, new_line).as_bytes());
+            self.note(changes);
+        }
+        self.exit = Some(exit);
+    }
+
+    /// How the program ended, if it ended since the window last took it.
+    pub fn take_exit(&mut self) -> Option<Exit> {
+        self.exit.take()
+    }
+
+    /// Leaves the terminal as a new program expects it, for the session
+    /// that starts again in its tab, as [`Terminal::restart`] says. The
+    /// title, the text for the clipboard and the end that the last program
+    /// gave, and that the window did not take, are dropped. The screen is
+    /// left as it was: the window copies all of it when it shows the tab.
+    pub fn restart(&mut self) {
+        self.terminal.restart();
+        self.title_changed = false;
+        self.clipboard_changed = false;
+        self.sync_noted = false;
+        self.exit = None;
+    }
 }
 
 /// Puts `new` in `title`, in the same memory if it can. Returns whether it
@@ -175,15 +230,21 @@ pub fn start(
         .map_err(|error| start_error(launch, &error))
 }
 
-/// What the terminal shows when `launch` cannot start: why, without the
-/// cursor, since nothing can be typed.
-fn start_error(launch: &Launch, error: &Error) -> String {
+/// What the terminal shows when `launch` cannot start: why, and below what
+/// the user can do then, without the cursor, since nothing can be typed.
+fn start_error(launch: &Launch, error: &dyn fmt::Display) -> String {
     let command = &launch.command;
     match &launch.folder {
-        Some(folder) => format!("[could not start `{command}` in `{folder}`: {error}]\x1b[?25l"),
-        None => format!("[could not start `{command}`: {error}]\x1b[?25l"),
+        Some(folder) => {
+            format!("[could not start `{command}` in `{folder}`: {error}]\r\n{HINT}\x1b[?25l")
+        }
+        None => format!("[could not start `{command}`: {error}]\r\n{HINT}\x1b[?25l"),
     }
 }
+
+/// What the user can do when the program of a tab ended without a clean
+/// end, or could not start, as Windows Terminal says it.
+const HINT: &str = "You can now close this tab with Ctrl+D, or press Enter to restart.";
 
 /// Gives the output of the program to the terminal, on the reader thread of
 /// the session, and answers the program.
@@ -217,32 +278,29 @@ impl Output for Reader {
     }
 
     fn ended(&mut self, exit_code: Option<u32>) {
-        let wake = {
-            let mut shared = lock(&self.shared);
-            let new_line = shared.terminal.cursor().column > 0;
-            let changes = shared.terminal.feed(end(exit_code, new_line).as_bytes());
-            shared.note(changes)
-        };
-        if wake {
-            self.waker.wake(self.tab.get());
-        }
+        let exit = exit_code.map_or(Exit::Unknown, Exit::Code);
+        lock(&self.shared).end(exit);
+        // Always, also when the window was already woken up for the screen
+        // and did not copy it, as in a hidden tab: it closes the tab, or
+        // forgets its session. It is the last thing that this thread does.
+        self.waker.wake(self.tab.get());
     }
 }
 
-/// What the terminal shows when the program ends, as Windows Terminal: a
-/// line with its exit code, in a row of its own if `new_line`, with the
-/// default colours. The cursor is hidden: nothing can be typed any more.
-/// The ConPTY does not turn off the mouse nor the bracketed paste of a
-/// program that ends: they are turned off, so that the mouse selects text
-/// again.
-fn end(exit_code: Option<u32>, new_line: bool) -> String {
+/// What the terminal shows when the program ends without a clean end, as
+/// Windows Terminal: a line with its exit code, in a row of its own if
+/// `new_line`, with the default colours, and below it what the user can do
+/// then. The cursor is hidden: nothing can be typed any more. The ConPTY
+/// does not turn off the mouse nor the bracketed paste of a program that
+/// ends: they are turned off, so that the mouse selects text again.
+fn end(exit: Exit, new_line: bool) -> String {
     const RESET: &str = "\x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l";
     let new_line = if new_line { "\r\n" } else { "" };
-    match exit_code {
-        Some(code) => {
-            format!("\x1b[0m{new_line}[process exited with code {code} (0x{code:08x})]{RESET}")
-        }
-        None => format!("\x1b[0m{new_line}[process exited]{RESET}"),
+    match exit {
+        Exit::Code(code) => format!(
+            "\x1b[0m{new_line}[process exited with code {code} (0x{code:08x})]\r\n{HINT}{RESET}"
+        ),
+        Exit::Unknown => format!("\x1b[0m{new_line}[process exited]\r\n{HINT}{RESET}"),
     }
 }
 
@@ -250,7 +308,7 @@ fn end(exit_code: Option<u32>, new_line: bool) -> String {
 mod tests {
     use std::time::Duration;
 
-    use meiga_core::term::{CursorShape, Screen};
+    use meiga_core::term::{CursorShape, Screen, Scroll};
 
     use super::*;
 
@@ -323,32 +381,108 @@ mod tests {
     }
 
     #[test]
-    fn the_end_of_the_program_is_on_a_row_of_its_own_without_the_cursor() {
-        let mut terminal = Terminal::new(GridSize::new(50, 3));
-        terminal.feed(b"\x1b[31mola\x1b[?1002;1006;2004h");
-        terminal.feed(end(Some(0xC000_013A), true).as_bytes());
+    fn the_end_of_the_program_is_on_a_row_of_its_own_with_what_to_do_and_without_the_cursor() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(70, 4)));
+        shared.screen_changed = false;
+        shared.terminal.feed(b"\x1b[31mola\x1b[?1002;1006;2004h");
+        shared.end(Exit::Code(0xC000_013A));
         let mut screen = Screen::new();
-        terminal.copy_damage(&mut screen);
+        shared.terminal.copy_damage(&mut screen);
         assert_eq!(screen.row_text(0), "ola");
         assert_eq!(
             screen.row_text(1),
             "[process exited with code 3221225786 (0xc000013a)]"
         );
+        assert_eq!(screen.row_text(2), HINT);
         assert_eq!(screen.row(1)[0].fg, meiga_core::term::Color::Default);
         assert_eq!(screen.cursor().shape, CursorShape::Hidden);
         // The mouse selects text again.
-        let modes = terminal.modes();
+        let modes = shared.terminal.modes();
         assert!(!modes.mouse_drag && !modes.sgr_mouse && !modes.bracketed_paste);
+        // The window takes the end once.
+        assert!(shared.screen_changed);
+        assert_eq!(shared.take_exit(), Some(Exit::Code(0xC000_013A)));
+        assert_eq!(shared.take_exit(), None);
 
         assert_eq!(
-            end(Some(0), false),
-            "\x1b[0m[process exited with code 0 (0x00000000)]\
+            end(Exit::Code(3), false),
+            "\x1b[0m[process exited with code 3 (0x00000003)]\r\n\
+             You can now close this tab with Ctrl+D, or press Enter to restart.\
              \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
         assert_eq!(
-            end(None, false),
-            "\x1b[0m[process exited]\x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
+            end(Exit::Unknown, true),
+            "\x1b[0m\r\n[process exited]\r\n\
+             You can now close this tab with Ctrl+D, or press Enter to restart.\
+             \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
+    }
+
+    #[test]
+    fn only_the_exit_code_0_is_a_clean_end_which_shows_nothing() {
+        assert!(Exit::Code(0).is_clean());
+        for exit in [Exit::Code(1), Exit::Code(0xC000_013A), Exit::Unknown] {
+            assert!(!exit.is_clean(), "{exit:?}");
+        }
+        let mut shared = Shared::new(Terminal::new(GridSize::new(70, 3)));
+        shared.terminal.feed(b"ola");
+        shared.end(Exit::Code(0));
+        let mut screen = Screen::new();
+        shared.terminal.copy_damage(&mut screen);
+        assert_eq!(screen.row_text(0), "ola");
+        assert_eq!(screen.row_text(1), "");
+        assert_eq!(shared.take_exit(), Some(Exit::Code(0)));
+    }
+
+    #[test]
+    fn the_end_is_on_a_row_of_its_own_also_with_the_view_in_the_history() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(70, 3)));
+        shared.terminal.feed(b"1\r\n2\r\n3\r\n4\r\nprompt>");
+        shared.terminal.scroll(Scroll::Top);
+        shared.end(Exit::Unknown);
+        shared.terminal.scroll(Scroll::Bottom);
+        let mut screen = Screen::new();
+        shared.terminal.copy_damage(&mut screen);
+        assert_eq!(screen.row_text(0), "prompt>");
+        assert_eq!(screen.row_text(1), "[process exited]");
+        assert_eq!(screen.row_text(2), HINT);
+    }
+
+    #[test]
+    fn a_program_that_cannot_start_tells_why_and_what_to_do() {
+        let mut launch = Launch::command_line("non-existent");
+        let error = "CreateProcessW failed";
+        assert_eq!(
+            start_error(&launch, &error),
+            "[could not start `non-existent`: CreateProcessW failed]\r\n\
+             You can now close this tab with Ctrl+D, or press Enter to restart.\x1b[?25l"
+        );
+        launch.folder = Some(r"C:\non-existent".to_owned());
+        assert!(
+            start_error(&launch, &error)
+                .starts_with(r"[could not start `non-existent` in `C:\non-existent`: ")
+        );
+    }
+
+    #[test]
+    fn a_restart_drops_what_the_last_program_left() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(70, 3)));
+        shared.screen_changed = true;
+        let changes = shared
+            .terminal
+            .feed(b"\x1b]0;vello\x07\x1b]52;c;b2xh\x07\x1b[?2026h");
+        assert!(shared.note(changes));
+        shared.end(Exit::Code(1));
+        shared.restart();
+        assert!(!shared.title_changed && !shared.clipboard_changed);
+        assert_eq!(shared.take_exit(), None);
+        assert_eq!(shared.take_clipboard(), None);
+        assert_eq!(shared.terminal.title(), None);
+        // The screen of the window is left as it was, and the next
+        // synchronized update wakes the window up again.
+        assert!(shared.screen_changed);
+        let changes = shared.terminal.feed(b"\x1b[?2026h");
+        assert!(shared.note(changes));
     }
 
     #[test]

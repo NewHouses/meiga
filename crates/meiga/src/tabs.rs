@@ -36,6 +36,12 @@
 //! What changes under it, all inside it, is not drawn until it closes. It
 //! closes when an item is chosen, and also when the window loses the focus,
 //! changes size or scale, starts moving, or is minimized.
+//!
+//! When the program of a tab ends with the exit code 0, the tab closes, as
+//! if the user had closed it, also while it is hidden: the last one closes
+//! the window. Otherwise, or if it could not start, the tab stays, and its
+//! terminal tells how the program ended; then, without a program, Enter
+//! starts it again in the same tab, and Ctrl+D closes the tab (ADR 0024).
 
 use std::convert::Infallible;
 use std::mem;
@@ -58,7 +64,7 @@ use crate::frames::{self, Scene};
 use crate::menu::MenuView;
 use crate::mouse::Response;
 use crate::scrollbar::ScrollBar;
-use crate::session::{self, Shared, lock};
+use crate::session::{self, Exit, Shared, lock};
 use crate::shells::Shells;
 use crate::tabbar::{Label, TabBar};
 use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TabTerminal, TerminalView};
@@ -117,6 +123,11 @@ pub enum TabAction {
     /// Close the tabs on the right of the one that is shown, and their
     /// sessions: the keyboard asked for it.
     CloseRightOfActive,
+    /// Start again, in the same tab, the program of this tab, which ended
+    /// without a clean end or could not start (ADR 0024).
+    Restart(TabId),
+    /// The same with the tab that is shown: Enter, without a program.
+    RestartActive,
 }
 
 /// A tab: the terminal of its session, the session, and what the bar shows
@@ -124,7 +135,8 @@ pub enum TabAction {
 struct Tab {
     shared: Arc<Mutex<Shared>>,
     /// It closes when the tab closes. `None` if its program could not
-    /// start.
+    /// start, or ended without a clean end: then the tab can start it
+    /// again.
     session: Option<Pty>,
     /// What its session runs, and the name that the bar shows while its
     /// program gives no title: a duplicate of the tab runs it too.
@@ -137,6 +149,10 @@ struct Tab {
     title_due: bool,
     /// The title that its program gave, as the window last took it.
     title: Option<String>,
+    /// How its program ended, if the window learned it while the tab was
+    /// hidden, and did not act on it yet: the wake-up of the end, which
+    /// always comes after it, does.
+    exit: Option<Exit>,
 }
 
 impl Tab {
@@ -154,22 +170,59 @@ impl Tab {
     ) -> Self {
         let mut terminal = Terminal::new(grid);
         terminal.set_cell_size(cell);
-        let shared = Arc::new(Mutex::new(Shared::new(terminal)));
-        let session = match session::start(&launch, environment, grid, &shared, waker, id) {
-            Ok(pty) => Some(pty),
-            Err(message) => {
-                lock(&shared).terminal.feed(message.as_bytes());
-                None
-            }
-        };
-        Self {
-            shared,
-            session,
+        let mut tab = Self {
+            shared: Arc::new(Mutex::new(Shared::new(terminal))),
+            session: None,
             launch,
             sync_due: None,
             title_due: false,
             title: None,
+            exit: None,
+        };
+        tab.run(environment, grid, waker, id);
+        tab
+    }
+
+    /// Starts its session, which runs what its profile says in a terminal
+    /// of `grid`, with the variables of `environment`, and wakes `waker` up
+    /// with `id`, its identifier. If the program cannot start, the terminal
+    /// shows why.
+    fn run(&mut self, environment: &[u16], grid: GridSize, waker: &Waker, id: TabId) {
+        match session::start(&self.launch, environment, grid, &self.shared, waker, id) {
+            Ok(pty) => self.session = Some(pty),
+            Err(message) => {
+                lock(&self.shared).terminal.feed(message.as_bytes());
+            }
         }
+    }
+
+    /// Starts again its program, which ended without a clean end or could
+    /// not start, as [`Tab::run`] does, in its terminal, which goes back to
+    /// how a new program expects it, with `grid` and cells of `cell`
+    /// pixels: what the last program wrote goes to the history (ADR 0024).
+    /// Until the new program gives a title, the tab shows the name of its
+    /// profile.
+    fn restart(
+        &mut self,
+        environment: &[u16],
+        grid: GridSize,
+        cell: Size,
+        waker: &Waker,
+        id: TabId,
+    ) {
+        {
+            let mut shared = lock(&self.shared);
+            // Before the new size: the terminal leaves the alternate screen,
+            // and its primary one gets the new size with the rest.
+            shared.restart();
+            shared.terminal.resize(grid);
+            shared.terminal.set_cell_size(cell);
+        }
+        self.sync_due = None;
+        self.title_due = false;
+        self.title = None;
+        self.exit = None;
+        self.run(environment, grid, waker, id);
     }
 
     /// Its terminal, for the view to show it.
@@ -191,11 +244,12 @@ impl Tab {
 
     /// While the tab is hidden: learns at `now` when the synchronized update
     /// that its program has open ends, and ends it if its time is up, with
-    /// the answers to the program, which `answers` holds meanwhile, and
-    /// whether its program gave another title, which the next frame takes.
-    /// What it copied to the clipboard waits until it is shown, when it is
-    /// dropped. Its reader keeps the lower priority of a hidden tab, except
-    /// while the window holds the lock.
+    /// the answers to the program, which `answers` holds meanwhile, whether
+    /// its program gave another title, which the next frame takes, and
+    /// whether it ended, which its wake-up acts on. What it copied to the
+    /// clipboard waits until it is shown, when it is dropped. Its reader
+    /// keeps the lower priority of a hidden tab, except while the window
+    /// holds the lock.
     fn learn(&mut self, now: Instant, answers: &mut Vec<u8>) {
         // If the reader held the lock with a lower priority, the window
         // would wait for a thread that a busy processor leaves for later: a
@@ -207,6 +261,9 @@ impl Tab {
             let mut shared = lock(&self.shared);
             let due = shared.end_late_sync(now, answers);
             self.title_due |= shared.title_changed;
+            if let Some(exit) = shared.take_exit() {
+                self.exit = Some(exit);
+            }
             due
         };
         self.set_priority(Priority::BelowNormal);
@@ -372,9 +429,9 @@ impl Tabs {
     /// The reader thread of the tab `id` woke the window up, which takes at
     /// `now` what it can. Returns whether a frame has to bring the scene up
     /// to date: the screen of the tab that is shown changed, a program gave
-    /// another title, which the frame takes, or a hidden tab has a
+    /// another title, which the frame takes, a hidden tab has a
     /// synchronized update open, which ends at a time that the next update
-    /// returns.
+    /// returns, or a program ended, and its tab closed.
     ///
     /// The titles wait for the frame so that the window takes them at most
     /// once per frame interval: until it does, the reader does not wake it
@@ -382,7 +439,12 @@ impl Tabs {
     pub fn wake(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
         if id == self.tabs.active().id() {
             let woken = self.view.wake(window);
-            return woken.screen || woken.title;
+            // A hidden tab may have learned the end before it was shown.
+            let exit = woken
+                .exit
+                .or_else(|| self.tabs.get_mut(id).and_then(|tab| tab.exit.take()));
+            let closed = exit.is_some_and(|exit| self.ended(window, id, exit, now));
+            return woken.screen || woken.title || closed;
         }
         // A hidden tab, or none: a tab that closed after its reader woke
         // the window up.
@@ -390,7 +452,11 @@ impl Tabs {
             return false;
         };
         tab.learn(now, &mut self.answers);
-        tab.title_due || tab.sync_due.is_some()
+        let due = tab.title_due || tab.sync_due.is_some();
+        match tab.exit.take() {
+            Some(exit) => self.ended(window, id, exit, now) || due,
+            None => due,
+        }
     }
 
     /// While a message box was open, the window lost the wake-ups of the
@@ -399,14 +465,49 @@ impl Tabs {
     pub fn catch_up_wakes(&mut self, window: &Window, now: Instant) -> bool {
         let woken = self.view.wake(window);
         let mut changed = woken.screen || woken.title;
+        let mut shown_exit = woken.exit;
         let active = self.tabs.active().id();
+        let mut ended = Vec::new();
         for (id, tab) in self.tabs.contents_mut() {
-            if id != active {
+            let exit = if id == active {
+                shown_exit.take().or_else(|| tab.exit.take())
+            } else {
                 tab.learn(now, &mut self.answers);
                 changed |= tab.title_due || tab.sync_due.is_some();
+                tab.exit.take()
+            };
+            if let Some(exit) = exit {
+                ended.push((id, exit));
             }
         }
+        // Once all the tabs know it: an end may close a tab, and show
+        // another one.
+        for (id, exit) in ended {
+            changed |= self.ended(window, id, exit, now);
+        }
         changed
+    }
+
+    /// The program of the tab `id` ended at `now`, with `exit`. A clean end
+    /// closes the tab, and the last one the window (ADR 0024). Otherwise
+    /// the tab forgets its session, and its terminal, which tells how the
+    /// program ended, stays: if the tab is shown, its keys no longer go to
+    /// a program. Returns whether a frame has to show it: the tab closed.
+    fn ended(&mut self, window: &Window, id: TabId, exit: Exit, now: Instant) -> bool {
+        if exit.is_clean() {
+            return self.close(window, id, now);
+        }
+        let shown = id == self.tabs.active().id();
+        let Some(tab) = self.tabs.get_mut(id) else {
+            return false;
+        };
+        // It closes without waiting, as when the tab closes: if the program
+        // left its console, the processes that it started end.
+        tab.session = None;
+        if shown {
+            self.view.program_ended();
+        }
+        false
     }
 
     /// Takes the title of the active tab, if its program gave another one,
@@ -497,6 +598,8 @@ impl Tabs {
                 let tab = self.bar.tab(self.tabs.active_index());
                 return self.open_menu(window, active, Anchor::Below(tab), true);
             }
+            TabAction::Restart(id) => return self.restart(window, id, now),
+            TabAction::RestartActive => return self.restart(window, active, now),
         };
         match switch {
             Some(switch) => {
@@ -541,6 +644,41 @@ impl Tabs {
             Ok::<_, Infallible>(Tab::start(launch, environment, grid, cell, &waker, id))
         });
         id
+    }
+
+    /// Starts again, at `now`, the program of the tab `id`, if it ended
+    /// without a clean end or could not start, with the grid that fills the
+    /// window (ADR 0024). Returns whether a frame has to show it: the bar,
+    /// which shows the name of its profile again, and the tab, if it is
+    /// shown.
+    fn restart(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
+        let shown = id == self.tabs.active().id();
+        let Some(index) = self.tabs.index_of(id) else {
+            return false;
+        };
+        let grid = self.view.window_grid();
+        let cell = self.view.cell();
+        let waker = window.waker();
+        let environment = self.shells.environment();
+        let Some(tab) = self.tabs.get_mut(id) else {
+            return false;
+        };
+        // Only a program that does not run starts again.
+        if tab.session.is_some() {
+            return false;
+        }
+        tab.restart(environment, grid, cell, &waker, id);
+        if shown {
+            // As if the tab were shown now: the view copies its whole new
+            // screen, and its keys go to the new program.
+            let terminal = tab.terminal();
+            self.view.show(window, terminal, now, &mut tab.title);
+            window.set_title(tab.title.as_deref().unwrap_or(TITLE));
+        } else {
+            tab.set_priority(Priority::BelowNormal);
+        }
+        self.bar.label_changed(index);
+        true
     }
 
     /// Closes the tab `id` and its session, at `now`. The last tab closes
@@ -606,8 +744,10 @@ impl Tabs {
             return false;
         };
         let count = self.tabs.tab_count();
+        let ended = self.tabs.get(id).is_some_and(|tab| tab.session.is_none());
         let entries = vec![
             Entry::item("Duplicate tab", TabAction::Duplicate(id), true),
+            Entry::item("Restart tab", TabAction::Restart(id), ended),
             Entry::Separator,
             Entry::item("Close tab", TabAction::CloseTab(id), true),
             Entry::item("Close other tabs", TabAction::CloseOthers(id), count > 1),
