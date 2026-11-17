@@ -22,7 +22,8 @@ the bar, after them: once the window draws the button, it has taken them.
 It checks that:
 
 - when the program of a hidden tab ends with exit code 0, its tab closes,
-  and only the bar is drawn;
+  and only the bar is drawn; the menu of the profiles, opened after the
+  menu of that tab, stays open, and takes Esc;
 - when the program of the tab that is shown ends with exit code 0, also
   while the menu of its tab is open, its tab closes, and its menu too: the
   one on its left is shown, with one full frame, and its program gets Esc
@@ -1240,15 +1241,44 @@ try {
     $third = Open-Tab 'Ctrl+Shift+T' @($first, $second)
     Write-Host "The grid has $($grid.Columns) x $($grid.Rows) cells of $($cell.Width) x $($cell.Height) pixels."
 
-    # 2. The program of the first tab, which is hidden, ends with exit code
-    # 0: its tab closes, and only the bar is drawn.
+    # 2. The right button opens the menu of the first tab, which is hidden,
+    # and Esc closes it; then Ctrl+Shift+Space opens the menu of the
+    # profiles. The program of the first tab ends with exit code 0: its tab
+    # closes, and only the bar is drawn. The menu of the profiles stays open,
+    # since only the menu of a tab closes with it, and takes Esc then:
+    # closing it would draw what it covered, below the bar.
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    $point = Get-TabPoint (Get-Bar 3).Tabs[0]
+    Send-Mouse @(
+        Get-Mouse $WM_MOUSEMOVE 0 $point
+        Get-Mouse $WM_RBUTTONDOWN $MK_RBUTTON $point
+        Get-Mouse $WM_RBUTTONUP 0 $point
+    )
+    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'The right button did not open the menu of the first tab.' }
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Chord 'Escape'
+    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'Esc did not close the menu of the first tab.' }
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Chord 'Ctrl+Shift+Spacebar'
+    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'Ctrl+Shift+Space did not open the menu of the profiles.' }
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Stop-Probe $first 0
     Wait-Gone $first 'The program of the first tab'
-    Assert-Inside $start (Get-Bar 2).Rect 'When the program of a hidden tab ended with exit code 0'
+    Assert-Inside $start (Get-Bar 2).Rect 'When the program of a hidden tab ended with exit code 0, with the menu of the profiles open'
     Wait-Shown $third @($second) 'After the first tab closed'
-    Write-Host 'OK: when the program of a hidden tab ends with exit code 0, its tab closes, and only the bar is drawn.'
+    $from = (Get-KeyText $third).Length
+    $start = @(Get-Log).Count
+    Send-Chord 'Escape'
+    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'After the first tab closed, Esc did not close the menu of the profiles.' }
+    $keys = Get-KeysBefore $third $from
+    if ($keys -cne '') {
+        throw "After the first tab closed with the menu of the profiles open, the program of the tab that is shown got the keys '$keys' before Z, instead of none: the menu of the profiles takes Esc."
+    }
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 0, its tab closes, and only the bar is drawn; the menu of the profiles, opened after the menu of that tab, stays open, and takes Esc.'
 
     # 3. The program of the tab that is shown, the last one, ends with exit
     # code 0 while Shift+F10 has the menu of its tab open: its tab closes,
@@ -1269,7 +1299,8 @@ try {
     Send-Chord 'Escape'
     $keys = Get-KeysBefore $second $from
     if ($keys -cne '27+ 27-') {
-        throw "When the tab that was shown closed with its menu open, and the one on its left was shown, its program got the keys '$keys' before Z, instead of Esc going down and up: the menu stayed open."
+        $cause = if ($keys) { '' } else { ': the menu stayed open, and took it' }
+        throw "When the tab that was shown closed with its menu open, and the one on its left was shown, its program got the keys '$keys' before Z, instead of Esc going down and up$cause."
     }
     Write-Host 'OK: when the program of the tab that is shown ends with exit code 0, also while the menu of its tab is open, its tab closes, and its menu too: the one on its left is shown, with one full frame, and its program gets Esc then.'
 
