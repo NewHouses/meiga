@@ -501,10 +501,10 @@ impl Tabs {
         let Some(tab) = self.tabs.get_mut(id) else {
             return false;
         };
-        // Its session closes without waiting, as when the tab closes: if the
-        // program left its console and still runs, the session ends it, with
-        // the programs that it started, as it does when the tab closes (ADR
-        // 0011).
+        // Its session closes without waiting, as when the tab closes. Without
+        // an exit code, ConPTY failed and the program may still run: then
+        // the session ends it, with the programs that it started, as it does
+        // when the tab closes (ADR 0011).
         tab.session = None;
         if shown {
             self.view.program_ended();

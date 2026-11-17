@@ -49,8 +49,8 @@ pub struct Shared {
 pub enum Exit {
     /// With this exit code.
     Code(u32),
-    /// It was still running some seconds after ConPTY closed its output: it
-    /// left its console (`FreeConsole`), or ConPTY failed.
+    /// It was still running some seconds after ConPTY closed its output,
+    /// which only happens if ConPTY itself fails.
     Unknown,
 }
 
