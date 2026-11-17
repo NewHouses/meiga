@@ -21,9 +21,11 @@ keys that nothing can show go with a move of the pointer onto a button of
 the bar, after them: once the window draws the button, it has taken them.
 It checks that:
 
-- when the program of a hidden tab ends with exit code 0, its tab closes,
-  and only the bar is drawn; the menu of the profiles, opened after the
-  menu of that tab, stays open, and takes Esc;
+- when the program of a hidden tab ends with exit code 0, its tab closes;
+  if the menu of the profiles, opened after the menu of that tab, or the
+  menu of another tab is open, it stays open, and takes Esc, and only the
+  bar is drawn; if the menu of that tab is open, it closes with it, and
+  then the program of the tab that is shown gets Esc;
 - when the program of the tab that is shown ends with exit code 0, also
   while the menu of its tab is open, its tab closes, and its menu too: the
   one on its left is shown, with one full frame, and its program gets Esc
@@ -945,6 +947,23 @@ function Send-Mouse([long[]]$Messages) {
     Send-Posted $Messages $null
 }
 
+# Opens the menu of the tab at $Index of the bar with $Count tabs, which $What
+# names, with the right button on its title, and waits until the window draws
+# it: the menu opens at the pointer, on the bar, and reaches below it, while
+# the pointer on a tab draws only in the bar.
+function Open-TabMenu([int]$Count, [int]$Index, [string]$What) {
+    $from = @(Get-Log).Count
+    $point = Get-TabPoint (Get-Bar $Count).Tabs[$Index]
+    Send-Mouse @(
+        Get-Mouse $WM_MOUSEMOVE 0 $point
+        Get-Mouse $WM_RBUTTONDOWN $MK_RBUTTON $point
+        Get-Mouse $WM_RBUTTONUP 0 $point
+    )
+    Wait-For { @(Get-Areas (Get-Frames $from) | Where-Object { $_.Bottom -gt $barHeight }).Count -gt 0 } {
+        "The right button did not open the menu of $What."
+    }
+}
+
 # The text of the clipboard: nothing if it has none, or if another program
 # keeps it open.
 function Get-Text {
@@ -1224,7 +1243,7 @@ try {
     $started = $process.StartTime
 
     # 1. The first tab runs Probe, the default profile, in its folder; and
-    # Ctrl+Shift+T opens two more, so that the third one is shown.
+    # Ctrl+Shift+T opens four more, so that the fifth one is shown.
     Wait-For { $api::WindowOf($process.Id, 'meiga') -ne [IntPtr]::Zero } { "$exe did not open its window." }
     $window = $api::WindowOf($process.Id, 'meiga')
     $processId = [uint32]0
@@ -1239,23 +1258,23 @@ try {
     Move-Pointer
     $second = Open-Tab 'Ctrl+Shift+T' @($first)
     $third = Open-Tab 'Ctrl+Shift+T' @($first, $second)
+    $fourth = Open-Tab 'Ctrl+Shift+T' @($first, $second, $third)
+    $fifth = Open-Tab 'Ctrl+Shift+T' @($first, $second, $third, $fourth)
     Write-Host "The grid has $($grid.Columns) x $($grid.Rows) cells of $($cell.Width) x $($cell.Height) pixels."
 
-    # 2. The right button opens the menu of the first tab, which is hidden,
-    # and Esc closes it; then Ctrl+Shift+Space opens the menu of the
-    # profiles. The program of the first tab ends with exit code 0: its tab
-    # closes, and only the bar is drawn. The menu of the profiles stays open,
-    # since only the menu of a tab closes with it, and takes Esc then:
-    # closing it would draw what it covered, below the bar.
+    # 2. When the program of a hidden tab ends with exit code 0, its tab
+    # closes, and so does the menu of that tab, but no other menu. The menu
+    # of a tab opens at the pointer, on the bar, and the menu of the profiles
+    # below the bar: while a menu stays open, only the bar is drawn, and once
+    # it closes, what it covered, below the bar.
+    # First, the right button opens the menu of the first tab, and Esc closes
+    # it; then Ctrl+Shift+Space opens the menu of the profiles, which stays
+    # open when the program of the first tab ends, and takes Esc: the program
+    # of the tab that is shown gets only Ctrl and Shift, which went down for
+    # it before the menu opened.
     Wait-Quiet 400
-    $start = @(Get-Log).Count
-    $point = Get-TabPoint (Get-Bar 3).Tabs[0]
-    Send-Mouse @(
-        Get-Mouse $WM_MOUSEMOVE 0 $point
-        Get-Mouse $WM_RBUTTONDOWN $MK_RBUTTON $point
-        Get-Mouse $WM_RBUTTONUP 0 $point
-    )
-    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'The right button did not open the menu of the first tab.' }
+    $from = (Get-KeyText $fifth).Length
+    Open-TabMenu 5 0 'the first tab'
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Escape'
@@ -1268,17 +1287,41 @@ try {
     $start = @(Get-Log).Count
     Stop-Probe $first 0
     Wait-Gone $first 'The program of the first tab'
-    Assert-Inside $start (Get-Bar 2).Rect 'When the program of a hidden tab ended with exit code 0, with the menu of the profiles open'
-    Wait-Shown $third @($second) 'After the first tab closed'
-    $from = (Get-KeyText $third).Length
+    Assert-Inside $start (Get-Bar 4).Rect 'When the program of a hidden tab ended with exit code 0, with the menu of the profiles open'
+    Wait-Shown $fifth @($second, $third, $fourth) 'After the first tab closed'
     $start = @(Get-Log).Count
     Send-Chord 'Escape'
     Wait-For { @(Get-Frames $start).Count -gt 0 } { 'After the first tab closed, Esc did not close the menu of the profiles.' }
-    $keys = Get-KeysBefore $third $from
-    if ($keys -cne '') {
-        throw "After the first tab closed with the menu of the profiles open, the program of the tab that is shown got the keys '$keys' before Z, instead of none: the menu of the profiles takes Esc."
+    $keys = Get-KeysBefore $fifth $from
+    if ($keys -cne '17+ 16+ 16- 17-') {
+        throw "After the first tab closed with the menu of the profiles open, the program of the tab that is shown got the keys '$keys' before Z, instead of Ctrl and Shift going down and up, which went down for it before Ctrl+Shift+Space opened the menu: the menu of the profiles takes Esc."
     }
-    Write-Host 'OK: when the program of a hidden tab ends with exit code 0, its tab closes, and only the bar is drawn; the menu of the profiles, opened after the menu of that tab, stays open, and takes Esc.'
+    # Then the right button opens the menu of the fourth tab, which stays open
+    # when the program of the third one ends. When the program of the fourth
+    # one ends, its menu closes with its tab: the program of the tab that is
+    # shown gets Esc then.
+    $from = (Get-KeyText $fifth).Length
+    Wait-Quiet 400
+    Open-TabMenu 4 2 'the fourth tab'
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Stop-Probe $third 0
+    Wait-Gone $third 'The program of the third tab'
+    Assert-Inside $start (Get-Bar 3).Rect 'When the program of a hidden tab ended with exit code 0, with the menu of another tab open'
+    Wait-Shown $fifth @($second, $fourth) 'After the third tab closed'
+    $start = @(Get-Log).Count
+    Stop-Probe $fourth 0
+    Wait-Gone $fourth 'The program of the fourth tab'
+    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'When the program of a hidden tab ended with exit code 0, with the menu of its tab open, the window drew nothing.' }
+    Wait-Quiet 400
+    Wait-Shown $fifth @($second) 'After the fourth tab closed'
+    Send-Chord 'Escape'
+    $keys = Get-KeysBefore $fifth $from
+    if ($keys -cne '27+ 27-') {
+        $cause = if ($keys) { '' } else { ': the menu stayed open, and took it' }
+        throw "When the fourth tab closed with its menu open, the program of the tab that is shown got the keys '$keys' before Z, instead of Esc going down and up$cause."
+    }
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 0, its tab closes; if the menu of the profiles, opened after the menu of that tab, or the menu of another tab is open, it stays open, and takes Esc, and only the bar is drawn; if the menu of that tab is open, it closes with it, and then the program of the tab that is shown gets Esc.'
 
     # 3. The program of the tab that is shown, the last one, ends with exit
     # code 0 while Shift+F10 has the menu of its tab open: its tab closes,
@@ -1291,8 +1334,8 @@ try {
     Wait-For { @(Get-Frames $start).Count -gt 0 } { 'Shift+F10 did not open the menu of the tab.' }
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    Stop-Probe $third 0
-    Wait-Gone $third 'The program of the tab that was shown'
+    Stop-Probe $fifth 0
+    Wait-Gone $fifth 'The program of the tab that was shown'
     Wait-OneFull $start 'The end of the program of the tab that was shown, with exit code 0,'
     Wait-Shown $second @() 'After the tab that was shown closed'
     $from = (Get-KeyText $second).Length
@@ -1370,14 +1413,14 @@ try {
     # 7. While the program of a tab runs, Restart tab is disabled in its
     # menu: Shift+F10 opens it with Duplicate tab highlighted, and Down goes
     # to Close tab, past Restart tab and the separator.
-    $fourth = Open-Tab 'Ctrl+Shift+T' @($again)
+    $sixth = Open-Tab 'Ctrl+Shift+T' @($again)
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Shift+F10'
     Wait-For { @(Get-Frames $start).Count -gt 0 } { 'Shift+F10 did not open the menu of the tab.' }
     Wait-Quiet 400
     Send-Keys (@((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'Enter').Messages))
-    Wait-Gone $fourth 'After Shift+F10, Down and Enter, on the menu of a tab whose program runs, the program'
+    Wait-Gone $sixth 'After Shift+F10, Down and Enter, on the menu of a tab whose program runs, the program'
     Wait-Shown $again @() 'After Close tab'
     Write-Host 'OK: while the program of a tab runs, Restart tab is disabled in the menu of the tab: Shift+F10 and Down highlight Close tab, which Enter chooses.'
 
@@ -1401,31 +1444,25 @@ try {
     # Duplicate tab, and Down again to Restart tab, which starts the program
     # again in the tab, without showing it, and with the lower priority of a
     # hidden tab from the start (see Assert-LowerReader).
-    $fifth = Open-Tab 'Ctrl+Shift+T' @()
+    $seventh = Open-Tab 'Ctrl+Shift+T' @()
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Ctrl+1'
-    Wait-Shown 0 @($fifth) 'After Ctrl+1'
+    Wait-Shown 0 @($seventh) 'After Ctrl+1'
     Wait-OneFull $start 'Ctrl+1, which showed the first tab,'
     $start = @(Get-Log).Count
-    Write-Probe $fifth "hidden`r`n$([char]27)]0;hidden$([char]7)"
+    Write-Probe $seventh "hidden`r`n$([char]27)]0;hidden$([char]7)"
     Assert-Inside $start (Get-Bar 2).Tabs[1].Rect 'When the program of a hidden tab wrote a line and gave a title'
     $start = @(Get-Log).Count
-    Stop-Probe $fifth 4
-    Wait-Gone $fifth 'The program of the hidden tab'
+    Stop-Probe $seventh 4
+    Wait-Gone $seventh 'The program of the hidden tab'
     Wait-Quiet 400
     $frames = @(Get-Frames $start)
     if ($frames.Count -gt 0) {
         Show-Lines $frames
         throw "When the program of a hidden tab ended with exit code 4, the window drew $($frames.Count) frames instead of none."
     }
-    $point = Get-TabPoint (Get-Bar 2).Tabs[1]
-    Send-Mouse @(
-        Get-Mouse $WM_MOUSEMOVE 0 $point
-        Get-Mouse $WM_RBUTTONDOWN $MK_RBUTTON $point
-        Get-Mouse $WM_RBUTTONUP 0 $point
-    )
-    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'The right button did not open the menu of the tab.' }
+    Open-TabMenu 2 1 'the tab'
     Wait-Quiet 400
     Send-Keys (@((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'Enter').Messages))
     $what = 'Down, Down and Enter, on the menu of a hidden tab whose program ended,'
@@ -1486,13 +1523,13 @@ try {
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Enter'
-    $sixth = Wait-NewShell @($behind) 'Enter, once the folder of Later was there,'
-    Wait-Shown $sixth @($behind) 'After Enter started Later'
-    $keys = Get-KeysBefore $sixth 0
+    $eighth = Wait-NewShell @($behind) 'Enter, once the folder of Later was there,'
+    Wait-Shown $eighth @($behind) 'After Enter started Later'
+    $keys = Get-KeysBefore $eighth 0
     if ($keys) {
         throw "Enter started Later, whose program got the keys '$keys' before Z, instead of none."
     }
-    Assert-Folder $sixth $later 'Later'
+    Assert-Folder $eighth $later 'Later'
     Wait-OneFull $start 'Enter, which started Later,'
     Write-Host 'OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.'
 
@@ -1506,9 +1543,9 @@ try {
     Send-Chord 'Ctrl+V'
     $dialog = Wait-Dialog 'Ctrl+V, with two lines in the clipboard,'
     Stop-Probe $behind 0
-    Stop-Probe $sixth 0
+    Stop-Probe $eighth 0
     Wait-Gone $behind 'While the message box was open, the program of the hidden tab'
-    Wait-Gone $sixth 'While the message box was open, the program of the tab that was shown'
+    Wait-Gone $eighth 'While the message box was open, the program of the tab that was shown'
     if (-not $api::PostMessageW($dialog, $WM_COMMAND, [UIntPtr]::new([uint64]$IDCANCEL), [IntPtr]::Zero)) {
         throw "Could not press Cancel on the message box: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
     }
