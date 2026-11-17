@@ -23,9 +23,10 @@ It checks that:
 
 - when the program of a hidden tab ends with exit code 0, its tab closes;
   if the menu of the profiles, opened after the menu of that tab, or the
-  menu of another tab is open, it stays open, and takes Esc, and only the
-  bar is drawn; if the menu of that tab is open, it closes with it, and
-  then the program of the tab that is shown gets Esc;
+  menu of another tab is open, it stays open, and only the bar is drawn,
+  and then the menu of the profiles takes Esc; if the menu of that tab is
+  open, it closes with it, and then the program of the tab that is shown
+  gets Esc;
 - when the program of the tab that is shown ends with exit code 0, also
   while the menu of its tab is open, its tab closes, and its menu too: the
   one on its left is shown, with one full frame, and its program gets Esc
@@ -1321,7 +1322,7 @@ try {
         $cause = if ($keys) { '' } else { ': the menu stayed open, and took it' }
         throw "When the fourth tab closed with its menu open, the program of the tab that is shown got the keys '$keys' before Z, instead of Esc going down and up$cause."
     }
-    Write-Host 'OK: when the program of a hidden tab ends with exit code 0, its tab closes; if the menu of the profiles, opened after the menu of that tab, or the menu of another tab is open, it stays open, and takes Esc, and only the bar is drawn; if the menu of that tab is open, it closes with it, and then the program of the tab that is shown gets Esc.'
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 0, its tab closes; if the menu of the profiles, opened after the menu of that tab, or the menu of another tab is open, it stays open, and only the bar is drawn, and then the menu of the profiles takes Esc; if the menu of that tab is open, it closes with it, and then the program of the tab that is shown gets Esc.'
 
     # 3. The program of the tab that is shown, the last one, ends with exit
     # code 0 while Shift+F10 has the menu of its tab open: its tab closes,
