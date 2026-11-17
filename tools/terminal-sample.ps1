@@ -9,10 +9,11 @@ hidden, strikeout and five kinds of underline); wide characters between
 brackets, which must fall on their two cells; accented letters and box
 drawing. It also sets the title of the window to "meiga sample".
 
-Run it in the terminal that you check or, while meiga has no keyboard, as
-the program of meiga:
+Run it in the terminal that you check, or in a tab of meiga. As the program
+of meiga, it ends with exit code 0, which closes its tab, so keep PowerShell
+open after it with -NoExit:
 
-    .\target\release\meiga.exe pwsh -NoProfile -File tools\terminal-sample.ps1
+    .\target\release\meiga.exe pwsh -NoProfile -NoExit -File tools\terminal-sample.ps1
 
 .PARAMETER Wait
 Seconds to wait at the end, before the script ends.

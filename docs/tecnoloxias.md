@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 2.6. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 2.7. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -1443,3 +1443,46 @@ Ctrl+3, Ctrl+4, Ctrl+5 e Ctrl+8 dan `ESC`, `FS`, `GS` e `DEL`, e Ctrl+1 e Ctrl+9
 E dúas diferenzas co Windows Terminal: a tab N vai con Ctrl, e non con Ctrl+Alt, por AltGr; e un perfil N que non existe tampouco deixa a tecla para o programa. Atopar a acción dunha tecla é percorrer unha lista dunhas cincuenta entradas, só cando unha tecla baixa: en repouso, nada.
 
 O código explícase en [Código › meiga-core › `shortcut.rs`](codigo/meiga-core.md#cratesmeiga-coresrcshortcutrs) e [› `config.rs`](codigo/meiga-core.md#cratesmeiga-coresrcconfigrs), e en [Código › meiga › `view.rs`](codigo/meiga.md#cratesmeigasrcviewrs), [› `tabs.rs`](codigo/meiga.md#cratesmeigasrctabsrs) e [› `shells.rs`](codigo/meiga.md#cratesmeigasrcshellsrs).
+
+## 59. O fin do programa, o código de saída e o reinicio noutros terminais
+
+**O código de saída.** Cando un programa remata, deixa un número: 0 se todo foi ben e, se non, o que escolla el. `GetExitCodeProcess` dáo, ou `STILL_ACTIVE` (259) mentres o programa segue vivo ([§32](#32-procesos-tubaxes-e-eventos)). Unha shell sae co número que lle dea `exit` e, sen el, cun que depende da shell. Co exemplo `conpty` de `meiga-win`, escribindo as liñas:
+
+| Shell | `exit` sen número |
+|---|---|
+| PowerShell 7 e Windows PowerShell | 0, tamén despois dun comando que falla, coma `cmd /c exit 3` ou `Get-Item` dun arquivo que non existe |
+| cmd | O `ERRORLEVEL` do último comando: 1 despois dun `dir` que falla, e 3 despois de `cmd /c exit 3` |
+| bash | O código do último comando: 1 despois de `false` |
+
+Así, se só o 0 pecha a tab, `exit` despois dun erro déixaa aberta en cmd e en bash, e péchaa en PowerShell.
+
+**Cando remata o programa, noutros terminais:**
+
+| Terminal | O que fai |
+|---|---|
+| Windows Terminal 1.25 | Co código 0, a conexión queda *Closed*; con outro, *Failed* ([`ConptyConnection.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalConnection/ConptyConnection.cpp#L537-L551)). Nos dous casos escribe, nunha fila nova, `[process exited with code N (0x…)]` e, debaixo, «You can now close this terminal with Ctrl+D, or press Enter to restart.» ([`Resources.resw`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalConnection/Resources/en-US/Resources.resw#L206-L218)): `\r\n`, as dúas liñas e outro `\r\n`, coas cores, os caracteres e os modos que deixase o programa, e sen borrar nada ([`ConptyConnection.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalConnection/ConptyConnection.cpp#L517-L528)). A opción `closeOnExit` de cada perfil decide se pecha o panel ([`TerminalPaneContent.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TerminalPaneContent.cpp#L228-L253)): `automatic`, a de por defecto ([`MTSMSettings.h`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/MTSMSettings.h#L94)), e `graceful` péchano con *Closed*; `always`, sempre; e `never`, nunca. Un programa que non arranca escribe ``[error … when launching `…']`` e, con algúns erros, unha liña que o explica, sen o aviso; e nunca pecha o panel, para que unha configuración mal non abra e peche o terminal no momento. |
+| VS Code 1.146 | Pecha o terminal con calquera código; cun que non é 0, mostra unha notificación, salvo se o último que se escribiu foi Ctrl+D ([`terminalInstance.ts`](https://github.com/microsoft/vscode/blob/1.146.0/src/vs/workbench/contrib/terminal/browser/terminalInstance.ts#L1735-L1821)). |
+| WezTerm 20240203-110809-5046fc22 | `exit_behavior`: `Close`, o de por defecto, pecha o panel; `CloseOnCleanExit`, só co 0 e cos códigos que engada `clean_exit_codes`, baleiro por defecto; e `Hold`, nunca ([`config.rs`](https://github.com/wezterm/wezterm/blob/20240203-110809-5046fc22/config/src/config.rs#L1893-L1903) e [`localpane.rs`](https://github.com/wezterm/wezterm/blob/20240203-110809-5046fc22/mux/src/localpane.rs#L286-L322)). A súa documentación avisa de que as shells saen co código do último comando ([`exit_behavior`](https://github.com/wezterm/wezterm/blob/20240203-110809-5046fc22/docs/config/lua/config/exit_behavior.md)). |
+| Alacritty 0.17 | Pecha a xanela, salvo con `--hold` ([`alacritty.1.scd`](https://github.com/alacritty/alacritty/blob/v0.17.0/extra/man/alacritty.1.scd#L20-L22)). |
+
+**Un programa que sae da súa consola.** O Windows Terminal solta a pseudoconsola despois de arrancar o programa ([`ConptyConnection.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalConnection/ConptyConnection.cpp#L451)): `ConptyReleasePseudoConsole` pecha o *handle* que mantén vivo o ConPTY, que remata entón cando sae del o último proceso ([`winconpty.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/winconpty/winconpty.cpp#L558-L577)). Nese momento, a conexión mira o código do programa. Un programa que saíu da súa consola (`FreeConsole`) e segue vivo ten aínda `STILL_ACTIVE`, que o Windows Terminal trata coma o 0: o panel pecha, e o programa segue. meiga non a solta: a sesión remata cando remata o programa ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md), decisión 5), e un programa así deixa a súa tab coma mentres estaba nela, ata que remata. Por iso, en meiga, un fin sen código só chega se falla o ConPTY, e non é un fin limpo ([ADR 0024](adr/0024-o-fin-do-programa-e-o-reinicio.md), decisión 1).
+
+**O reinicio do Windows Terminal.** Co panel *Closed* ou *Failed*, Ctrl+D (0x04) pecha o panel e Intro reinicia ([`ControlCore.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalControl/ControlCore.cpp#L520-L541)), coma *Restart connection*, no menú do terminal, que só aparece entón ([`TerminalPage.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TerminalPage.cpp#L5504-L5507)); a acción `restartConnection` non ten atallo ([`defaults.json`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/defaults.json#L626)). O reinicio fai dúas cousas ([`TerminalPage.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TerminalPage.cpp#L3862-L3881)): un reinicio do terminal que non borra o texto (`HardResetWithoutErase`), cos modos e as cores coma nun terminal novo; e unha conexión nova, co mesmo perfil e a mesma liña de comandos, no cartafol actual se o coñece ([`TerminalPage.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TerminalPage.cpp#L1578-L1619)), que herda o cursor: o ConPTY (`PSEUDOCONSOLE_INHERIT_CURSOR`) pregúntalle ao terminal onde está (`ESC [ 6 n`) e agarda a resposta ata 1 s, e o programa novo empeza debaixo do texto de antes ([`ConptyConnection.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalConnection/ConptyConnection.cpp#L264-L273) e [`VtIo.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/host/VtIo.cpp#L183-L217)). meiga empeza nunha pantalla limpa, coma o ConPTY cando arranca, e o texto de antes pasa ao historial: `ESC [ 2 J`, na pantalla principal de `alacritty_terminal`, sube ao historial as filas ata a última con texto ([`term/mod.rs`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1788-L1804) e [`grid/mod.rs`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L309-L333)), mentres que `ESC c` borraría tamén o historial ([`term/mod.rs`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1833-L1858)).
+
+**En meiga:**
+
+| Regra | De onde vén |
+|---|---|
+| Só o código 0 é un fin limpo, e pecha a tab | O Windows Terminal, co seu `closeOnExit` por defecto, e WezTerm con `CloseOnCleanExit` |
+| A última tab pecha a xanela, e meiga sae co 0 | O Windows Terminal |
+| Con outro fin, a liña do código e, debaixo, «You can now close this tab with Ctrl+D, or press Enter to restart.» | O Windows Terminal, coa tab no canto do terminal |
+| A liña do fin nunha fila nova só se o cursor non está ao principio dunha fila baleira; coas cores, os caracteres e o paso á fila seguinte por defecto e a rexión de desprazamento enteira; e borrando desde ela ata o final da pantalla o que deixou o programa | Propio: o Windows Terminal empeza sempre unha fila nova, deixa todo coma o deixou o programa e non borra nada |
+| Sen programa, Intro reinicia e Ctrl+D pecha a tab | O Windows Terminal |
+| Un programa que non arranca mostra tamén o aviso | O Windows Terminal, onde Intro e Ctrl+D fan o mesmo, pero sen o aviso |
+| *Restart tab*, no menú da tab, desactivado mentres corre o programa | O Windows Terminal, que só mostra *Restart connection* cando se pode usar |
+| Reiniciar repite o perfil, a liña de comandos e o cartafol | O Windows Terminal, que usa o cartafol actual se o coñece; meiga, o do perfil, coma *Duplicate tab* |
+| O programa novo, nunha pantalla limpa, co texto de antes no historial | O ConPTY, que empeza así |
+
+E tres diferenzas co Windows Terminal: un fin sen código non é limpo; a liña do fin lese igual deixe o que deixe o programa, e borra o que había debaixo dela; e o programa novo non herda o cursor. O fin non engade ningún fío nin temporizador: chega co aviso que xa enviaba o fío lector.
+
+O código explícase en [Código › meiga › `session.rs`](codigo/meiga.md#cratesmeigasrcsessionrs), [› `tabs.rs`](codigo/meiga.md#cratesmeigasrctabsrs) e [› `view.rs`](codigo/meiga.md#cratesmeigasrcviewrs), e en [Código › meiga-core › `term/mod.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermmodrs).
