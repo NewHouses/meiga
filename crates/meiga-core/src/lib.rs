@@ -19,6 +19,7 @@ pub mod pacing;
 pub mod paste;
 pub mod profile;
 pub mod shell;
+pub mod shortcut;
 pub mod sort;
 pub mod term;
 pub mod text;

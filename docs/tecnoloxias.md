@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 2.5. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: subfase 2.6. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -1388,3 +1388,58 @@ Os programas da Microsoft Store son **alias de execución**: arquivos especiais 
 E dúas diferenzas co Windows Terminal. meiga quita `WT_SESSION` e `WT_PROFILE_ID`, que herda se se abre desde el, tamén do `WSLENV`: con eles, os seus programas crerían que corren no Windows Terminal. E un erro no arquivo non o desfai enteiro: o Windows Terminal, cun erro de sintaxe ou de tipo ao arrancar, usa só os seus valores por defecto e móstrao nun diálogo ([`AppLogic.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/AppLogic.cpp#L219-L261)); meiga ignora só o valor que está mal, e o arquivo enteiro só se non o pode ler: se non é TOML, se non é UTF-8 ou se pasa de 1 MiB. Os erros móstraos unha caixa de mensaxe ([§47](#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)), da xanela de meiga, que se abre cando a xanela xa está na pantalla, para que se vexa diante dela.
 
 O código explícase en [Código › meiga › `shells.rs`](codigo/meiga.md#cratesmeigasrcshellsrs), en [Código › meiga-core › `config.rs`](codigo/meiga-core.md#cratesmeiga-coresrcconfigrs), [› `profile.rs`](codigo/meiga-core.md#cratesmeiga-coresrcprofilers), [› `environment.rs`](codigo/meiga-core.md#cratesmeiga-coresrcenvironmentrs) e [› `sort.rs`](codigo/meiga-core.md#cratesmeiga-coresrcsortrs), e en [Código › meiga-win › `profiles.rs`](codigo/meiga-win.md#cratesmeiga-winsrcprofilesrs).
+
+## 58. Os atallos de teclado: as teclas virtuais, AltGr e os doutros programas
+
+**Que é un atallo.** Unha combinación de teclas que o terminal colle para si, no canto de enviarlla ao programa que corre nel: Ctrl+Maiús+T abre unha tab, e o programa non a recibe. Cada tecla que colle o terminal é unha tecla que perde o programa, así que hai que escoller ben cales colle, e deixar que cada quen as cambie. meiga ten os seus atallos, e a táboa `[shortcuts]` do `config.toml` ([§57](#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)) pode engadir outros, cambiarlles a acción ou liberalos ([ADR 0023](adr/0023-os-atallos-de-teclado.md)):
+
+```toml
+[shortcuts]
+"ctrl+t" = "new_tab"          # outro atallo para abrir unha tab
+"ctrl+6" = "none"             # Ctrl+6 chega outra vez ao programa
+"ctrl+alt+1" = "tab_1"        # Ctrl+Alt+1 mostra a primeira tab, coma no Windows Terminal
+```
+
+**Como se escribe un atallo.** O Windows Terminal escribe os seus coma texto, `ctrl+shift+t`: os modificadores `ctrl`, `alt`, `shift` e `win`, e unha tecla, unidos con `+` ([*Windows Terminal Actions*](https://learn.microsoft.com/en-us/windows/terminal/customize-settings/actions)). A tecla é unha letra ou un díxito; un nome, coma `enter`, `pgup` ou `numpad_plus`; `vk(N)`, unha tecla virtual polo seu número ([§41](#41-o-teclado-en-windows)); `sc(N)`, un código de exploración; ou un carácter calquera, que busca na distribución do teclado de agora con [`VkKeyScanW`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw) ([`KeyChordSerialization.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/KeyChordSerialization.cpp#L124-L234)). meiga le a mesma sintaxe, sen `win`, porque as teclas Windows son de Windows, e sen `vk()`, `sc()` nin os caracteres: un carácter depende da distribución, e o mesmo arquivo daría outra tecla noutro equipo, ou ningunha. Para as teclas que escriben un signo, o Windows Terminal ten catro nomes que valen en calquera distribución, `plus`, `comma`, `minus` e `period` ([`KeyChordSerialization.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/KeyChordSerialization.cpp#L22-L88)): as teclas virtuais `VK_OEM_PLUS`, `VK_OEM_COMMA`, `VK_OEM_MINUS` e `VK_OEM_PERIOD`, que Windows define, para calquera país ou rexión, coma a tecla que escribe ese signo ([*Virtual-Key Codes*](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes)). No teclado español, a tecla `+` está ao lado do Intro; no estadounidense, é a do `=`. Así, meiga busca os atallos pola tecla virtual, e non polo carácter: `ctrl+shift+2` é a tecla do 2 en calquera distribución, aínda que con Maiús escriba `"` no teclado español e `@` no estadounidense.
+
+**AltGr e Ctrl+Alt.** Windows dá AltGr coma o Ctrl esquerdo e o Alt dereito ([§41](#41-o-teclado-en-windows)), así que un atallo con Ctrl+Alt colle tamén as teclas que se escriben con AltGr: no teclado español, AltGr+1, AltGr+2 e AltGr+3 escriben `|`, `@` e `#`, e un atallo `ctrl+alt+2` impediría escribir a arroba. Por iso Raymond Chen explica que os programas non deben usar Ctrl+Alt nos seus atallos ([*Why Ctrl+Alt shouldn't be used as a shortcut modifier*](https://devblogs.microsoft.com/oldnewthing/20040329-00/?p=40003)), e Chromium déixao escrito no seu código ([`accelerator_table.cc`](https://github.com/chromium/chromium/blob/158.0.8127.37/chrome/browser/ui/accelerator_table.cc#L42-L43)). O Windows Terminal usa Ctrl+Alt+1…9 para mostrar a tab N, pero non mira os atallos mentres están premidos o Ctrl esquerdo e o Alt dereito, estean ou non os outros dous ([`TermControl.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalControl/TermControl.cpp#L1800-L1814) e [`ControlKeyStates.hpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalCore/ControlKeyStates.hpp#L124-L127)): AltGr segue escribindo, e os seus atallos fanse co Alt esquerdo. meiga fai o mesmo, pero conta coma AltGr só o Ctrl esquerdo e o Alt dereito sen o Ctrl dereito nin o Alt esquerdo, coma o seu teclado desde a 1.7 ([ADR 0014](adr/0014-o-teclado.md)); calquera outra combinación de Ctrl e Alt é Ctrl+Alt. Nun teclado sen AltGr, coma o estadounidense, o Alt dereito é un Alt normal, pero o Ctrl esquerdo co Alt dereito segue sendo AltGr para os dous terminais: un atallo `ctrl+alt+…` faise co Alt esquerdo.
+
+**O que perden os programas.** As teclas que non colle meiga chegan ao programa enteiras, no win32-input-mode, e os programas que len VT, coma os de WSL, reciben o que traduce o ConPTY ([§42](#42-as-teclas-no-terminal-win32-input-mode-e-vt)). Con Ctrl, os díxitos do 2 ao 8 dan códigos de control, os mesmos ca Ctrl e os signos que os daban nos terminais de antes, e o 1 e o 9 dan o propio díxito ([`terminalInput.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/input/terminalInput.cpp#L497-L521)). Algúns programas usan esas teclas, e os atallos novos da 2.6 cóllenas:
+
+| Teclas | O que recibe un programa que le VT | Quen o usa |
+|---|---|---|
+| Ctrl+2 | `NUL`, coma Ctrl+@ | readline, en bash: `set-mark`, a marca da rexión ([manual de bash](https://www.gnu.org/software/bash/manual/html_node/Miscellaneous-Commands.html)) |
+| Ctrl+6 | `RS`, coma Ctrl+^ | vim: volta ao arquivo anterior ([`CTRL-^`](https://vimhelp.org/editing.txt.html#CTRL-%5E)) |
+| Ctrl+7 | `US`, coma Ctrl+_ | readline: `undo`, desfai |
+| Ctrl+RePáx e Ctrl+AvPáx | `ESC [ 5 ; 5 ~` e `ESC [ 6 ; 5 ~` | vim: a páxina de tabs anterior e a seguinte ([`CTRL-<PageUp>`](https://vimhelp.org/tabpage.txt.html#CTRL-%3CPageUp%3E) e [`CTRL-<PageDown>`](https://vimhelp.org/tabpage.txt.html#CTRL-%3CPageDown%3E)); PSReadLine, que as recibe coma eventos: despraza a xanela da consola unha liña ([`KeyBindings.cs`](https://github.com/PowerShell/PSReadLine/blob/v2.4.5/PSReadLine/KeyBindings.cs#L256-L261)) |
+
+Ctrl+3, Ctrl+4, Ctrl+5 e Ctrl+8 dan `ESC`, `FS`, `GS` e `DEL`, e Ctrl+1 e Ctrl+9, o díxito. Quen as queira no programa libéraas con `"none"`. Alt cos díxitos, en cambio, segue indo ao programa: no PSReadLine e en bash dá un argumento numérico, as veces que se repite a orde seguinte ([`KeyBindings.cs`](https://github.com/PowerShell/PSReadLine/blob/v2.4.5/PSReadLine/KeyBindings.cs#L220-L230) e [`digit-argument`](https://www.gnu.org/software/bash/manual/html_node/Numeric-Arguments.html)).
+
+**Os atallos das tabs noutros programas:**
+
+| Programa | Atallos das tabs |
+|---|---|
+| Chrome 158 | Ctrl+1…8, a tab N, e Ctrl+9, a última, tamén cos díxitos do teclado numérico; Ctrl+Tab e Ctrl+AvPáx, a seguinte, e Ctrl+Maiús+Tab e Ctrl+RePáx, a anterior ([`accelerator_table.cc`](https://github.com/chromium/chromium/blob/158.0.8127.37/chrome/browser/ui/accelerator_table.cc#L76-L100)); en Linux, tamén Alt+1…9 ([`accelerator_table.cc`](https://github.com/chromium/chromium/blob/158.0.8127.37/chrome/browser/ui/accelerator_table.cc#L257-L278)). |
+| Windows Terminal 1.25 | Ctrl+Alt+1…8, a tab N, e Ctrl+Alt+9, a última; Ctrl+Tab e Ctrl+Maiús+Tab; Ctrl+Maiús+1…9, o perfil N do seu menú; e Ctrl+Maiús+D, duplicar a tab ([`defaults.json`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/defaults.json#L739-L761)). |
+| Warp, en Windows | Ctrl+1…8 e Ctrl+9, e Ctrl+RePáx e Ctrl+AvPáx ([a súa documentación](https://github.com/warpdotdev/docs/blob/9894bc06861026ac727b9ea6cb7fac26bc6abe51/src/content/docs/getting-started/keyboard-shortcuts.mdx#L337-L355)). |
+
+**Cando a tab ou o perfil N non existe.** Chrome non fai nada ([`browser_commands.cc`](https://github.com/chromium/chromium/blob/158.0.8127.37/chrome/browser/ui/browser_commands.cc#L1584-L1619)). O Windows Terminal mostra a última tab ([`TabManagement.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TabManagement.cpp#L539-L562)), e, se o perfil N non existe, non abre nada e deixa a tecla para o programa ([`AppActionHandlers.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/AppActionHandlers.cpp#L459-L478)). meiga non fai nada nos dous casos, e a tecla tampouco lle chega ao programa: así, o que recibe o programa non depende de cantas tabs haxa abertas, nin de cantas shells atope meiga en cada equipo.
+
+**As repeticións.** Mentres se mantén unha tecla, chegan máis `WM_KEYDOWN`, co bit 30 do `lParam` posto ([§41](#41-o-teclado-en-windows)). meiga repite só as accións que se fan pouco a pouco: a tab seguinte e a anterior, o historial e o zoom, menos o tamaño do principio. As outras fanse unha vez, e unha tecla mantida un pouco de máis non abre nin pecha varias tabs. As teclas dun atallo non lle chegan ao programa nin mentres repiten nin cando soben. E, ao revés, unha tecla que baixou para o programa é súa ata que sobe: as súas repeticións non buscan atallos, tamén cos modificadores que se premen mentres tanto, e o programa recibe a súa soltura.
+
+**En meiga:**
+
+| Regra | De onde vén |
+|---|---|
+| Os atallos, nunha táboa do arquivo, e `"none"` para liberar un | O Windows Terminal, que libera un atallo cun `"command": null` ([`ActionMap.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/ActionMap.cpp#L802-L827)) |
+| A sintaxe, `ctrl+shift+t`, e os nomes das teclas | O Windows Terminal, sen `win`, `vk()`, `sc()` nin os caracteres |
+| Os atallos, pola tecla virtual | O Windows Terminal, salvo cun carácter |
+| Ctrl+1…8, a tab N, e Ctrl+9, a última, só cos díxitos de arriba | Chrome e o Warp; Chrome, tamén cos do teclado numérico |
+| Ctrl+RePáx e Ctrl+AvPáx, a anterior e a seguinte | Chrome e o Warp |
+| Ctrl+Maiús+1…9, o perfil N, e Ctrl+Maiús+D, duplicar a tab | O Windows Terminal |
+| Ningún atallo con AltGr | O Windows Terminal; e Chromium e Raymond Chen, que non usan Ctrl+Alt |
+| Unha tab N que non existe non fai nada | Chrome |
+
+E dúas diferenzas co Windows Terminal: a tab N vai con Ctrl, e non con Ctrl+Alt, por AltGr; e un perfil N que non existe tampouco deixa a tecla para o programa. Atopar a acción dunha tecla é percorrer unha lista dunhas cincuenta entradas, só cando unha tecla baixa: en repouso, nada.
+
+O código explícase en [Código › meiga-core › `shortcut.rs`](codigo/meiga-core.md#cratesmeiga-coresrcshortcutrs) e [› `config.rs`](codigo/meiga-core.md#cratesmeiga-coresrcconfigrs), e en [Código › meiga › `view.rs`](codigo/meiga.md#cratesmeigasrcviewrs), [› `tabs.rs`](codigo/meiga.md#cratesmeigasrctabsrs) e [› `shells.rs`](codigo/meiga.md#cratesmeigasrcshellsrs).

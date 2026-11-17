@@ -1,6 +1,6 @@
 # ADR 0022 · Os perfís e a configuración
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0023](0023-os-atallos-de-teclado.md)
 - **Data:** 2026-11-15
 - **Relacionados:** [ADR 0004](0004-conpty-empaquetado.md), [ADR 0006](0006-licenzas-e-dependencias.md), [ADR 0014](0014-o-teclado.md), [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [ADR 0020](0020-a-barra-de-tabs.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md)
 

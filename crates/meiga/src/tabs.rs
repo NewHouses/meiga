@@ -79,6 +79,15 @@ pub enum TabAction {
     Next,
     /// Show the previous tab or, from the first one, the last.
     Previous,
+    /// Show the tab at this place of the bar, from 0, if there is one: the
+    /// keyboard asked for it.
+    Nth(usize),
+    /// Show the last tab: the keyboard asked for it.
+    Last,
+    /// Find the shells again, and open a tab with the profile at this place
+    /// of the menu of the profiles, from 0, at the end, and show it, if
+    /// there is one: the keyboard asked for it, without the menu.
+    Profile(usize),
     /// Close the tab that is shown, and its session. The last one closes
     /// the window.
     Close,
@@ -95,12 +104,19 @@ pub enum TabAction {
     /// Open a tab with the program of this one, right after it, and show
     /// it.
     Duplicate(TabId),
+    /// The same with the tab that is shown: the keyboard asked for it.
+    DuplicateActive,
     /// Close all the tabs but this one, and their sessions, and show this
     /// one.
     CloseOthers(TabId),
+    /// The same with the tab that is shown: the keyboard asked for it.
+    CloseAllButActive,
     /// Close the tabs on the right of this one, and their sessions. If the
     /// one that is shown is one of them, this one is shown.
     CloseToTheRight(TabId),
+    /// Close the tabs on the right of the one that is shown, and their
+    /// sessions: the keyboard asked for it.
+    CloseRightOfActive,
 }
 
 /// A tab: the terminal of its session, the session, and what the bar shows
@@ -263,7 +279,8 @@ impl Tabs {
         });
         let first = tabs.active();
         let terminal = first.content().terminal();
-        let view = TerminalView::new(terminal, fonts, font, dpi, area);
+        let shortcuts = shells.shortcuts();
+        let view = TerminalView::new(terminal, fonts, font, dpi, area, shortcuts);
         // The clicks select text until the program asks for the mouse.
         window.set_pointer(Pointer::Text);
         Ok(Self {
@@ -429,32 +446,56 @@ impl Tabs {
     /// `now`. Returns whether a frame has to show it: the window shows
     /// another tab, the bar changed, or the menu opened.
     pub fn act(&mut self, window: &Window, action: TabAction, now: Instant) -> bool {
+        let active = self.tabs.active().id();
         let switch = match action {
             TabAction::New => self.open(window, self.shells.default_launch()),
             TabAction::OpenProfile(index) => match self.shells.launch(index) {
                 Some(launch) => self.open(window, launch),
                 None => None,
             },
+            TabAction::Profile(index) => {
+                // The profile at that place of the menu, as it would show
+                // them now.
+                self.shells.refresh();
+                match self.shells.launch(index) {
+                    Some(launch) => self.open(window, launch),
+                    None => None,
+                }
+            }
             TabAction::ProfileMenu { keyboard } => {
                 return self.open_profile_menu(window, keyboard);
             }
             TabAction::Duplicate(id) => self.duplicate(window, id),
+            TabAction::DuplicateActive => self.duplicate(window, active),
             TabAction::Next => self.tabs.activate_next(),
             TabAction::Previous => self.tabs.activate_previous(),
+            TabAction::Nth(index) => match self.tabs.tabs().get(index) {
+                Some(tab) => self.tabs.activate(tab.id()).ok().flatten(),
+                None => None,
+            },
+            TabAction::Last => match self.tabs.tabs().last() {
+                Some(tab) => self.tabs.activate(tab.id()).ok().flatten(),
+                None => None,
+            },
             TabAction::Activate(id) => self.tabs.activate(id).ok().flatten(),
-            TabAction::Close => return self.close(window, self.tabs.active().id(), now),
+            TabAction::Close => return self.close(window, active, now),
             TabAction::CloseTab(id) => return self.close(window, id, now),
             TabAction::CloseOthers(id) => {
                 return self.close_several(window, now, |tabs| tabs.close_others(id));
             }
+            TabAction::CloseAllButActive => {
+                return self.close_several(window, now, |tabs| tabs.close_others(active));
+            }
             TabAction::CloseToTheRight(id) => {
                 return self.close_several(window, now, |tabs| tabs.close_to_the_right(id));
+            }
+            TabAction::CloseRightOfActive => {
+                return self.close_several(window, now, |tabs| tabs.close_to_the_right(active));
             }
             TabAction::Menu(id, at) => return self.open_menu(window, id, Anchor::At(at), false),
             TabAction::ActiveMenu => {
                 let tab = self.bar.tab(self.tabs.active_index());
-                let id = self.tabs.active().id();
-                return self.open_menu(window, id, Anchor::Below(tab), true);
+                return self.open_menu(window, active, Anchor::Below(tab), true);
             }
         };
         match switch {

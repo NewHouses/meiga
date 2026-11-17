@@ -65,7 +65,7 @@ impl ControlKeys {
 
     /// Whether the Ctrl and the Alt that are down are only those of AltGr,
     /// which Windows gives as the left Ctrl and the right Alt.
-    const fn alt_gr(self) -> bool {
+    pub const fn alt_gr(self) -> bool {
         let all = Self::LEFT_ALT.0 | Self::RIGHT_ALT.0 | Self::LEFT_CTRL.0 | Self::RIGHT_CTRL.0;
         self.0 & all == Self::LEFT_CTRL.0 | Self::RIGHT_ALT.0
     }

@@ -1,5 +1,6 @@
 //! The configuration file, `config.toml` (ADR 0022): the default profile,
-//! and the entries that change, hide or add to the profiles that meiga finds.
+//! the entries that change, hide or add to the profiles that meiga finds,
+//! and the shortcuts that change the ones of meiga (ADR 0023).
 //!
 //! ```toml
 //! default_profile = "Ubuntu"
@@ -12,14 +13,19 @@
 //! name = "Build"
 //! command = 'pwsh -NoExit -File "%USERPROFILE%\build.ps1"'
 //! directory = 'C:\src\meiga'
+//!
+//! [shortcuts]
+//! "ctrl+t" = "new_tab"
+//! "ctrl+6" = "none"
 //! ```
 //!
 //! The file is optional, and meiga reads it when it starts. A file that is
 //! not TOML, that is not UTF-8 text, or that has more than 1 MiB, is
 //! ignored whole; a value that is wrong, or a key that meiga does not know,
-//! only itself; and a profile without a name, or with the name of another
-//! one, all of it. Each of them is a [`Problem`], with its line and its
-//! column, which the window shows.
+//! only itself; a profile without a name, or with the name of another
+//! one, all of it; and a shortcut that is wrong, or whose chord an earlier
+//! one has, only itself. Each of them is a [`Problem`], with its line and
+//! its column, which the window shows.
 //!
 //! The file is read without serde: the parser of the `toml` crate gives each
 //! key and each value with its place in the file, and this module takes the
@@ -32,6 +38,7 @@ use std::str;
 use toml::Spanned;
 use toml::de::{DeTable, DeValue};
 
+use crate::shortcut::{self, Action, Chord};
 use crate::sort::insertion_sort_by;
 
 /// The largest file that meiga reads: a configuration has a few hundred
@@ -107,6 +114,9 @@ pub struct Config {
     pub default_profile: Option<Setting<String>>,
     /// The entries of `[[profiles]]`, in the order of the file.
     pub profiles: Vec<ProfileEntry>,
+    /// The entries of `[shortcuts]`, in the order of the file, each chord
+    /// once.
+    pub shortcuts: Vec<shortcut::Entry>,
 }
 
 /// Reads the configuration in `bytes`, the contents of the file. Returns it,
@@ -168,10 +178,64 @@ impl Reader<'_> {
                     });
                 }
                 "profiles" => config.profiles = self.profiles(key, value),
+                "shortcuts" => config.shortcuts = self.shortcuts(key, value),
                 _ => self.unknown(key),
             }
         }
         config
+    }
+
+    /// The entries of `[shortcuts]`: a chord, and the name of its action.
+    fn shortcuts(&mut self, key: &Key<'_>, value: &Value<'_>) -> Vec<shortcut::Entry> {
+        let DeValue::Table(table) = value.get_ref() else {
+            self.problem(
+                value.span(),
+                format!(
+                    "`{}` has to be a table ([shortcuts]), not {}",
+                    key.get_ref(),
+                    kind(value.get_ref())
+                ),
+            );
+            return Vec::new();
+        };
+        // The table gives its keys in the order of their text: the entries
+        // go in the order of the file, so that the first one of a chord
+        // counts.
+        let mut items: Vec<(&Key<'_>, &Value<'_>)> = table.iter().collect();
+        insertion_sort_by(&mut items, |a, b| a.0.span().start.cmp(&b.0.span().start));
+        let mut entries = Vec::<(shortcut::Entry, u32)>::with_capacity(items.len());
+        for (key, value) in items {
+            let text = key.get_ref();
+            let chord = match Chord::parse(text) {
+                Ok(chord) => chord,
+                Err(_) if text.trim().is_empty() => {
+                    self.problem(key.span(), "a shortcut cannot be empty");
+                    continue;
+                }
+                Err(error) => {
+                    self.problem(key.span(), format!("`{text}` is not a shortcut: {error}"));
+                    continue;
+                }
+            };
+            let Some(name) = self.string(key, value) else {
+                continue;
+            };
+            let action = match Action::parse(&name) {
+                Ok(action) => action,
+                Err(error) => {
+                    self.problem(value.span(), format!("`{name}` {error}"));
+                    continue;
+                }
+            };
+            if let Some((_, line)) = entries.iter().find(|(entry, _)| entry.chord == chord) {
+                let message = format!("`{text}` repeats the shortcut of line {line}");
+                self.problem(key.span(), message);
+                continue;
+            }
+            let line = self.at(key.span()).line;
+            entries.push((shortcut::Entry { chord, action }, line));
+        }
+        entries.into_iter().map(|(entry, _)| entry).collect()
     }
 
     /// The entries of `[[profiles]]`.
@@ -397,6 +461,7 @@ mod tests {
                         ..entry("Build")
                     },
                 ],
+                shortcuts: Vec::new(),
             }
         );
         // Inline tables too.
@@ -470,6 +535,90 @@ mod tests {
             problems,
             ["Line 1, column 13: a profile has to be a table, not a string"]
         );
+    }
+
+    fn shortcut(text: &str, action: Option<Action>) -> shortcut::Entry {
+        shortcut::Entry {
+            chord: Chord::parse(text).unwrap(),
+            action,
+        }
+    }
+
+    #[test]
+    fn shortcuts_go_in_the_order_of_the_file_and_the_first_of_a_chord_counts() {
+        // In the order of their text, `Ctrl+T` would come first.
+        let (config, problems) = read(
+            "[shortcuts]\n\
+             \"ctrl+t\" = \"new_tab\"\n\
+             \"ctrl+6\" = \"none\"\n\
+             \"alt+a\" = \"tab_2\"\n\
+             \"Ctrl+T\" = \"close_tab\"\n",
+        );
+        assert_eq!(
+            problems,
+            ["Line 5, column 1: `Ctrl+T` repeats the shortcut of line 2"]
+        );
+        assert_eq!(
+            config.shortcuts,
+            [
+                shortcut("ctrl+t", Some(Action::NewTab)),
+                shortcut("ctrl+6", None),
+                shortcut("alt+a", Some(Action::Tab(1))),
+            ]
+        );
+        // An inline table too.
+        let (config, _) = read("shortcuts = { \"ctrl+shift+u\" = \"profile_4\" }");
+        assert_eq!(
+            config.shortcuts,
+            [shortcut("ctrl+shift+u", Some(Action::Profile(3)))]
+        );
+        // The same text twice is not TOML.
+        assert!(
+            fails(b"[shortcuts]\n\"ctrl+t\" = \"new_tab\"\n\"ctrl+t\" = \"none\"")
+                .starts_with("Line 3, column 1: ")
+        );
+    }
+
+    #[test]
+    fn wrong_shortcuts_are_ignored_with_their_place() {
+        let (config, problems) = read(
+            "[shortcuts]\n\
+             \"ctrl+a+b\" = \"new_tab\"\n\
+             \"\" = \"new_tab\"\n\
+             \"win+e\" = \"new_tab\"\n\
+             \"alt+f4\" = \"close_tab\"\n\
+             \"ctrl+q\" = \"quit\"\n\
+             \"ctrl+0\" = \"tab_0\"\n\
+             \"ctrl+e\" = 5\n\
+             \"ctrl+r\" = \"\"\n\
+             \"ctrl+y\" = \"nwe_tab\"\n\
+             \"Ctrl+Y\" = \"duplicate_tab\"\n",
+        );
+        assert_eq!(
+            problems,
+            [
+                "Line 2, column 1: `ctrl+a+b` is not a shortcut: it has more than one key",
+                "Line 3, column 1: a shortcut cannot be empty",
+                "Line 4, column 1: `win+e` is not a shortcut: the Windows keys are for Windows",
+                "Line 5, column 1: `alt+f4` is not a shortcut: Alt+F4 and Alt+Space are for Windows",
+                "Line 6, column 12: `quit` is not an action",
+                "Line 7, column 12: `tab_0` is not an action: the tabs and the profiles count from 1",
+                "Line 8, column 12: `ctrl+e` has to be a string, not an integer",
+                "Line 9, column 12: `ctrl+r` cannot be empty",
+                "Line 10, column 12: `nwe_tab` is not an action",
+            ]
+        );
+        // The first right one of a chord counts.
+        assert_eq!(
+            config.shortcuts,
+            [shortcut("ctrl+y", Some(Action::DuplicateTab))]
+        );
+        let (config, problems) = read("shortcuts = [\"ctrl+t\"]");
+        assert_eq!(
+            problems,
+            ["Line 1, column 13: `shortcuts` has to be a table ([shortcuts]), not an array"]
+        );
+        assert!(config.shortcuts.is_empty());
     }
 
     #[test]
