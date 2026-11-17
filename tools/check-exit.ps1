@@ -987,10 +987,12 @@ function Show-Text([string]$Text) {
 # Reads the line at the row $Row of the view, with a triple click on its
 # second column, which copies the whole line, with its rows joined if it
 # wraps; and checks that it is $Start or, with $End, that it starts with
-# $Start and ends with $End. Returns it. The click happens again while the
-# line is not there yet, as the output of a program that has just started.
-function Assert-Line([int]$Row, [string]$Start, [string]$End, [string]$What) {
+# $Start and ends with $End; with $Or, it can be $Or too. Returns it. The
+# click happens again while the line is not there yet, as the output of a
+# program that has just started.
+function Assert-Line([int]$Row, [string]$Start, [string]$End, [string]$What, [string]$Or) {
     $ends = $PSBoundParameters.ContainsKey('End')
+    $either = $PSBoundParameters.ContainsKey('Or')
     $point = [pscustomobject]@{ X = Get-X 1; Y = Get-Y $Row }
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ($true) {
@@ -1006,6 +1008,7 @@ function Assert-Line([int]$Row, [string]$Start, [string]$End, [string]$What) {
         while ([DateTime]::UtcNow -lt $again) {
             $text = Get-Text
             $found = if ($null -eq $text) { $false }
+            elseif ($either -and $text -ceq $Or) { $true }
             elseif ($ends) { $text.StartsWith($Start, 'Ordinal') -and $text.EndsWith($End, 'Ordinal') }
             else { $text -ceq $Start }
             if ($found) { return $text }
@@ -1016,6 +1019,7 @@ function Assert-Line([int]$Row, [string]$Start, [string]$End, [string]$What) {
         }
         if ([DateTime]::UtcNow -gt $deadline) {
             $expected = if ($ends) { "a line that starts with '$Start' and ends with '$End'" } else { "'$Start'" }
+            if ($either) { $expected += " or '$Or'" }
             throw "$What, the row $Row of the terminal has '$(Show-Text $text)' instead of $expected."
         }
     }
@@ -1534,9 +1538,12 @@ try {
     }
     # The rest is the error of Windows, in its language.
     $failure = Assert-Line 0 ('[could not start `' + $probeLine + '` in `' + $later + '`: ') ']' 'The tab of Later'
-    # The line wraps into the rows that it needs, and the hint follows it.
-    $hintRow = [int][Math]::Ceiling($failure.Length / $grid.Columns)
-    $null = Assert-Line $hintRow $hint -What 'The tab of Later'
+    # The line wraps into the rows that its characters take, two columns for
+    # a wide one, as in an error of Windows in Chinese: a triple click on any
+    # of them copies the whole line. The hint follows it, on the first row
+    # that does not.
+    $hintRow = 1
+    while ((Assert-Line $hintRow $hint -What 'The tab of Later' -Or $failure) -cne $hint) { $hintRow++ }
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Enter'
