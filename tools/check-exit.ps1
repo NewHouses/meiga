@@ -39,10 +39,11 @@ It checks that:
   to Close tab, which Enter chooses;
 - when the program ends with exit code 1 at the start of a row, the line of
   the exit code goes in that row;
-- on the menu that the right button opens on a hidden tab whose program
-  ended, Down and Down highlight Restart tab, which Enter chooses: the
-  program starts again in the hidden tab, with the lower priority of a
-  hidden tab, and the tab is not shown;
+- when the program of a hidden tab ends with exit code 4, its tab stays, and
+  nothing is drawn; on the menu that the right button opens on it, Down and
+  Down highlight Restart tab, which Enter chooses: the program starts again
+  in the hidden tab, with the lower priority of a hidden tab from the start,
+  and the tab is not shown;
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
@@ -704,13 +705,14 @@ function Get-Priority([int]$Program) {
 }
 
 # Waits until the tab of $Shown is the one with the reader of normal
-# priority, and the ones of $Hidden have the lower one.
+# priority, and the ones of $Hidden have the lower one. With $Shown 0, the
+# tab that is shown has no program.
 function Wait-Shown([int]$Shown, [int[]]$Hidden, [string]$What) {
     Wait-For {
-        (Get-Priority $Shown) -eq $THREAD_PRIORITY_NORMAL -and
+        ($Shown -eq 0 -or (Get-Priority $Shown) -eq $THREAD_PRIORITY_NORMAL) -and
         @($Hidden | Where-Object { (Get-Priority $_) -ne $THREAD_PRIORITY_BELOW_NORMAL }).Count -eq 0
     } {
-        $all = @($Shown) + $Hidden | ForEach-Object { "$_ $(Get-Priority $_)" }
+        $all = @($Shown | Where-Object { $_ -ne 0 }) + $Hidden | ForEach-Object { "$_ $(Get-Priority $_)" }
         "$What`: the priorities of the readers are not the expected ones (process and priority: $($all -join ', '))."
     }
 }
@@ -848,9 +850,24 @@ function Get-Mouse([int]$Message, [int]$Keys, $Point) {
     $Message, $Keys, (([int]$Point.X -band 0xFFFF) -bor (([int]$Point.Y -band 0xFFFF) -shl 16))
 }
 
-# Posts mouse messages at once: see PostAll.
+# Posts $Messages to the window at once, with the state of the keys of
+# $State, if it is not null: see PostAll. If meiga has ended, it says so,
+# instead of the error of its thread, which is not there any more.
+function Send-Posted([long[]]$Messages, [byte[]]$State) {
+    try {
+        $api::PostAll($window, $thread, $Messages, $State)
+    }
+    catch {
+        if ($process.WaitForExit(2000)) {
+            throw "$exe ended with exit code $($process.ExitCode), and the check could not post its keys or its clicks to its window."
+        }
+        throw
+    }
+}
+
+# Posts mouse messages at once.
 function Send-Mouse([long[]]$Messages) {
-    $api::PostAll($window, $thread, $Messages, $null)
+    Send-Posted $Messages $null
 }
 
 # The text of the clipboard: nothing if it has none, or if another program
@@ -1024,7 +1041,7 @@ function Get-Chord([string]$Chord, [int]$Repeats = 0) {
         Get-Key $code $false $system $extended
         foreach ($modifier in $reversed) { Get-Key $modifier.Code $false ($system -and $modifier.Code -ne $VK_MENU) $modifier.Extended }
     )
-    [pscustomobject]@{ Messages = [long[]]$messages; Down = [int[]]$down; System = $system }
+    [pscustomobject]@{ Messages = [long[]]$messages; Down = [int[]]$down }
 }
 
 # Posts key messages at once, with the keys of $Down down and no other one
@@ -1033,20 +1050,13 @@ function Get-Chord([string]$Chord, [int]$Repeats = 0) {
 function Send-Keys([long[]]$Messages, [int[]]$Down = @()) {
     $state = [byte[]]::new(256)
     foreach ($key in $Down) { $state[$key] = 0x80 }
-    $api::PostAll($window, $thread, $Messages, $state)
+    Send-Posted $Messages $state
 }
 
-# Types $Chord, with $Repeats repeats of its key (see Get-Chord) and, with
-# $Mark, Z after it, with the same modifier keys down: none of the chords of
-# Z is a shortcut, and the program gets Z once the window has taken all the
-# keys before it.
-function Send-Chord([string]$Chord, [int]$Repeats = 0, [switch]$Mark) {
+# Types $Chord, with $Repeats repeats of its key (see Get-Chord).
+function Send-Chord([string]$Chord, [int]$Repeats = 0) {
     $typed = Get-Chord $Chord $Repeats
-    $messages = $typed.Messages
-    if ($Mark) {
-        $messages += @(Get-Key $VK_Z $true $typed.System) + @(Get-Key $VK_Z $false $typed.System)
-    }
-    Send-Keys $messages $typed.Down
+    Send-Keys $typed.Messages $typed.Down
 }
 
 # Types the keys of $Messages, with the keys of $Down down, which nothing
@@ -1097,19 +1107,6 @@ function Wait-Mark([int]$Id, [int]$From, [string]$What) {
 function Get-KeysBefore([int]$Id, [int]$From) {
     Send-Keys (@(Get-Key $VK_Z $true) + @(Get-Key $VK_Z $false))
     Wait-Mark $Id $From 'Z'
-}
-
-# Types $Chord, and Z after it, which shows the tab of $Id, and hides the
-# ones of $Hidden: once the program of the tab gets Z, checks that the
-# window drew one full frame.
-function Show-Tab([string]$Chord, [int]$Id, [int[]]$Hidden) {
-    Wait-Quiet 400
-    $start = @(Get-Log).Count
-    $from = (Get-KeyText $Id).Length
-    Send-Chord $Chord -Mark
-    Wait-Shown $Id $Hidden "After $Chord"
-    $null = Wait-Mark $Id $from $Chord
-    Assert-OneFull $start $Chord
 }
 
 # Types $Chord, which opens a tab whose program runs the command line of
@@ -1276,14 +1273,32 @@ try {
     $null = Assert-Line 2 $hint -What $what
     Write-Host "OK: when the program ends with exit code 1 at the start of a row, '$code1' goes in that row."
 
-    # 9. On the menu that the right button opens on the first tab, which is
-    # hidden, and whose program ended, nothing is highlighted: Down goes to
-    # Duplicate tab, and Down again to Restart tab, which starts the program
-    # again in the tab, without showing it.
+    # 9. The first tab, whose program ended, is shown again, and the program
+    # of the second one, which is hidden then, ends with exit code 4: its tab
+    # stays, and nothing is drawn. On the menu that the right button opens on
+    # it, nothing is highlighted: Down goes to Duplicate tab, and Down again
+    # to Restart tab, which starts the program again in the tab, without
+    # showing it. Nothing wakes the window up for the new program: its
+    # screen does not, since the window does not copy the screen of a hidden
+    # tab, and the end of the last program already woke it up for it; nor
+    # does a title, which the script does not give. So its reader has the
+    # lower priority of a hidden tab from the start, and not after a wake-up.
     $fifth = Open-Tab 'Ctrl+Shift+T' @()
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    $point = Get-TabPoint (Get-Bar 2).Tabs[0]
+    Send-Chord 'Ctrl+1'
+    Wait-Shown 0 @($fifth) 'After Ctrl+1'
+    Wait-OneFull $start 'Ctrl+1, which showed the first tab,'
+    $start = @(Get-Log).Count
+    Stop-Probe $fifth 4
+    Wait-Gone $fifth 'The program of the hidden tab'
+    Wait-Quiet 400
+    $frames = @(Get-Frames $start)
+    if ($frames.Count -gt 0) {
+        Show-Lines $frames
+        throw "When the program of a hidden tab ended with exit code 4, the window drew $($frames.Count) frames instead of none."
+    }
+    $point = Get-TabPoint (Get-Bar 2).Tabs[1]
     Send-Mouse @(
         Get-Mouse $WM_MOUSEMOVE 0 $point
         Get-Mouse $WM_RBUTTONDOWN $MK_RBUTTON $point
@@ -1292,8 +1307,8 @@ try {
     Wait-For { @(Get-Frames $start).Count -gt 0 } { 'The right button did not open the menu of the tab.' }
     Wait-Quiet 400
     Send-Keys (@((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'Enter').Messages))
-    $behind = Wait-NewShell @($fifth) 'Down, Down and Enter, on the menu of a hidden tab whose program ended,'
-    Wait-Shown $fifth @($behind) 'After Restart tab, on a hidden tab'
+    $behind = Wait-NewShell @() 'Down, Down and Enter, on the menu of a hidden tab whose program ended,'
+    Wait-Shown 0 @($behind) 'After Restart tab, on a hidden tab'
     Assert-Folder $behind $work 'After Restart tab, on a hidden tab'
     Wait-Quiet 400
     $full = @(Get-Frames $start | Where-Object { Test-Full $_ })
@@ -1301,21 +1316,18 @@ try {
         Show-Lines (Get-Frames $start)
         throw "Restart tab, on a hidden tab, made $($full.Count) full frames: it showed the tab."
     }
-    Write-Host 'OK: on the menu that the right button opens on a hidden tab whose program ended, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab, and the tab is not shown.'
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, its tab stays, and nothing is drawn; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab, and the tab is not shown.'
 
     # 10. Ctrl+D closes the tab that is shown, whose program ended, and
     # shows the next one, whose program gets neither D nor Ctrl going up:
     # meiga took them when they went down.
-    Show-Tab 'Ctrl+1' $behind @($fifth)
-    Stop-Probe $behind 2
-    Wait-Gone $behind 'The program that Restart tab started'
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    $from = (Get-KeyText $fifth).Length
+    $from = (Get-KeyText $behind).Length
     Send-Chord 'Ctrl+D'
-    Wait-Shown $fifth @() 'After Ctrl+D'
+    Wait-Shown $behind @() 'After Ctrl+D'
     Wait-OneFull $start 'Ctrl+D, which closed the tab whose program ended,'
-    $keys = Get-KeysBefore $fifth $from
+    $keys = Get-KeysBefore $behind $from
     if ($keys) {
         throw "Ctrl+D closed the tab whose program ended, and the program of the next tab got the keys '$keys' before Z, instead of none."
     }
@@ -1351,8 +1363,8 @@ try {
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Enter'
-    $sixth = Wait-NewShell @($fifth) 'Enter, once the folder of Later was there,'
-    Wait-Shown $sixth @($fifth) 'After Enter started Later'
+    $sixth = Wait-NewShell @($behind) 'Enter, once the folder of Later was there,'
+    Wait-Shown $sixth @($behind) 'After Enter started Later'
     $keys = Get-KeysBefore $sixth 0
     if ($keys) {
         throw "Enter started Later, whose program got the keys '$keys' before Z, instead of none."
@@ -1370,9 +1382,9 @@ try {
     Wait-Quiet 400
     Send-Chord 'Ctrl+V'
     $dialog = Wait-Dialog 'Ctrl+V, with two lines in the clipboard,'
-    Stop-Probe $fifth 0
+    Stop-Probe $behind 0
     Stop-Probe $sixth 0
-    Wait-Gone $fifth 'While the message box was open, the program of the hidden tab'
+    Wait-Gone $behind 'While the message box was open, the program of the hidden tab'
     Wait-Gone $sixth 'While the message box was open, the program of the tab that was shown'
     if (-not $api::PostMessageW($dialog, $WM_COMMAND, [UIntPtr]::new([uint64]$IDCANCEL), [IntPtr]::Zero)) {
         throw "Could not press Cancel on the message box: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
