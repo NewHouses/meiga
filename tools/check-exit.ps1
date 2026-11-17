@@ -39,11 +39,12 @@ It checks that:
   to Close tab, which Enter chooses;
 - when the program ends with exit code 1 at the start of a row, the line of
   the exit code goes in that row;
-- when the program of a hidden tab ends with exit code 4, its tab stays, and
-  nothing is drawn; on the menu that the right button opens on it, Down and
-  Down highlight Restart tab, which Enter chooses: the program starts again
-  in the hidden tab, with the lower priority of a hidden tab from the start,
-  and the tab is not shown;
+- when the program of a hidden tab ends with exit code 4, also after it
+  wrote a line and gave a title, which draw only its tab in the bar, its tab
+  stays, and nothing is drawn; on the menu that the right button opens on
+  it, Down and Down highlight Restart tab, which Enter chooses: the program
+  starts again in the hidden tab, with the lower priority of a hidden tab
+  from the start, and the tab is not shown;
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
@@ -270,13 +271,14 @@ public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] s
     }
 }
 
-// The priority of the thread of a process whose name is `name`, or null if
-// the process has none, or has ended.
-public static int? PriorityOf(int process, string name)
+// The priorities of the threads of a process whose names start with
+// `prefix`, by name, or null if the process has ended.
+public static System.Collections.Generic.Dictionary<string, int> PrioritiesOf(int process, string prefix)
 {
     System.Diagnostics.Process target;
     try { target = System.Diagnostics.Process.GetProcessById(process); }
     catch (ArgumentException) { return null; }
+    var found = new System.Collections.Generic.Dictionary<string, int>();
     using (target)
     {
         System.Diagnostics.ProcessThreadCollection threads;
@@ -294,12 +296,23 @@ public static int? PriorityOf(int process, string name)
                 string description;
                 try { description = Marshal.PtrToStringUni(text); }
                 finally { LocalFree(text); }
-                if (description == name) return GetThreadPriority(handle);
+                if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
+                    found[description] = GetThreadPriority(handle);
             }
             finally { CloseHandle(handle); }
         }
     }
-    return null;
+    return found;
+}
+
+// The priority of the thread of a process whose name is `name`, or null if
+// the process has none, or has ended.
+public static int? PriorityOf(int process, string name)
+{
+    var found = PrioritiesOf(process, name);
+    int priority;
+    if (found == null || !found.TryGetValue(name, out priority)) return null;
+    return priority;
 }
 
 static string ClassOf(IntPtr window)
@@ -422,6 +435,9 @@ Add-Type -Namespace MeigaCheck -Name Input -MemberDefinition @"
 $in = [MeigaCheck.Input]::GetStdHandle(-10)
 # The check sets it once it has written how this script ends.
 $stop = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::ManualReset, "meiga-check-exit-$PID")
+# And this one once it has written some text for this script to write, which
+# goes on then.
+$write = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "meiga-check-exit-write-$PID")
 # The folder of the program, and the size of its console: the grid of the
 # terminal.
 [IO.File]::WriteAllText((Join-Path $Work "info-$PID.txt"), "$([Environment]::CurrentDirectory)`n$([Console]::WindowWidth) $([Console]::WindowHeight)`n")
@@ -433,14 +449,19 @@ $records = [byte[]]::new(20 * 64)
 # goes up, in a file that the check reads while this script writes it. Once
 # the file is there, the script reads the keys.
 $file = [IO.FileStream]::new((Join-Path $Work "keys-$PID.txt"), [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
-$handles = [IntPtr[]]@($in, $stop.SafeWaitHandle.DangerousGetHandle())
+$handles = [IntPtr[]]@($in, $stop.SafeWaitHandle.DangerousGetHandle(), $write.SafeWaitHandle.DangerousGetHandle())
 while ($true) {
-    $signaled = [MeigaCheck.Input]::WaitForMultipleObjects(2, $handles, $false, [uint32]::MaxValue)
+    $signaled = [MeigaCheck.Input]::WaitForMultipleObjects(3, $handles, $false, [uint32]::MaxValue)
     if ($signaled -eq 1) {
         # Its exit code, and the text to write before, if there is one.
         $end = [IO.File]::ReadAllLines((Join-Path $Work "exit-$PID.txt"))
         if ($end.Count -gt 1) { [Console]::Out.Write($end[1]) }
         exit [int]$end[0]
+    }
+    if ($signaled -eq 2) {
+        [Console]::Out.Write([IO.File]::ReadAllText((Join-Path $Work "write-$PID.txt")))
+        [Console]::Out.Flush()
+        continue
     }
     if ($signaled -ne 0) { exit 99 }
     $read = 0
@@ -704,6 +725,46 @@ function Get-Priority([int]$Program) {
     $api::PriorityOf($process.Id, "conpty reader $Program")
 }
 
+# Waits until the reader thread of a program starts, while meiga has no
+# other one, and checks that it gets the lower priority of a hidden tab
+# from the start, and not once a wake-up of the window lowers it: a title of
+# the program wakes the window up, which then lowers the priority anyway
+# (Tab::learn), and PowerShell gives one as it starts as administrator, as
+# in the CI. So the check reads it from the moment it starts, until it is
+# the lower one, for 50 ms: meiga starts it with the normal priority, as
+# any thread, and lowers it right after, and the window raises it to the
+# normal one again only while it holds the lock of its terminal.
+function Assert-LowerReader([string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $readings = [Collections.Generic.List[int]]::new()
+    $first = $null
+    while ($true) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode): $What, no program started."
+        }
+        # Null once meiga has ended: then the check above says so.
+        $readers = $api::PrioritiesOf($process.Id, 'conpty reader ')
+        $count = if ($null -eq $readers) { 0 } else { $readers.Count }
+        if ($count -gt 1) {
+            $all = ($readers.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)" }) -join ', '
+            throw "$What`: $exe has $count reader threads instead of one (name and priority: $all)."
+        }
+        if ($count -eq 1) {
+            $priority = @($readers.Values)[0]
+            if ($priority -eq $THREAD_PRIORITY_BELOW_NORMAL) { return }
+            $readings.Add($priority)
+            if ($null -eq $first) { $first = [DateTime]::UtcNow }
+            elseif (([DateTime]::UtcNow - $first).TotalMilliseconds -ge 50) { break }
+        }
+        elseif ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What`: no program started: $exe has no reader thread after $TimeoutSeconds s."
+        }
+        [Threading.Thread]::Sleep(1)
+    }
+    $priorities = ($readings | Sort-Object -Unique) -join ' and '
+    throw "$What`: the reader thread of the new program had the priority $priorities in $($readings.Count) readings for 50 ms, instead of the lower one of a hidden tab, $THREAD_PRIORITY_BELOW_NORMAL."
+}
+
 # Waits until the tab of $Shown is the one with the reader of normal
 # priority, and the ones of $Hidden have the lower one. With $Shown 0, the
 # tab that is shown has no program.
@@ -745,6 +806,15 @@ function Stop-Probe([int]$Id, [int]$Code, [string]$Text = '') {
     finally { $stop.Dispose() }
 }
 
+# Tells the script of the tab of $Id to write $Text, without a new line, and
+# to go on.
+function Write-Probe([int]$Id, [string]$Text) {
+    [IO.File]::WriteAllText((Join-Path $work "write-$Id.txt"), $Text, $utf8)
+    $write = [Threading.EventWaitHandle]::OpenExisting("meiga-check-exit-write-$Id")
+    try { $null = $write.Set() }
+    finally { $write.Dispose() }
+}
+
 # Waits until the program of the tab of $Id has ended, and the reader thread
 # of its session too, whose last work is to give the terminal how the
 # program ended, and to post the wake-up that tells it to the window: what
@@ -754,7 +824,7 @@ function Stop-Probe([int]$Id, [int]$Code, [string]$Text = '') {
 function Wait-Gone([int]$Id, [string]$What) {
     Wait-Ended $Id $What
     Wait-For { $null -eq (Get-Priority $Id) } { "$What ended, and the reader thread of its session did not." }
-    foreach ($file in "keys-$Id.txt", "info-$Id.txt", "exit-$Id.txt") {
+    foreach ($file in "keys-$Id.txt", "info-$Id.txt", "exit-$Id.txt", "write-$Id.txt") {
         Remove-Item -LiteralPath (Join-Path $work $file) -ErrorAction SilentlyContinue
     }
 }
@@ -1274,21 +1344,24 @@ try {
     Write-Host "OK: when the program ends with exit code 1 at the start of a row, '$code1' goes in that row."
 
     # 9. The first tab, whose program ended, is shown again, and the program
-    # of the second one, which is hidden then, ends with exit code 4: its tab
-    # stays, and nothing is drawn. On the menu that the right button opens on
-    # it, nothing is highlighted: Down goes to Duplicate tab, and Down again
-    # to Restart tab, which starts the program again in the tab, without
-    # showing it. Nothing wakes the window up for the new program: its
-    # screen does not, since the window does not copy the screen of a hidden
-    # tab, and the end of the last program already woke it up for it; nor
-    # does a title, which the script does not give. So its reader has the
-    # lower priority of a hidden tab from the start, and not after a wake-up.
+    # of the second one, which is hidden then, writes a line and gives a
+    # title: the window draws only the title of its tab, and does not copy
+    # its screen, so the reader does not wake it up again for the screen.
+    # Then the program ends with exit code 4: its reader wakes the window up
+    # all the same, and the tab stays, and nothing is drawn. On the menu that
+    # the right button opens on it, nothing is highlighted: Down goes to
+    # Duplicate tab, and Down again to Restart tab, which starts the program
+    # again in the tab, without showing it, and with the lower priority of a
+    # hidden tab from the start (see Assert-LowerReader).
     $fifth = Open-Tab 'Ctrl+Shift+T' @()
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Ctrl+1'
     Wait-Shown 0 @($fifth) 'After Ctrl+1'
     Wait-OneFull $start 'Ctrl+1, which showed the first tab,'
+    $start = @(Get-Log).Count
+    Write-Probe $fifth "hidden`r`n$([char]27)]0;hidden$([char]7)"
+    Assert-Inside $start (Get-Bar 2).Tabs[1].Rect 'When the program of a hidden tab wrote a line and gave a title'
     $start = @(Get-Log).Count
     Stop-Probe $fifth 4
     Wait-Gone $fifth 'The program of the hidden tab'
@@ -1307,7 +1380,9 @@ try {
     Wait-For { @(Get-Frames $start).Count -gt 0 } { 'The right button did not open the menu of the tab.' }
     Wait-Quiet 400
     Send-Keys (@((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'Enter').Messages))
-    $behind = Wait-NewShell @() 'Down, Down and Enter, on the menu of a hidden tab whose program ended,'
+    $what = 'Down, Down and Enter, on the menu of a hidden tab whose program ended,'
+    Assert-LowerReader $what
+    $behind = Wait-NewShell @() $what
     Wait-Shown 0 @($behind) 'After Restart tab, on a hidden tab'
     Assert-Folder $behind $work 'After Restart tab, on a hidden tab'
     Wait-Quiet 400
@@ -1316,7 +1391,7 @@ try {
         Show-Lines (Get-Frames $start)
         throw "Restart tab, on a hidden tab, made $($full.Count) full frames: it showed the tab."
     }
-    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, its tab stays, and nothing is drawn; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab, and the tab is not shown.'
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and nothing is drawn; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.'
 
     # 10. Ctrl+D closes the tab that is shown, whose program ended, and
     # shows the next one, whose program gets neither D nor Ctrl going up:
