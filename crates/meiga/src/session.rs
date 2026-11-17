@@ -19,24 +19,32 @@ use meiga_win::window::Waker;
 ///
 /// The reader wakes the window up only if it was not already woken up for
 /// the same thing (ADR 0005): for the screen, until the window copies it;
-/// for the title and for the clipboard, until the window takes them; and
-/// for a synchronized update, until the window knows when it ends. While
-/// the window is minimized, or the tab is hidden, the window does not copy
-/// the screen, so the output does not wake it up again, except to end a
+/// for the title and for the clipboard, until the window takes them; for
+/// the bell, until the tab is hidden again (ADR 0025); and for a
+/// synchronized update, until the window knows when it ends. While the
+/// window is minimized, or the tab is hidden, the window does not copy the
+/// screen, so the output does not wake it up again, except to end a
 /// synchronized update in time, and for the title, which the tab bar shows
-/// for every tab (ADR 0020). What a hidden tab copied to the clipboard
-/// waits until the tab is shown, and is dropped then (ADR 0019), also in a
-/// synchronized update that its program has not ended yet (ADR 0020). The
-/// end of the program always wakes the window up, once (ADR 0024).
+/// for every tab (ADR 0020). When a tab is hidden, the window forgets the
+/// screen and the bell, so the first output and the first bell after it
+/// wake it up, once: its tab tells them (ADR 0025). What a hidden tab
+/// copied to the clipboard waits until the tab is shown, and is dropped
+/// then (ADR 0019), also in a synchronized update that its program has not
+/// ended yet (ADR 0020). The end of the program always wakes the window up,
+/// once (ADR 0024).
 pub struct Shared {
     pub terminal: Terminal,
-    /// The screen may have changed since the window last copied it.
+    /// The screen may have changed since the window last copied it or, for
+    /// a hidden tab, since it was hidden.
     pub screen_changed: bool,
     /// The title changed since the window last took it.
     pub title_changed: bool,
     /// The program copied text to the clipboard (OSC 52) since the window
     /// last took it.
     pub clipboard_changed: bool,
+    /// The program rang the bell since its tab was last hidden, or since it
+    /// started.
+    pub bell_rang: bool,
     /// The window knows when the synchronized update that the program has
     /// open ends, and ends it then, even while it is minimized.
     sync_noted: bool,
@@ -70,6 +78,7 @@ impl Shared {
             screen_changed: false,
             title_changed: false,
             clipboard_changed: false,
+            bell_rang: false,
             sync_noted: false,
             exit: None,
         }
@@ -88,12 +97,13 @@ impl Shared {
         screen || others || sync
     }
 
-    /// Notes the changes of the title and of the clipboard, and says
-    /// whether the window has to be woken up for them.
+    /// Notes the changes of the title, of the clipboard and the bell, and
+    /// says whether the window has to be woken up for them.
     fn note_others(&mut self, changes: Changes) -> bool {
         let title = changes.title && !mem::replace(&mut self.title_changed, true);
         let clipboard = changes.clipboard && !mem::replace(&mut self.clipboard_changed, true);
-        title || clipboard
+        let bell = changes.bell && !mem::replace(&mut self.bell_rang, true);
+        title || clipboard || bell
     }
 
     /// Ends the synchronized update that the program has open if its time is
@@ -172,10 +182,14 @@ impl Shared {
     /// title, the text for the clipboard and the end that the last program
     /// gave, and that the window did not take, are dropped. The screen is
     /// left as it was: the window copies all of it when it shows the tab.
+    /// The first output and the first bell of the new program wake the
+    /// window up, also while the tab is hidden: its tab tells them.
     pub fn restart(&mut self) {
         self.terminal.restart();
+        self.screen_changed = false;
         self.title_changed = false;
         self.clipboard_changed = false;
+        self.bell_rang = false;
         self.sync_noted = false;
         self.exit = None;
     }
@@ -537,7 +551,7 @@ mod tests {
         shared.screen_changed = true;
         let changes = shared
             .terminal
-            .feed(b"\x1b]0;vello\x07\x1b]52;c;b2xh\x07\x1b[?2026h");
+            .feed(b"\x1b]0;vello\x07\x1b]52;c;b2xh\x07\x07\x1b[?2026h");
         assert!(shared.note(changes));
         shared.end(Exit::Code(1));
         // The end already forgot the update; the restart forgets it too,
@@ -548,11 +562,42 @@ mod tests {
         assert_eq!(shared.take_exit(), None);
         assert_eq!(shared.take_clipboard(), None);
         assert_eq!(shared.terminal.title(), None);
-        // The screen of the window is left as it was, and the next
-        // synchronized update wakes the window up again.
-        assert!(shared.screen_changed);
+        // The window copies the whole screen when it shows the tab: the
+        // first output of the new program, and its first bell, wake the
+        // window up again, as the next synchronized update.
+        assert!(!shared.screen_changed && !shared.bell_rang);
+        let changes = shared.terminal.feed(b"\x07");
+        assert!(changes.bell);
+        assert!(shared.note(changes));
+        assert!(shared.screen_changed && shared.bell_rang);
         let changes = shared.terminal.feed(b"\x1b[?2026h");
         assert!(shared.note(changes));
+    }
+
+    #[test]
+    fn the_bell_wakes_the_window_once_until_the_tab_is_hidden_again() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(10, 2)));
+        // The window was woken up for the screen and did not copy it, as
+        // while the tab is hidden.
+        shared.screen_changed = true;
+        let bell = shared.terminal.feed(b"\x07");
+        assert!(bell.bell);
+        assert!(shared.note(bell));
+        assert!(!shared.note(bell));
+        // Copying the screen does not change it: only hiding the tab again.
+        shared.screen_changed = false;
+        shared.note(Changes::default());
+        assert!(!shared.note(bell));
+        shared.bell_rang = false;
+        assert!(shared.note(bell));
+        // A bell in a synchronized update that the window ends rings then,
+        // without waking it up: the window learns it there.
+        shared.bell_rang = false;
+        let changes = shared.terminal.feed(b"\x1b[?2026h\x07");
+        assert!(!changes.bell);
+        assert!(shared.note(changes));
+        shared.end_sync(&mut Vec::new());
+        assert!(shared.bell_rang);
     }
 
     #[test]
