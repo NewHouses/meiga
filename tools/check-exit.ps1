@@ -11,8 +11,9 @@ own, whose config.toml has two profiles, Probe, the default one, and Later,
 which run the same PowerShell script, Later in a folder that is not there at
 first; and hides the shells that meiga finds. The script of each tab writes
 its folder and the size of its console in a file of its own, and in another
-one the keys that its program gets; and it ends when the check tells it to,
-with an exit code, after some text or none.
+one the keys that its program gets; it writes the text that the check gives
+it, and it ends when the check tells it to, with an exit code, after some
+text or none.
 
 The check reads the lines of the terminal with a triple click, which copies
 them to the clipboard, and types the keys as check-shortcuts.ps1 does. The
@@ -22,8 +23,10 @@ It checks that:
 
 - when the program of a hidden tab ends with exit code 0, its tab closes,
   and only the bar is drawn;
-- when the program of the tab that is shown ends with exit code 0, its tab
-  closes, and the one on its left is shown, with one full frame;
+- when the program of the tab that is shown ends with exit code 0, also
+  while the menu of its tab is open, its tab closes, and its menu too: the
+  one on its left is shown, with one full frame, and its program gets Esc
+  then;
 - when the program of the last tab ends with exit code 3, after writing
   "bye", the tab stays, with "bye", the line of the exit code in a row of its
   own below it, and below that what can be done then; meiga goes on;
@@ -733,21 +736,22 @@ function Get-Priority([int]$Program) {
 # in the CI. So the check reads it from the moment it starts, until it is
 # the lower one, for 50 ms: meiga starts it with the normal priority, as
 # any thread, and lowers it right after, and the window raises it to the
-# normal one again only while it holds the lock of its terminal.
+# normal one again only while it holds the lock of its terminal. $What, what
+# starts the program, is the subject of its messages, as in Wait-NewShell.
 function Assert-LowerReader([string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     $readings = [Collections.Generic.List[int]]::new()
     $first = $null
     while ($true) {
         if ($process.HasExited) {
-            throw "$exe ended with exit code $($process.ExitCode): $What, no program started."
+            throw "$What started no program: $exe ended with exit code $($process.ExitCode)."
         }
         # Null once meiga has ended: then the check above says so.
         $readers = $api::PrioritiesOf($process.Id, 'conpty reader ')
         $count = if ($null -eq $readers) { 0 } else { $readers.Count }
         if ($count -gt 1) {
             $all = ($readers.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)" }) -join ', '
-            throw "$What`: $exe has $count reader threads instead of one (name and priority: $all)."
+            throw "$What left $exe with $count reader threads instead of one (name and priority: $all)."
         }
         if ($count -eq 1) {
             $priority = @($readers.Values)[0]
@@ -757,12 +761,12 @@ function Assert-LowerReader([string]$What) {
             elseif (([DateTime]::UtcNow - $first).TotalMilliseconds -ge 50) { break }
         }
         elseif ([DateTime]::UtcNow -gt $deadline) {
-            throw "$What`: no program started: $exe has no reader thread after $TimeoutSeconds s."
+            throw "$What did not start a program: $exe has no reader thread after $TimeoutSeconds s."
         }
         [Threading.Thread]::Sleep(1)
     }
     $priorities = ($readings | Sort-Object -Unique) -join ' and '
-    throw "$What`: the reader thread of the new program had the priority $priorities in $($readings.Count) readings for 50 ms, instead of the lower one of a hidden tab, $THREAD_PRIORITY_BELOW_NORMAL."
+    throw "$What started a program whose reader thread had the priority $priorities in $($readings.Count) readings for 50 ms, instead of the lower one of a hidden tab, $THREAD_PRIORITY_BELOW_NORMAL."
 }
 
 # Waits until the tab of $Shown is the one with the reader of normal
@@ -1247,14 +1251,27 @@ try {
     Write-Host 'OK: when the program of a hidden tab ends with exit code 0, its tab closes, and only the bar is drawn.'
 
     # 3. The program of the tab that is shown, the last one, ends with exit
-    # code 0: its tab closes, and the one on its left is shown.
+    # code 0 while Shift+F10 has the menu of its tab open: its tab closes,
+    # and its menu too, whose items would be for a tab that is not there.
+    # The one on its left is shown, and its program gets Esc then, which an
+    # open menu would take to close.
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Chord 'Shift+F10'
+    Wait-For { @(Get-Frames $start).Count -gt 0 } { 'Shift+F10 did not open the menu of the tab.' }
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Stop-Probe $third 0
     Wait-Gone $third 'The program of the tab that was shown'
     Wait-OneFull $start 'The end of the program of the tab that was shown, with exit code 0,'
     Wait-Shown $second @() 'After the tab that was shown closed'
-    Write-Host 'OK: when the program of the tab that is shown ends with exit code 0, its tab closes, and the one on its left is shown, with one full frame.'
+    $from = (Get-KeyText $second).Length
+    Send-Chord 'Escape'
+    $keys = Get-KeysBefore $second $from
+    if ($keys -cne '27+ 27-') {
+        throw "When the tab that was shown closed with its menu open, and the one on its left was shown, its program got the keys '$keys' before Z, instead of Esc going down and up: the menu stayed open."
+    }
+    Write-Host 'OK: when the program of the tab that is shown ends with exit code 0, also while the menu of its tab is open, its tab closes, and its menu too: the one on its left is shown, with one full frame, and its program gets Esc then.'
 
     # 4. The program of the last tab writes bye, and ends with exit code 3:
     # the tab stays, and tells how it ended, in a row of its own, and below

@@ -35,7 +35,8 @@
 //! before go up for the program, which gets each key that it got go up too.
 //! What changes under it, all inside it, is not drawn until it closes. It
 //! closes when an item is chosen, and also when the window loses the focus,
-//! changes size or scale, starts moving, or is minimized.
+//! changes size or scale, starts moving, or is minimized; and the menu of a
+//! tab, when the tab closes.
 //!
 //! When the program of a tab ends with the exit code 0, the tab closes, as
 //! if the user had closed it, also while it is hidden: the last one closes
@@ -183,7 +184,7 @@ impl Tab {
         tab
     }
 
-    /// Starts its session, which runs what its profile says in a terminal
+    /// Starts its session, which runs what its `launch` says in a terminal
     /// of `grid`, with the variables of `environment`, and wakes `waker` up
     /// with `id`, its identifier. If the program cannot start, the terminal
     /// shows why.
@@ -201,7 +202,7 @@ impl Tab {
     /// how a new program expects it, with `grid` and cells of `cell`
     /// pixels: what the last program wrote goes to the history (ADR 0024).
     /// Until the new program gives a title, the tab shows the name of its
-    /// profile.
+    /// `launch` again.
     fn restart(
         &mut self,
         environment: &[u16],
@@ -304,6 +305,9 @@ pub struct Tabs {
     view: TerminalView,
     bar: TabBar,
     menu: MenuView<TabAction>,
+    /// The tab whose menu is open, if the menu that may be open is the menu
+    /// of a tab: it closes with the tab.
+    menu_tab: Option<TabId>,
     shells: Shells,
     /// The size of the client area of the window: the bar, and below it
     /// the terminal.
@@ -345,6 +349,7 @@ impl Tabs {
             view,
             bar,
             menu: MenuView::new(),
+            menu_tab: None,
             shells,
             client,
             retitled_at: None,
@@ -651,7 +656,7 @@ impl Tabs {
     /// Starts again, at `now`, the program of the tab `id`, if it ended
     /// without a clean end or could not start, with the grid that fills the
     /// window (ADR 0024). Returns whether a frame has to show it: the bar,
-    /// which shows the name of its profile again, and the tab, if it is
+    /// which shows the name of its `launch` again, and the tab, if it is
     /// shown.
     fn restart(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
         let shown = id == self.tabs.active().id();
@@ -683,12 +688,20 @@ impl Tabs {
         true
     }
 
-    /// Closes the tab `id` and its session, at `now`. The last tab closes
-    /// the window instead. Returns whether a frame has to show it: the bar
-    /// without the tab, and another tab if it was the active one.
+    /// Closes the tab `id` and its session, at `now`, and its menu, if it is
+    /// open. The last tab closes the window instead. Returns whether a frame
+    /// has to show it: the bar without the tab, another tab if it was the
+    /// active one, and what its menu covered.
     fn close(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
         match self.tabs.close(id) {
             Ok(Close::Removed { content, activated }) => {
+                // The menu of the tab closes with it: its items would be for
+                // a tab that is not there any more. While a menu is open, the
+                // keys and the mouse are for it, so only the end of its
+                // program closes a tab meanwhile.
+                if self.menu_tab == Some(id) {
+                    self.close_menu(window);
+                }
                 if let Some(to) = activated {
                     self.show(window, Switch { from: id, to }, now);
                 }
@@ -759,6 +772,7 @@ impl Tabs {
                 index + 1 < count,
             ),
         ];
+        self.menu_tab = Some(id);
         self.show_menu(window, entries, anchor, keyboard)
     }
 
@@ -783,6 +797,7 @@ impl Tabs {
             })
             .collect();
         let anchor = Anchor::Below(self.bar.buttons());
+        self.menu_tab = None;
         self.show_menu(window, entries, anchor, keyboard)
     }
 

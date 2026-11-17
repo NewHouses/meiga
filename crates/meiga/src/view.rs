@@ -55,7 +55,8 @@ pub struct TerminalView {
     shared: Arc<Mutex<Shared>>,
     /// Sends to the program the keys, and the answers that the window finds
     /// when it ends a synchronized update, and tells it the size of the
-    /// grid. `None` if the program did not start.
+    /// grid. `None` while no program runs in the tab: it did not start, or
+    /// it ended without a clean end (ADR 0024).
     input: Option<Input>,
     /// The fonts of the system, for a new font when the zoom or the scale
     /// changes.
@@ -102,8 +103,8 @@ pub struct TerminalView {
 /// The terminal of a tab, as the view needs it to show it.
 pub struct TabTerminal {
     pub shared: Arc<Mutex<Shared>>,
-    /// What sends input to its program, or `None` if the program did not
-    /// start.
+    /// What sends input to its program, or `None` if no program runs: it
+    /// did not start, or it ended without a clean end.
     pub input: Option<Input>,
 }
 
@@ -316,7 +317,9 @@ impl TerminalView {
     /// go to the program, as the modes that it turned on say, and a key
     /// that goes down removes the selection and brings the view back to the
     /// screen, where the program writes, unless it is a modifier key. A key
-    /// that went down for the program is its own until it goes up.
+    /// that went down for the program is its own until it goes up. While no
+    /// program runs, Enter starts it again, Ctrl+D closes the tab, and the
+    /// other keys do nothing (ADR 0024).
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         if !event.down {
             // A key that goes up is not down any more, whoever gets it.
@@ -858,10 +861,11 @@ const fn is_modifier(key: u16) -> bool {
     )
 }
 
-/// What a key that goes down does when no program runs in the tab, because
-/// it ended or did not start, as in Windows Terminal (ADR 0024): Enter,
-/// also with Shift, starts it again, and Ctrl+D, also with Shift, closes
-/// the tab. With Alt, or AltGr, neither.
+/// What a key that goes down, and that no shortcut takes, does when no
+/// program runs in the tab, because it ended or did not start, as in Windows
+/// Terminal (ADR 0024): Enter, also with Shift, starts it again, and Ctrl+D,
+/// also with Shift, closes the tab. With Alt, or AltGr, neither. The
+/// shortcuts go first: by default, Ctrl+Shift+D duplicates the tab.
 fn after_the_end(event: &KeyEvent) -> Option<TabAction> {
     let controls = event.controls;
     if controls.alt() {
