@@ -1,6 +1,6 @@
 # ADR 0019 · Varias sesións e as tabs en segundo plano
 
-- **Estado:** Aceptado; concretado polos [ADR 0020](0020-a-barra-de-tabs.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0022](0022-os-perfis-e-a-configuracion.md) e [ADR 0023](0023-os-atallos-de-teclado.md)
+- **Estado:** Aceptado; concretado polos [ADR 0020](0020-a-barra-de-tabs.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0022](0022-os-perfis-e-a-configuracion.md), [ADR 0023](0023-os-atallos-de-teclado.md) e [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md)
 - **Data:** 2026-11-14
 - **Relacionados:** [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0011](0011-fin-e-peche-das-sesions.md), [ADR 0013](0013-da-saida-a-pantalla.md), [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md), [ADR 0018](0018-o-modelo-das-tabs.md)
 

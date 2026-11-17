@@ -35,7 +35,8 @@ const BASE_DPI: u32 = 96;
 pub struct Context<'a> {
     pub window: &'a Window,
     pub shared: &'a Mutex<Shared>,
-    /// The input of the program, or `None` if it did not start.
+    /// The input of the program, or `None` if no program runs: it did not
+    /// start, or it ended without a clean end.
     pub input: Option<&'a Input>,
     /// The size of a cell, in pixels.
     pub cell: Size,

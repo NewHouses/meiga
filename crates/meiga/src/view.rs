@@ -24,7 +24,7 @@ use meiga_win::window::{self, CaretSettings, Window};
 use crate::clipboard;
 use crate::frames;
 use crate::mouse::{Context, Mouse, Response};
-use crate::session::{Shared, lock, store_title};
+use crate::session::{Exit, Shared, lock, store_title};
 use crate::tabs::TabAction;
 
 /// The font: the first of these families that is installed, at 12 points,
@@ -45,12 +45,18 @@ const BASE_DPI: u32 = 96;
 /// Esc, which removes the selection, if there is one, before any shortcut.
 const VK_ESCAPE: u16 = 0x1b;
 
+/// Enter and D: when no program runs in the tab, Enter starts it again and
+/// Ctrl+D closes the tab.
+const VK_RETURN: u16 = 0x0d;
+const VK_D: u16 = 0x44;
+
 /// The terminal of the tab that the window shows, as the window shows it.
 pub struct TerminalView {
     shared: Arc<Mutex<Shared>>,
     /// Sends to the program the keys, and the answers that the window finds
     /// when it ends a synchronized update, and tells it the size of the
-    /// grid. `None` if the program did not start.
+    /// grid. `None` while no program runs in the tab: it did not start, or
+    /// it ended without a clean end (ADR 0024).
     input: Option<Input>,
     /// The fonts of the system, for a new font when the zoom or the scale
     /// changes.
@@ -97,8 +103,8 @@ pub struct TerminalView {
 /// The terminal of a tab, as the view needs it to show it.
 pub struct TabTerminal {
     pub shared: Arc<Mutex<Shared>>,
-    /// What sends input to its program, or `None` if the program did not
-    /// start.
+    /// What sends input to its program, or `None` if no program runs: it
+    /// did not start, or it ended without a clean end.
     pub input: Option<Input>,
 }
 
@@ -110,6 +116,9 @@ pub struct Woken {
     pub screen: bool,
     /// The program changed the title, which the next frame takes.
     pub title: bool,
+    /// The program ended, like this: the window closes the tab, or forgets
+    /// its session.
+    pub exit: Option<Exit>,
 }
 
 impl TerminalView {
@@ -183,22 +192,34 @@ impl TerminalView {
     }
 
     /// The reader thread of the tab that the view shows woke the window up:
-    /// its title, its screen, the clipboard, or more than one, changed, or
-    /// its program left a synchronized update open. The window takes the
-    /// text for the clipboard, if it can, and leaves the title to the next
-    /// frame (ADR 0020). The next update also learns when the synchronized
-    /// update ends, even with the window minimized.
+    /// its title, its screen, the clipboard, or more than one, changed, its
+    /// program left a synchronized update open, or it ended. The window
+    /// takes the text for the clipboard, if it can, and leaves the title to
+    /// the next frame (ADR 0020). The next update also learns when the
+    /// synchronized update ends, even with the window minimized.
     pub fn wake(&self, window: &Window) -> Woken {
-        let (clipboard, screen, title) = {
+        let (clipboard, screen, title, exit) = {
             let mut shared = lock(&self.shared);
             (
                 shared.take_clipboard(),
                 shared.screen_changed,
                 shared.title_changed,
+                shared.take_exit(),
             )
         };
         self.copy_for_program(window, clipboard);
-        Woken { screen, title }
+        Woken {
+            screen,
+            title,
+            exit,
+        }
+    }
+
+    /// The program of the tab that the view shows ended: from now on, until
+    /// the tab shows a new one, Enter starts it again, Ctrl+D closes the tab,
+    /// and the other keys that are not shortcuts do nothing (ADR 0024).
+    pub fn program_ended(&mut self) {
+        self.input = None;
     }
 
     /// Puts `text`, which the program copied (OSC 52), in the clipboard, if
@@ -296,7 +317,9 @@ impl TerminalView {
     /// go to the program, as the modes that it turned on say, and a key
     /// that goes down removes the selection and brings the view back to the
     /// screen, where the program writes, unless it is a modifier key. A key
-    /// that went down for the program is its own until it goes up.
+    /// that went down for the program is its own until it goes up. While no
+    /// program runs, Enter starts it again, Ctrl+D closes the tab, and the
+    /// other keys do nothing (ADR 0024).
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
         if !event.down {
             // A key that goes up is not down any more, whoever gets it.
@@ -334,6 +357,10 @@ impl TerminalView {
             }
             return response;
         }
+        // No program runs in the tab: it ended, or it did not start.
+        if self.input.is_none() {
+            return self.without_program(event);
+        }
         // For the program, which has the key down until it goes up.
         if event.down && event.key != 0 && !self.holds_key(event.key) {
             self.held.push(DownKey::of(event));
@@ -366,6 +393,29 @@ impl TerminalView {
         }
     }
 
+    /// A key, which is not a shortcut, while no program runs in the tab,
+    /// because it ended or did not start (ADR 0024): Enter starts it again,
+    /// Ctrl+D closes the tab, and the others do nothing. meiga takes the
+    /// keys that go down meanwhile, so that a program that starts while one
+    /// of them is down does not get it, neither while it repeats nor when it
+    /// goes up. A key that went down for the program before it ended does
+    /// nothing while it repeats.
+    fn without_program(&mut self, event: &KeyEvent) -> Response {
+        if !event.down || event.key == 0 || self.holds_key(event.key) {
+            return Response::default();
+        }
+        // Outside a menu, as the key of a shortcut: a menu that opens while
+        // it is down does not take its repeats either.
+        self.taken.push(DownKey {
+            shortcut: true,
+            ..DownKey::of(event)
+        });
+        Response {
+            tab: after_the_end(event),
+            ..Response::default()
+        }
+    }
+
     /// Whether `key` went down for the program and did not go up yet: a
     /// menu that opens meanwhile does not take its repeats, and the program
     /// gets it when it goes up.
@@ -373,9 +423,10 @@ impl TerminalView {
         self.held.iter().any(|held| held.key == key)
     }
 
-    /// Whether a shortcut took `key`, which did not go up yet: a menu that
-    /// opens meanwhile does not take its repeats either, as the ones of the
-    /// Space of Ctrl+Shift+Space, which would choose an item.
+    /// Whether meiga took `key` outside a menu, for a shortcut or while no
+    /// program ran, and it did not go up yet: a menu that opens meanwhile
+    /// does not take its repeats either, as the ones of the Space of
+    /// Ctrl+Shift+Space, which would choose an item.
     pub fn took_for_a_shortcut(&self, key: u16) -> bool {
         self.taken
             .iter()
@@ -810,16 +861,33 @@ const fn is_modifier(key: u16) -> bool {
     )
 }
 
+/// What a key that goes down, and that no shortcut takes, does when no
+/// program runs in the tab, because it ended or did not start, as in Windows
+/// Terminal (ADR 0024): Enter, also with Shift, starts it again, and Ctrl+D,
+/// also with Shift, closes the tab. With Alt, or AltGr, neither. The
+/// shortcuts go first: by default, Ctrl+Shift+D duplicates the tab.
+fn after_the_end(event: &KeyEvent) -> Option<TabAction> {
+    let controls = event.controls;
+    if controls.alt() {
+        return None;
+    }
+    match event.key {
+        VK_RETURN if !controls.ctrl() => Some(TabAction::RestartActive),
+        VK_D if controls.ctrl() => Some(TabAction::Close),
+        _ => None,
+    }
+}
+
 /// A key that went down, in the lists of the view: its virtual-key code,
-/// its place on the keyboard, and whether a shortcut took it.
+/// its place on the keyboard, and whether meiga took it outside a menu.
 #[derive(Clone, Copy, Debug)]
 struct DownKey {
     key: u16,
     /// The scan code, with 0x100 for the extended keys, or 0 if the event
     /// has none, as some messages that other programs post.
     place: u16,
-    /// A shortcut took it, and not a menu: a menu does not take its
-    /// repeats.
+    /// A shortcut took it, or meiga while no program ran, and not a menu: a
+    /// menu does not take its repeats.
     shortcut: bool,
 }
 
@@ -1330,5 +1398,45 @@ mod tests {
         let posted = DownKey::of(&event(0x28, 0, extended, true));
         assert!(!posted.ended_by(&event(0x26, 0, extended, false)));
         assert!(posted.ended_by(&event(0x28, 0, extended, false)));
+    }
+
+    #[test]
+    fn without_a_program_enter_starts_it_again_and_ctrl_d_closes_the_tab() {
+        let key = |key, controls| KeyEvent {
+            key,
+            scan: 0,
+            character: 0,
+            down: true,
+            controls,
+            repeat: 1,
+        };
+        let restart = Some(TabAction::RestartActive);
+        let close = Some(TabAction::Close);
+        // Enter, also with Shift, and the one of the keypad, an extended key.
+        assert_eq!(
+            after_the_end(&key(VK_RETURN, ControlKeys::empty())),
+            restart
+        );
+        assert_eq!(after_the_end(&key(VK_RETURN, ControlKeys::SHIFT)), restart);
+        assert_eq!(
+            after_the_end(&key(VK_RETURN, ControlKeys::ENHANCED)),
+            restart
+        );
+        // Ctrl+D, with either Ctrl, also with Shift.
+        assert_eq!(after_the_end(&key(VK_D, ControlKeys::LEFT_CTRL)), close);
+        let right = ControlKeys::RIGHT_CTRL | ControlKeys::SHIFT;
+        assert_eq!(after_the_end(&key(VK_D, right)), close);
+        // Neither with Alt, nor with AltGr, the left Ctrl and the right Alt.
+        assert_eq!(after_the_end(&key(VK_RETURN, ControlKeys::LEFT_ALT)), None);
+        let alt_gr = ControlKeys::LEFT_CTRL | ControlKeys::RIGHT_ALT;
+        assert_eq!(after_the_end(&key(VK_D, alt_gr)), None);
+        let ctrl_alt = ControlKeys::LEFT_CTRL | ControlKeys::LEFT_ALT;
+        assert_eq!(after_the_end(&key(VK_D, ctrl_alt)), None);
+        // Ctrl+Enter, which writes a line feed, D without Ctrl, and a
+        // character without a key do nothing.
+        assert_eq!(after_the_end(&key(VK_RETURN, ControlKeys::LEFT_CTRL)), None);
+        assert_eq!(after_the_end(&key(VK_D, ControlKeys::empty())), None);
+        assert_eq!(after_the_end(&key(VK_D, ControlKeys::SHIFT)), None);
+        assert_eq!(after_the_end(&key(0, ControlKeys::LEFT_CTRL)), None);
     }
 }

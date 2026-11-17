@@ -12,6 +12,7 @@ mod scanner;
 mod screen;
 mod selection;
 
+use std::io::Write;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
@@ -49,6 +50,32 @@ const DEFAULT_CURSOR: CursorStyle = CursorStyle {
     shape: ansi::CursorShape::Beam,
     blinking: true,
 };
+
+/// What leaves the modes, the colours, the cursor and the title as in a new
+/// terminal, and moves the primary screen to the history, without the reset
+/// (`ESC c`) that erases it too: see [`Terminal::restart`].
+const RESTART: &[u8] = concat!(
+    // The primary screen, the default colours of the text, and all the
+    // screen for the program: the scrolling region, the origin mode, the
+    // wrapping, the insert mode and the line feed.
+    "\x1b[?1049l\x1b[0m\x1b[r\x1b[?6l\x1b[?7h\x1b[4l\x1b[20l",
+    // The keys and the mouse: the cursor keys and the keypad, the reports
+    // of the mouse, the focus events, the bracketed paste, the
+    // win32-input-mode and the wheel on the alternate screen.
+    "\x1b[?1l\x1b>\x1b[?1000;1002;1003;1005;1006l\x1b[?1004l\x1b[?2004l\x1b[?9001l\x1b[?1007h",
+    // The characters: the four sets, ASCII, and the first one in use.
+    "\x1b(B\x1b)B\x1b*B\x1b+B\x0f",
+    // The cursor, with its default style and shown; no hyperlink.
+    "\x1b[ q\x1b[?25h\x1b]8;;\x07",
+    // The colours of the theme: the palette, the text, the background and
+    // the cursor.
+    "\x1b]104\x07\x1b]110\x07\x1b]111\x07\x1b]112\x07",
+    // No title: the tab shows the name of its profile.
+    "\x1b]0;\x07",
+    // What the primary screen shows goes to the history.
+    "\x1b[2J",
+)
+.as_bytes();
 
 /// What happened when the terminal read output, besides changes on the
 /// screen.
@@ -442,6 +469,58 @@ impl Terminal {
         };
         self.parser.stop_sync(&mut hooked);
         self.take_changes()
+    }
+
+    /// Leaves the terminal as a new program expects it, for the session
+    /// that starts again in its tab (ADR 0024): the primary screen goes to
+    /// the history, above a clean screen with the cursor at its top-left
+    /// corner, as with `ESC [ 2 J`, and the modes, the colours, the cursor,
+    /// the tab stops and the title are the ones of a new terminal, as after
+    /// the reset of Windows Terminal that keeps the text. What the last
+    /// program left on the alternate screen is dropped, as when a program
+    /// leaves it. The history stays, and the view goes back to the screen.
+    ///
+    /// ConPTY starts with a clean screen and its cursor at the top-left
+    /// corner: the terminal is then like the one of ConPTY, as in a new tab.
+    pub fn restart(&mut self) {
+        // What the last program left in a synchronized update is shown
+        // first. It has ended: its answers are dropped.
+        if self.sync_deadline().is_some() {
+            self.end_sync();
+        }
+        self.feed(RESTART);
+        // A tab stop every 8 columns, from the first one: alacritty_terminal
+        // ignores DECST8C (`CSI ? 5 W`).
+        let mut tabs = Vec::with_capacity(8 * (usize::from(self.size.columns) / 8 + 1) + 8);
+        tabs.extend_from_slice(b"\x1b[3g");
+        for column in (1..=self.size.columns).step_by(8) {
+            let _ = write!(tabs, "\x1b[{column}G\x1bH");
+        }
+        // Then the cursor at the top-left corner, which is also the one that
+        // `ESC 8` restores until the program saves another one.
+        tabs.extend_from_slice(b"\x1b[H\x1b7");
+        self.feed(&tabs);
+        self.scroll(Scroll::Bottom);
+        let mut pending = lock(&self.pending);
+        pending.responses.clear();
+        pending.clipboard = None;
+    }
+
+    /// Whether a line written at the cursor has a row of its own: the cursor
+    /// is at the start of an empty row, without text nor colours, as an
+    /// erased one, and the row above does not wrap into it. The view does
+    /// not matter: it can show the history, and not the cursor.
+    pub fn at_empty_row_start(&self) -> bool {
+        let grid = self.term.grid();
+        let point = grid.cursor.point;
+        if point.column.0 != 0 || !grid[point.line].is_clear() {
+            return false;
+        }
+        let above = Line(point.line.0 - 1);
+        above < grid.topmost_line()
+            || !grid[above][grid.last_column()]
+                .flags
+                .contains(Flags::WRAPLINE)
     }
 
     /// Copies to `screen` the rows that changed since the last copy, the

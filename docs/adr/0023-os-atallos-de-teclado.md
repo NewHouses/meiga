@@ -1,6 +1,6 @@
 # ADR 0023 · Os atallos de teclado
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md)
 - **Data:** 2026-11-16
 - **Relacionados:** [ADR 0014](0014-o-teclado.md), [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md), [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0022](0022-os-perfis-e-a-configuracion.md)
 

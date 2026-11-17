@@ -34,9 +34,10 @@ from the frame that opens it. It checks that:
   pointer, without showing the tab; the pointer on an item draws only its
   highlight; a click on "Duplicate tab" puts the copy right after the tab,
   and not at the end, and the window lets the mouse go;
-- a click on a disabled item does nothing, and the pointer on it draws
-  nothing; a press outside the menu closes it and does nothing else: on
-  another tab, it does not show it;
+- a click on a disabled item, "Restart tab" while the program of the tab
+  runs, or "Close tabs to the right" on the last tab, does nothing, and the
+  pointer on it draws nothing; a press outside the menu closes it and does
+  nothing else: on another tab, it does not show it;
 - "Close tabs to the right", on the tab in the middle, closes the last one,
   and the first one stays; its program ends, and the tab of the menu is
   shown, with one full frame, because the one that was shown closed;
@@ -724,7 +725,7 @@ function Get-Bar([int]$Count) {
 }
 
 # The sizes of the menu of a tab, as meiga computes them (see
-# crates/meiga-core/src/ui/menu.rs): four items and a separator, between a
+# crates/meiga-core/src/ui/menu.rs): five items and a separator, between a
 # border with some space inside it. Its width depends on the font, and
 # comes from the frame that opens it.
 function Get-MenuSizes {
@@ -741,7 +742,7 @@ function Get-MenuSizes {
         Gap = $gap
         Item = $item
         Separator = $separator
-        Height = 2 * ($border + $padding) + 4 * $item + $separator
+        Height = 2 * ($border + $padding) + 5 * $item + $separator
         # Beside the text: the border, the space between it and the
         # highlight, and the one between the highlight and the text, on
         # each side.
@@ -768,16 +769,17 @@ function Get-MenuAt($Point) {
     Get-Menu $Point.X $Point.Y $Point.X $Point.Y
 }
 
-# The entries of $Menu: Duplicate tab, the separator, Close tab, Close other
-# tabs and Close tabs to the right. Each one with a point in the middle of
-# it, X and Y, and, for an item, its highlight, without the space on its
-# sides and above and below it.
+# The entries of $Menu: Duplicate tab, Restart tab, the separator, Close
+# tab, Close other tabs and Close tabs to the right. Each one with a point
+# in the middle of it, X and Y, and, for an item, its highlight, without the
+# space on its sides and above and below it. Restart tab is disabled while
+# the program of the tab runs, as in all this check.
 function Get-Entries($Menu) {
     $top = $Menu.Top + $sizes.Border + $sizes.Padding
     $left = $Menu.Left + $sizes.Border + $sizes.Side
     $right = $Menu.Right - $sizes.Border - $sizes.Side
     $x = [Math]::Floor(($Menu.Left + $Menu.Right) / 2)
-    foreach ($height in $sizes.Item, $sizes.Separator, $sizes.Item, $sizes.Item, $sizes.Item) {
+    foreach ($height in $sizes.Item, $sizes.Item, $sizes.Separator, $sizes.Item, $sizes.Item, $sizes.Item) {
         [pscustomobject]@{
             X = $x
             Y = $top + [Math]::Floor($height / 2)
@@ -955,8 +957,8 @@ try {
     }
     $entries = @(Get-Entries $menu)
     Send-Mouse @(
-        Get-Mouse $WM_MOUSEMOVE 0 $entries[2]
-        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $entries[2]
+        Get-Mouse $WM_MOUSEMOVE 0 $entries[3]
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $entries[3]
     )
     Wait-For { (Get-Capture) -ne [IntPtr]::Zero } { 'A press on an item of the menu did not capture the mouse.' }
     Wait-Quiet 400
@@ -966,7 +968,7 @@ try {
     if ((Get-Capture) -ne [IntPtr]::Zero) {
         throw 'Esc closed the menu while a button was down in it, and the window kept the mouse.'
     }
-    Send-Mouse (Get-Mouse $WM_LBUTTONUP 0 $entries[2])
+    Send-Mouse (Get-Mouse $WM_LBUTTONUP 0 $entries[3])
     Write-Host "OK: the Menu key opens the menu of the tab that is shown, below its tab ($menuWidth x $($sizes.Height) pixels, with cells $cell pixels wide), and draws only the menu; while it is open, nothing is drawn when nothing changes (1 s), nor when the program writes under it, and what it writes across its side is drawn; Esc closes it, also with a button down in it, and then the window lets the mouse go, and draws again what it covered."
 
     # 3. F10 alone goes to the program. Then Shift goes down for the
@@ -987,7 +989,7 @@ try {
     Send-Keys (Get-Key $VK_SHIFT $false)
     $start = @(Get-Log).Count
     Send-Press $VK_DOWN
-    $null = Assert-Inside $start (Get-Union @($entries[0].Highlight, $entries[2].Highlight)) 'Down on the menu'
+    $null = Assert-Inside $start (Get-Union @($entries[0].Highlight, $entries[3].Highlight)) 'Down on the menu'
     $start = @(Get-Log).Count
     Send-Press $VK_X
     Assert-Nothing $start 'X on the menu'
@@ -1046,10 +1048,10 @@ try {
     $entries = @(Get-Entries $menu)
     $start = @(Get-Log).Count
     Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[0])
-    $null = Assert-Inside $start $entries[0].Highlight 'The pointer on the first item of the menu'
+    $null = Assert-Inside $start $entries[0].Highlight 'The pointer on Duplicate tab'
     $start = @(Get-Log).Count
-    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[2])
-    $null = Assert-Inside $start $entries[2].Highlight 'The pointer on the second item of the menu'
+    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[3])
+    $null = Assert-Inside $start $entries[3].Highlight 'The pointer on Close tab'
     Send-Click $entries[0]
     $copy2 = Wait-Copy @($first, $copy1) 'A click on Duplicate tab'
     Wait-Shown $copy2 @($first, $copy1) 'After a click on Duplicate tab'
@@ -1061,21 +1063,24 @@ try {
     Wait-Quiet 400
     Write-Host 'OK: the right button opens the menu of the tab where it goes up, at the pointer, without showing the tab, and the pointer on an item draws only its highlight; a click on Duplicate tab puts the copy right after the tab, shows it, and lets the mouse go.'
 
-    # 6. The menu of the last tab: Close tabs to the right is disabled. The
-    # pointer on it highlights nothing, and a click on it does nothing. Then
-    # a press on another tab closes the menu, and does not show the tab.
+    # 6. The menu of the last tab: Restart tab, while its program runs, and
+    # Close tabs to the right are disabled. The pointer on them highlights
+    # nothing, and a click on them does nothing. Then a press on another tab
+    # closes the menu, and does not show the tab.
     $point = Get-TabPoint $bar.Tabs[2]
     $menu = Get-MenuAt $point
     Send-Click $point 'Right'
     Wait-Quiet 400
     $entries = @(Get-Entries $menu)
-    $start = @(Get-Log).Count
-    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[4])
-    Assert-Nothing $start 'The pointer on a disabled item'
-    Send-Click $entries[4]
-    Wait-Quiet 400
+    foreach ($disabled in $entries[1], $entries[5]) {
+        $start = @(Get-Log).Count
+        Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $disabled)
+        Assert-Nothing $start 'The pointer on a disabled item'
+        Send-Click $disabled
+        Wait-Quiet 400
+    }
     if (@(Get-Shells).Count -ne 3) {
-        throw 'A click on Close tabs to the right, disabled on the last tab, closed a tab.'
+        throw 'A click on Restart tab, disabled while the program of the tab ran, or on Close tabs to the right, disabled on the last tab, closed a tab or started a program.'
     }
     $start = @(Get-Log).Count
     Send-Click (Get-TabPoint $bar.Tabs[1])
@@ -1090,7 +1095,7 @@ try {
     if ((Get-Priority $copy1) -ne $THREAD_PRIORITY_NORMAL -or (Get-Priority $copy2) -ne $THREAD_PRIORITY_BELOW_NORMAL) {
         throw 'A press on another tab showed it: the menu was not open any more, or did not take the press.'
     }
-    Write-Host 'OK: the pointer on a disabled item draws nothing, and a click on it does nothing; a press outside the menu closes it and does nothing else: on another tab, it does not show it.'
+    Write-Host 'OK: the pointer on a disabled item, Restart tab while the program of the tab runs, or Close tabs to the right on the last tab, draws nothing, and a click on it does nothing; a press outside the menu closes it and does nothing else: on another tab, it does not show it.'
 
     # 7. Close tabs to the right, on the tab in the middle, which is hidden:
     # the last tab, which is shown, closes, and the tab of the menu is
@@ -1100,7 +1105,7 @@ try {
     Send-Click $point 'Right'
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    Send-Click $entries[4]
+    Send-Click $entries[5]
     Wait-Ended $copy1 'The program of the last tab, after Close tabs to the right'
     Wait-For { @(Get-Consoles).Count -eq 2 } { "With two tabs left, $exe does not have two consoles." }
     Wait-Shown $copy2 @($first) 'After Close tabs to the right'
@@ -1178,7 +1183,7 @@ try {
     Send-Click $point 'Right'
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    Send-Click $entries[2]
+    Send-Click $entries[3]
     Wait-Ended $copy3 'The program of the tab of the menu, after Close tab'
     Wait-For { @(Get-Consoles).Count -eq 2 } { "With two tabs left, $exe does not have two consoles." }
     Wait-Shown $first @($copy2) 'After Close tab'
@@ -1197,7 +1202,7 @@ try {
     Send-Click $point 'Right'
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    Send-Click $entries[3]
+    Send-Click $entries[4]
     Wait-Ended $first 'The program of the first tab, after Close other tabs'
     Wait-For { @(Get-Consoles).Count -eq 1 } { "With one tab left, $exe does not have one console." }
     Wait-Shown $copy2 @() 'After Close other tabs'
@@ -1205,16 +1210,17 @@ try {
     Assert-OneFull $start 'Close other tabs'
     Write-Host 'OK: Close tab, on a tab that is hidden, closes it, and its program ends, and draws only the bar and what the menu covered: the tab that is shown stays; Close other tabs closes all the tabs but the one of the menu, also on its left, and their programs end; the tab of the menu is shown, with one full frame.'
 
-    # 11. With one tab, Close other tabs and Close tabs to the right are
-    # disabled: Down goes from Duplicate tab, over the separator, to Close
-    # tab, and from it, over the disabled items, round to Duplicate tab,
-    # twice; then Up goes round, over the disabled items, to Close tab.
-    # Arrows that stopped on the separator or on the disabled items, or
-    # did not go round, would end on another entry. Enter on Close tab
-    # closes the window.
+    # 11. With one tab whose program runs, Restart tab, Close other tabs and
+    # Close tabs to the right are disabled: Down goes from Duplicate tab,
+    # over Restart tab and the separator, to Close tab, and from it, over
+    # the disabled items, round to Duplicate tab; then Up goes round, over
+    # the disabled items, to Close tab. Arrows that stopped on the separator
+    # or on the disabled items, or did not go round, would end on another
+    # entry: the separator, Restart tab, or Duplicate tab. Enter on Close
+    # tab closes the window.
     Send-Keys @(Get-Key $VK_F10 $true; Get-Key $VK_F10 $false) $shiftKeys
     Wait-Quiet 400
-    foreach ($key in $VK_DOWN, $VK_DOWN, $VK_DOWN, $VK_DOWN, $VK_UP) {
+    foreach ($key in $VK_DOWN, $VK_DOWN, $VK_UP) {
         Send-Press $key
     }
     Send-Press $VK_RETURN

@@ -1,6 +1,6 @@
 # ADR 0011 · Fin e peche das sesións de ConPTY
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md)
 - **Data:** 2026-11-08
 - **Relacionados:** [ADR 0004](0004-conpty-empaquetado.md), [ADR 0005](0005-fios-e-fotogramas.md)
 
