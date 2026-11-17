@@ -116,8 +116,9 @@ impl Shared {
     /// one: what it wrote meanwhile is shown as it is, and its answers go to
     /// `answers`. A title, or text for the clipboard, that it gave meanwhile
     /// waits for the window to take it, without waking it up: the window is
-    /// the one that ends the update. None is left open, so the next one
-    /// that the program leaves open wakes the window up again.
+    /// the one that ends the update, or the end of the program, which wakes
+    /// it up anyway. None is left open, so the next one that the program
+    /// leaves open wakes the window up again.
     pub fn end_sync(&mut self, answers: &mut Vec<u8>) {
         if self.terminal.sync_deadline().is_some() {
             let changes = self.terminal.end_sync();
@@ -294,24 +295,27 @@ impl Output for Reader {
 /// What the terminal shows when the program ends without a clean end, as
 /// Windows Terminal: a line with its exit code, in a row of its own if
 /// `new_line`, with the default colours and characters, and below it what
-/// the user can do then. Neither the line-drawing characters, the insert
-/// mode, a screen without wrapping nor a scrolling region that the program
-/// left change how it reads: below a region, the last row does not scroll,
-/// and the hint would cover the line. The region goes back to the whole
-/// screen between `ESC 7` and `ESC 8`, which keep the cursor where the
-/// program left it. The cursor is hidden: nothing can be typed any more.
-/// The ConPTY does not turn off the mouse nor the bracketed paste of a
-/// program that ends: they are turned off, so that the mouse selects text
-/// again.
+/// the user can do then. What the program left does not change how it
+/// reads. The screen is erased from the row of the line to its end
+/// (`ESC [ J`), unlike Windows Terminal: what the program left below the
+/// cursor, as a full-screen program that ends at once, does not mix with
+/// them, and the insert mode only moves blank cells. The line-drawing
+/// characters are turned off, and the wrapping on. A scrolling region goes
+/// back to the whole screen, between `ESC 7` and `ESC 8`, which keep the
+/// cursor where the program left it: below a region, the last row does not
+/// scroll, and the hint would cover the line. The cursor is hidden: nothing
+/// can be typed any more. The ConPTY does not turn off the mouse nor the
+/// bracketed paste of a program that ends: they are turned off, so that the
+/// mouse selects text again.
 fn end(exit: Exit, new_line: bool) -> String {
-    const READABLE: &str = "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\x1b7\x1b[r\x1b8";
+    const READABLE: &str = "\x1b[0m\x1b(B\x0f\x1b[?7h\x1b7\x1b[r\x1b8";
     const RESET: &str = "\x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l";
-    let new_line = if new_line { "\r\n" } else { "" };
+    let place = if new_line { "\r\n\x1b[J" } else { "\x1b[J" };
     match exit {
         Exit::Code(code) => format!(
-            "{READABLE}{new_line}[process exited with code {code} (0x{code:08x})]\r\n{HINT}{RESET}"
+            "{READABLE}{place}[process exited with code {code} (0x{code:08x})]\r\n{HINT}{RESET}"
         ),
-        Exit::Unknown => format!("{READABLE}{new_line}[process exited]\r\n{HINT}{RESET}"),
+        Exit::Unknown => format!("{READABLE}{place}[process exited]\r\n{HINT}{RESET}"),
     }
 }
 
@@ -417,14 +421,14 @@ mod tests {
 
         assert_eq!(
             end(Exit::Code(3), false),
-            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\x1b7\x1b[r\x1b8\
+            "\x1b[0m\x1b(B\x0f\x1b[?7h\x1b7\x1b[r\x1b8\x1b[J\
              [process exited with code 3 (0x00000003)]\r\n\
              You can now close this tab with Ctrl+D, or press Enter to restart.\
              \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
         assert_eq!(
             end(Exit::Unknown, true),
-            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\x1b7\x1b[r\x1b8\r\n[process exited]\r\n\
+            "\x1b[0m\x1b(B\x0f\x1b[?7h\x1b7\x1b[r\x1b8\r\n\x1b[J[process exited]\r\n\
              You can now close this tab with Ctrl+D, or press Enter to restart.\
              \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
@@ -453,15 +457,17 @@ mod tests {
     }
 
     #[test]
-    fn the_end_reads_well_whatever_characters_modes_and_region_the_program_left() {
+    fn the_end_reads_well_whatever_the_program_left() {
         let mut shared = Shared::new(Terminal::new(GridSize::new(30, 6)));
-        // The line-drawing characters in the two sets, the second one in
-        // use, the insert mode, no wrapping, and a scrolling region of the
-        // first two rows, with the cursor at the end of the second one,
-        // above a row with text: a new line there would scroll the region.
-        shared
-            .terminal
-            .feed(b"ola\r\nabc\r\nxyz\x1b[1;2r\x1b[2;4H\x1b(0\x1b)0\x0e\x1b[4h\x1b[?7l");
+        // Rows with text below the cursor, longer than the line and the end
+        // of the hint, the line-drawing characters in the two sets, the
+        // second one in use, the insert mode, no wrapping, and a scrolling
+        // region of the first two rows, with the cursor at the end of the
+        // second one: a new line there would scroll the region.
+        shared.terminal.feed(
+            b"ola\r\nabc\r\nabcdefghijklmnopqrstuvwxyz\r\n\r\n\r\n0123456789\
+              \x1b[1;2r\x1b[2;4H\x1b(0\x1b)0\x0e\x1b[4h\x1b[?7l",
+        );
         shared.end(Exit::Unknown);
         let mut screen = Screen::new();
         shared.terminal.copy_damage(&mut screen);
@@ -534,8 +540,11 @@ mod tests {
             .feed(b"\x1b]0;vello\x07\x1b]52;c;b2xh\x07\x1b[?2026h");
         assert!(shared.note(changes));
         shared.end(Exit::Code(1));
+        // The end already forgot the update; the restart forgets it too,
+        // whatever led to it.
+        shared.sync_noted = true;
         shared.restart();
-        assert!(!shared.title_changed && !shared.clipboard_changed);
+        assert!(!shared.title_changed && !shared.clipboard_changed && !shared.sync_noted);
         assert_eq!(shared.take_exit(), None);
         assert_eq!(shared.take_clipboard(), None);
         assert_eq!(shared.terminal.title(), None);
