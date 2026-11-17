@@ -52,8 +52,8 @@ const DEFAULT_CURSOR: CursorStyle = CursorStyle {
 };
 
 /// What leaves the modes, the colours, the cursor and the title as in a new
-/// terminal, and moves what the screen shows to the history, without the
-/// reset (`ESC c`) that erases it too: see [`Terminal::restart`].
+/// terminal, and moves the primary screen to the history, without the reset
+/// (`ESC c`) that erases it too: see [`Terminal::restart`].
 const RESTART: &[u8] = concat!(
     // The primary screen, the default colours of the text, and all the
     // screen for the program: the scrolling region, the origin mode, the
@@ -72,7 +72,7 @@ const RESTART: &[u8] = concat!(
     "\x1b]104\x07\x1b]110\x07\x1b]111\x07\x1b]112\x07",
     // No title: the tab shows the name of its profile.
     "\x1b]0;\x07",
-    // What the screen shows goes to the history.
+    // What the primary screen shows goes to the history.
     "\x1b[2J",
 )
 .as_bytes();
@@ -472,12 +472,13 @@ impl Terminal {
     }
 
     /// Leaves the terminal as a new program expects it, for the session
-    /// that starts again in its tab (ADR 0024): what the last one showed
-    /// goes to the history, above a clean screen with the cursor at its
-    /// top-left corner, as with `ESC [ 2 J`, and the modes, the colours, the
-    /// cursor, the tab stops and the title are the ones of a new terminal,
-    /// as after the reset of Windows Terminal that keeps the text. The
-    /// history stays, and the view goes back to the screen.
+    /// that starts again in its tab (ADR 0024): the primary screen goes to
+    /// the history, above a clean screen with the cursor at its top-left
+    /// corner, as with `ESC [ 2 J`, and the modes, the colours, the cursor,
+    /// the tab stops and the title are the ones of a new terminal, as after
+    /// the reset of Windows Terminal that keeps the text. What the last
+    /// program left on the alternate screen is dropped, as when a program
+    /// leaves it. The history stays, and the view goes back to the screen.
     ///
     /// ConPTY starts with a clean screen and its cursor at the top-left
     /// corner: the terminal is then like the one of ConPTY, as in a new tab.
@@ -505,10 +506,21 @@ impl Terminal {
         pending.clipboard = None;
     }
 
-    /// Whether the cursor is at the start of its row, also when the view
-    /// shows the history and not the cursor.
-    pub fn at_row_start(&self) -> bool {
-        self.term.grid().cursor.point.column.0 == 0
+    /// Whether a line written at the cursor has a row of its own: the cursor
+    /// is at the start of an empty row, without text nor colours, as an
+    /// erased one, and the row above does not wrap into it. The view does
+    /// not matter: it can show the history, and not the cursor.
+    pub fn at_empty_row_start(&self) -> bool {
+        let grid = self.term.grid();
+        let point = grid.cursor.point;
+        if point.column.0 != 0 || !grid[point.line].is_clear() {
+            return false;
+        }
+        let above = Line(point.line.0 - 1);
+        above < grid.topmost_line()
+            || !grid[above][grid.last_column()]
+                .flags
+                .contains(Flags::WRAPLINE)
     }
 
     /// Copies to `screen` the rows that changed since the last copy, the

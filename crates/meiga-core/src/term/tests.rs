@@ -703,7 +703,8 @@ fn a_restart_moves_the_screen_to_the_history_and_leaves_a_new_terminal() {
     terminal.feed(b"1\r\n2\r\n3\r\n4\r\n5\r\n6");
     terminal.feed(
         b"\x1b[3;5H\x1b[31;1m\x1b7\x1b[3g\x1b)0\x0e\x1b[2;3r\x1b[?6h\x1b[?7l\x1b[4h\x1b[20h\
-          \x1b[4 q\x1b[?25l\x1b]4;1;rgb:12/34/56\x07\x1b]0;vello\x07",
+          \x1b[4 q\x1b[?25l\x1b]4;1;rgb:12/34/56\x07\x1b]11;rgb:01/02/03\x07\
+          \x1b]12;rgb:04/05/06\x07\x1b]0;vello\x07",
     );
     terminal.scroll(Scroll::Rows(1));
     terminal.restart();
@@ -751,14 +752,26 @@ fn a_restart_moves_the_screen_to_the_history_and_leaves_a_new_terminal() {
 }
 
 #[test]
-fn the_cursor_is_at_the_start_of_its_row_also_with_the_view_up() {
+fn the_cursor_is_at_the_start_of_an_empty_row_also_with_the_view_up() {
+    assert!(Terminal::new(GridSize::new(10, 3)).at_empty_row_start());
     let mut terminal = ten_lines();
-    assert!(!terminal.at_row_start());
+    assert!(!terminal.at_empty_row_start());
     terminal.scroll(Scroll::Top);
     assert_eq!(terminal.cursor().column, 0);
-    assert!(!terminal.at_row_start());
+    assert!(!terminal.at_empty_row_start());
+    // At the start of a row with text, after a carriage return.
+    terminal.feed(b"\r");
+    assert!(!terminal.at_empty_row_start());
+    terminal.feed(b"\n");
+    assert!(terminal.at_empty_row_start());
+    // A row with a colour is not empty.
+    terminal.feed(b"\x1b[44m \x1b[0m\r");
+    assert!(!terminal.at_empty_row_start());
+    // Nor one that continues the row above, which wraps into it.
+    terminal.feed(b"\r\nabcdefghij \r");
+    assert!(!terminal.at_empty_row_start());
     terminal.feed(b"\r\n");
-    assert!(terminal.at_row_start());
+    assert!(terminal.at_empty_row_start());
 }
 
 /// A terminal of 10 × 3 with the lines 1 to 10: 7 of them in the history.

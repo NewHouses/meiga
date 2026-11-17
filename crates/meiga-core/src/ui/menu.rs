@@ -386,8 +386,9 @@ fn inset(rect: Rect, x: u32, y: u32) -> Rect {
 mod tests {
     use super::*;
 
-    /// The entries of the menu of a tab, with "Close other tabs" disabled:
-    /// a disabled item between two that can be chosen.
+    /// The entries of the menu of a tab until subphase 2.7, without
+    /// Restart tab, and with "Close other tabs" disabled: a disabled item
+    /// between two that can be chosen.
     fn entries() -> Vec<Entry<u8>> {
         vec![
             Entry::item("Duplicate tab", 1, true),

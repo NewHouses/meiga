@@ -149,8 +149,12 @@ impl Shared {
     /// closes the tab, so it shows nothing.
     fn end(&mut self, exit: Exit) {
         if !exit.is_clean() {
+            // Below what the program left in a synchronized update, which
+            // the terminal shows first. The program has ended: its answers
+            // are dropped.
+            self.end_sync(&mut Vec::new());
             // In a row of its own, also when the view shows the history.
-            let new_line = !self.terminal.at_row_start();
+            let new_line = !self.terminal.at_empty_row_start();
             let changes = self.terminal.feed(end(exit, new_line).as_bytes());
             self.note(changes);
         }
@@ -289,18 +293,22 @@ impl Output for Reader {
 
 /// What the terminal shows when the program ends without a clean end, as
 /// Windows Terminal: a line with its exit code, in a row of its own if
-/// `new_line`, with the default colours, and below it what the user can do
-/// then. The cursor is hidden: nothing can be typed any more. The ConPTY
-/// does not turn off the mouse nor the bracketed paste of a program that
-/// ends: they are turned off, so that the mouse selects text again.
+/// `new_line`, with the default colours and characters, and below it what
+/// the user can do then. Neither the line-drawing characters, the insert
+/// mode nor a screen without wrapping that the program left change how it
+/// reads; they do not move the cursor. The cursor is hidden: nothing can be
+/// typed any more. The ConPTY does not turn off the mouse nor the bracketed
+/// paste of a program that ends: they are turned off, so that the mouse
+/// selects text again.
 fn end(exit: Exit, new_line: bool) -> String {
+    const READABLE: &str = "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h";
     const RESET: &str = "\x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l";
     let new_line = if new_line { "\r\n" } else { "" };
     match exit {
         Exit::Code(code) => format!(
-            "\x1b[0m{new_line}[process exited with code {code} (0x{code:08x})]\r\n{HINT}{RESET}"
+            "{READABLE}{new_line}[process exited with code {code} (0x{code:08x})]\r\n{HINT}{RESET}"
         ),
-        Exit::Unknown => format!("\x1b[0m{new_line}[process exited]\r\n{HINT}{RESET}"),
+        Exit::Unknown => format!("{READABLE}{new_line}[process exited]\r\n{HINT}{RESET}"),
     }
 }
 
@@ -406,15 +414,63 @@ mod tests {
 
         assert_eq!(
             end(Exit::Code(3), false),
-            "\x1b[0m[process exited with code 3 (0x00000003)]\r\n\
+            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h[process exited with code 3 (0x00000003)]\r\n\
              You can now close this tab with Ctrl+D, or press Enter to restart.\
              \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
         );
         assert_eq!(
             end(Exit::Unknown, true),
-            "\x1b[0m\r\n[process exited]\r\n\
+            "\x1b[0m\x1b(B\x0f\x1b[4l\x1b[?7h\r\n[process exited]\r\n\
              You can now close this tab with Ctrl+D, or press Enter to restart.\
              \x1b[?1000;1002;1003;1005;1006;2004l\x1b[?25l"
+        );
+    }
+
+    #[test]
+    fn the_end_goes_below_what_the_program_left_in_a_synchronized_update() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(70, 4)));
+        // Until the update ends, the cursor seems to be at the start of an
+        // empty row, and the question waits for its answer.
+        shared.terminal.feed(b"ola\r\n\x1b[?2026hadeus\x1b[c");
+        shared.end(Exit::Code(1));
+        assert_eq!(shared.terminal.sync_deadline(), None);
+        let mut screen = Screen::new();
+        shared.terminal.copy_damage(&mut screen);
+        assert_eq!(screen.row_text(1), "adeus");
+        assert_eq!(
+            screen.row_text(2),
+            "[process exited with code 1 (0x00000001)]"
+        );
+        assert_eq!(screen.row_text(3), HINT);
+        // Nobody answers a program that has ended.
+        let mut answers = Vec::new();
+        shared.terminal.take_responses(&mut answers);
+        assert!(answers.is_empty());
+    }
+
+    #[test]
+    fn the_end_reads_well_whatever_characters_and_modes_the_program_left() {
+        let mut shared = Shared::new(Terminal::new(GridSize::new(30, 6)));
+        // The line-drawing characters in the two sets, the second one in
+        // use, the insert mode and no wrapping, with the cursor above a row
+        // with text.
+        shared
+            .terminal
+            .feed(b"ola\r\nxyz\x1b[1;4H\x1b(0\x1b)0\x0e\x1b[4h\x1b[?7l");
+        shared.end(Exit::Unknown);
+        let mut screen = Screen::new();
+        shared.terminal.copy_damage(&mut screen);
+        let rows: Vec<String> = (0..6).map(|row| screen.row_text(row)).collect();
+        assert_eq!(
+            rows,
+            [
+                "ola",
+                "[process exited]",
+                &HINT[..30],
+                &HINT[30..60],
+                &HINT[60..],
+                ""
+            ]
         );
     }
 
