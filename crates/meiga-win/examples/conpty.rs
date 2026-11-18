@@ -10,7 +10,8 @@
 //! folder or, with `--system`, the one of Windows. Without a command line, it
 //! runs `cmd`. The arguments are joined with spaces. It ends when the session
 //! ends, with the exit code of the program. Ctrl+Z and Enter close the
-//! session.
+//! session, and then, before it ends, it waits for the session to end, as
+//! meiga does before it exits.
 //!
 //! With `--record`, it also writes what the session sends to a recording
 //! (`meiga_core::term::recording`), which the replay example of meiga-core
@@ -28,7 +29,7 @@ use std::time::Instant;
 
 use meiga_core::geometry::GridSize;
 use meiga_core::term::recording::Recorder;
-use meiga_win::conpty::{Command, Conpty, Input, Output, Source};
+use meiga_win::conpty::{self, Command, Conpty, Input, Output, Source};
 
 /// The size of the pseudoconsole: the default of a console window.
 const SIZE: GridSize = GridSize::new(120, 30);
@@ -76,7 +77,10 @@ impl Output for Printer {
                 Err(error) => eprintln!("Could not write to {}: {error}", path.display()),
             }
         }
-        // The exit code of a process is the u32 that Windows keeps.
+        // The exit code of a process is the u32 that Windows keeps. If the
+        // session was closed, its writer may still be ending it: the output
+        // has closed, so it does not wait for this thread.
+        conpty::wait_for_closed_sessions();
         std::process::exit(exit_code.map_or(1, |code| code as i32));
     }
 }

@@ -24,6 +24,7 @@ use std::env;
 use std::error::Error;
 use std::process::ExitCode;
 
+use meiga_win::conpty;
 use meiga_win::window::{self, Window, WindowOptions};
 
 use crate::app::{App, TITLE};
@@ -41,7 +42,7 @@ fn main() -> ExitCode {
             return ExitCode::from(USAGE_ERROR);
         }
     };
-    match run(&options) {
+    let code = match run(&options) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             report(&format!(
@@ -49,7 +50,11 @@ fn main() -> ExitCode {
             ));
             ExitCode::FAILURE
         }
-    }
+    };
+    // The window is gone, but the sessions of its tabs may still be ending,
+    // and they would stay stuck if meiga exited first (ADR 0026).
+    conpty::wait_for_closed_sessions();
+    code
 }
 
 fn run(options: &Options) -> Result<(), Box<dyn Error>> {

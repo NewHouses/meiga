@@ -1,6 +1,6 @@
 # Código › medición (`tools/perf/`)
 
-> Estado: subfase 2.5. Na 2.5, `measure-startup.ps1` arranca meiga cun `APPDATA` baleiro, para que o `config.toml` de quen mide non cambie o resultado; os outros scripts non cambiaron. Na 1.10 os scripts non cambiaron: só chegou a ligazón ao ADR 0017.
+> Estado: mantemento M2, despois da subfase 2.8. No M2, `measure-startup.ps1` agarda 10 s máis a que remate meiga despois de pechar a súa xanela, porque meiga agarda antes de saír a que rematen as sesións das súas tabs; os outros scripts non cambiaron. Na 2.6, na 2.7 e na 2.8 os scripts non cambiaron. Na 2.5, `measure-startup.ps1` arranca meiga cun `APPDATA` baleiro, para que o `config.toml` de quen mide non cambie o resultado; os outros scripts non cambiaron. Na 1.10 os scripts non cambiaron: só chegou a ligazón ao ADR 0017.
 
 Ferramentas para medir canto consome un terminal, sempre da mesma maneira. Non forman parte do programa: serven para comparar meiga co Warp e co Windows Terminal e para comprobar en cada fase que cumpre os orzamentos de rendemento. Os conceptos que se miden (tempo de CPU, ciclos, cambios de contexto, memoria privada…) explícanse en [Tecnoloxías › Medición do rendemento](../tecnoloxias.md#19-medición-do-rendemento).
 
@@ -705,7 +705,7 @@ O CSV ten unha fila por arranque, co seu número (`run`) e os milisegundos (`ms`
 | `-Warmup` | 2 | Os arranques de antes, que non contan. |
 | `-Label` | o nome do executábel | O nome da medición, para o CSV. |
 | `-OutDir` | `.perf\` | O cartafol do CSV. |
-| `-TimeoutSeconds` | 10 | O tempo máximo de cada espera. |
+| `-TimeoutSeconds` | 10 | O tempo máximo que agarda pola xanela en cada arranque e, con 10 s máis, a que remate meiga despois de pechala. |
 
 Explicación por partes:
 
@@ -730,8 +730,12 @@ function Measure-Start {
         if (-not $process.CloseMainWindow()) {
             throw "Could not ask the window of $exe to close."
         }
-        if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-            throw "$exe was still running $TimeoutSeconds s after its window was asked to close."
+        # The window closes as the shell of the first tab starts: meiga waits
+        # for its session to end, which gets stuck if the shell still
+        # connects to its console (ADR 0011 and ADR 0026).
+        $exitSeconds = $TimeoutSeconds + 10
+        if (-not $process.WaitForExit($exitSeconds * 1000)) {
+            throw "$exe was still running $exitSeconds s after its window was asked to close."
         }
         if ($process.ExitCode -ne 0) {
             throw "$exe ended with exit code $($process.ExitCode) instead of 0."
@@ -750,6 +754,7 @@ function Measure-Start {
 ```
 
 - Cada arranque pecha a xanela e comproba que meiga remata co código 0, como `check-window.ps1`: o tempo dun programa que non funciona non vale de nada. Se falla, o script detense co erro.
+- **A espera a que remate meiga**, desde o mantemento M2, dura `$TimeoutSeconds` + 10 s: 20 s por defecto. Antes de saír, meiga agarda a que rematen as sesións das súas tabs ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 1), e eiquí a xanela péchase mentres arranca a shell da primeira tab. Normalmente a sesión remata en milisegundos. Pero, se a shell aínda se está a conectar á súa consola cando esta se pecha, como pode pasar nunha máquina cargada, a sesión queda bloqueada, e o seu fío escritor remata os seus programas cando pasan 10 s sen que remate ningún ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md), decisión 6, e [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 3): entón meiga sae uns 10 s despois de pecharse a xanela. Ata a 2.8, meiga saía sen agardar, e esa sesión quedaba bloqueada para sempre; o script agardaba só `$TimeoutSeconds`. A espera non conta no tempo do arranque: o cronómetro xa parou despois de `WaitForInputIdle`.
 - `Start-Sleep -Milliseconds 500`: deixa que a xanela pechada desapareza antes do seguinte arranque, para que a súa animación non se mesture coa medición.
 - A última liña devolve os milisegundos: en PowerShell, o valor dunha expresión solta é o resultado da función.
 

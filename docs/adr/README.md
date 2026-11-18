@@ -25,7 +25,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0008](0008-temporizador-dos-fotogramas.md) | Temporizador dos fotogramas | Aceptado |
 | [0009](0009-xanela-que-non-se-ve.md) | Que se debuxa cando a xanela non se ve | Aceptado |
 | [0010](0010-texto-con-directwrite.md) | Texto con DirectWrite e unha caché de glifos | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
-| [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado; concretado polo [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
+| [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado; concretado polos [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0026](0026-o-peche-das-sesions-ao-sair.md) |
 | [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) e [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
 | [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0014](0014-o-teclado.md) | O teclado | Aceptado; concretado polo [0023](0023-os-atallos-de-teclado.md) |
@@ -40,6 +40,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0023](0023-os-atallos-de-teclado.md) | Os atallos de teclado | Aceptado; concretado polo [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polo [0025](0025-moitas-tabs-e-os-indicadores.md) |
 | [0025](0025-moitas-tabs-e-os-indicadores.md) | Moitas tabs: o ancho mínimo, o desprazamento da barra e os indicadores | Aceptado |
+| [0026](0026-o-peche-das-sesions-ao-sair.md) | O peche das sesións ao saír | Aceptado |
 
 ## Como se relacionan
 
@@ -135,6 +136,10 @@ graph TD
     A20 --> A25
     A21 --> A25
     A24 --> A25
+    A5 --> A26["0026 O peche das sesións ao saír"]
+    A11 --> A26
+    A19 --> A26
+    A24 --> A26
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.

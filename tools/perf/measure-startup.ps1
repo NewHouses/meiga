@@ -37,8 +37,11 @@ executable.
 Folder for the CSV file. Defaults to .perf\ in the repository.
 
 .PARAMETER TimeoutSeconds
-How long to wait for the window, and then for the process to end, in each
-run.
+How long to wait for the window in each run, and then for the process to
+end, 10 s more: meiga waits for the session of its tab to end (ADR 0026),
+and if the window closes while the shell still connects to its console, as
+it can on a busy machine, the session ends its programs 10 s later (ADR
+0011).
 
 .EXAMPLE
 pwsh -File .\tools\perf\measure-startup.ps1
@@ -116,8 +119,12 @@ function Measure-Start {
         if (-not $process.CloseMainWindow()) {
             throw "Could not ask the window of $exe to close."
         }
-        if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-            throw "$exe was still running $TimeoutSeconds s after its window was asked to close."
+        # The window closes as the shell of the first tab starts: meiga waits
+        # for its session to end, which gets stuck if the shell still
+        # connects to its console (ADR 0011 and ADR 0026).
+        $exitSeconds = $TimeoutSeconds + 10
+        if (-not $process.WaitForExit($exitSeconds * 1000)) {
+            throw "$exe was still running $exitSeconds s after its window was asked to close."
         }
         if ($process.ExitCode -ne 0) {
             throw "$exe ended with exit code $($process.ExitCode) instead of 0."

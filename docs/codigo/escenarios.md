@@ -1,6 +1,6 @@
 # Código › escenarios de carga (`tools/perf/`)
 
-> Estado: subfase 2.5. Na 2.5, `run-scenario.ps1 -Start` arranca o terminal cun `APPDATA` baleiro, para que meiga non lea o `config.toml` de quen mide; os escenarios non cambiaron. Na 1.10 chegou a opción `-Maximized` de `run-scenario.ps1`; os escenarios non cambiaron.
+> Estado: mantemento M2, despois da subfase 2.8. No M2, `run-scenario.ps1 -Start` agarda ata 15 s, e non 5, a que remate o terminal despois de pechar a súa xanela, tamén se xa non a ten, porque meiga agarda antes de saír a que rematen as sesións das súas tabs; os escenarios non cambiaron. Na 2.6, na 2.7 e na 2.8 non cambiaron nin os scripts nin os escenarios. Na 2.5, `run-scenario.ps1 -Start` arranca o terminal cun `APPDATA` baleiro, para que meiga non lea o `config.toml` de quen mide; os escenarios non cambiaron. Na 1.10 chegou a opción `-Maximized` de `run-scenario.ps1`; os escenarios non cambiaron.
 
 Cargas de traballo reproducíbeis para medir os terminais con [`measure.ps1`](perf.md#toolsperfmeasureps1). Imitan o que fai un terminal cada día: unha IA que pensa e responde, un indicador de progreso que xira e a saída dun arquivo grande. Cada escenario existe en PowerShell e en bash, para medir a mesma carga nunha tab de pwsh e nunha de WSL, e as dúas versións debuxan exactamente o mesmo: os mesmos textos, coas mesmas cores e as mesmas secuencias de escape.
 
@@ -400,7 +400,7 @@ Mide un terminal mentres corre un escenario. Os pasos:
 3. Agarda a que arranquen `-Instances` copias do escenario, mostrando cantas van.
 4. Agarda `-Warmup` segundos, para que deixes o terminal como o queres medir (por exemplo, coa tab do escenario diante, ou detrás). Con `-Start` non che pide que o colocues, porque o terminal acaba de abrirse e non ten máis ca o escenario: só avisa de cando empeza a medir.
 5. Fai `-Runs` medicións seguidas con `measure.ps1 -Quiet -PassThru`. Para bigfile engade `-SampleInterval 1 -StartedFile go-<n> -StopFile finished-<n>`, e o límite de cada medición pasa a 600 s.
-6. Crea `stop` e agarda ata 5 s a que os escenarios borren os seus marcadores. Se queda algún, avisa. Con `-Start`, despois pecha o terminal como o botón X (`CloseMainWindow`), agarda ata 5 s a que remate e, se aínda segue aberto, remátao con `Kill`; despois borra o cartafol do `APPDATA`. Isto tamén pasa se o cancelas con Ctrl+C.
+6. Crea `stop` e agarda ata 5 s a que os escenarios borren os seus marcadores. Se queda algún, avisa. Con `-Start`, despois, se o terminal non rematou, péchao como o botón X (`CloseMainWindow`) e agarda ata 15 s a que remate, teña ou non xanela; se aínda non rematou, remátao con `Kill`. Despois borra o cartafol do `APPDATA`. Isto tamén pasa se o cancelas con Ctrl+C.
 7. Mostra o resumo e o veredicto, e garda o resumo en CSV.
 
 | Parámetro | Por defecto | Que fai |
@@ -482,10 +482,17 @@ function Start-Terminal {
 - **O ConPTY.** Para medir o meiga que se distribúe, `target\release\meiga.exe` ten que ter ao lado o seu ConPTY, que deixa alí [`package.ps1`](ferramentas.md#toolspackageps1). Sen el, meiga usa sen avisar o de Windows, e no grupo `console` mediríase `conhost.exe` en vez de `OpenConsole.exe`.
 
 ```powershell
-    # The terminal that this script started closes as the X button does.
+    # The terminal that this script started closes as the X button does. meiga
+    # waits for the sessions of its tabs to end before it exits, and a session
+    # that gets stuck as it closes ends 10 s after the last of its programs
+    # ended (ADR 0026): ending meiga before would leave that session stuck for
+    # ever. This waits also when the terminal has no window: meiga closes it
+    # itself when the program of its only tab ends with exit code 0, and then
+    # waits for the sessions.
     if ($terminalProcess) {
-        if (-not $terminalProcess.HasExited -and $terminalProcess.CloseMainWindow()) {
-            $null = $terminalProcess.WaitForExit(5000)
+        if (-not $terminalProcess.HasExited) {
+            $null = $terminalProcess.CloseMainWindow()
+            $null = $terminalProcess.WaitForExit(15000)
         }
         if (-not $terminalProcess.HasExited) {
             $terminalProcess.Kill()
@@ -497,8 +504,10 @@ function Start-Terminal {
     }
 ```
 
-- Vai no bloque `finally`, despois de crear `stop` e de agardar polos marcadores: primeiro remata o escenario, coma sen `-Start`, e despois péchase a xanela. Cando o seu programa remata, meiga non pecha a xanela ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)), así que o script péchaa con `CloseMainWindow`, que lle envía `WM_CLOSE` coma o botón X, igual ca [`check-window.ps1`](ferramentas.md#toolscheck-windowps1). En `idle`, a shell segue aberta, e remata cando se pecha meiga ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)).
-- Se 5 s despois aínda non rematou, ou se non se lle puido pedir (`CloseMainWindow` devolve `$false` se o proceso non ten xanela, por exemplo se se cancela xusto ao arrancalo), `Kill` remátao. Como vai no `finally`, pasa tamén despois dun erro ou de Ctrl+C: o terminal nunca queda aberto.
+- Vai no bloque `finally`, despois de crear `stop` e de agardar polos marcadores: primeiro remata o escenario, coma sen `-Start`, e despois péchase a xanela. Desde a 2.7, cando o escenario remata co código 0, meiga pecha a súa tab e, como é a única, tamén a xanela, e sae ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md), decisión 2); ata a 2.6, meiga non pechaba a xanela cando remataba o seu programa ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Se o terminal segue aberto, coma en `idle`, onde a shell segue aberta, o script péchao con `CloseMainWindow`, que lle envía `WM_CLOSE` coma o botón X, igual ca [`check-window.ps1`](ferramentas.md#toolscheck-windowps1): a shell remata cando se pecha a súa sesión, coa xanela ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)).
+- **Ata 15 s**, desde o mantemento M2; ata a 2.8, 5 s. Antes de saír, meiga agarda a que rematen as sesións das súas tabs ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 1). Unha sesión que se pecha normalmente remata en milisegundos; pero unha que se bloquea ao pecharse, coma a dun programa que se estaba a conectar á súa consola, remátaa o seu fío escritor cando pasan 10 s sen que remate ningún dos seus programas ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 3). `Kill` remataría meiga no medio desa espera, e a sesión quedaría bloqueada para sempre, co seu ConPTY e os seus programas: por iso o script agarda eses 10 s, e unha marxe.
+- **Tamén sen xanela**, desde o mantemento M2. O que devolve `CloseMainWindow` non conta: é `$false` se o proceso non ten xanela, e meiga pode estar sen ela mentres agarda polas sesións, porque desde a 2.7 a pecha el mesmo cando o escenario remata co código 0. Ata a 2.8, con `$false` o script remataba o terminal no momento; agora agarda igual ata 15 s. Se se cancela xusto ao arrancar meiga, antes de que mostre a súa xanela, agarda eses 15 s en balde.
+- Se 15 s despois aínda non rematou, `Kill` remátao. Como vai no `finally`, pasa tamén despois dun erro ou de Ctrl+C: o terminal nunca queda aberto.
 - Desde a 2.5, despois bórrase o cartafol do `APPDATA`, co que haxa dentro (`-Recurse`), cando o terminal xa non o usa. Se non se pode borrar, o script non se para por iso (`-ErrorAction SilentlyContinue`). Sen `-Start`, `$appdata` queda co `$null` que lle pon o script antes do `try`, e non se borra nada.
 - As medicións xa remataron, así que pechar o terminal non conta en ningunha.
 

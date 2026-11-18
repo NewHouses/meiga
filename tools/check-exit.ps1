@@ -64,20 +64,36 @@ It checks that:
   close, and the last one closes the window: meiga.exe ends with exit code
   0, and the consoles end too;
 - when the program of the command line of meiga.exe ends with exit code 0,
-  meiga.exe ends with exit code 0 too.
+  meiga.exe ends with exit code 0 too;
+- when the window closes, and the program of the first tab, as its console
+  closes, starts another one in it, which connects to the console while
+  ConPTY closes it, the session of that tab does not end: meiga waits for
+  it, also once the session of the second tab has ended, and 10 s after the
+  program of the first tab ended, the session ends the programs left in it
+  (ADR 0011); then meiga.exe ends with exit code 0, less than 17 s after its
+  window closed, and leaves nothing of its tabs (ADR 0026).
+
+The last run starts meiga.exe in a job of the check, with the script of
+Probe, with -Closer, as the program of its first tab: when its console
+closes, the script starts cmd in it, which runs ping. The job tells what
+meiga leaves, and ends it.
 
 It needs PowerShell 7 (pwsh) in the PATH, for the script of the tabs. It
 uses the clipboard, and puts back the text that it had.
 
-If a check fails, the script ends meiga.exe and keeps its folder, with the
-frame log and the files of the tabs.
+If a check fails, the script ends meiga.exe, and what it left in the job of
+the last run, and keeps its folder, with the frame logs and the files of the
+tabs.
 
 .PARAMETER Path
 The executable to check. Defaults to target\release\meiga.exe.
 
 .PARAMETER TimeoutSeconds
 How long to wait for the window, for each program to start and to end, for
-each line of the terminal, and for each frame.
+each line of the terminal, and for each frame. In the last run, meiga.exe has
+to end less than 17 s after its window closes: the check waits that much
+longer for it, to tell how long it took, and that long for its tabs once it
+has ended.
 #>
 [CmdletBinding()]
 param(
@@ -384,10 +400,81 @@ public static string LongPathOf(string path)
     if (length == 0 || length >= longPath.Capacity) throw new System.ComponentModel.Win32Exception();
     return longPath.ToString();
 }
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr CreateJobObjectW(IntPtr attributes, IntPtr name);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool SetInformationJobObject(IntPtr job, int infoClass, byte[] info, uint length);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool QueryInformationJobObject(IntPtr job, int infoClass, byte[] info, uint length, IntPtr returned);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+
+// A job that ends its processes when its last handle closes, as when this
+// script ends: JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, in the LimitFlags of a
+// JOBOBJECT_EXTENDED_LIMIT_INFORMATION, 144 bytes on x64, at 16.
+public static IntPtr NewJob()
+{
+    IntPtr job = CreateJobObjectW(IntPtr.Zero, IntPtr.Zero);
+    if (job == IntPtr.Zero) throw new System.ComponentModel.Win32Exception();
+    var limits = new byte[144];
+    BitConverter.GetBytes(0x2000).CopyTo(limits, 16);
+    // JobObjectExtendedLimitInformation
+    if (!SetInformationJobObject(job, 9, limits, (uint)limits.Length))
+    {
+        var error = new System.ComponentModel.Win32Exception();
+        CloseHandle(job);
+        throw error;
+    }
+    return job;
+}
+
+// Starts a process and puts it in `job` right away: the processes that it
+// starts from then on are in the job too. Process.Start cannot start it
+// suspended, so it runs outside the job for a moment, and a process that it
+// started then would not be in it: the caller checks the ones it needs.
+public static System.Diagnostics.Process StartInJob(System.Diagnostics.ProcessStartInfo info, IntPtr job)
+{
+    var started = System.Diagnostics.Process.Start(info);
+    if (!AssignProcessToJobObject(job, started.Handle))
+    {
+        var error = new System.ComponentModel.Win32Exception();
+        started.Kill();
+        started.Dispose();
+        throw error;
+    }
+    return started;
+}
+
+// The numbers of the processes in a job, also in the jobs inside it: a
+// JOBOBJECT_BASIC_PROCESS_ID_LIST, with how many numbers it has at 4, and
+// the numbers from 8, of 8 bytes on x64.
+public static long[] ProcessesIn(IntPtr job)
+{
+    var list = new byte[8 + 8 * 1024];
+    // JobObjectBasicProcessIdList
+    if (!QueryInformationJobObject(job, 3, list, (uint)list.Length, IntPtr.Zero)) throw new System.ComponentModel.Win32Exception();
+    var ids = new long[BitConverter.ToInt32(list, 4)];
+    for (int i = 0; i < ids.Length; i++) ids[i] = BitConverter.ToInt64(list, 8 + 8 * i);
+    return ids;
+}
+
+// Closes a job of NewJob, which ends the processes left in it.
+public static void CloseJob(IntPtr job)
+{
+    CloseHandle(job);
+}
 '@
 }
 $api = [Meiga.Tools.ExitCheck]
 
+$WM_CLOSE = 0x0010
 $WM_KEYDOWN = 0x0100
 $WM_KEYUP = 0x0101
 $WM_SYSKEYDOWN = 0x0104
@@ -429,9 +516,10 @@ $extendedKeys = @(0x21..0x28) + @(0x2D, 0x2E)
 # The script of the tabs of Probe and Later. It writes a line with its
 # number, its folder and the size of its console, and then the keys that its
 # program gets, until the check tells it how to end: with an exit code, after
-# some text or none.
+# some text or none. With -Closer, in the first tab of the last run, it only
+# waits until its console closes, and then starts another program in it.
 $program = @'
-param([Parameter(Mandatory)][string]$Work)
+param([Parameter(Mandatory)][string]$Work, [switch]$Closer)
 $ErrorActionPreference = 'Stop'
 # The cursor is hidden, so that it never blinks; then a line that tells the
 # screen of this program from the ones of the programs before it in its tab.
@@ -441,6 +529,66 @@ Add-Type -Namespace MeigaCheck -Name Input -MemberDefinition @"
 [DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
 [DllImport("kernel32.dll")] public static extern uint WaitForMultipleObjects(uint count, System.IntPtr[] handles, bool all, uint milliseconds);
 "@
+if ($Closer) {
+    # When its console closes, this program starts another one in it, as the
+    # shell of a tab can, such as the git of its prompt: the new program
+    # connects to the console while ConPTY closes it, and the session does
+    # not end (ADR 0011). It writes the number of the new program, or why it
+    # could not start it, in a file. Windows calls the handler on a thread of
+    # its own, which has no runspace of PowerShell: it is in C#.
+    Add-Type -TypeDefinition @"
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
+
+namespace MeigaCheck
+{
+    public static class Closer
+    {
+        delegate bool Handler(uint signal);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool SetConsoleCtrlHandler(Handler handler, bool add);
+
+        // Here, so that the collector does not free it while Windows can call it.
+        static Handler handler;
+        static string file;
+
+        public static void Start(string path)
+        {
+            file = path;
+            handler = OnSignal;
+            if (!SetConsoleCtrlHandler(handler, true)) throw new System.ComponentModel.Win32Exception();
+        }
+
+        static bool OnSignal(uint signal)
+        {
+            // CTRL_CLOSE_EVENT
+            if (signal != 2) return false;
+            try
+            {
+                var info = new ProcessStartInfo("cmd.exe", "/d /c ping -n 30 127.0.0.1 >nul") { UseShellExecute = false };
+                using (var started = Process.Start(info)) File.WriteAllText(file, started.Id.ToString());
+            }
+            catch (Exception error)
+            {
+                File.WriteAllText(file, error.Message);
+            }
+            // So that it starts before this program ends. And so that this
+            // program ends a while after its console closes, as a shell that
+            // saves its history does: a writer that counted its 10 s from the
+            // close, and not from the last program that ended, would end the
+            // session sooner than 10 s after this program (step 14).
+            Thread.Sleep(500);
+            return true;
+        }
+    }
+}
+"@
+    [MeigaCheck.Closer]::Start((Join-Path $Work "closer-$PID.txt"))
+}
 $in = [MeigaCheck.Input]::GetStdHandle(-10)
 # The check sets it once it has written how this script ends.
 $stop = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::ManualReset, "meiga-check-exit-$PID")
@@ -458,6 +606,8 @@ $records = [byte[]]::new(20 * 64)
 # goes up, in a file that the check reads while this script writes it. Once
 # the file is there, the script reads the keys.
 $file = [IO.FileStream]::new((Join-Path $Work "keys-$PID.txt"), [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
+# With -Closer, the program only waits until its console closes.
+if ($Closer) { [Threading.Thread]::Sleep([Threading.Timeout]::Infinite) }
 $handles = [IntPtr[]]@($in, $stop.SafeWaitHandle.DangerousGetHandle(), $write.SafeWaitHandle.DangerousGetHandle())
 while ($true) {
     $signaled = [MeigaCheck.Input]::WaitForMultipleObjects(3, $handles, $false, [uint32]::MaxValue)
@@ -570,6 +720,13 @@ $utf8 = [Text.UTF8Encoding]::new($false)
 
 # What the tabs of Probe and of Later run.
 $probeLine = $probeCommand.Replace('%MEIGA_CHECK_WORK%', $work)
+# The program of the first tab of the last run, on the command line of
+# meiga: the script of Probe, with -Closer.
+$closerArguments = 'pwsh', '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $script, '-Work', $work, '-Closer'
+# What its tab runs: its arguments, with quotes around the ones with blanks,
+# as meiga writes them when they have no quotes (see
+# crates/meiga-core/src/shell.rs).
+$closerLine = ($closerArguments | ForEach-Object { if ($_ -match '[ \t]') { "`"$_`"" } else { $_ } }) -join ' '
 # What a tab shows below the line that tells how its program ended, or why it
 # could not start (see crates/meiga/src/session.rs).
 $hint = 'You can now close this tab with Ctrl+D, or press Enter to restart.'
@@ -711,17 +868,17 @@ function Get-Consoles {
 }
 
 # Waits until a tab starts a program that is not one of $Known, which runs
-# the command line of Probe, and returns its number once its script reads
-# its keys.
-function Wait-NewShell([int[]]$Known, [string]$What) {
+# $Line, by default the command line of Probe, and returns its number once
+# its script reads its keys.
+function Wait-NewShell([int[]]$Known, [string]$What, [string]$Line = $probeLine) {
     $new = { @(Get-Shells | Where-Object { [int]$_.ProcessId -notin $Known }) }
     Wait-For { @(& $new).Count -gt 0 } { "$What did not start a program." }
     $shells = @(& $new)
     if ($shells.Count -ne 1) {
         throw "$What started $($shells.Count) programs, with the command lines: $(($shells | ForEach-Object CommandLine) -join '; ')."
     }
-    if ($shells[0].CommandLine -cne $probeLine) {
-        throw "$What started '$($shells[0].CommandLine)' instead of '$probeLine'."
+    if ($shells[0].CommandLine -cne $Line) {
+        throw "$What started '$($shells[0].CommandLine)' instead of '$Line'."
     }
     $id = [int]$shells[0].ProcessId
     Wait-For { Test-Path -LiteralPath (Get-KeyFile $id) } { "$What started a program whose script did not start." }
@@ -804,6 +961,11 @@ function Wait-ConsolesEnded {
     foreach ($console in Get-Consoles) {
         Wait-Ended ([int]$console.ProcessId) "The console $($console.Name) of a tab"
     }
+}
+
+# $Seconds with a decimal, and a point, whatever the culture.
+function Format-Seconds([double]$Seconds) {
+    $Seconds.ToString('0.0', [cultureinfo]::InvariantCulture)
 }
 
 # Tells the script of the tab of $Id to end with exit code $Code, after
@@ -1243,6 +1405,9 @@ $pointer = $null
 $attached = $false
 $onNew = $false
 $marks = 0
+$job = [IntPtr]::Zero
+$closerProgram = $null
+$tabConsoles = @()
 $passed = $false
 $saved = Get-Text
 try {
@@ -1433,8 +1598,13 @@ try {
     Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Ctrl+Shift+Home drew nothing: the view did not move to the history.' }
     Wait-Quiet 400
     $what = 'In the history, once Enter started the program again'
-    $null = Assert-Line 0 "probe-$second" -What $what
-    $null = Assert-Line 2 $code3 -What $what
+    # The console of Windows clears the screen when it starts, and
+    # alacritty_terminal moves a blank row to the history when it clears a
+    # blank screen without history: then the history of each tab starts with
+    # that row, until subphase 8.6.
+    $top = if (@(Get-Consoles | Where-Object Name -EQ 'conhost.exe').Count -gt 0) { 1 } else { 0 }
+    $null = Assert-Line $top "probe-$second" -What $what
+    $null = Assert-Line ($top + 2) $code3 -What $what
     $from = @(Get-Log).Count
     Send-Chord 'Ctrl+Shift+End'
     Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Ctrl+Shift+End drew nothing: the view did not move back.' }
@@ -1614,6 +1784,105 @@ try {
     }
     Wait-ConsolesEnded
     Write-Host 'OK: when the program of its command line ends with exit code 0, meiga.exe ends with exit code 0 too, and its console ends.'
+
+    # 14. When the window closes, the program of the first tab, as its
+    # console closes, starts another one in it, as the shell of a tab can,
+    # such as the git of its prompt: the new program connects to the console
+    # while ConPTY closes it, and the session of the tab does not end. meiga
+    # waits for it before it ends, also once the session of the second tab,
+    # which it closes after the first one, has ended; and the writer thread
+    # of the session ends the programs left in it 10 s after the last of its
+    # programs ended (ADR 0011 and ADR 0026). meiga runs in a job of the
+    # check, where the check sees what it leaves, and which ends it if the
+    # check fails.
+    $process.Dispose()
+    $process = $null
+    $log = Join-Path $work 'frames-close.csv'
+    $info = [Diagnostics.ProcessStartInfo]::new($Path)
+    $info.UseShellExecute = $false
+    $info.WorkingDirectory = $work
+    $info.Environment['APPDATA'] = $appdata
+    $info.Environment['MEIGA_CHECK_WORK'] = $work
+    foreach ($argument in @('--trace-frames', $log, '--') + $closerArguments) {
+        $info.ArgumentList.Add($argument)
+    }
+    $job = $api::NewJob()
+    $process = $api::StartInJob($info, $job)
+    $started = $process.StartTime
+    Wait-For { $api::WindowOf($process.Id, 'meiga') -ne [IntPtr]::Zero } { "$exe did not open its window." }
+    $window = $api::WindowOf($process.Id, 'meiga')
+    $processId = [uint32]0
+    $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
+    $layout = $api::GetKeyboardLayout($thread)
+    $dpi = $api::GetDpiForWindow($window)
+    $closer = Wait-NewShell @() 'The first tab' $closerLine
+    Join-Input
+    $quick = Open-Tab 'Ctrl+Shift+T' @($closer)
+    Split-Input
+    $inJob = $api::ProcessesIn($job)
+    $consoleIds = @(Get-Consoles | ForEach-Object { [int]$_.ProcessId })
+    $missing = @(@($process.Id, $closer, $quick) + $consoleIds | Where-Object { $_ -notin $inJob })
+    if ($missing.Count -gt 0) {
+        throw "The processes $($missing -join ', '), of $exe and of its tabs, are not in the job of the check."
+    }
+    # With their handles open, to read when they ended once they have.
+    $closerProgram = [Diagnostics.Process]::GetProcessById($closer)
+    $null = $closerProgram.Handle
+    $tabConsoles = @($consoleIds | ForEach-Object { [Diagnostics.Process]::GetProcessById($_) })
+    foreach ($console in $tabConsoles) {
+        $null = $console.Handle
+    }
+    $closing = [DateTime]::UtcNow
+    if (-not $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)) {
+        throw "Could not close the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    if (-not $process.WaitForExit((17 + $TimeoutSeconds) * 1000)) {
+        throw "$exe was still running $(17 + $TimeoutSeconds) s after its window closed."
+    }
+    if (-not $closerProgram.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "The program of the first tab was still running $TimeoutSeconds s after $exe ended."
+    }
+    # The number of the program that it started, or why it could not.
+    $closerFile = Join-Path $work "closer-$closer.txt"
+    $other = if (Test-Path -LiteralPath $closerFile) { [IO.File]::ReadAllText($closerFile) }
+    if (-not $other) {
+        throw 'When the window closed, the program of the first tab did not start another one in its console.'
+    }
+    if ($other -notmatch '^\d+$') {
+        throw "When the window closed, the program of the first tab could not start another one in its console: $other"
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0, once its window closed."
+    }
+    # The times when the processes ended, as Windows tells them, change every
+    # 15.6 ms or less.
+    $after = ($process.ExitTime - $closerProgram.ExitTime).TotalSeconds
+    $waited = ($process.ExitTime.ToUniversalTime() - $closing).TotalSeconds
+    if ($after -lt 9.9) {
+        $when = if ($after -lt 0) { 'before the program of the first tab' } else { "$(Format-Seconds $after) s after the program of the first tab" }
+        # A session that does not get stuck ends at once, with its console,
+        # and meiga ends then too: this step cannot check it. A meiga that
+        # does not wait for a stuck session leaves its console running.
+        if (@($tabConsoles | Where-Object { -not $_.HasExited }).Count -eq 0) {
+            throw "$exe ended $(Format-Seconds $waited) s after its window closed, $when, once the consoles of its tabs had ended: with this ConPTY, the session of the first tab did not get stuck, and this step needs one where it does, such as the ConPTY of meiga, which tools\package.ps1 copies next to $exe."
+        }
+        throw "$exe ended $(Format-Seconds $waited) s after its window closed, $when, and not 10 s after it: it did not wait for the session of that tab, which ends then the programs left in it."
+    }
+    if ($waited -ge 17) {
+        throw "$exe ended $(Format-Seconds $waited) s after its window closed: the session of the first tab did not end 10 s after its program, which ended $(Format-Seconds ($waited - $after)) s after the window closed."
+    }
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (($left = $api::ProcessesIn($job)).Count -gt 0) {
+        if ([DateTime]::UtcNow -gt $deadline) {
+            $names = foreach ($id in $left) {
+                $leftover = Get-Process -Id $id -ErrorAction Ignore
+                if ($leftover) { "$($leftover.ProcessName) $id" } else { "$id" }
+            }
+            throw "$TimeoutSeconds s after $exe ended, $($left.Count) processes of its tabs were still running: $($names -join ', ')."
+        }
+        Start-Sleep -Milliseconds 20
+    }
+    Write-Host "OK: when its window closes, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the session of the second tab has ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, $(Format-Seconds $waited) s after its window closed, and leaves nothing of its tabs."
     $passed = $true
 }
 finally {
@@ -1623,6 +1892,16 @@ finally {
             $process.Kill()
         }
         $process.Dispose()
+    }
+    if ($closerProgram) {
+        $closerProgram.Dispose()
+    }
+    foreach ($console in $tabConsoles) {
+        $console.Dispose()
+    }
+    # What meiga left in the job of the last run ends with it.
+    if ($job -ne [IntPtr]::Zero) {
+        $api::CloseJob($job)
     }
     if ($null -ne $pointer) {
         $null = $api::SetCursorPos($pointer.X, $pointer.Y)

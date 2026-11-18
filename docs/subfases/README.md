@@ -40,8 +40,9 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 
 ## Mantemento
 
-Entre subfases, algúns PR só actualizan as dependencias e as ferramentas, sen cambiar o que fai meiga: unha versión nova do ConPTY ou de Rust, ou unha regra de Dependabot. Cada un ten o seu documento, cos mesmos apartados ca unha subfase, e o seu identificador, M1, M2…
+Entre subfases van tamén algúns PR de mantemento, que non son parte do plan: poñen ao día as dependencias e as ferramentas, coma unha versión nova do ConPTY ou de Rust, ou unha regra de Dependabot, ou arranxan algo que quedou pendente, coma o que lles pasaba ás sesións das tabs cando meiga saía. Cada un ten o seu documento, cos mesmos apartados ca unha subfase, e o seu identificador, M1, M2…
 
 | Mantemento | Despois de | Título | Entrega | Documento |
 |---|---|---|---|---|
 | M1 | 1.10 | ConPTY 1.25.261109001, Rust 1.100.0 e Dependabot | [PR #19](https://github.com/NewHouses/meiga/pull/19) | [m1-mantemento.md](m1-mantemento.md) |
+| M2 | 2.8 | O peche das sesións ao saír | [PR #28](https://github.com/NewHouses/meiga/pull/28) | [m2-peche.md](m2-peche.md) |

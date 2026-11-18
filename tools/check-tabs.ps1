@@ -44,17 +44,30 @@ each shortcut while the thread of the window is suspended: it sets the key
 state and posts the keys, and once the thread runs again, it reads the
 posted keys before any input.
 
-Before the output of the hidden tab, the check waits until the window draws
+Before the output of the hidden tab, the check waits until the shell of the
+new tab, and the programs that it starts, have used no processor time for
+a second, once it has written its prompt, and then until the window draws
 nothing for a second: until the cursor of the shown tab stops blinking, if
 Windows lets it blink. With the settings of Windows by default, the cursor
 changes about every half a second while it blinks, and stops blinking 5 s
-after the screen last changed.
+after the screen last changed. It also waits for the shell of the third
+tab, and its programs, before it closes the tab: a program that starts as
+its console closes keeps the console from closing, and the session ends
+its programs 10 s later, which meiga waits for when it ends (ADR 0011 and
+ADR 0026).
 
 It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
 The new tabs run the default profile of meiga, which is PowerShell 7 if
 meiga finds it, and load the profile of PowerShell: one that draws
 something seconds after the prompt can make the check fail. The check uses
 the clipboard: if it had text, the check puts it back at the end.
+
+It works with the ConPTY that meiga ships, which tools\package.ps1 puts next
+to meiga.exe, and with the one of Windows, when that one is not there. Then
+the consoles of the tabs are conhost.exe, which answer the questions of
+their programs themselves: the question of the hidden tab never reaches
+meiga, so the check only sees that its program gets an answer, and warns
+that it does not really check the answers of meiga.
 
 If a check fails, the script ends meiga.exe and keeps the frame log and the
 reports of the script.
@@ -104,6 +117,17 @@ public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wPar
 
 [StructLayout(LayoutKind.Sequential)]
 public struct RECT { public int Left, Top, Right, Bottom; }
+
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+struct PROCESSENTRY32W
+{
+    public uint dwSize, cntUsage, th32ProcessID;
+    public IntPtr th32DefaultHeapID;
+    public uint th32ModuleID, cntThreads, th32ParentProcessID;
+    public int pcPriClassBase;
+    public uint dwFlags;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szExeFile;
+}
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
@@ -188,6 +212,27 @@ static extern uint ResumeThread(IntPtr thread);
 [return: MarshalAs(UnmanagedType.Bool)]
 static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int id);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetProcessTimes(IntPtr process, out long creation, out long exit, out long kernel, out long user);
+
+[DllImport("kernel32.dll")]
+static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint process);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool Process32FirstW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool Process32NextW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+
 // Types a key in the window: sets the key state of its thread, which this
 // thread shares, to `state`, and posts the messages of the key `code` going
 // down and up, with the lParams `down` and `up`. The thread of the window is
@@ -264,6 +309,80 @@ public static int? PriorityOf(int process, string name)
         }
     }
     return null;
+}
+
+// The process `process` and the ones under it, the programs that it started
+// and the ones that they started, as a text that changes when one of them
+// starts or ends, or uses processor time: the number of each one and its
+// time, in ticks of 100 ns. A process keeps the number of its parent after
+// the parent ends, and Windows can give that number to another process:
+// only the ones that started after their parent count. Null if `process`
+// has ended.
+public static string TreeOf(int process)
+{
+    // TH32CS_SNAPPROCESS
+    IntPtr snapshot = CreateToolhelp32Snapshot(0x2, 0);
+    if (snapshot == new IntPtr(-1)) throw new System.ComponentModel.Win32Exception();
+    var children = new System.Collections.Generic.Dictionary<uint, System.Collections.Generic.List<uint>>();
+    try
+    {
+        var entry = new PROCESSENTRY32W();
+        entry.dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32W));
+        for (bool more = Process32FirstW(snapshot, ref entry); more; more = Process32NextW(snapshot, ref entry))
+        {
+            System.Collections.Generic.List<uint> list;
+            if (!children.TryGetValue(entry.th32ParentProcessID, out list))
+            {
+                list = new System.Collections.Generic.List<uint>();
+                children[entry.th32ParentProcessID] = list;
+            }
+            list.Add(entry.th32ProcessID);
+        }
+    }
+    finally { CloseHandle(snapshot); }
+    long created, used;
+    if (!TimesOf((uint)process, out created, out used)) return null;
+    var tree = new System.Collections.Generic.SortedDictionary<uint, long>();
+    tree[(uint)process] = used;
+    var pending = new System.Collections.Generic.Queue<Tuple<uint, long>>();
+    pending.Enqueue(Tuple.Create((uint)process, created));
+    while (pending.Count > 0)
+    {
+        var parent = pending.Dequeue();
+        System.Collections.Generic.List<uint> list;
+        if (!children.TryGetValue(parent.Item1, out list)) continue;
+        foreach (uint child in list)
+        {
+            long childCreated, childUsed;
+            if (tree.ContainsKey(child) || !TimesOf(child, out childCreated, out childUsed) || childCreated < parent.Item2) continue;
+            tree[child] = childUsed;
+            pending.Enqueue(Tuple.Create(child, childCreated));
+        }
+    }
+    var text = new System.Text.StringBuilder();
+    foreach (var pair in tree) text.Append(pair.Key).Append(' ').Append(pair.Value).Append(';');
+    return text.ToString();
+}
+
+// When the process `process` started, and the processor time that it has
+// used, in ticks of 100 ns; false if it has ended, or cannot be opened.
+static bool TimesOf(uint process, out long created, out long used)
+{
+    created = used = 0;
+    // PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE
+    IntPtr handle = OpenProcess(0x1000 | 0x100000, false, (int)process);
+    if (handle == IntPtr.Zero) return false;
+    try
+    {
+        // A process that has ended, but that somebody holds open, is not
+        // WAIT_TIMEOUT.
+        if (WaitForSingleObject(handle, 0) != 0x102) return false;
+        long exited, kernel, user;
+        if (!GetProcessTimes(handle, out created, out exited, out kernel, out user)) return false;
+        used = kernel + user;
+        return true;
+    }
+    finally { CloseHandle(handle); }
 }
 '@
 }
@@ -565,6 +684,34 @@ function Open-Tab([int[]]$Hidden) {
     $opened
 }
 
+# Waits until the process $Id, and the ones under it, have used no processor
+# time for a second, and no other one has started or ended: a shell that
+# starts has loaded its profile and written its prompt, also when its
+# prompt runs programs, as git for the folder. A program that starts as the
+# console of its tab closes keeps the console from closing, and the session
+# ends its programs 10 s later, which meiga waits for when it ends (ADR 0011
+# and ADR 0026).
+function Wait-Settled([int]$Id, [string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds + 10)
+    $last = $null
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $tree = $api::TreeOf($Id)
+        if ($null -eq $tree) { throw "$What ended." }
+        if ($tree -cne $last) {
+            $last = $tree
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 1000) {
+            return
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What, or the programs that it started, kept running for $($TimeoutSeconds + 10) s."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+}
+
 # Waits until the process $Id has ended, also after meiga.
 function Wait-Ended([int]$Id, [string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
@@ -609,6 +756,12 @@ try {
     $first = [int]$first
     Wait-For { (Get-Title) -eq 'meiga-tabs-1' } { "The title of the window is '$(Get-Title)' instead of 'meiga-tabs-1'." }
     Wait-Shown $first @() 'With one tab'
+    # The console of Windows answers the questions of its programs itself:
+    # only the ConPTY that meiga ships gives them to the terminal.
+    $windows = @(Get-Consoles | Where-Object Name -EQ 'conhost.exe').Count -gt 0
+    if ($windows) {
+        Write-Warning 'The consoles of the tabs are the ones of Windows (conhost.exe), which answer the questions of their programs themselves, so the answers of meiga to a hidden tab are not really checked. tools\package.ps1 copies the ConPTY of meiga next to meiga.exe.'
+    }
 
     # SetKeyboardState sets the key state of the thread that calls it: share
     # it with the thread of the window. This thread needs a message queue,
@@ -636,8 +789,9 @@ try {
     Write-Host "OK: Ctrl+Shift+T opens a tab with the default shell ($($second.Name)), and shows it with a full frame; the reader of the hidden tab gets a lower priority."
     $second = [int]$second.ProcessId
 
-    # 3. Nothing is drawn for a second: the cursor of the new tab, if it
-    # blinks, has stopped.
+    # 3. The new tab has written its prompt, and nothing is drawn for a
+    # second: its cursor, if it blinks, has stopped.
+    Wait-Settled $second 'The program of the new tab'
     Wait-Quiet 1000 ($TimeoutSeconds + 10)
 
     # 4. The hidden tab writes for a second: only its first output wakes the
@@ -659,7 +813,10 @@ try {
     $start = @(Get-Log).Count
     $sync = Invoke-Step 'ask in a synchronized update while it is hidden'
     $answer, $milliseconds = ($sync -split ' ')[1, 2]
-    if ($answer -ne '\e[?6c' -or [int]$milliseconds -gt 1000) {
+    # The console of Windows says what it can do itself, and the question
+    # never reaches meiga.
+    $valid = if ($windows) { $answer -match '^\\e\[\?[0-9;]+c$' } else { $answer -eq '\e[?6c' }
+    if (-not $valid -or [int]$milliseconds -gt 1000) {
         throw "A hidden tab that left a synchronized update open did not get the answer to its question in time: '$sync'."
     }
     Start-Sleep -Milliseconds 200
@@ -668,7 +825,12 @@ try {
         Show-Lines $frames
         throw 'The window drew when it ended the synchronized update of a hidden tab.'
     }
-    Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline ($milliseconds ms), without drawing."
+    if ($windows) {
+        Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, without drawing: the console of Windows answers them itself ($milliseconds ms)."
+    }
+    else {
+        Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline ($milliseconds ms), without drawing."
+    }
 
     # 6. A title, and text for the clipboard, while it is hidden.
     $sentinel = "meiga-check-tabs-$PID"
@@ -758,8 +920,11 @@ try {
         Write-Host 'OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.'
     }
 
-    # 9. A third tab, and around the tabs.
+    # 9. A third tab, and around the tabs. Its shell has started before its
+    # tab closes: a program that starts as its console closes keeps the
+    # session from ending for 10 s (ADR 0011).
     $third = [int](Open-Tab @($first, $second)).ProcessId
+    Wait-Settled $third 'The program of the third tab'
     Send-Key 'Ctrl+Tab'
     Wait-Shown $first @($second, $third) 'Ctrl+Tab from the last tab'
     Send-Key 'Ctrl+Shift+Tab'
