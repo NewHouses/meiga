@@ -49,10 +49,11 @@ It checks that:
   the exit code goes in that row;
 - when the program of a hidden tab ends with exit code 4, also after it
   wrote a line and gave a title, which draw only its tab in the bar, its tab
-  stays, and nothing is drawn; on the menu that the right button opens on
-  it, Down and Down highlight Restart tab, which Enter chooses: the program
-  starts again in the hidden tab, with the lower priority of a hidden tab
-  from the start, and the tab is not shown;
+  stays, and only its tab is drawn again, which tells it (ADR 0025); on the
+  menu that the right button opens on it, Down and Down highlight Restart
+  tab, which Enter chooses: the program starts again in the hidden tab,
+  with the lower priority of a hidden tab from the start, and the tab is
+  not shown;
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
@@ -1469,11 +1470,12 @@ try {
     # title: the window draws only the title of its tab, and does not copy
     # its screen, so the reader does not wake it up again for the screen.
     # Then the program ends with exit code 4: its reader wakes the window up
-    # all the same, and the tab stays, and nothing is drawn. On the menu that
-    # the right button opens on it, nothing is highlighted: Down goes to
-    # Duplicate tab, and Down again to Restart tab, which starts the program
-    # again in the tab, without showing it, and with the lower priority of a
-    # hidden tab from the start (see Assert-LowerReader).
+    # all the same, and the tab stays, and only its tab is drawn again, with
+    # the mark of the end before its title. On the menu that the right
+    # button opens on it, nothing is highlighted: Down goes to Duplicate tab,
+    # and Down again to Restart tab, which starts the program again in the
+    # tab, without showing it, and with the lower priority of a hidden tab
+    # from the start (see Assert-LowerReader).
     $eighth = Open-Tab 'Ctrl+Shift+T' @()
     Wait-Quiet 400
     $start = @(Get-Log).Count
@@ -1486,12 +1488,7 @@ try {
     $start = @(Get-Log).Count
     Stop-Probe $eighth 4
     Wait-Gone $eighth 'The program of the hidden tab'
-    Wait-Quiet 400
-    $frames = @(Get-Frames $start)
-    if ($frames.Count -gt 0) {
-        Show-Lines $frames
-        throw "When the program of a hidden tab ended with exit code 4, the window drew $($frames.Count) frames instead of none."
-    }
+    Assert-Inside $start (Get-Bar 2).Tabs[1].Rect 'When the program of a hidden tab ended with exit code 4'
     Open-TabMenu 2 1 'the tab'
     Wait-Quiet 400
     Send-Keys (@((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'Enter').Messages))
@@ -1506,7 +1503,7 @@ try {
         Show-Lines (Get-Frames $start)
         throw "Restart tab, on a hidden tab, made $($full.Count) full frames: it showed the tab."
     }
-    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and nothing is drawn; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.'
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and only its tab is drawn again, which tells it; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.'
 
     # 10. Ctrl+D closes the tab that is shown, whose program ended, and
     # shows the next one, whose program gets neither D nor Ctrl going up:

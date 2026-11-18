@@ -118,6 +118,9 @@ jobs:
       - name: Check the end of the programs
         run: ./tools/check-exit.ps1
 
+      - name: Check many tabs
+        run: ./tools/check-manytabs.ps1
+
       - name: Check the start-up measurement
         run: ./tools/perf/measure-startup.ps1 -Runs 3 -Warmup 1
 

@@ -1307,8 +1307,16 @@ mod tests {
         assert_eq!(bar.layout.scroll(), 0);
         bar.settle(&tabs);
         assert_eq!(bar.layout.scroll(), 0);
-        // Titles out of the strip draw nothing.
+        // Also before the frame: the user scrolls the tabs, and the one
+        // that was just shown no longer has to be in view.
+        bar.shown();
+        bar.wheel(&tabs, -120, false);
+        bar.settle(&tabs);
+        assert_eq!(bar.layout.scroll(), 100);
+        // Titles out of the strip draw nothing, also under the buttons on
+        // its right.
         damage(&mut bar);
+        bar.label_changed(8);
         bar.label_changed(9);
         assert!(!bar.has_damage());
         // The menu of the tab opens below it.

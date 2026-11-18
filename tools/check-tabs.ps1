@@ -16,10 +16,11 @@ closes the tab that is shown. It checks that:
 - the reader thread of each tab has the normal priority while its tab is
   shown, and below normal while it is hidden, which tells which tab is
   shown;
-- while a tab is hidden, the output of its program draws nothing, and its
-  program still gets the answers to its questions, also when it leaves a
-  synchronized update (DECSET 2026) open: the window ends it at its
-  deadline;
+- while a tab is hidden, the output of its program draws only its tab in
+  the bar, once, which tells that its program wrote something (ADR 0025),
+  and its program still gets the answers to its questions, also when it
+  leaves a synchronized update (DECSET 2026) open: the window ends it at
+  its deadline, without drawing;
 - the title of a hidden tab does not reach the window, only its tab in the
   bar (check-tabbar.ps1 checks what that draws), until the tab is shown;
   the text that it copies to the clipboard (OSC 52) never does, also in a
@@ -100,6 +101,16 @@ if (-not ('Meiga.Tools.TabsCheck' -as [type])) {
     Add-Type -Namespace Meiga.Tools -Name TabsCheck -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential)]
 public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wParam; public IntPtr lParam; public uint time; public int x, y; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT { public int Left, Top, Right, Bottom; }
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetClientRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
@@ -411,7 +422,50 @@ function Test-Full($Line) {
 }
 
 function Show-Lines($Lines) {
-    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels -AutoSize | Out-Host
+    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels, areas -AutoSize | Out-Host
+}
+
+# A rectangle, from its left and top, included, to its right and bottom,
+# excluded.
+function New-Rect([int]$Left, [int]$Top, [int]$Right, [int]$Bottom) {
+    [pscustomobject]@{ Left = $Left; Top = $Top; Right = $Right; Bottom = $Bottom }
+}
+
+function Show-Rect($Rect) {
+    "($($Rect.Left), $($Rect.Top)) to ($($Rect.Right), $($Rect.Bottom))"
+}
+
+# Whether $Inner is inside $Outer.
+function Test-Inside($Inner, $Outer) {
+    $Inner.Left -ge $Outer.Left -and $Inner.Top -ge $Outer.Top -and
+    $Inner.Right -le $Outer.Right -and $Inner.Bottom -le $Outer.Bottom
+}
+
+# The areas that the frames of $Lines presented: "x y w h;x y w h".
+function Get-Areas($Lines) {
+    foreach ($line in $Lines) {
+        foreach ($area in ($line.areas -split ';' | Where-Object { $_ })) {
+            $x, $y, $w, $h = [int[]]($area -split ' ')
+            New-Rect $x $y ($x + $w) ($y + $h)
+        }
+    }
+}
+
+# The first of two tabs, as meiga lays out its bar (see
+# crates/meiga-core/src/ui/tabbar.rs): from a gap on the left and the top of
+# the bar to its bottom, and as wide as two tabs fit beside the buttons +
+# and of the profiles, up to 240 pixels at a scale of 100 %.
+function Get-FirstTab {
+    $client = [Meiga.Tools.TabsCheck+RECT]::new()
+    if (-not $api::GetClientRect($window, [ref]$client)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $dpi = $api::GetDpiForWindow($window)
+    $scale = { param([int]$Pixels) [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96)) }
+    $gap = & $scale 4
+    $room = [Math]::Max(0, $client.Right - 3 * $gap - (& $scale 28) - (& $scale 24))
+    $width = [int][Math]::Min((& $scale 240), [Math]::Floor($room / 2))
+    New-Rect $gap $gap ($gap + $width) (& $scale 32)
 }
 
 # The reports of the script of the first tab.
@@ -586,16 +640,20 @@ try {
     # blinks, has stopped.
     Wait-Quiet 1000 ($TimeoutSeconds + 10)
 
-    # 4. The hidden tab writes for a second.
+    # 4. The hidden tab writes for a second: only its first output wakes the
+    # window up, which draws its tab in the bar, once, with the mark that
+    # tells that its program wrote something.
     $start = @(Get-Log).Count
     $null = Invoke-Step 'write while it is hidden'
     Start-Sleep -Milliseconds 300
     $frames = @(Get-Frames $start)
-    if ($frames.Count -gt 0) {
+    $tab = Get-FirstTab
+    $outside = @(Get-Areas $frames | Where-Object { -not (Test-Inside $_ $tab) })
+    if ($frames.Count -ne 1 -or $outside.Count -gt 0) {
         Show-Lines $frames
-        throw 'The window drew while the output of a hidden tab changed.'
+        throw "While the output of a hidden tab changed, the window drew $($frames.Count) frames, instead of one only inside its tab, $(Show-Rect $tab)."
     }
-    Write-Host 'OK: while a tab is hidden, the output of its program draws nothing.'
+    Write-Host 'OK: while a tab is hidden, the output of its program draws only its tab in the bar, once.'
 
     # 5. A question in a synchronized update that the program never ends.
     $start = @(Get-Log).Count

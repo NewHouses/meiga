@@ -334,19 +334,24 @@ impl Label for Tab {
         self.title.as_deref().unwrap_or(&self.launch.name)
     }
 
-    /// The end of its program, while it does not run, also while the tab is
-    /// shown, as in Windows Terminal; otherwise, while it is hidden, the
-    /// bell, and then what its program wrote (ADR 0025).
     fn indicator(&self) -> Option<Indicator> {
-        if self.session.is_none() {
-            Some(Indicator::Ended)
-        } else if self.bell {
-            Some(Indicator::Bell)
-        } else if self.activity {
-            Some(Indicator::Activity)
-        } else {
-            None
-        }
+        indicator(self.session.is_some(), self.bell, self.activity)
+    }
+}
+
+/// What the tab of a program tells: the end of the program, while it does
+/// not run, also while the tab is shown, as in Windows Terminal; otherwise,
+/// while the tab is hidden, the bell, and then what the program wrote (ADR
+/// 0025).
+const fn indicator(runs: bool, bell: bool, activity: bool) -> Option<Indicator> {
+    if !runs {
+        Some(Indicator::Ended)
+    } else if bell {
+        Some(Indicator::Bell)
+    } else if activity {
+        Some(Indicator::Activity)
+    } else {
+        None
     }
 }
 
@@ -1192,4 +1197,19 @@ fn coordinate(pixels: u32) -> i32 {
 /// The earlier of two moments, if there is one.
 fn earliest(first: Option<Instant>, second: Option<Instant>) -> Option<Instant> {
     first.into_iter().chain(second).min()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_end_goes_before_the_bell_and_the_bell_before_what_the_program_wrote() {
+        assert_eq!(indicator(true, false, false), None);
+        assert_eq!(indicator(true, false, true), Some(Indicator::Activity));
+        assert_eq!(indicator(true, true, true), Some(Indicator::Bell));
+        // The end shows also while the tab is shown, which clears the rest.
+        assert_eq!(indicator(false, false, false), Some(Indicator::Ended));
+        assert_eq!(indicator(false, true, true), Some(Indicator::Ended));
+    }
 }
