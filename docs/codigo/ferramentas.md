@@ -12610,7 +12610,7 @@ A CI executa este script en cada PR, despois de `check-shortcuts.ps1`, no paso *
 
 ## `tools/check-manytabs.ps1`
 
-Desde a subfase 2.8. Comproba que `meiga.exe` mantén manexábeis 30 tabs, e o que din as tabs ocultas ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md); [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). Con 7 tabs, todas se encollen por igual e caben na barra, co botón + detrás delas. A oitava xa non cabe: as tabs quedan co ancho mínimo, nunha franxa entre os dous botóns de desprazamento, que mostra a tab nova, e os botóns + e dos perfís van á dereita da barra. Con 30, cada tab corre o seu programa, nada se solapa, e a franxa mostra a última, que remata antes do botón da dereita; ese botón xa non pode desprazala, e o punteiro enriba del, e un clic nel, non debuxan nada. A roda na barra despraza unha tab por paso, cara á primeira adiante ou á esquerda, e cara á última atrás ou á dereita, e garda o que sobra dun paso para o seguinte xiro. Un clic nun botón de desprazamento leva a franxa ata que a primeira tab que oculta por ese lado, aínda que sexa en parte, queda enteira á vista; e, mentres o botón esquerdo segue premido nel, co punteiro enriba, despraza outra tab aos 250 ms, e despois cada 100 ms. Cada unha das 30 tabs móstrase cun clic no seu título, cando a roda a trae á vista. Cando o × ou o botón do medio pechan unha tab, as outras quedan co seu ancho e no seu sitio mentres o punteiro segue na barra, e o × seguinte queda debaixo do punteiro; cando o punteiro sae da barra, recolócanse, e a franxa mostra a tab que se mostra. Unha tab que pecha o teclado, co punteiro na barra, recoloca as outras no momento, e despois unha que pecha o rato déixaas no seu sitio; e pechar a última co rato recolócaas tamén no momento, así que o × da nova última queda debaixo do punteiro. Mostrar unha tab co teclado, tamén dando a volta, leva a franxa ata ela; a roda pode deixar fóra da vista a tab que se mostra, e alí queda; e Maiús+F10 leva a franxa ata ela, e abre o seu menú debaixo dela. E unha tab oculta: o primeiro que escribe o seu programa debuxa só o título da súa tab, unha vez, e a primeira campá, outra; mostrala quita os dous indicadores, e a campá da tab que se mostra non debuxa nada; e o fin do seu programa co código 3 debuxa o título outra vez. Ao final, a xanela péchase: meiga sae co código 0, e os programas das tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs) e [› `session.rs`](meiga.md#cratesmeigasrcsessionrs), e en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Light, que corre `cmd` co cursor oculto, para que as súas tabs custen pouco, e Probe, o perfil por defecto, que corre un script de PowerShell que escribe o texto que lle dá a comprobación, e remata cando llo di ela; e as shells que atopa meiga, ocultas. A xanela recibe unha área cliente de 800 × 400 píxeles a escala 100 %, na que caben 7 tabs e non 8. A comprobación calcula a barra coma meiga, coas mesmas regras ca o `Layout` de `meiga-core`, e sabe que tab se mostra polas prioridades dos fíos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Publica os clics, a roda e as teclas na xanela co seu fío suspendido, coma [`check-exit.ps1`](#toolscheck-exitps1), e le no rexistro o que debuxa: o punteiro enriba dunha parte da barra debuxa só esa parte, e onde a debuxa di onde está a franxa.
+Desde a subfase 2.8. Comproba que `meiga.exe` mantén manexábeis 30 tabs, e o que din as tabs ocultas ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md); [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). Con 7 tabs, todas se encollen por igual e caben na barra, co botón + detrás delas. A oitava xa non cabe: as tabs quedan co ancho mínimo, nunha franxa entre os dous botóns de desprazamento, que mostra a tab nova, e os botóns + e dos perfís van á dereita da barra. Con 30, cada tab corre o seu programa, nada se solapa, e a franxa mostra a última, que remata antes do botón da dereita; ese botón xa non pode desprazala, e o punteiro enriba del, e un clic nel, non debuxan nada. A roda na barra despraza unha tab por paso, cara á primeira adiante ou á esquerda, e cara á última atrás ou á dereita, e garda o que sobra dun paso para o seguinte xiro. Un clic nun botón de desprazamento leva a franxa ata que a primeira tab que oculta por ese lado, aínda que sexa en parte, queda enteira á vista; e, mentres o botón esquerdo segue premido nel, co punteiro enriba, despraza outra tab aos 250 ms, e despois cada 100 ms. Cada unha das 30 tabs móstrase cun clic no seu título, cando a roda a trae á vista. Cando o × ou o botón do medio pechan unha tab, as outras quedan co seu ancho e no seu sitio mentres o punteiro segue na barra, e o × seguinte queda debaixo do punteiro; cando o punteiro sae da barra, recolócanse, e a franxa mostra a tab que se mostra. Unha tab que pecha o teclado, co punteiro na barra, recoloca as outras no momento, e despois unha que pecha o rato déixaas no seu sitio; e pechar a última co rato recolócaas tamén no momento, así que o × da nova última queda debaixo do punteiro. Mostrar unha tab co teclado, tamén dando a volta, leva a franxa ata ela; a roda pode deixar fóra da vista a tab que se mostra, e alí queda ata que se escolle outra vez: desde a revisión do PR, Ctrl+1 e Ctrl+9, e un clic na parte dela que se ve, levan a franxa ata que está enteira á vista, e Ctrl+9 na tab enteira á vista non debuxa nada; e Maiús+F10 tamén leva a franxa ata ela, e abre o seu menú debaixo dela. E unha tab oculta: o primeiro que escribe o seu programa debuxa só o título da súa tab, unha vez, e a primeira campá, outra; mostrala quita os dous indicadores, e a campá da tab que se mostra non debuxa nada; e o fin do seu programa co código 3 debuxa o título outra vez. Ao final, a xanela péchase: meiga sae co código 0, e os programas das tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs) e [› `session.rs`](meiga.md#cratesmeigasrcsessionrs), e en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Light, que corre `cmd` co cursor oculto, para que as súas tabs custen pouco, e Probe, o perfil por defecto, que corre un script de PowerShell que escribe o texto que lle dá a comprobación, e remata cando llo di ela; e as shells que atopa meiga, ocultas. A xanela recibe unha área cliente de 800 × 400 píxeles a escala 100 %, na que caben 7 tabs e non 8. A comprobación calcula a barra coma meiga, coas mesmas regras ca o `Layout` de `meiga-core`, e sabe que tab se mostra polas prioridades dos fíos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Publica os clics, a roda e as teclas na xanela co seu fío suspendido, coma [`check-exit.ps1`](#toolscheck-exitps1), e le no rexistro o que debuxa: o punteiro enriba dunha parte da barra debuxa só esa parte, e onde a debuxa di onde está a franxa.
 
 ```powershell
 .\tools\check-manytabs.ps1                              # comproba target\release\meiga.exe
@@ -12636,7 +12636,7 @@ OK: each of the 30 tabs can be shown with a click on its title, once the wheel b
 OK: when the close button or the middle button closes a tab, the others keep their width and their place while the pointer stays on the bar, and the next close button is under the pointer; once the pointer leaves the bar, they get their width again, and the strip shows the tab that is shown.
 OK: a tab that the keyboard closes, with the pointer on the bar, lets the others get their width at once; then a tab that the mouse closes makes them keep it.
 OK: the last tab, closed with the mouse, lets the others get their width at once, so the close button of the new last one comes under the pointer.
-OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays; Shift+F10 scrolls the strip until it is in view again, and opens its menu below it.
+OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays until the tab is chosen again: Ctrl+1 and Ctrl+9, and a click on the part of it that is in view, scroll the strip until it is all in view, and Ctrl+9 on the tab all in view draws nothing; Shift+F10 also scrolls the strip until the tab is in view, and opens its menu below it.
 OK: while a tab is hidden, its program writes, which draws only the title of its tab, once, and rings the bell, which draws it once more; showing the tab clears both, and a bell while it is shown draws nothing; the end of its program with exit code 3, while it is hidden, draws its title once more.
 OK: it ends with exit code 0 when its window closes, and the programs of its tabs and their consoles end too.
 ```
@@ -12647,7 +12647,7 @@ OK: it ends with exit code 0 when its window closes, and the programs of its tab
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1: se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coas zonas que presentaron, e a mensaxe di o rectángulo que esperaba; se é da tab que se mostra, a mensaxe di cal tiña que ser, pola súa posición na barra, e cantas tabs hai. As que empezan por `The check expects` din que a barra que calcula a comprobación non é a que necesita o paso: algo que a comprobación non contempla, máis ca un erro de meiga. Se meiga rematou antes de tempo, dío, co seu código de saída. E garda o cartafol da comprobación, co `config.toml` e o rexistro dos fotogramas, e di onde, cunha liña `Kept …`. Pase o que pase, nin `meiga.exe` nin os programas das súas tabs quedan abertos, e o punteiro volta a onde estaba.
 
-**Comprobado** con trinta e tres copias de meiga cun cambio feito a propósito cada unha, compiladas noutro cartafol en *release* sen LTO, coma as de `check-exit.ps1`, e co ConPTY ao lado. Vinte e nove fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle. Tres dependen do punteiro do sistema no paso 6: unha falla só onde a comprobación non o pode levar ao botón, e dúas, só onde pode, coma na CI. E unha pasa, e acéptase (ver o paso 12).
+**Comprobado** con corenta copias de meiga cun cambio feito a propósito cada unha, trinta e tres antes da revisión do PR e sete na revisión, compiladas noutro cartafol en *release* sen LTO, coma as de `check-exit.ps1`, e co ConPTY ao lado. Trinta e seis fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle. Tres dependen do punteiro do sistema no paso 6: unha falla só onde a comprobación non o pode levar ao botón, e dúas, só onde pode, coma na CI. E unha pasa, e acéptase (ver o paso 12).
 
 Esta comprobación non mira os debuxos, só os rectángulos que se debuxan, e cantas veces: nin os glifos dos indicadores, a × grosa do fin, a 🔔 da campá e o ● da actividade, nin as súas cores, nin a cela baleira despois deles; nin as frechas dos botóns de desprazamento, nin o seu aspecto máis escuro cando non poden desprazar, nin as tabs cortadas polos lados da franxa. Iso próbano as probas de [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), que len os píxeles. Tampouco oe a campá da tab que se mostra, que non soa (decisión 9): só ve que non debuxa nada. Non conta os espertares da xanela, coma [`check-tabbar.ps1`](#toolscheck-tabbarps1): a segunda saída e a segunda campá dunha tab oculta non poden debuxar nada, pero unha meiga que espertase a xanela por elas, sen debuxar, pasaría; que a campá só esperta a xanela unha vez próbao `the_bell_wakes_the_window_once_until_the_tab_is_hidden_again`, en [› `session.rs`](meiga.md#cratesmeigasrcsessionrs). O botón mantido só se mide onde a comprobación pode levar alí o punteiro do sistema; e, aínda así, non comproba que pare cando o punteiro sae do botón, nin que siga cando volta, nin que as repeticións non tarden máis de 250 e 100 ms, só que non cheguen antes, e que haxa polo menos tres: todo iso próbao `the_buttons_on_the_sides_scroll_a_tab_and_again_while_they_stay_down`. Non move a roda coas tabs que caben, nin cun botón premido na barra, nin cara a un lado cara ao que a franxa non pode desprazarse; e, no botón que non pode desprazar, só mira que o punteiro e o clic non debuxan nada: que tampouco recolocan as tabs conxeladas, nin esquecen levar á vista a tab que se mostra, próbao `what_cannot_scroll_the_strip_changes_nothing`. As tabs conxeladas só se recolocan porque o punteiro sae da xanela: non porque vaia ao terminal, nin porque un menú colla o rato, nin porque se desprace a franxa, se abra unha tab ou cambie o tamaño ou a escala da xanela; e, mentres están conxeladas, a tab que se mostra nunca está fóra da vista. Por iso non colle tres copias que collen as probas de Rust, en `the_tab_that_is_shown_comes_into_view`: unha que leva á vista a tab que se mostra tamén coas tabs conxeladas; unha onde desprazar a franxa non esquece que a tab que se mostra ten que ir á vista, porque, cando a roda a deixa fóra (paso 11), meiga xa a levou á vista antes; e unha onde o que debuxa un indicador non se corta coa franxa, porque a tab dos indicadores está enteira nela. Nin unha onde o fin vai despois da campá, que colle `the_end_goes_before_the_bell_and_the_bell_before_what_the_program_wrote`: no paso 12, o programa remata cando a tab non ten campá. Tampouco usa Ctrl+Tab nin a tecla de menú, nin mira o indicador do fin na tab que se mostra, nin o que fai co indicador un reinicio. E só corre á escala da pantalla, nunha xanela de 800 píxeles a escala 100 %: as outras medidas próbanse en Rust, en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs).
 
@@ -12710,8 +12710,10 @@ the window draws in its frame log. It checks that:
   once, so the close button of the new last one comes under the pointer;
 - showing a tab with the keyboard, also round the bar, scrolls the strip so
   that it is in view; the wheel can then move the tab that is shown out of
-  view, where it stays; Shift+F10 scrolls the strip until it is in view
-  again, and opens its menu below it;
+  view, where it stays until the tab is chosen again: Ctrl+1 and Ctrl+9, and
+  a click on the part of it that is in view, scroll the strip until it is all
+  in view, and Ctrl+9 on the tab all in view draws nothing; Shift+F10 also
+  scrolls the strip until the tab is in view, and opens its menu below it;
 - while a tab is hidden, its program writes, which draws only the title of
   its tab, once, and rings the bell, which draws it once more; showing the
   tab clears both, and a bell while it is shown draws nothing; the end of
@@ -13767,7 +13769,7 @@ function Get-Chord([string]$Chord) {
 }
 ```
 
-**Unha combinación: `Get-Chord`.** É a de `check-exit.ps1` sen as repeticións (ver alí): as modificadoras baixan, a tecla baixa e sobe, e as modificadoras soben, ao revés; e, con Alt e sen Ctrl, van coma teclas do sistema, menos Alt cando sobe, como di o comentario. As combinacións desta comprobación son Ctrl+Maiús+1, que abre Light; Ctrl+1 e Ctrl+2, que mostran a primeira tab e a segunda ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 5); Ctrl+Maiús+Tab, que mostra a anterior; Ctrl+Maiús+W, que pecha a que se mostra; Maiús+F10, que abre o seu menú; e Esc, que o pecha. Ningunha leva Alt: a regra das teclas do sistema queda para as que se engadan, coma en `check-exit.ps1`.
+**Unha combinación: `Get-Chord`.** É a de `check-exit.ps1` sen as repeticións (ver alí): as modificadoras baixan, a tecla baixa e sobe, e as modificadoras soben, ao revés; e, con Alt e sen Ctrl, van coma teclas do sistema, menos Alt cando sobe, como di o comentario. As combinacións desta comprobación son Ctrl+Maiús+1, que abre Light; Ctrl+1, Ctrl+2 e Ctrl+9, que mostran a primeira tab, a segunda e a última, ou levan á vista a que xa se mostra ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 5, e [ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 5); Ctrl+Maiús+Tab, que mostra a anterior; Ctrl+Maiús+W, que pecha a que se mostra; Maiús+F10, que abre o seu menú; e Esc, que o pecha. Ningunha leva Alt: a regra das teclas do sistema queda para as que se engadan, coma en `check-exit.ps1`.
 
 ```powershell
 # Posts key messages at once, with the keys of $Down down and no other one
@@ -13958,8 +13960,9 @@ function Step-Bar([string]$Side) {
 }
 
 # Scrolls the strip as little as it can so that the tab at $Index is all in
-# view, as meiga does before a frame once a tab is shown, or before it opens
-# the menu of a tab with the keyboard. Returns whether it scrolled.
+# view, as meiga does before a frame once a tab is shown, and at once when the
+# tab that is shown is chosen again or before it opens the menu of a tab with
+# the keyboard. Returns whether it scrolled.
 function Show-BarTab([int]$Index) {
     if (-not $barOverflow -or $Index -ge $tabs.Count) { return $false }
     $left = $Index * $barTabWidth
@@ -13992,7 +13995,7 @@ function Add-Wheel([int]$Delta, [bool]$Horizontal) {
 
 - **`Set-BarScroll`** (`scroll_to`): leva a franxa a `$Target`, ou ata onde pode, entre 0 e o máximo, e di se se moveu.
 - **`Step-Bar`** (`step`), coma un clic nun botón de desprazamento (decisión 4). Cara á esquerda, ata a tab de antes da primeira enteira á vista: `(⌈desprazamento / ancho⌉ − 1) × ancho`, e polo menos 0. Cara á dereita, ata que a primeira tab que non está enteira á vista pola dereita queda enteira, no bordo dereito da franxa: `(⌊(desprazamento + franxa) / ancho⌋ + 1) × ancho − franxa`.
-- **`Show-BarTab`** (`reveal`) despraza o mínimo para que a tab de `$Index` quede enteira á vista, se as tabs non caben: se está á esquerda, ata o seu lado esquerdo; se está á dereita, ata que o seu lado dereito chegue ao da franxa, ou ata o seu lado esquerdo, se a franxa fose máis estreita ca unha tab. Di se se moveu. É o que fai meiga antes dun fotograma, cando se mostrou outra tab (`TabBar::settle`), e antes de abrir co teclado o menú dunha tab (`TabBar::scroll_to_tab`).
+- **`Show-BarTab`** (`reveal`) despraza o mínimo para que a tab de `$Index` quede enteira á vista, se as tabs non caben: se está á esquerda, ata o seu lado esquerdo; se está á dereita, ata que o seu lado dereito chegue ao da franxa, ou ata o seu lado esquerdo, se a franxa fose máis estreita ca unha tab. Di se se moveu. É o que fai meiga antes dun fotograma, cando se mostrou outra tab (`TabBar::settle`); no momento, desde a revisión do PR, cando se escolle outra vez a tab que xa se mostra (`Tabs::select`); e antes de abrir co teclado o menú dunha tab (`TabBar::scroll_to_tab`).
 - **`Add-Wheel`** (`TabBar::wheel`): un xiro da roda de `$Delta` 120 avos de paso, adiante ou á dereita se é positivo (decisión 3). Mentres as tabs caben, non despraza nada, e esquece o que sobraba. Se non, o xiro horizontal vai cara á última tab, e o vertical, co signo cambiado; o xiro, en píxeles por 120, é o que sobraba máis ese xiro polo ancho dunha tab; os píxeles, o xiro entre 120; e o que sobra, o resto. Coma en Rust, a división trunca cara a 0, e o resto ten o signo do xiro: `[Math]::Truncate` fai o primeiro, e `$turn - $pixels * $WHEEL_DELTA`, o segundo. A escala 100 %, un paso adiante, 120, son −120 × 100 / 120 = −100 píxeles: unha tab cara á primeira.
 
 ```powershell
@@ -14225,13 +14228,39 @@ function Assert-NothingDrawn([scriptblock]$Action, [string]$What) {
         throw "$What drew $($frames.Count) frames instead of none."
     }
 }
+
+# Does $Action, which chooses again the tab that is shown, while the strip
+# leaves it out of view, at least in part: the strip scrolls at once so that
+# the tab is all in view, as when another tab is shown. Checks that the
+# window draws the whole bar, and nothing out of it: the tab that is shown is
+# the same.
+function Assert-Reveal([scriptblock]$Action, [string]$What) {
+    if (-not (Show-BarTab $active)) {
+        throw 'The check expects the tab that is shown out of view, at least in part.'
+    }
+    Wait-Quiet 400
+    $from = Get-Mark
+    & $Action
+    Wait-For { @(Get-BarFrames $from).Count -gt 0 } {
+        Show-Lines (Get-Frames $from)
+        "$What did not draw the whole bar: the strip did not scroll so that the tab is all in view."
+    }
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    $bar = New-Rect 0 0 $barWidth $barHeight
+    if (@($frames | Where-Object { Test-Full $_ }).Count -gt 0 -or @(Get-Areas $frames | Where-Object { -not (Test-Inside $_ $bar) }).Count -gt 0) {
+        Show-Lines $frames
+        throw "$What drew out of the bar: it did not leave the tab shown."
+    }
+}
 ```
 
 **O que debuxa unha acción.**
 
 - **`Assert-Drawn`** fai `$Action` cando meiga leva 400 ms sen debuxar, e agarda algún fotograma; despois de 400 ms máis sen debuxar, comproba que houbo un só, e que todas as súas zonas son exactamente `$Area`. É a dos indicadores do paso 12: un indicador que aparece ou cambia nunha tab oculta debuxa só o sitio do título da súa tab, unha vez.
 - **`Assert-NothingDrawn`** fai `$Action` cando meiga leva 400 ms sen debuxar, agarda 300 ms, e despois a que meiga leve outros 400 sen debuxar: non pode haber ningún fotograma. Os 300 ms dan tempo a que o que escribiu o programa chegue a meiga, coma no paso 4 de `check-tabs.ps1`.
-- **Unha acción, e non unhas liñas:** as dúas reciben un bloque, `$Action`, e cóntano desde xusto antes del, despois da calma.
+- **`Assert-Reveal`**, desde a revisión do PR, é a do paso 11, para unha acción que escolle outra vez a tab que xa se mostra, cando a franxa a deixa fóra, polo menos en parte: un atallo ou un clic nela. Antes, o modelo leva a tab á vista (`Show-BarTab`), e ten que desprazar: se non, a acción non comprobaría nada, e a comprobación falla. Despois, fai `$Action` cando meiga leva 400 ms sen debuxar, e agarda un fotograma da barra enteira (`Get-BarFrames`), que é o que debuxa meiga cando a franxa se despraza; se non chega en `TimeoutSeconds`, mostra os fotogramas, e falla. E, cando meiga leva outros 400 ms sen debuxar, ningún fotograma pode ser completo, nin ter zonas fóra da barra: a tab que se mostra é a mesma, e o terminal non se debuxa outra vez. Non mira onde quedou a franxa: só que se desprazou. Onde, compróbano as accións que veñen despois no paso.
+- **Unha acción, e non unhas liñas:** as tres reciben un bloque, `$Action`, e cóntano desde xusto antes del, despois da calma.
 
 ```powershell
 # Types $Chord, which shows the tab at $Index, once meiga stops drawing what
@@ -14252,7 +14281,7 @@ function Show-Tab([string]$Chord, [int]$Index) {
 
 **Mostrar unha tab co teclado: `Show-Tab`.** Cando meiga leva 400 ms sen debuxar, teclea `$Chord`, que mostra a tab de `$Index`; o modelo fai dela a que se mostra, e lévaa á vista (`Show-BarTab`). Despois agarda a que se mostre (`Wait-Active`), e o seu fotograma completo (`Wait-OneFull`).
 
-- **Por que o fotograma completo, eiquí e en `Assert-Scroll`.** meiga non leva a tab á vista cando a mostra: apunta que o ten que facer (`TabBar::shown`), e faino o seguinte fotograma, antes de debuxar (`TabBar::settle`), se as tabs non están conxeladas (decisión 5). Ata entón, a franxa está onde estaba, e o que chegue antes pode cambiar o que fará: a roda e os botóns desprazan a franxa e esquecen o apuntado (`TabBar::scroll`), e, se se mostran dúas tabs antes dun fotograma, só a segunda vai á vista. O modelo leva a tab á vista no momento: só coincide con meiga despois dese fotograma, que debuxa a xanela enteira, porque mostra outra tab.
+- **Por que o fotograma completo, eiquí e en `Assert-Scroll`.** meiga non leva a tab á vista cando a mostra: apunta que o ten que facer (`TabBar::shown`), e faino o seguinte fotograma, antes de debuxar (`TabBar::settle`), se as tabs non están conxeladas (decisión 5). Ata entón, a franxa está onde estaba, e o que chegue antes pode cambiar o que fará: a roda e os botóns desprazan a franxa e esquecen o apuntado (`TabBar::scroll`), e, se se mostran dúas tabs antes dun fotograma, só a segunda vai á vista. O modelo leva a tab á vista no momento: só coincide con meiga despois dese fotograma, que debuxa a xanela enteira, porque mostra outra tab. Escoller outra vez a tab que xa se mostra, en cambio, lévaa á vista no momento, sen agardar polo fotograma (`Tabs::select`, desde a revisión do PR): por iso `Assert-Reveal` só agarda o fotograma da barra.
 
 ```powershell
 # The command line of meiga: its frame log, and no program, so that its first
@@ -14347,7 +14376,7 @@ try {
 | 8 | Dous clics de vez, no mesmo sitio: no × dunha tab do medio da franxa, co botón esquerdo, e despois co do medio. Despois de saír o punteiro, un clic no título doutra tab. | Péchanse a tab e a que vén ao seu sitio: as outras quedan co seu ancho e no seu sitio mentres o punteiro segue na barra. Cando sae, recolócanse, e a franxa vai ata o final, que xa está dúas tabs antes. |
 | 9 | Co punteiro no × da tab que se mostra, de vez: Ctrl+Maiús+W, un clic alí mesmo, e un clic no título da antepenúltima tab. Despois de saír o punteiro, o punteiro no título desa tab. | Ctrl+Maiús+W pecha a tab, e as outras recolócanse no momento: o × da tab da súa esquerda queda debaixo do punteiro, e o clic pecha esa. Pechada co rato, as outras quedan no seu sitio: o clic mostra a antepenúltima, e non a da súa esquerda. |
 | 10 | Dous clics de vez no × da última tab. Un clic no título doutra. | Péchanse a última e a anterior: pechar a última recoloca as outras no momento, e o × da nova última queda debaixo do punteiro. |
-| 11 | Ctrl+1, e o punteiro no título da primeira tab; Ctrl+Maiús+Tab, e o punteiro no título da última. A roda dous pasos adiante e un clic no título doutra tab, de vez; a roda tres pasos atrás. Maiús+F10, e Esc. Un clic no título doutra tab. | Ctrl+1 e Ctrl+Maiús+Tab mostran a primeira e a última, e a franxa vai ata elas. A roda deixa fóra da vista a tab que se mostra, e alí queda. Maiús+F10 leva a franxa ata ela, e abre o seu menú debaixo dela; Esc pécháo. |
+| 11 | Ctrl+1, e o punteiro no título da primeira tab; a roda un paso atrás, e Ctrl+1 outra vez; un clic no título doutra tab. Dúas veces Ctrl+Maiús+Tab, e o punteiro no título da última; Ctrl+9; a roda dous pasos adiante, e Ctrl+9 outra vez. A roda dous pasos adiante e un clic no título doutra tab, de vez; a roda tres pasos atrás. Maiús+F10, e Esc. Un clic no título doutra tab. A roda cinco pasos adiante, e un clic no que se ve do título da tab que se mostra. Un clic no título doutra tab. | Ctrl+1 e Ctrl+Maiús+Tab mostran a primeira e a última, e a franxa vai ata elas. A roda deixa fóra da vista a tab que se mostra, e alí queda ata que se escolle outra vez: Ctrl+1, Ctrl+9 e o clic na tab que se mostra, cortada, levan a franxa ata ela no momento, e só debuxan a barra. Ctrl+9 na última, enteira á vista, non debuxa nada. Maiús+F10 leva a franxa ata a tab que se mostra, e abre o seu menú debaixo dela; Esc pécháo. |
 | 12 | Ctrl+1 e Ctrl+2: a primeira tab, a de Probe, queda oculta. O seu programa escribe `x`, `y`, a campá, e a campá outra vez. Ctrl+1, e a campá. Ctrl+2; o programa escribe `z`, e remata co código 3. | `x` debuxa só o sitio do título da primeira tab, unha vez, e `y`, nada; a primeira campá, o mesmo sitio, unha vez, e a segunda, nada. A campá coa tab á vista non debuxa nada. Oculta outra vez, `z` debuxa o sitio do título, e o fin, outra vez. |
 | 13 | Pecha a xanela. | meiga sae co código 0, e os programas das tabs e as súas consolas rematan. |
 
@@ -14689,14 +14718,38 @@ try {
     # 11. The keyboard shows a tab, and the strip scrolls so that it is in
     # view: Ctrl+1 the first one, and Ctrl+Shift+Tab, round the bar, the last
     # one. The wheel can move the tab that is shown out of view, and the strip
-    # stays there; Shift+F10 scrolls it until that tab is in view, and opens
-    # its menu below it.
+    # stays there until that tab is chosen again (ADR 0025, decision 5): Ctrl+1
+    # and Ctrl+9 bring the first and the last tab into view again, though
+    # Ctrl+9 draws nothing while the last tab is all in view; Shift+F10 scrolls
+    # the strip too, and opens the menu of the tab below it; and a click on the
+    # part of the tab that is in view, on the right of the strip this time,
+    # brings all of it into view. After each of them, a click on another tab,
+    # or the wheel and a click, find the strip where it has to be.
+    $at = Get-Middle (Get-Strip)
     Show-Tab 'Ctrl+1' 0
     Assert-Hover (Get-Middle (Get-TitleRect 0)) (Get-TabArea 0) 'the title of the first tab, once Ctrl+1 showed it,'
+    Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (-$WHEEL_DELTA) $at) 'The wheel backward'
+    Add-Wheel (-$WHEEL_DELTA) $false
+    Assert-Reveal { Send-Chord 'Ctrl+1' } 'Ctrl+1, on the first tab, which is shown,'
+    Assert-Scroll (Get-OtherTab) 'once Ctrl+1 brought the first tab into view'
+```
+
+**11. A tab que se mostra, á vista** (decisión 5, que cambiou na revisión do PR).
+
+- **Ctrl+1** mostra a primeira tab (`Show-Tab`; [ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 5), e o seu fotograma completo leva a franxa ao principio, de 1 712 a 0. O punteiro no seu título debuxa a súa columna.
+- **A roda, un paso atrás** (`Send-ToBar`): a franxa vai unha tab cara á última, de 0 a 100, e a primeira, a que se mostra, queda fóra da vista, á esquerda. A roda non mostra ningunha tab, e, se a tab que se mostra tiña que ir á vista, esquéceo (`TabBar::scroll`).
+- **Ctrl+1 outra vez,** na tab que xa se mostra (`Assert-Reveal`). Desde a revisión do PR, escoller outra vez a tab que se mostra lévaa á vista no momento, coma cando se mostra outra ([`Tabs::select`](meiga.md#os-atallos-e-os-clics-act-select-open-e-close)): a franxa volta de 100 a 0, nun fotograma só da barra. Ata a revisión, alí quedaba, ata que se mostrase outra tab.
+- **Onde está a franxa** (`Assert-Scroll`), coa tab 2, que o clic mostra.
+
+```powershell
+    Show-Tab 'Ctrl+Shift+Tab' 0
     $last = $tabs.Count - 1
     Show-Tab 'Ctrl+Shift+Tab' $last
     Assert-Hover (Get-Middle (Get-TitleRect $last)) (Get-TabArea $last) 'the title of the last tab, once Ctrl+Shift+Tab showed it from the first one,'
-    $at = Get-Middle (Get-Strip)
+    Assert-NothingDrawn { Send-Chord 'Ctrl+9' } 'Ctrl+9, on the last tab, which is shown and all in view,'
+    Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (2 * $WHEEL_DELTA) $at) 'The wheel forward'
+    Add-Wheel (2 * $WHEEL_DELTA) $false
+    Assert-Reveal { Send-Chord 'Ctrl+9' } 'Ctrl+9, on the last tab, which is shown,'
     $messages = Get-Wheel $WM_MOUSEWHEEL (2 * $WHEEL_DELTA) $at
     Add-Wheel (2 * $WHEEL_DELTA) $false
     $target = Get-OtherTab
@@ -14706,11 +14759,11 @@ try {
     Wait-Active 'A click on the title of a tab, once the wheel scrolled the strip,'
 ```
 
-**11. A tab que se mostra, á vista** (decisión 5).
-
-- **Ctrl+1** mostra a primeira tab (`Show-Tab`; [ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 5), e o seu fotograma completo leva a franxa ao principio. O punteiro no seu título debuxa a súa columna.
-- **Ctrl+Maiús+Tab,** desde a primeira, dá a volta, e mostra a última: a franxa vai ata o final. O punteiro no título da última debuxa a súa columna, cortada pola franxa: o separador da súa dereita quedaría fóra.
-- **A roda e un clic, de vez:** dous pasos adiante, de 1 712 a 1 512, e un clic no título da primeira tab enteira á vista que non se mostra, a 17, que se mostra.
+- **Ctrl+Maiús+Tab, dúas veces:** desde a segunda, mostra a primeira; e, desde a primeira, dá a volta, e mostra a última: a franxa vai ata o final, 1 712. O punteiro no título da última debuxa a súa columna, cortada pola franxa: o separador da súa dereita quedaría fóra.
+- **Ctrl+9 na última, enteira á vista** (`Assert-NothingDrawn`): a tab xa se mostra, e a franxa non ten a onde ir, así que meiga non debuxa nada. `TabBar::settle` só debuxa a barra se a franxa se move, e o atallo só pide un fotograma se hai algo que debuxar.
+- **A roda, dous pasos adiante:** de 1 712 a 1 512, e a última queda fóra da vista, á dereita.
+- **Ctrl+9 outra vez** (`Assert-Reveal`): a franxa volta ao final, de 1 512 a 1 712, nun fotograma só da barra.
+- **A roda e un clic, de vez:** dous pasos adiante, outra vez de 1 712 a 1 512, e un clic no título da primeira tab enteira á vista que non se mostra, a 17, que se mostra.
 
 ```powershell
     Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (-3 * $WHEEL_DELTA) $at) 'The wheel backward'
@@ -14741,15 +14794,33 @@ try {
     Send-Chord 'Escape'
     Wait-For { @(Get-Areas (Get-Frames $from) | Where-Object { Test-Inside $menu $_ }).Count -gt 0 } { 'Esc did not close the menu.' }
     Assert-Scroll (Get-OtherTab) 'once Shift+F10 scrolled the strip'
-    Write-Host 'OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays; Shift+F10 scrolls the strip until it is in view again, and opens its menu below it.'
 ```
 
-**Despois, a tab que se mostra, fóra da vista.** Tres pasos atrás, cos seus fotogramas (`Send-ToBar`): a franxa vai ata o final, 1 712, e a tab que se mostra queda fóra, á esquerda; o modelo comproba que a súa columna, cortada coa franxa, non ten ancho. A roda non mostra ningunha tab, e, se a tab que se mostra tiña que ir á vista, esquéceo (`TabBar::scroll`): alí queda.
+**Despois, a tab que se mostra, fóra da vista.** Tres pasos atrás, cos seus fotogramas (`Send-ToBar`): a franxa vai ata o final, 1 712, e a tab que se mostra queda fóra, á esquerda; o modelo comproba que a súa columna, cortada coa franxa, non ten ancho.
 
 - **Maiús+F10** abre co teclado o menú da tab que se mostra, debaixo dela, desde o seu lado esquerdo ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 4); antes, leva a franxa ata ela, no momento (`TabBar::scroll_to_tab`). O modelo fai o mesmo (`Show-BarTab`), e ten que desprazar: de 1 712 a 1 600, coa tab 17 ao principio da franxa. A comprobación agarda unha zona que sexa a barra enteira, e outra que empece no lado esquerdo e no fondo da tab, onde a pon o modelo: o menú. Se non chegan en `TimeoutSeconds`, mostra os fotogramas, e falla.
 - **Esc** pecha o menú: algunha zona cobre a do menú, o que tapaba.
-- **Onde está a franxa** (`Assert-Scroll`), coa tab 18.
-- **O que colle:** unha meiga onde mostrar unha tab non a leva á vista: Ctrl+1 deixa a franxa onde estaba, e o punteiro no título da primeira cae noutra tab, cuxa columna está noutro sitio. E unha onde o menú do teclado non leva a franxa ata a tab: Maiús+F10 non debuxa a barra enteira.
+- **Onde está a franxa** (`Assert-Scroll`), coa tab 18, que o clic mostra.
+
+```powershell
+    # The tab that the click showed, on the right of the strip, where only
+    # part of it is in view, with its title.
+    Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (5 * $WHEEL_DELTA) $at) 'The wheel forward'
+    Add-Wheel (5 * $WHEEL_DELTA) $false
+    $label = Get-LabelArea $active
+    if ((Test-AllInView $active) -or $label.Right -le $label.Left) {
+        throw 'The check expects the tab that is shown partly in view, with part of its title, once the wheel scrolls the strip forward.'
+    }
+    Assert-Reveal { Send-Mouse (Get-Click (Get-Middle $label)) } 'A click on the title of the tab that is shown, partly in view,'
+    Assert-Scroll (Get-OtherTab) 'once a click on the tab that is shown brought it all into view'
+    Write-Host 'OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays until the tab is chosen again: Ctrl+1 and Ctrl+9, and a click on the part of it that is in view, scroll the strip until it is all in view, and Ctrl+9 on the tab all in view draws nothing; Shift+F10 also scrolls the strip until the tab is in view, and opens its menu below it.'
+```
+
+**Por último, a tab que se mostra, cortada á dereita.** Cinco pasos adiante: de 1 600 a 1 100. A tab que se mostra, a 18, que mostrou o clic de `Assert-Scroll`, queda á dereita da franxa, cortada: vense 88 dos seus 100 píxeles, co título enteiro, e o × queda cortado. O modelo compróbao: a tab non está enteira á vista (`Test-AllInView`), e o seu título, cortado coa franxa (`Get-LabelArea`), ten ancho.
+
+- **Un clic no medio do seu título** (`Assert-Reveal`). O botón esquerdo mostra a tab sobre a que baixa ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6) e, se xa se mostra, desde a revisión do PR, lévaa á vista: a franxa vai de 1 100 a 1 112, ata que o lado dereito da tab chega ao da franxa.
+- **Onde está a franxa** (`Assert-Scroll`), coa tab 13. É a única vez que a comprobación leva á vista pola dereita unha tab que non é a última. A última para no final da franxa, estea onde estea o seu lado dereito, así que ata a revisión do PR esta parte de `reveal` só a collían as probas unitarias: o límite que sinalou a revisión independente.
+- **O que colle:** unha meiga onde mostrar unha tab non a leva á vista: Ctrl+1 deixa a franxa onde estaba, e o punteiro no título da primeira cae noutra tab, cuxa columna está noutro sitio. E unha onde o menú do teclado non leva a franxa ata a tab: Maiús+F10 non debuxa a barra enteira. Desde a revisión do PR, outras sete, que fallan no seu sitio do paso. As tres que non levan á vista a tab que xa se mostra, coma antes da revisión, cada unha cun dos tres camiños: Ctrl+1…8, Ctrl+9 e o clic. A que non o fai con ningún: Ctrl+1. A que só apunta que a tab ten que ir á vista, coma cando se mostra outra, e agarda un fotograma que ningún atallo pide: Ctrl+1 non debuxa nada. A que debuxa a barra enteira cada vez, aínda que a tab xa se vexa enteira: Ctrl+9 na última debuxa. E a que leva a franxa ata o lado esquerdo da tab tamén cando a tab está á dereita: o clic déixaa en 1 700, e o punteiro no título da 13 cae noutra tab.
 
 ```powershell
     # 12. Probe, the first tab, while it is hidden: its program writes, rings
