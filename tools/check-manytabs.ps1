@@ -1436,7 +1436,9 @@ try {
             })
         if ($scrolls.Count -lt 3 -or $early.Count -gt 0) {
             Show-Lines $scrolls
-            throw "While the left button stayed down for a second on the button that scrolls the strip to the left, the strip scrolled $($scrolls.Count) times, after $(($gaps | ForEach-Object { '{0:0.0} ms' -f $_ }) -join ', '): it has to scroll at once, 250 ms later, and then every 100 ms."
+            $count = if ($scrolls.Count -eq 1) { 'once' } else { "$($scrolls.Count) times" }
+            $after = if ($gaps.Count -gt 0) { ', after ' + (($gaps | ForEach-Object { '{0:0.0} ms' -f $_ }) -join ', ') } else { '' }
+            throw "While the left button stayed down for a second on the button that scrolls the strip to the left, the strip scrolled $count$($after): it has to scroll at once, 250 ms later, and then every 100 ms."
         }
         Write-Host "OK: while the left button stays down on a button that scrolls the strip, with the pointer on it, the strip scrolls another tab after 250 ms, and then after each 100 ms: $($scrolls.Count) tabs in a second."
     }
