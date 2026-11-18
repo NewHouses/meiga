@@ -63,9 +63,13 @@ depends on the font, comes from the frame that opens it. It checks that:
 
 Opening each profile starts its shell, as a tab of meiga does: the ones of
 the user load their profiles, and WSL may have to start. The check waits
-until each one is idle, and closes it then. A start-up file that changes
-the folder of its shell, as a cd in the .bashrc of Git Bash, can make the
-check fail, if it runs before the check reads the folder.
+until each one is idle, with the programs that it started, and closes it
+then: the bash.exe of Git Bash is a launcher, which waits for the shell that
+it starts, while that shell starts git for its prompt; and a program that
+starts as its console closes keeps the console from closing, so the
+session ends its programs 10 s later (ADR 0011). A start-up file that
+changes the folder of its shell, as a cd in the .bashrc of Git Bash, can
+make the check fail, if it runs before the check reads the folder.
 
 As check-menu.ps1 does, the check moves the pointer out of the window, posts
 its messages while the thread of the window is suspended, and types each key
@@ -148,6 +152,17 @@ public struct GUITHREADINFO
 struct PROCESS_BASIC_INFORMATION
 {
     public IntPtr ExitStatus, PebBaseAddress, AffinityMask, BasePriority, UniqueProcessId, InheritedFromUniqueProcessId;
+}
+
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+struct PROCESSENTRY32W
+{
+    public uint dwSize, cntUsage, th32ProcessID;
+    public IntPtr th32DefaultHeapID;
+    public uint th32ModuleID, cntThreads, th32ParentProcessID;
+    public int pcPriClassBase;
+    public uint dwFlags;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szExeFile;
 }
 
 public delegate bool EnumProc(IntPtr window, IntPtr parameter);
@@ -250,6 +265,24 @@ static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] boo
 
 [DllImport("kernel32.dll", SetLastError = true)]
 static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int id);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetProcessTimes(IntPtr process, out long creation, out long exit, out long kernel, out long user);
+
+[DllImport("kernel32.dll")]
+static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint process);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool Process32FirstW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool Process32NextW(IntPtr snapshot, ref PROCESSENTRY32W entry);
 
 [DllImport("ntdll.dll")]
 static extern int NtQueryInformationProcess(IntPtr process, int type, ref PROCESS_BASIC_INFORMATION information, int size, out int returned);
@@ -468,6 +501,80 @@ public static bool IsFile(string path)
     uint attributes = GetFileAttributesW(path);
     // INVALID_FILE_ATTRIBUTES, and FILE_ATTRIBUTE_DIRECTORY.
     return attributes != 0xFFFFFFFF && (attributes & 0x10) == 0;
+}
+
+// The process `process` and the ones under it, the programs that it started
+// and the ones that they started, as a text that changes when one of them
+// starts or ends, or uses processor time: the number of each one and its
+// time, in ticks of 100 ns. A process keeps the number of its parent after
+// the parent ends, and Windows can give that number to another process:
+// only the ones that started after their parent count. Null if `process`
+// has ended.
+public static string TreeOf(int process)
+{
+    // TH32CS_SNAPPROCESS
+    IntPtr snapshot = CreateToolhelp32Snapshot(0x2, 0);
+    if (snapshot == new IntPtr(-1)) throw new System.ComponentModel.Win32Exception();
+    var children = new System.Collections.Generic.Dictionary<uint, System.Collections.Generic.List<uint>>();
+    try
+    {
+        var entry = new PROCESSENTRY32W();
+        entry.dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32W));
+        for (bool more = Process32FirstW(snapshot, ref entry); more; more = Process32NextW(snapshot, ref entry))
+        {
+            System.Collections.Generic.List<uint> list;
+            if (!children.TryGetValue(entry.th32ParentProcessID, out list))
+            {
+                list = new System.Collections.Generic.List<uint>();
+                children[entry.th32ParentProcessID] = list;
+            }
+            list.Add(entry.th32ProcessID);
+        }
+    }
+    finally { CloseHandle(snapshot); }
+    long created, used;
+    if (!TimesOf((uint)process, out created, out used)) return null;
+    var tree = new System.Collections.Generic.SortedDictionary<uint, long>();
+    tree[(uint)process] = used;
+    var pending = new System.Collections.Generic.Queue<Tuple<uint, long>>();
+    pending.Enqueue(Tuple.Create((uint)process, created));
+    while (pending.Count > 0)
+    {
+        var parent = pending.Dequeue();
+        System.Collections.Generic.List<uint> list;
+        if (!children.TryGetValue(parent.Item1, out list)) continue;
+        foreach (uint child in list)
+        {
+            long childCreated, childUsed;
+            if (tree.ContainsKey(child) || !TimesOf(child, out childCreated, out childUsed) || childCreated < parent.Item2) continue;
+            tree[child] = childUsed;
+            pending.Enqueue(Tuple.Create(child, childCreated));
+        }
+    }
+    var text = new System.Text.StringBuilder();
+    foreach (var pair in tree) text.Append(pair.Key).Append(' ').Append(pair.Value).Append(';');
+    return text.ToString();
+}
+
+// When the process `process` started, and the processor time that it has
+// used, in ticks of 100 ns; false if it has ended, or cannot be opened.
+static bool TimesOf(uint process, out long created, out long used)
+{
+    created = used = 0;
+    // PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE
+    IntPtr handle = OpenProcess(0x1000 | 0x100000, false, (int)process);
+    if (handle == IntPtr.Zero) return false;
+    try
+    {
+        // A process that has ended, but that somebody holds open, is not
+        // WAIT_TIMEOUT.
+        if (WaitForSingleObject(handle, 0) != 0x102) return false;
+        long exited, kernel, user;
+        if (!GetProcessTimes(handle, out created, out exited, out kernel, out user)) return false;
+        used = kernel + user;
+        return true;
+    }
+    finally { CloseHandle(handle); }
 }
 
 // The long form of the path of a folder that exists: with the long names of
@@ -931,18 +1038,22 @@ function Wait-Shown([int]$Shown, [int[]]$Hidden, [string]$What) {
     }
 }
 
-# Waits until the process $Id has used no processor time for a second, or
-# for $Seconds at most: a shell of the user has started, and its profile may
-# keep working.
+# Waits until the process $Id, and the ones under it, have used no processor
+# time for a second, and no other one has started or ended, or for $Seconds
+# at most: a shell of the user has started, and its profile may keep
+# working. A launcher, as the bash.exe of Git Bash, waits for the shell that
+# it starts, which may still start programs, as git for its prompt; and a
+# program that starts as its console closes keeps the console from closing,
+# so the session ends its programs 10 s later (ADR 0011).
 function Wait-Settled([int]$Id, [int]$Seconds) {
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
-    $last = -1
+    $last = $null
     $since = [DateTime]::UtcNow
     while ([DateTime]::UtcNow -lt $deadline) {
-        try { $time = (Get-Process -Id $Id -ErrorAction Stop).TotalProcessorTime.Ticks }
-        catch { return }
-        if ($time -ne $last) {
-            $last = $time
+        $tree = $api::TreeOf($Id)
+        if ($null -eq $tree) { return }
+        if ($tree -cne $last) {
+            $last = $tree
             $since = [DateTime]::UtcNow
         }
         elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 1000) {

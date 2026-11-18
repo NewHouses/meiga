@@ -44,11 +44,15 @@ each shortcut while the thread of the window is suspended: it sets the key
 state and posts the keys, and once the thread runs again, it reads the
 posted keys before any input.
 
-Before the output of the hidden tab, the check waits until the window draws
-nothing for a second: until the cursor of the shown tab stops blinking, if
-Windows lets it blink. With the settings of Windows by default, the cursor
-changes about every half a second while it blinks, and stops blinking 5 s
-after the screen last changed.
+Before the output of the hidden tab, the check waits until the shell of the
+new tab has used no processor time for a second, once it has written its
+prompt, and then until the window draws nothing for a second: until the
+cursor of the shown tab stops blinking, if Windows lets it blink. With the
+settings of Windows by default, the cursor changes about every half a
+second while it blinks, and stops blinking 5 s after the screen last
+changed. It also waits for the shell of the third tab before it closes the
+tab: a program that starts as its console closes keeps the console from
+closing, and the session ends its programs 10 s later (ADR 0011).
 
 It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
 The new tabs run the default profile of meiga, which is PowerShell 7 if
@@ -565,6 +569,30 @@ function Open-Tab([int[]]$Hidden) {
     $opened
 }
 
+# Waits until the process $Id has used no processor time for a second: a
+# shell that starts has loaded its profile and written its prompt.
+function Wait-Settled([int]$Id, [string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds + 10)
+    $last = -1
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $program = Get-Process -Id $Id -ErrorAction Ignore
+        if (-not $program) { throw "$What ended." }
+        $time = $program.TotalProcessorTime.Ticks
+        if ($time -ne $last) {
+            $last = $time
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 1000) {
+            return
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What kept running for $($TimeoutSeconds + 10) s."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+}
+
 # Waits until the process $Id has ended, also after meiga.
 function Wait-Ended([int]$Id, [string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
@@ -636,8 +664,9 @@ try {
     Write-Host "OK: Ctrl+Shift+T opens a tab with the default shell ($($second.Name)), and shows it with a full frame; the reader of the hidden tab gets a lower priority."
     $second = [int]$second.ProcessId
 
-    # 3. Nothing is drawn for a second: the cursor of the new tab, if it
-    # blinks, has stopped.
+    # 3. The new tab has written its prompt, and nothing is drawn for a
+    # second: its cursor, if it blinks, has stopped.
+    Wait-Settled $second 'The program of the new tab'
     Wait-Quiet 1000 ($TimeoutSeconds + 10)
 
     # 4. The hidden tab writes for a second: only its first output wakes the
@@ -758,8 +787,11 @@ try {
         Write-Host 'OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.'
     }
 
-    # 9. A third tab, and around the tabs.
+    # 9. A third tab, and around the tabs. Its shell has started before its
+    # tab closes: a program that starts as its console closes keeps the
+    # session from ending for 10 s (ADR 0011).
     $third = [int](Open-Tab @($first, $second)).ProcessId
+    Wait-Settled $third 'The program of the third tab'
     Send-Key 'Ctrl+Tab'
     Wait-Shown $first @($second, $third) 'Ctrl+Tab from the last tab'
     Send-Key 'Ctrl+Shift+Tab'

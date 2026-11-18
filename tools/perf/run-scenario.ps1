@@ -365,10 +365,13 @@ finally {
         Write-Warning "$left copies of the scenario are still running: stop them with Ctrl+C."
     }
     Remove-Item -LiteralPath (Join-Path $runDirectory 'controller') -ErrorAction Ignore
-    # The terminal that this script started closes as the X button does.
+    # The terminal that this script started closes as the X button does. meiga
+    # waits for the sessions of its tabs to end before it exits, and a session
+    # that gets stuck as it closes ends 10 s later (ADR 0026): ending meiga
+    # before would leave that session stuck for ever.
     if ($terminalProcess) {
         if (-not $terminalProcess.HasExited -and $terminalProcess.CloseMainWindow()) {
-            $null = $terminalProcess.WaitForExit(5000)
+            $null = $terminalProcess.WaitForExit(15000)
         }
         if (-not $terminalProcess.HasExited) {
             $terminalProcess.Kill()
