@@ -439,8 +439,9 @@ fn a_session_whose_programs_keep_ending_is_not_ended_by_the_writer() {
 #[test]
 fn the_sessions_that_were_closed_end_before_the_process_exits() {
     // Another process closes a session that gets stuck and another one,
-    // waits for them, and exits. Its job ends nothing: the job only counts
-    // its programs, and those of its sessions, which are in it too.
+    // waits for them, and exits. The job of the test counts its programs,
+    // and those of its sessions, which are in it too: it ends the ones left
+    // only when it is dropped, after the test has counted them.
     let job = Job::new();
     let mut exiter = process::Command::new(env::current_exe().unwrap())
         .args(HELPER_ARGUMENTS)

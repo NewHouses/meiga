@@ -369,6 +369,7 @@ impl Conpty {
             handle,
             close: self.close,
             resize: self.resize,
+            may_wait: matches!(self.source, Source::System),
         })
     }
 }
@@ -439,11 +440,13 @@ fn keep_closing(writer: JoinHandle<()>) {
 }
 
 /// Waits until the sessions that were closed have ended: until the writer of
-/// each one has seen its programs end or, if the session got stuck, has
-/// ended them. Call it before the process exits, once no thread closes more
-/// sessions: when a process exits, its threads end with it, and a session
-/// that got stuck would stay so for ever, with its programs and its ConPTY
-/// (ADR 0026).
+/// each one has seen ConPTY close the output and the program end or, if the
+/// session got stuck, has ended the programs of its job. If a session ended
+/// on its own, its programs that are not in its console, such as a window
+/// that its shell opened, go on. Call it before the process exits, once no
+/// thread closes more sessions: when a process exits, its threads end with
+/// it, and a session that got stuck would stay so for ever, with its
+/// programs and its ConPTY (ADR 0026).
 ///
 /// It waits as long as the sessions take: a session ends at once, or when
 /// its programs handle `CTRL_CLOSE_EVENT`, or [`CLOSE_TIMEOUT_MS`] after the
@@ -729,6 +732,9 @@ struct PseudoConsole {
     handle: HPCON,
     close: CloseFn,
     resize: ResizeFn,
+    /// Closing it may wait until ConPTY ends: the close function of Windows
+    /// does so before Windows 11 24H2.
+    may_wait: bool,
 }
 
 impl Drop for PseudoConsole {
@@ -774,13 +780,36 @@ fn write_input(shared: &Shared, pipe: OwnedHandle) {
         state.console.take()
     };
     drop(pipe);
-    // The bundled ConPTY, and the one of Windows since Windows 11 24H2,
-    // return at once. Before 24H2, ClosePseudoConsole of Windows waits until
-    // ConPTY ends, which can take a while: that is why it is called here,
-    // and not on the thread of the window. It does not wait for ever,
-    // because the reader keeps reading the output.
-    drop(console);
+    if let Some(console) = console {
+        close_console(console);
+    }
     shared.wait_for_end();
+}
+
+/// Closes a pseudoconsole, which asks its programs to end, without waiting
+/// for ConPTY to end. The bundled ConPTY, and the one of Windows since
+/// Windows 11 24H2, return at once. Before 24H2, ClosePseudoConsole of
+/// Windows waits until ConPTY ends, which can take a while: that is why
+/// closing a session never calls it on the thread of the window. Only
+/// `Conpty::spawn` does, on the thread that calls it, when it fails: by then
+/// the session has no programs, and its output is closed, so nothing keeps
+/// ConPTY waiting. And ConPTY does not end while a program that was
+/// connecting to it when it closed waits for it: the writer would wait for
+/// ever, and never end the programs of the session (ADR 0026). So a
+/// pseudoconsole that may wait closes on a thread of its own, which ends once
+/// ConPTY ends, and nobody waits for it.
+fn close_console(console: PseudoConsole) {
+    if !console.may_wait {
+        drop(console);
+        return;
+    }
+    // If the thread does not start, the closure is dropped here, and the
+    // pseudoconsole with it: it closes on this thread, as when it does not
+    // wait, and before 24H2 a session that is stuck keeps the writer there
+    // for ever.
+    let _ = thread::Builder::new()
+        .name("conpty close".to_owned())
+        .spawn(move || drop(console));
 }
 
 /// Writes all of `bytes` to `pipe`, or returns false if the pipe broke.
@@ -1159,6 +1188,8 @@ fn pipe(size: u32) -> Result<(OwnedHandle, OwnedHandle), Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Condvar;
+
     use super::*;
 
     #[test]
@@ -1196,5 +1227,73 @@ mod tests {
         assert!(environment_block(&[65, 61, 49, 0]).is_err());
         assert!(environment_block(&[0]).is_err());
         assert!(environment_block(&[]).is_err());
+    }
+
+    /// The pseudoconsoles that [`slow_close`] closed, with the thread that
+    /// closed each one.
+    static CLOSED: Mutex<Vec<(HPCON, thread::ThreadId)>> = Mutex::new(Vec::new());
+
+    /// Lets [`slow_close`] return.
+    static RELEASED: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
+
+    /// Closes as ClosePseudoConsole of Windows does before Windows 11 24H2
+    /// in a session that got stuck: it waits until ConPTY ends, here until
+    /// the test lets it go, or 5 s at most.
+    extern "system" fn slow_close(handle: HPCON) {
+        let (released, changed) = &RELEASED;
+        let released = released.lock().unwrap_or_else(PoisonError::into_inner);
+        let (released, _) = changed
+            .wait_timeout_while(released, Duration::from_secs(5), |released| !*released)
+            .unwrap_or_else(PoisonError::into_inner);
+        drop(released);
+        let closer = thread::current().id();
+        CLOSED
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push((handle, closer));
+    }
+
+    extern "system" fn no_resize(_: HPCON, _: COORD) -> HRESULT {
+        0
+    }
+
+    /// The thread that closed the pseudoconsole `handle`, once it has.
+    fn closer_of(handle: HPCON) -> Option<thread::ThreadId> {
+        let closed = CLOSED.lock().unwrap_or_else(PoisonError::into_inner);
+        closed
+            .iter()
+            .find(|&&(closed, _)| closed == handle)
+            .map(|&(_, closer)| closer)
+    }
+
+    #[test]
+    fn a_pseudoconsole_that_may_wait_closes_on_a_thread_of_its_own() {
+        let console = |handle, may_wait| PseudoConsole {
+            handle,
+            close: slow_close,
+            resize: no_resize,
+            may_wait,
+        };
+        let started = Instant::now();
+        close_console(console(1, true));
+        let waited = started.elapsed();
+        assert!(
+            waited < Duration::from_secs(2),
+            "the writer waited {waited:?}"
+        );
+        assert_eq!(closer_of(1), None);
+        let (released, changed) = &RELEASED;
+        *released.lock().unwrap_or_else(PoisonError::into_inner) = true;
+        changed.notify_all();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while closer_of(1).is_none() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(10));
+        }
+        let this = thread::current().id();
+        assert!(closer_of(1).is_some_and(|closer| closer != this));
+        // The bundled ConPTY, and the one of Windows since 24H2, close on
+        // the writer.
+        close_console(console(2, false));
+        assert_eq!(closer_of(2), Some(this));
     }
 }
