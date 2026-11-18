@@ -693,6 +693,7 @@ Nun terminal, cada carácter ocupa unha cela ou dúas, e algúns ningunha. Unico
 | Versión | A do Windows de cada máquina. | A do paquete NuGet, a mesma en todas ([§33](#33-nuget-e-as-sinaturas-authenticode)). |
 | `ClosePseudoConsole` | Volta de inmediato desde Windows 11 24H2; antes, espera ata que remata o anfitrión. Desde o mantemento M2, meiga chámao nun fío propio. | Volta de inmediato. |
 | Medir os caracteres con `wcswidth` | Non: ignora o *flag*. | Si. |
+| A pregunta dun programa polos atributos do terminal (*DA1*, `ESC [ c`) | Respóndea o anfitrión, coa súa resposta, coma `ESC [ ? 61 ; 6 ; 7 ; 21 ; … c`: non chega ao terminal. Viuse no mantemento M2, co paso 5 de [`check-tabs.ps1`](codigo/ferramentas.md#toolscheck-tabsps1). | Pásaa ao terminal, e a resposta deste, ao programa: con meiga, `ESC [ ? 6 c`. |
 
 meiga usa o empaquetado se os dous arquivos están ao lado de `meiga.exe`, e se non, o de Windows. Fan falta os dous: sen `OpenConsole.exe`, `conpty.dll` arrancaría sen avisar o `conhost.exe` de Windows.
 

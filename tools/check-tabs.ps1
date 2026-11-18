@@ -62,6 +62,13 @@ meiga finds it, and load the profile of PowerShell: one that draws
 something seconds after the prompt can make the check fail. The check uses
 the clipboard: if it had text, the check puts it back at the end.
 
+It works with the ConPTY that meiga ships, which tools\package.ps1 puts next
+to meiga.exe, and with the one of Windows, when that one is not there. Then
+the consoles of the tabs are conhost.exe, which answer the questions of
+their programs themselves: the question of the hidden tab never reaches
+meiga, so the check only sees that its program gets an answer, and warns
+that it does not really check the answers of meiga.
+
 If a check fails, the script ends meiga.exe and keeps the frame log and the
 reports of the script.
 
@@ -749,6 +756,12 @@ try {
     $first = [int]$first
     Wait-For { (Get-Title) -eq 'meiga-tabs-1' } { "The title of the window is '$(Get-Title)' instead of 'meiga-tabs-1'." }
     Wait-Shown $first @() 'With one tab'
+    # The console of Windows answers the questions of its programs itself:
+    # only the ConPTY that meiga ships gives them to the terminal.
+    $windows = @(Get-Consoles | Where-Object Name -EQ 'conhost.exe').Count -gt 0
+    if ($windows) {
+        Write-Warning 'The consoles of the tabs are the ones of Windows (conhost.exe), which answer the questions of their programs themselves, so the answers of meiga to a hidden tab are not really checked. tools\package.ps1 copies the ConPTY of meiga next to meiga.exe.'
+    }
 
     # SetKeyboardState sets the key state of the thread that calls it: share
     # it with the thread of the window. This thread needs a message queue,
@@ -800,7 +813,10 @@ try {
     $start = @(Get-Log).Count
     $sync = Invoke-Step 'ask in a synchronized update while it is hidden'
     $answer, $milliseconds = ($sync -split ' ')[1, 2]
-    if ($answer -ne '\e[?6c' -or [int]$milliseconds -gt 1000) {
+    # The console of Windows says what it can do itself, and the question
+    # never reaches meiga.
+    $valid = if ($windows) { $answer -match '^\\e\[\?[0-9;]+c$' } else { $answer -eq '\e[?6c' }
+    if (-not $valid -or [int]$milliseconds -gt 1000) {
         throw "A hidden tab that left a synchronized update open did not get the answer to its question in time: '$sync'."
     }
     Start-Sleep -Milliseconds 200
@@ -809,7 +825,12 @@ try {
         Show-Lines $frames
         throw 'The window drew when it ended the synchronized update of a hidden tab.'
     }
-    Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline ($milliseconds ms), without drawing."
+    if ($windows) {
+        Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, without drawing: the console of Windows answers them itself ($milliseconds ms)."
+    }
+    else {
+        Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline ($milliseconds ms), without drawing."
+    }
 
     # 6. A title, and text for the clipboard, while it is hidden.
     $sentinel = "meiga-check-tabs-$PID"

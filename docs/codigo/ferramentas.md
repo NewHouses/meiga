@@ -3089,7 +3089,7 @@ A CI executa este script en cada PR, despois de `check-mouse.ps1`, no paso *Chec
 
 ## `tools/check-tabs.ps1`
 
-Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Os atallos: Ctrl+Maiús+T abre unha tab co perfil por defecto e móstraa cun fotograma completo; Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior, e dan a volta; e Ctrl+Maiús+W pecha a tab que se mostra, cos seus programas, ou a xanela, se é a última. E unha tab oculta: o seu fío lector baixa de prioridade; a saída do seu programa só debuxa a súa tab na barra, unha vez, que di que o programa escribiu algo ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)), e o programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que non remata; o seu título non chega á xanela, só á súa tab na barra, ata que se mostra, e o texto que copia ao portapapeis non chega nunca, tampouco dentro dunha actualización sincronizada que o programa mantén aberta ata que se mostra a tab, mentres que o que copia xa á vista si, tamén dentro dunha actualización sincronizada que o programa deixa aberta e que a xanela remata á súa hora límite; e a súa grella non cambia ata que se mostra. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación, coma en [`check-present.ps1`](#toolscheck-presentps1), e escribe nun arquivo o que ve. Teclea os atallos na xanela coma [`check-keyboard.ps1`](#toolscheck-keyboardps1) as súas teclas, pero co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1) as accións do rato, e sabe que tab se mostra pola prioridade dos fíos lectores. A xanela non ten que estar en primeiro plano, pero sen iso a comprobación demostra menos do portapapeis (o paso 8). Leva uns 10 s, boa parte deles agardando a que arranque a shell da tab nova e deixe de pestanexar o seu cursor (o paso 3).
+Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Os atallos: Ctrl+Maiús+T abre unha tab co perfil por defecto e móstraa cun fotograma completo; Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior, e dan a volta; e Ctrl+Maiús+W pecha a tab que se mostra, cos seus programas, ou a xanela, se é a última. E unha tab oculta: o seu fío lector baixa de prioridade; a saída do seu programa só debuxa a súa tab na barra, unha vez, que di que o programa escribiu algo ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)), e o programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que non remata; o seu título non chega á xanela, só á súa tab na barra, ata que se mostra, e o texto que copia ao portapapeis non chega nunca, tampouco dentro dunha actualización sincronizada que o programa mantén aberta ata que se mostra a tab, mentres que o que copia xa á vista si, tamén dentro dunha actualización sincronizada que o programa deixa aberta e que a xanela remata á súa hora límite; e a súa grella non cambia ata que se mostra. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación, coma en [`check-present.ps1`](#toolscheck-presentps1), e escribe nun arquivo o que ve. Teclea os atallos na xanela coma [`check-keyboard.ps1`](#toolscheck-keyboardps1) as súas teclas, pero co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1) as accións do rato, e sabe que tab se mostra pola prioridade dos fíos lectores. A xanela non ten que estar en primeiro plano, pero sen iso a comprobación demostra menos do portapapeis (o paso 8). Leva uns 15 s, boa parte deles agardando a que arranquen e se calmen as shells das tabs novas, e a que deixe de pestanexar o cursor da segunda (os pasos 3 e 9).
 
 ```powershell
 .\tools\check-tabs.ps1                                  # comproba target\release\meiga.exe
@@ -3097,7 +3097,7 @@ Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-var
 .\tools\check-tabs.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
 ```
 
-Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script da primeira tab con `pwsh`. As tabs novas corren o perfil por defecto: desde a 2.5, co `APPDATA` baleiro da comprobación, PowerShell, o PowerShell 7 que atopa meiga nos cartafoles onde o deixan os seus instaladores, ou, se non atopa ningún, Windows PowerShell ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 4 e 5); ata a 2.4, o `pwsh` do `PATH`, ou `powershell`, se non o había. E cargan o perfil de PowerShell do usuario: un perfil que debuxe algo segundos despois do *prompt* pode facer fallar a comprobación, porque no paso 4 só pode haber un fotograma, dentro da primeira tab, e no 5, ningún. Desde o mantemento M2, antes do paso 4 a comprobación agarda a que a shell da tab nova, e os programas que arranca ela, coma o `git` do *prompt* de posh-git, leven un segundo sen usar o procesador, e sen que arranque nin remate ningún (o paso 3): un perfil que traballa uns segundos antes de escribir o *prompt* xa non a fai fallar, pero un que debuxa algo despois de quedar quieto aínda pode; e tamén unha shell que non queda quieta en `TimeoutSeconds` + 10 s. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`.
+Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script da primeira tab con `pwsh`. As tabs novas corren o perfil por defecto: desde a 2.5, co `APPDATA` baleiro da comprobación, PowerShell, o PowerShell 7 que atopa meiga nos cartafoles onde o deixan os seus instaladores, ou, se non atopa ningún, Windows PowerShell ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 4 e 5); ata a 2.4, o `pwsh` do `PATH`, ou `powershell`, se non o había. E cargan o perfil de PowerShell do usuario: un perfil que debuxe algo segundos despois do *prompt* pode facer fallar a comprobación, porque no paso 4 só pode haber un fotograma, dentro da primeira tab, e no 5, ningún. Desde o mantemento M2, antes do paso 4 a comprobación agarda a que a shell da tab nova, e os programas que arranca ela, coma o `git` do *prompt* de posh-git, leven un segundo sen usar o procesador, e sen que arranque nin remate ningún (o paso 3): un perfil que traballa uns segundos antes de escribir o *prompt* xa non a fai fallar, pero un que debuxa algo despois de quedar quieto aínda pode; e tamén unha shell que non queda quieta en `TimeoutSeconds` + 10 s. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`, e responden elas as preguntas dos seus programas, así que o paso 5 non comproba as respostas de meiga, e a comprobación avisa (ver *O ConPTY de Windows*, no paso 1). Ata o mantemento M2, co de Windows fallaba nese paso.
 
 **Coidado:** mentres corre, non uses o rato nin o teclado: as teclas mesturaríanse coas da comprobación, e un clic noutra xanela cambiaría o primeiro plano, que a comprobación mira no paso 8 e que ten que quedar igual ata o final dese paso. Se cambia e o paso falla, a mensaxe de erro dío. E usa o portapapeis: se tiña texto, ao rematar volta deixalo nel, pero calquera outra cousa, coma unha imaxe, pérdese. Ademais, a xanela de meiga cambia de tamaño unha vez.
 
@@ -3118,6 +3118,7 @@ OK: closing the last tab closes the window, and it ends with exit code 0.
 - **Os milisegundos** da terceira liña son os que agardou o programa a resposta á súa pregunta: os 150 ms da hora límite da actualización sincronizada, máis o que tardan a pregunta en chegar a meiga e a resposta en voltar ao programa. Cambian dunha vez a outra, e a comprobación acepta ata 1 000.
 - **As grellas** da cuarta, en columnas e filas: a que tiña a primeira tab cando se ocultou, a da xanela ao abrirse, e a que recibe ao mostrarse, a da xanela de 640 × 480 píxeles. Dependen da escala da pantalla e do tamaño que lle dá Windows á xanela ao abrila.
 - **O portapapeis.** A quinta liña depende da xanela de meiga, coma en [`check-mouse.ps1`](#toolscheck-mouseps1): se non está en primeiro plano, é `OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.`
+- **Co ConPTY de Windows,** antes da primeira liña vai o aviso (ver *O ConPTY de Windows*, no paso 1), e a terceira é `OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, without drawing: the console of Windows answers them itself (… ms).`, con moitos menos milisegundos: a consola responde en seguida, sen agardar a hora límite.
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1; se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coma `check-present.ps1`; e, se é do portapapeis e a xanela entrou ou saíu do primeiro plano mentres tanto, dío, e pide correr a comprobación outra vez. E garda o rexistro dos fotogramas e os informes do script da primeira tab, e di onde, cunha liña `Kept …` por arquivo. Pase o que pase, `meiga.exe` non queda aberto, e o portapapeis volta ter o texto que tiña.
 
@@ -3409,7 +3410,7 @@ $null = $go.WaitOne()
 |---|---|---|
 | 1 | Oculta o cursor (`ESC [ ? 25 l`), pon o título `meiga-tabs-1` (*OSC 0*), borra a pantalla e leva o cursor ao principio. | `ready <proceso> <columnas>x<filas>`: o número do seu proceso e o tamaño da grella. |
 | 2 | `line 1` a `line 20`, nas filas 2 a 21, desde a columna 3, unha cada 50 ms: saída durante un segundo. | `burst` |
-| 3 | Abre unha actualización sincronizada (`ESC [ ? 2026 h`, *DECSET 2026*), que non remata nunca, e pregunta que terminal é (`ESC [ c`, *DA1*). Le a resposta, ata o `c`, ou durante 5 s como moito. | `sync <resposta> <milisegundos>`: `sync \e[?6c …`. |
+| 3 | Abre unha actualización sincronizada (`ESC [ ? 2026 h`, *DECSET 2026*), que non remata nunca, e pregunta que terminal é (`ESC [ c`, *DA1*). Le a resposta, ata o `c`, ou durante 5 s como moito. | `sync <resposta> <milisegundos>`: `sync \e[?6c …`, ou, coas consolas de Windows, a resposta delas, coma `sync \e[?61;6;7;21;22;23;24;28;32;42c …`. |
 | 4 | O título `meiga-tabs-hidden`, e o texto `meiga-tabs-hidden` para o portapapeis (`ESC ] 52 ; c ; base64 ESC \`). | `title` |
 | 5 | `size` e o tamaño da grella, ao principio da primeira fila. | `size <columnas>x<filas>` |
 | 6 | Abre outra actualización sincronizada e, dentro dela, o texto `meiga-tabs-open` para o portapapeis. Mantena aberta ata o seguinte paso. | `open` |
@@ -3801,7 +3802,7 @@ try {
 | 2 | Ctrl+Maiús+T. | Arranca un programa novo, nunha tab que se mostra cun primeiro fotograma completo. O lector da tab nova ten a prioridade normal, e o da primeira, a de debaixo. |
 | 3 | Agarda a que a shell da tab nova leve un segundo sen usar o procesador. | A shell segue viva, e xa escribiu o seu *prompt*. Despois, un segundo sen fotogramas: o seu cursor xa non pestanexa. |
 | 4 | A primeira tab, oculta, escribe durante un segundo. | Un só fotograma, só dentro da primeira tab: o indicador de que o seu programa escribiu algo. |
-| 5 | A primeira tab abre unha actualización sincronizada, pregunta que terminal é e non a remata. | O programa recibe a resposta en menos de 1 s, e a xanela non debuxa nada. |
+| 5 | A primeira tab abre unha actualización sincronizada, pregunta que terminal é e non a remata. | O programa recibe a resposta en menos de 1 s, a de meiga ou, coas consolas de Windows, a delas, e a xanela non debuxa nada. |
 | 6 | Un texto propio no portapapeis. A primeira tab pon un título e copia outro texto. | Nin o título da xanela nin o portapapeis cambian. |
 | 7 | A xanela pasa a 640 × 480 píxeles. | A primeira tab segue coa súa grella. |
 | 8 | A primeira tab, oculta, copia outro texto dentro dunha actualización sincronizada que mantén aberta. Ctrl+Tab. Mira se a xanela está en primeiro plano. A primeira tab di o seu tamaño, e deixa de manter aberta a actualización; despois copia outro texto, nunha actualización sincronizada que non remata. | Móstrase a primeira tab, cun só fotograma completo, co título que puxo oculta e coa grella da xanela. Os textos que copiou oculta non chegan ao portapapeis, tampouco o da actualización que seguía aberta; o novo, en primeiro plano, si, cando a xanela remata a actualización. |
@@ -3815,9 +3816,23 @@ try {
     $first = [int]$first
     Wait-For { (Get-Title) -eq 'meiga-tabs-1' } { "The title of the window is '$(Get-Title)' instead of 'meiga-tabs-1'." }
     Wait-Shown $first @() 'With one tab'
+    # The console of Windows answers the questions of its programs itself:
+    # only the ConPTY that meiga ships gives them to the terminal.
+    $windows = @(Get-Consoles | Where-Object Name -EQ 'conhost.exe').Count -gt 0
+    if ($windows) {
+        Write-Warning 'The consoles of the tabs are the ones of Windows (conhost.exe), which answer the questions of their programs themselves, so the answers of meiga to a hidden tab are not really checked. tools\package.ps1 copies the ConPTY of meiga next to meiga.exe.'
+    }
 ```
 
 **1. A primeira tab, soa.** O primeiro paso do script oculta o cursor e pon o título, e o seu informe di o número do seu proceso e a súa grella: `$first` é o programa da primeira tab, e `$firstSize`, a grella que tiña ao arrancar. `($ready -split ' ')[1, 2]` colle a segunda e a terceira palabra do informe de vez. Cando a xanela ten o título `meiga-tabs-1`, meiga xa leu o que escribiu o script. Cunha tab soa, o seu lector ten a prioridade normal, a coa que empeza todo fío.
+
+**O ConPTY de Windows.** Desde o mantemento M2, a comprobación mira tamén cal é a consola da primeira tab, que xa está a correr o script: `Get-Consoles` dá `OpenConsole.exe` co ConPTY que vai con meiga e `conhost.exe` co de Windows, que meiga usa se non atopa o seu ao lado ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). A consola de Windows responde ela as preguntas que lle fan os seus programas ao terminal, coma a do paso 5: a pregunta non chega a meiga, e a comprobación non pode ver se meiga a responde. Por iso, `$windows` di no paso 5 que resposta esperar, e a comprobación avisa con `Write-Warning`, coma [`check-tabbar.ps1`](#toolscheck-tabbarps1) co seu límite; e segue, porque o resto si o comproba:
+
+```text
+WARNING: The consoles of the tabs are the ones of Windows (conhost.exe), which answer the questions of their programs themselves, so the answers of meiga to a hidden tab are not really checked. tools\package.ps1 copies the ConPTY of meiga next to meiga.exe.
+```
+
+Mira as consolas, e non se hai `conpty.dll` ao lado de `meiga.exe`, coma o paso 6 de [`check-exit.ps1`](#toolscheck-exitps1): o que importa é que consola corre, e a de Windows tamén corre se só falta `OpenConsole.exe`.
 
 ```powershell
     # SetKeyboardState sets the key state of the thread that calls it: share
@@ -3896,7 +3911,10 @@ try {
     $start = @(Get-Log).Count
     $sync = Invoke-Step 'ask in a synchronized update while it is hidden'
     $answer, $milliseconds = ($sync -split ' ')[1, 2]
-    if ($answer -ne '\e[?6c' -or [int]$milliseconds -gt 1000) {
+    # The console of Windows says what it can do itself, and the question
+    # never reaches meiga.
+    $valid = if ($windows) { $answer -match '^\\e\[\?[0-9;]+c$' } else { $answer -eq '\e[?6c' }
+    if (-not $valid -or [int]$milliseconds -gt 1000) {
         throw "A hidden tab that left a synchronized update open did not get the answer to its question in time: '$sync'."
     }
     Start-Sleep -Milliseconds 200
@@ -3905,14 +3923,20 @@ try {
         Show-Lines $frames
         throw 'The window drew when it ended the synchronized update of a hidden tab.'
     }
-    Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline ($milliseconds ms), without drawing."
+    if ($windows) {
+        Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, without drawing: the console of Windows answers them itself ($milliseconds ms)."
+    }
+    else {
+        Write-Host "OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline ($milliseconds ms), without drawing."
+    }
 ```
 
 **5. Unha pregunta nunha actualización sincronizada que o programa non remata.**
 
-- O script pregunta que terminal é dentro dunha actualización que deixa aberta, e o seu informe di a resposta e os milisegundos que agardou. A resposta ten que ser `ESC [ ? 6 c` (`\e[?6c` no informe), e chegar en menos de 1 s.
+- O script pregunta que terminal é dentro dunha actualización que deixa aberta, e o seu informe di a resposta e os milisegundos que agardou. Co ConPTY que vai con meiga, a resposta ten que ser `ESC [ ? 6 c` (`\e[?6c` no informe), a de meiga, e chegar en menos de 1 s.
 - **Por que chega.** O fío lector avisa á xanela cando se abre a actualización, a xanela apunta cando remata, e o temporizador dos fotogramas vence a esa hora, aínda que non haxa ningún fotograma que debuxar: meiga remata a actualización sen copiar nin debuxar nada, e a resposta vai ao programa (decisión 4). Os programas que preguntan algo ao terminal esperan a resposta: nunha tab que non se mostrase, quedarían parados.
 - **Os milisegundos** da liña `OK:` son os da hora límite, 150 ms, máis o camiño da pregunta e o da resposta, así que cambian dunha vez a outra. O límite dun segundo deixa marxe para unha máquina ocupada. Unha meiga que non rematase as actualizacións das tabs ocultas gardaría a pregunta ata mostrar a tab, e o script agardaría os seus 5 s sen resposta.
+- **Coas consolas de Windows,** `conhost.exe` (`$windows`, no paso 1), a resposta é a da consola, que di ela o que sabe facer, coma `ESC [ ? 61 ; 6 ; 7 ; 21 ; … c`, e chega en seguida, sen agardar ningunha hora límite: a pregunta non chega a meiga. A comprobación só mira entón que sexa unha resposta a esa pregunta: `-match` co patrón `^\\e\[\?[0-9;]+c$`, `\e[?`, números separados por `;` e `c`, nada máis; e a liña `OK:` di que a respondeu a consola. Desde a 2.2 ata o mantemento M2, esperaba tamén entón `\e[?6c`, e co ConPTY de Windows fallaba eiquí.
 - Despois, 200 ms máis: rematar a actualización non pode debuxar nada, nin a saída nova da tab, que xa ten o indicador da actividade desde o paso 4.
 - `$answer, $milliseconds = …` asigna as dúas palabras de vez. Son textos: `[int]` converte os milisegundos nun número para comparalos.
 

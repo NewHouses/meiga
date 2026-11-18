@@ -28,11 +28,11 @@ Investigar e arranxar o que quedaba pendente desde a 1.4: que lles pasa ás sesi
 | `crates/meiga-win/examples/conpty.rs` | O exemplo tamén agarda polas sesións pechadas antes de saír co código do programa. | [Código › meiga-win](../codigo/meiga-win.md#cratesmeiga-winexamplesconptyrs) |
 | `tools/check-exit.ps1` | Un paso novo, o 14: ao pecharse a xanela, o programa da primeira tab arranca outro na súa consola, e a sesión bloquéase. meiga, que corre nun *job* da comprobación, ten que rematar 10 s despois dese programa, co código 0, e sen deixar nada das súas tabs. E, co ConPTY de Windows, o paso 6 le o historial unha fila máis abaixo: esa consola borra a pantalla ao arrancar, e `alacritty_terminal` mete entón unha fila en branco no historial de cada tab. Desde a 2.7, con ese ConPTY, a comprobación fallaba eiquí, e nunca chegaba ao paso 14. | [Código › ferramentas](../codigo/ferramentas.md#toolscheck-exitps1) |
 | `tools/check-profiles.ps1` | Antes de pechar a tab de cada perfil, agarda a que a súa shell e os programas que arrancou leven un segundo sen usar o procesador, e sen que arranque nin remate ningún: o lanzador de Git Bash non fai nada mentres o seu bash arranca programas. E, nos pasos 7 e 8, dálle a meiga para saír o mesmo tempo ca ás shells do usuario para rematar, 30 s por defecto: se unha delas segue traballando cando se pecha a súa tab, a súa sesión pode bloquearse, e meiga agarda por ela. | [Código › ferramentas](../codigo/ferramentas.md#toolscheck-profilesps1) |
-| `tools/check-tabs.ps1` | Agarda a que a shell dunha tab nova, e os programas que arranca, coma o `git` dun *prompt*, leven un segundo sen usar o procesador, e sen que arranque nin remate ningún, antes de mirar a saída da tab oculta, e antes de pechar a terceira tab: un *prompt* que chegaba tarde tomábase pola saída da tab oculta, e pechar unha tab mentres a súa shell arranca un programa pode bloquear a sesión. | [Código › ferramentas](../codigo/ferramentas.md#toolscheck-tabsps1) |
+| `tools/check-tabs.ps1` | Agarda a que a shell dunha tab nova, e os programas que arranca, coma o `git` dun *prompt*, leven un segundo sen usar o procesador, e sen que arranque nin remate ningún, antes de mirar a saída da tab oculta, e antes de pechar a terceira tab: un *prompt* que chegaba tarde tomábase pola saída da tab oculta, e pechar unha tab mentres a súa shell arranca un programa pode bloquear a sesión. E, coas consolas de Windows, `conhost.exe`, o paso 5 acepta a resposta da consola, que responde ela a pregunta da tab oculta, e a comprobación avisa de que non comproba as respostas de meiga. Desde a 2.2, con ese ConPTY, a comprobación fallaba eiquí. | [Código › ferramentas](../codigo/ferramentas.md#toolscheck-tabsps1) |
 | `tools/perf/measure-startup.ps1` | Agarda 10 s máis a que remate meiga despois de pedirlle que peche a xanela: nunha máquina ocupada, a xanela pode pecharse mentres a shell aínda se conecta á súa consola, e meiga agarda pola súa sesión. | [Código › perf](../codigo/perf.md#toolsperfmeasure-startupps1) |
 | `tools/perf/run-scenario.ps1` | Agarda ata 15 s, e non 5, a que remate o terminal que lanzou, antes de rematalo. | [Código › escenarios](../codigo/escenarios.md#run-scenariops1) |
 | `docs/adr/0026-o-peche-das-sesions-ao-sair.md` | A decisión nova: meiga agarda sen límite polas sesións que pechou antes de saír, o escritor ve rematar cada un dos seus programas, e co ConPTY de Windows pecha a pseudoconsola nun fío propio. O 0011 pasa a estar concretado por el. | [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md) |
-| `docs/tecnoloxias.md` | Unha sección nova, o fin dun proceso e dos seus fíos; e, nas do ConPTY e dos procesos, o que pasa coas sesións ao saír e a espera do escritor. | [Tecnoloxías](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos) |
+| `docs/tecnoloxias.md` | Unha sección nova, o fin dun proceso e dos seus fíos; e, nas do ConPTY e dos procesos, o que pasa coas sesións ao saír e a espera do escritor, e que a consola de Windows responde ela a pregunta dun programa polos atributos do terminal. | [Tecnoloxías](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos) |
 | `docs/arquitectura.md` | As sesións, os fíos e o estado. | [Arquitectura](../arquitectura.md#sesións-a-shell-o-conpty-e-os-dous-fíos) |
 | `docs/codigo/` | A explicación de todo o código que cambia. | [Código](../codigo/README.md) |
 | `docs/subfases/README.md` | A sección de mantemento, con esta fila. | [Subfases › Mantemento](README.md#mantemento) |
@@ -44,12 +44,12 @@ Sen dependencias novas.
 
 Na máquina da liña base (subfase 0.8), coa xanela de meiga do tamaño por defecto, fronte á 2.8 compilada igual. Todas as meiga teñen un `APPDATA` propio, coma nas comprobacións, e cada compilación mídese cando ninguén usou o equipo durante 3 minutos:
 
-- **A saída normal:** con 1 e con 5 tabs do perfil por defecto en repouso, o tempo desde que se pide pechar a xanela ata que remata o proceso, e o que queda despois, en dúas tandas que alternan cal vai primeiro.
+- **A saída normal:** con 1 e con 5 tabs do perfil por defecto en repouso, o tempo desde que se pide pechar a xanela ata que remata o proceso, e o que queda despois, en tres tandas, dúas co M2 primeiro e unha coa 2.8 primeiro.
 - **Unha sesión que se bloquea:** a primeira tab corre un programa que, ao pecharse a súa consola, arranca outro nela, coma no paso 14 de `check-exit.ps1`: canto tarda meiga en rematar, e o que queda despois, coas dúas compilacións.
 - **As probas de integración do ConPTY,** dez veces seguidas con cada compilación: canto leva a que pecha sesións mentres arrancan os seus programas, que na 2.8 levaba 10 ou 20 s.
 - **O repouso con 5 tabs:** `run-scenario.ps1 idle`, en dúas roldas que alternan cal vai primeiro.
-- **A memoria e os *handles*:** con 1 e con 5 tabs en repouso.
-- **O arranque:** `measure-startup.ps1`, 20 veces con cada compilación, en catro roldas que alternan cal vai primeiro.
+- **A memoria e os *handles*:** con 1, 5 e 30 tabs en repouso, en dúas roldas que alternan cal vai primeiro.
+- **O arranque:** `measure-startup.ps1`, 20 veces con cada compilación, en seis pares de roldas que alternan cal vai primeiro, os dous últimos cunha pausa de 30 s antes de cada compilación.
 
 ## Decisións e alternativas descartadas
 
@@ -67,6 +67,7 @@ O detalle está no [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md).
 | `check-profiles.ps1` dálle a meiga para saír o tempo das shells do usuario, 30 s por defecto | Seguir con `TimeoutSeconds`, 10 s por defecto; ou agardar sen límite a que se calme cada shell | A comprobación só pode agardar un tempo por cada shell do usuario, e unha que segue traballando pode pecharse mentres arranca un programa: meiga agarda pola súa sesión ata 10 s. |
 | `measure-startup.ps1` e `run-scenario.ps1` agardan máis a que remate meiga | Rematalo antes | Rematar meiga antes deixaría bloqueada para sempre a sesión pola que agarda. |
 | Co ConPTY de Windows, o paso 6 de `check-exit.ps1` le o historial unha fila máis abaixo, e meiga deixará de meter esa fila na 8.6 (decidido contigo) | Arranxar meiga xa no M2, para que un `ESC [ 2 J` nunha pantalla baleira sen historial non meta ningunha fila; ou só corrixir a documentación, que dicía que a comprobación funciona tamén co ConPTY de Windows | A fila non ten que ver co peche das sesións, e só a mete o ConPTY de Windows, que meiga usa se non atopa o seu. E sen arranxar a comprobación, o paso 14 non correría nunca co ConPTY de Windows, o único co que o peche vai nun fío propio. |
+| Coas consolas de Windows, o paso 5 de `check-tabs.ps1` acepta a resposta da consola, e a comprobación avisa de que non comproba as respostas de meiga (decidido contigo) | Só corrixir a documentación, que dicía que a comprobación funciona tamén co ConPTY de Windows, e arranxala na 8.6; ou deixala así, coma unha limitación do contorno | A consola de Windows responde ela a pregunta, e meiga non a ve: con ese ConPTY, o paso non pode comprobar meiga, pero o resto da comprobación si, coma `check-tabbar.ps1`, que avisa do seu límite e segue. Así, todas as comprobacións que din funcionar co ConPTY de Windows funcionan con el. |
 
 ## Como comprobar que todo está ben
 
@@ -118,21 +119,29 @@ O detalle está no [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md).
 
    **Resultado esperado:** ningún erro, e ningún aviso de Clippy.
 
-   - `cargo test` mostra dez liñas `test result: ok.`, as sete do paso 1 e tres con `0 passed`, as da documentación. As probas de integración do ConPTY levan PENDENTE.
+   - `cargo test` mostra dez liñas `test result: ok.`, as sete do paso 1 e tres con `0 passed`, as da documentación. As probas de integración do ConPTY levan uns 13 s, e non uns 10 coma na 2.8: as dúas novas pechan sesións que tardan máis de 10 s en rematar.
    - `cargo deny check` mostra en amarelo o aviso de sempre, `warning[duplicate]: found 2 duplicate entries for crate 'windows-sys'`, e remata con `advisories ok, bans ok, licenses ok, sources ok`.
    - `package.ps1` remata con `Wrote …\dist\meiga-0.1.0-x86_64-pc-windows-msvc.zip`.
    - `check-imports.ps1`, as mesmas DLL ca na 2.8, e `OK: no dependencies on the Visual C++ runtime.`
-   - `check-docs.ps1`: PENDENTE.
+   - `check-docs.ps1`: `OK: 5179 relative links checked in 69 files.`, con máis ligazóns ca na 2.8, as do ADR 0026, deste documento e da documentación do código que cambia.
    - `check-powershell.ps1`: `OK: the 29 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.`, coma na 2.8.
-   - O tamaño de `meiga.exe`, PENDENTE.
+   - O tamaño, `840704` (na 2.8, `836096`): a espera polas sesións pechadas, a espera do escritor por cada programa e o peche da pseudoconsola nun fío propio.
 
 5. **As probas novas:**
 
    ```powershell
    cargo test -p meiga-win --test conpty -- keep_ending were_closed
+   cargo test -p meiga-win --lib -- may_wait
    ```
 
-   **Resultado esperado:** PENDENTE.
+   **Resultado esperado:** primeiro, as dúas probas novas de integración, en calquera orde, e `test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out`, despois duns 12 s: cada unha pecha unha sesión que tarda máis de 10 s en rematar.
+
+   ```text
+   test the_sessions_that_were_closed_end_before_the_process_exits ... ok
+   test a_session_whose_programs_keep_ending_is_not_ended_by_the_writer ... ok
+   ```
+
+   Despois, a unitaria do peche nun fío propio, `test conpty::tests::a_pseudoconsole_that_may_wait_closes_on_a_thread_of_its_own ... ok`, con `test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out`.
 
 6. **Unha saída normal non se nota.** Abre meiga:
 
@@ -146,7 +155,7 @@ O detalle está no [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md).
    $clock = [Diagnostics.Stopwatch]::StartNew(); $null = $meiga.CloseMainWindow(); $meiga.WaitForExit(); $clock.ElapsedMilliseconds; $meiga.ExitCode
    ```
 
-   **Resultado esperado:** PENDENTE.
+   **Resultado esperado:** PowerShell mostra os milisegundos, unha fracción de segundo, e `0`, o código de saída. meiga sae xusto despois de rematar as súas sesións, e non deixa nada: as consolas das tabs e as súas shells xa remataron. Coa 2.8 saía un pouco antes, pero as consolas e as shells seguían vivas un pouco despois del. Se pechas a xanela antes de que todas as tabs mostren o seu *prompt*, meiga pode tardar uns 10 s: unha shell que aínda se conecta á súa consola pode bloquear a sesión, e meiga agarda por ela.
 
 7. **(Opcional) Unha sesión que se bloquea.** Crea un script que, cando se pecha a súa consola, arranca outro programa nela, coma unha shell que arranca o `git` do seu *prompt*, e abre meiga con el na primeira tab:
 
@@ -192,7 +201,7 @@ O detalle está no [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md).
    Remove-Item $closer
    ```
 
-   **Resultado esperado:** PENDENTE.
+   **Resultado esperado:** PowerShell mostra os segundos, algo máis de 10, e `0`, o código de saída; `Get-Process PING` non mostra nada. PowerShell remata medio segundo despois de pecharse a súa consola, e o `ping` que arrancou queda na sesión, que se bloquea: o escritor agarda 10 s desde que remata PowerShell e, como non remata ningún outro programa, remata os que quedan, entre eles o `ping`. meiga agarda por esa sesión antes de saír. Coa 2.8, meiga remataba no momento, e o `ping`, o seu `cmd` e a consola da tab seguían vivos ata que o `ping` remataba só, uns 30 s despois.
 
 8. **Comproba o fin dos programas automaticamente.** Mentres corre, non premas o rato nin o teclado:
 
@@ -250,15 +259,15 @@ O detalle está no [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md).
 | Comprobación | Resultado |
 |---|---|
 | fmt, clippy, test e deny | Pasan. 332 probas (na 2.8, 329): as dúas novas de integración do ConPTY e a unitaria do peche nun fío propio. E unha ignorada, `helper`, o programa que usan as novas de integración, que só corre cando o lanza unha delas. |
-| «Feito cando» | PENDENTE |
-| A saída normal | PENDENTE |
-| Unha sesión que se bloquea | PENDENTE |
-| As probas de integración do ConPTY | PENDENTE |
-| Repouso con 5 tabs | PENDENTE |
-| A memoria e os *handles* | PENDENTE |
-| O arranque | PENDENTE |
-| `meiga.exe` | PENDENTE |
-| O ConPTY de Windows | PENDENTE |
+| «Feito cando» | Cumprido. Ao pechar a xanela, meiga non deixa nada das súas tabs: nin cunha nin con cinco tabs en repouso, nin cunha sesión bloqueada, que remata 10 s despois do seu último programa. Na CI compróbao o paso 14 de `check-exit.ps1`, co ConPTY empaquetado, e en local, tamén co de Windows. |
+| A saída normal | Con 1 e con 5 tabs en repouso, en tres tandas: o M2 sae xusto despois de rematar as súas sesións, e non deixa nada. A 2.8 saía un pouco antes, pero deixaba vivas as consolas e as shells das tabs, que remataban despois del: o M2 remata máis ou menos cando remataban elas coa 2.8, nunhas tandas un pouco antes e noutras un pouco despois. Non se nota. |
+| Unha sesión que se bloquea | Coa primeira tab coma no paso 7, en dúas tandas que alternan cal vai primeiro: o M2 remata algo máis de 10 s despois de pecharse a xanela, os 10 s que agarda a sesión desde que remata a shell, co código 0, e non deixa nada. A 2.8 remataba no momento, pero a consola da tab, o `cmd` e o `ping` seguían vivos ata que o `ping` remataba só, uns 30 s despois; cun programa que non remata só, quedarían para sempre. Na CI, o paso 14 de `check-exit.ps1` dá o mesmo: meiga remata 10,6 s despois de pecharse a xanela. |
+| As probas de integración do ConPTY | A que pecha sesións mentres arrancan os programas dos seus lanzadores, dez veces con cada compilación, alternando: arredor de 10 s coas dúas, e nunca 20. Nesta máquina, tampouco a 2.8 chegou aos 20 s, que na súa CI saíron en dúas das seis execucións da rama e do PR (20,25 e 20,10 s). Todas xuntas levan agora uns 13 s, porque as dúas novas pechan sesións que tardan máis de 10 s en rematar: na CI, 12,2 s. |
+| Repouso con 5 tabs | Igual ca na 2.8, en dúas roldas que alternan cal vai primeiro: o terminal non usa o procesador, case non esperta, e ten a mesma memoria, por debaixo do orzamento, 40 MB, e os mesmos fíos: un da xanela e dous por tab, máis os que crea Windows ao arrancar. O mantemento non engade ningún fío nin temporizador en repouso. |
+| A memoria e os *handles* | Con 1, 5 e 30 tabs en repouso, en dúas roldas: a mesma memoria e os mesmos fíos ca na 2.8, e un *handle* máis por tab, o do fío escritor da súa sesión: cada `Pty` garda agora o seu `JoinHandle`, para agardar por el ao saír, e a 2.8 soltábao, e pechaba o *handle* do fío. |
+| O arranque | Igual ca na 2.8: nas roldas nas que a máquina estaba tranquila, as dúas arrancan no mesmo tempo. Noutras estaba ocupada, aínda que ninguén a usase, e as dúas variaron moito, unhas veces máis o M2 e outras máis a 2.8, tamén coa pausa antes de cada compilación. O mantemento non cambia nada do que fai meiga ao arrancar. |
+| `meiga.exe` | 840 704 bytes (na 2.8, 836 096): uns 4,5 KB máis, a espera polas sesións pechadas, a espera do escritor por cada programa e o peche da pseudoconsola nun fío propio. As mesmas DLL ca na 2.8. |
+| O ConPTY de Windows | Cunha copia de `meiga.exe` sen o ConPTY empaquetado ao lado, pasan as oito comprobacións que din funcionar con ese ConPTY: `check-window.ps1`, `check-tabs.ps1`, `check-tabbar.ps1` (co seu aviso), `check-menu.ps1`, `check-profiles.ps1`, `check-shortcuts.ps1`, `check-exit.ps1` e `check-manytabs.ps1`. Tamén o paso 14: a sesión bloquéase tamén con ese ConPTY, que se pecha nun fío propio, e meiga remata 10 s despois do programa da primeira tab, sen deixar nada. Dúas fallaban antes, non polo M2, e arranxáronse nel (decidido contigo): `check-exit.ps1`, no paso 6 desde a 2.7, pola fila en branco do principio do historial, e `check-tabs.ps1`, no paso 5 desde a 2.2, porque a consola de Windows responde ela a pregunta da tab oculta. A 2.8 falla igual nas dúas. |
 | Revisión do código | Ao documentar o código atopáronse comentarios que dicían outra cousa e ocos nas comprobacións e nos scripts, xa corrixidos. **Os comentarios:** o da espera polas sesións pechadas dicía que o escritor ve rematar os programas da sesión: ve pecharse a saída e rematar o programa, ou remata os do *job* se a sesión se bloqueou, e os que non están na consola, coma unha xanela que abriu a shell, seguen se a sesión rematou soa; e o da proba das sesións pechadas non dicía que a proba conta os programas antes de rematar os que queden. **As comprobacións:** o paso 14 de `check-exit.ps1` di agora, se meiga remata en seguida e as consolas das tabs xa remataron, que con ese ConPTY a sesión non se bloqueou, e non que meiga non agardou, e solta os procesos das consolas tamén se falla; `check-profiles.ps1` dálle a meiga para saír o tempo das shells do usuario, e non o das súas propias esperas; e `check-tabs.ps1` agarda tamén polos programas que arranca a shell dunha tab nova, coma `check-profiles.ps1`. **Os scripts de medición:** `run-scenario.ps1` agarda tamén cando o terminal xa non ten xanela: meiga pecha a súa cando o programa da única tab remata co código 0, e despois agarda polas sesións. **Despois, unha revisión independente** non atopou problemas importantes. Comprobou a lista dos escritores e a súa espera, a espera do escritor por cada programa, os camiños de erro, as probas, o paso 14 de `check-exit.ps1` e os scripts. Sinalou un matiz: co ConPTY de Windows, antes de Windows 11 24H2, o peche agarda sen límite a que remate o ConPTY, e nunha sesión bloqueada o ConPTY non remata ata que o escritor remata os seus programas, despois de pechar: o escritor quedaría no peche para sempre, e meiga, agardando por el, non sairía nunca. Decidiches arranxalo: co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, que ninguén agarda. Antes comprobouse na documentación de Microsoft e no código do ConPTY: o da versión 1.18 tamén agardaba, e o da 1.25, o que empaqueta meiga, xa non. Unha proba unitaria nova, cun peche falso que agarda ata que a proba o deixa voltar, compróbao, e fállana dúas copias: a que pecha sempre no escritor e a que pecha sempre nun fío. E dúas copias de meiga que imitan co ConPTY empaquetado o peche de antes de 24H2: a que pecha no escritor falla o paso 14 de `check-exit.ps1`, porque meiga segue vivo pasado o límite da comprobación, e a que pecha nun fío pasa as trece comprobacións. **Despois, a revisión da corrección** non atopou problemas importantes. Comprobou cada sitio onde se pecha unha pseudoconsola, que se o fío do peche non se pode crear a pseudoconsola se pecha no escritor, o cambio de tamaño fronte ao peche, a concorrencia, a proba unitaria, os documentos e as fontes. Atopou dúas frases que dicían máis ca o código, xa corrixidas: que o peche nunca se chama no fío da xanela, cando `Conpty::spawn` pecha a pseudoconsola no fío que o chama se falla, sen ningún programa nin a saída que o fagan agardar; e que a espera sempre acaba, cando, se Windows non pode crear o fío do peche, a pseudoconsola se pecha no escritor, e co ConPTY de Windows anterior a 24H2 unha sesión bloqueada deixaríao agardando para sempre. |
 | CI | PENDENTE |
 
