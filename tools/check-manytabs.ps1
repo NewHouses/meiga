@@ -711,10 +711,11 @@ function Stop-Probe([int]$Id, [int]$Code) {
 }
 
 # Waits until the program of the tab of $Id has ended, and the reader thread
-# of its session too, whose last work is to post the wake-up that tells it
-# to the window: what the check posts to the window from then on comes after
-# it. The files of the script go, so that a program that gets the same number
-# later can create them.
+# of its session too, whose last work is to post the wake-up that tells the
+# window that the program ended, which it ignores if it closed the tab
+# already: what the check posts to the window from then on comes after it.
+# The files of its script go too, so that the check does not take them for
+# the ones of a program that gets the same number later.
 function Wait-Gone([int]$Id, [string]$What) {
     Wait-Ended $Id $What
     Wait-For { $null -eq (Get-Priority $Id) } { "$What ended, and the reader thread of its session did not." }
@@ -886,7 +887,10 @@ function Get-Key([int]$Code, [bool]$Down, [bool]$System = $false, [bool]$Extende
 # "Shift+F10", with the names of System.ConsoleKey for the keys that are not
 # a letter nor a digit, and the keys that are down meanwhile: its modifier
 # keys go down, its key goes down and up, and its modifier keys go up, the
-# other way round.
+# other way round. With Alt and without Ctrl, they are system keys, as
+# Windows sends them, but for Alt going up: after another key, Windows sends
+# it as a key that is not a system one, and then it does not open the menu
+# of the window.
 function Get-Chord([string]$Chord) {
     $parts = $Chord -split '\+'
     $modifiers = @(foreach ($part in ($parts | Select-Object -SkipLast 1)) {
@@ -1377,10 +1381,13 @@ try {
     if (-not (Test-AllInView $last) -or (Get-TabArea $last).Right -gt (Get-ScrollRect 'Right').Left) {
         throw 'The check expects the last tab all in view, before the button that scrolls the strip to the right.'
     }
-    Assert-Hover (Get-Middle (Get-ScrollRect 'Right')) (Get-ScrollRect 'Right') 'the button that scrolls the strip to the right'
+    # The strip is at its end: the button that scrolls it to the right
+    # cannot, so it looks the same under the pointer, and a click on it does
+    # nothing.
+    Assert-NothingDrawn { Send-Mouse (Get-Click (Get-Middle (Get-ScrollRect 'Right'))) } 'The pointer on the button that scrolls the strip to the right, at its end, and a click on it,'
     Assert-Hover (Get-Middle (Get-TitleRect $last)) (Get-TabArea $last) 'the title of the last tab'
     Assert-Scroll (Get-OtherTab) 'with 30 tabs'
-    Write-Host 'OK: with 30 tabs, each one runs its own program, nothing overlaps, and the strip shows the last one, which ends before the button that scrolls the strip to the right.'
+    Write-Host 'OK: with 30 tabs, each one runs its own program, nothing overlaps, and the strip shows the last one, which ends before the button that scrolls the strip to the right; that button cannot scroll it further, and the pointer on it, and a click on it, draw nothing.'
 
     # 4. The wheel, on the strip: a tab for each step, and the rest of a step
     # for the next turn.
@@ -1389,6 +1396,8 @@ try {
         @{ Delta = 120; Horizontal = $false }
         @{ Delta = 360; Horizontal = $false }
         @{ Delta = 120; Horizontal = $true }
+        @{ Delta = -120; Horizontal = $false }
+        @{ Delta = -120; Horizontal = $true }
         @{ Delta = 50; Horizontal = $false }
         @{ Delta = 70; Horizontal = $false }
     )
@@ -1399,7 +1408,7 @@ try {
     Send-ToBar $messages 'The wheel'
     foreach ($turn in $turns) { Add-Wheel $turn.Delta $turn.Horizontal }
     Assert-Scroll (Get-OtherTab) 'after the wheel'
-    Write-Host 'OK: the wheel on the bar scrolls a tab for each step, towards the first one forward and towards the last one backward or to the right, and keeps what is left of a step for the next turn.'
+    Write-Host 'OK: the wheel on the bar scrolls a tab for each step, towards the first one forward or to the left, and towards the last one backward or to the right, and keeps what is left of a step for the next turn.'
 
     # 5. The buttons that scroll the strip, with a click.
     foreach ($side in 'Left', 'Left', 'Right') {
@@ -1440,7 +1449,7 @@ try {
             $after = if ($gaps.Count -gt 0) { ', after ' + (($gaps | ForEach-Object { '{0:0.0} ms' -f $_ }) -join ', ') } else { '' }
             throw "While the left button stayed down for a second on the button that scrolls the strip to the left, the strip scrolled $count$($after): it has to scroll at once, 250 ms later, and then every 100 ms."
         }
-        Write-Host "OK: while the left button stays down on a button that scrolls the strip, with the pointer on it, the strip scrolls another tab after 250 ms, and then after each 100 ms: $($scrolls.Count) tabs in a second."
+        $ok = "OK: while the left button stays down on a button that scrolls the strip, with the pointer on it, the strip scrolls another tab after 250 ms, and then after each 100 ms: $($scrolls.Count) tabs in a second."
     }
     else {
         Send-Mouse ((Get-Mouse $WM_MOUSEMOVE 0 $arrow) + (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $arrow))
@@ -1452,10 +1461,11 @@ try {
             Show-Lines $scrolls
             throw "The left button down for a second on the button that scrolls the strip to the left, with the pointer that left at once, scrolled the strip $($scrolls.Count) times instead of once."
         }
-        Write-Host 'OK: the left button down on a button that scrolls the strip scrolls it once, and no more once the pointer leaves the button; the check could not move the pointer of the system onto the button to hold it there.'
+        $ok = 'OK: the left button down on a button that scrolls the strip scrolls it once, and no more once the pointer leaves the button; the check could not move the pointer of the system onto the button to hold it there.'
     }
     foreach ($scroll in $scrolls) { $null = Step-Bar 'Left' }
     Assert-Scroll (Get-OtherTab) 'after the button held down'
+    Write-Host $ok
 
     # 7. Each of the 30 tabs, with a click on its title, once the wheel
     # brings it all into view, if it is not: the wheel and the click go
