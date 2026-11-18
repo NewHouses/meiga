@@ -8,10 +8,13 @@
 //! once for each kind of change, until the window takes it (ADR 0005). The
 //! window does not copy nor draw the screen of a hidden tab, nor takes its
 //! text for the clipboard, so the output of a hidden tab wakes it up at most
-//! once for them. It takes its title, which the bar shows, each time that it
-//! changes, and its synchronized updates cannot wait: the window ends them
-//! in time, as while it is minimized (ADR 0013). When a tab is shown again,
-//! the view copies its whole screen, once.
+//! once for them: its tab in the bar tells then that its program wrote
+//! something, and the bell, the first time that it rings, until the tab is
+//! shown (ADR 0025). It takes its title, which the bar shows, each time
+//! that it changes, and its synchronized updates cannot wait: the window
+//! ends them in time, as while it is minimized (ADR 0013). When a tab is
+//! shown again, the view copies its whole screen, once, and the bar brings
+//! it into view.
 //!
 //! The window never waits for a reader with a lower priority than its own:
 //! before it locks the terminal of a tab, it gives the reader of the tab the
@@ -21,7 +24,8 @@
 //! The mouse is for the bar or for the terminal: for the one where a button
 //! went down, until it goes up, and otherwise for the one under the
 //! pointer. The terminal gets the events with its own coordinates, from
-//! below the bar.
+//! below the bar. The wheel on the bar scrolls the tabs, while they do not
+//! fit.
 //!
 //! A new tab runs the default profile or, from the menu of the profiles, the
 //! one that the user chooses (ADR 0022). The first one runs the program of
@@ -67,7 +71,7 @@ use crate::mouse::Response;
 use crate::scrollbar::ScrollBar;
 use crate::session::{self, Exit, Shared, lock};
 use crate::shells::Shells;
-use crate::tabbar::{Label, TabBar};
+use crate::tabbar::{Indicator, Label, TabBar};
 use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TabTerminal, TerminalView};
 
 /// What a shortcut, a click on the tab bar, or an item of a menu asks for
@@ -154,6 +158,11 @@ struct Tab {
     /// hidden, and did not act on it yet: the wake-up of the end, which
     /// always comes after it, does.
     exit: Option<Exit>,
+    /// While the tab is hidden, its program wrote something, or rang the
+    /// bell, since it was hidden: its tab tells it until it is shown (ADR
+    /// 0025).
+    activity: bool,
+    bell: bool,
 }
 
 impl Tab {
@@ -179,6 +188,8 @@ impl Tab {
             title_due: false,
             title: None,
             exit: None,
+            activity: false,
+            bell: false,
         };
         tab.run(environment, grid, waker, id);
         tab
@@ -202,7 +213,8 @@ impl Tab {
     /// how a new program expects it, with `grid` and cells of `cell`
     /// pixels: what the last program wrote goes to the history (ADR 0024).
     /// Until the new program gives a title, the tab shows the name of its
-    /// `launch` again.
+    /// `launch` again. Only what the new program writes, and the bells that
+    /// it rings, count for the indicator of the tab.
     fn restart(
         &mut self,
         environment: &[u16],
@@ -223,6 +235,8 @@ impl Tab {
         self.title_due = false;
         self.title = None;
         self.exit = None;
+        self.activity = false;
+        self.bell = false;
         self.run(environment, grid, waker, id);
     }
 
@@ -246,26 +260,45 @@ impl Tab {
     /// While the tab is hidden: learns at `now` when the synchronized update
     /// that its program has open ends, and ends it if its time is up, with
     /// the answers to the program, which `answers` holds meanwhile, whether
-    /// its program gave another title, which the next frame takes, and
-    /// whether it ended, which its wake-up acts on. What it copied to the
+    /// its program gave another title, which the next frame takes, whether
+    /// it ended, which its wake-up acts on, and whether it wrote something
+    /// or rang the bell, which its tab tells. What it copied to the
     /// clipboard waits until it is shown, when it is dropped. Its reader
     /// keeps the lower priority of a hidden tab, except while the window
-    /// holds the lock.
-    fn learn(&mut self, now: Instant, answers: &mut Vec<u8>) {
+    /// holds the lock. Returns whether the indicator of the tab changed.
+    fn learn(&mut self, now: Instant, answers: &mut Vec<u8>) -> bool {
+        self.learn_since(now, answers, false)
+    }
+
+    /// The tab is hidden from now on, at `now`: its reader gets the lower
+    /// priority, and it learns as [`Tab::learn`] does, but what its program
+    /// wrote, and the bells that it rang, while the tab was shown do not
+    /// count. From now on, its reader wakes the window up again, once, when
+    /// the program writes or rings the bell.
+    fn hide(&mut self, now: Instant, answers: &mut Vec<u8>) {
+        self.learn_since(now, answers, true);
+    }
+
+    /// [`Tab::learn`] and, if `hiding`, [`Tab::hide`].
+    fn learn_since(&mut self, now: Instant, answers: &mut Vec<u8>, hiding: bool) -> bool {
         // If the reader held the lock with a lower priority, the window
         // would wait for a thread that a busy processor leaves for later: a
         // priority inversion. The mutex of the standard library waits with
         // WaitOnAddress, which does not know who holds it, so Windows cannot
         // raise it.
         self.set_priority(Priority::Normal);
-        let due = {
+        let (due, wrote, rang) = {
             let mut shared = lock(&self.shared);
             let due = shared.end_late_sync(now, answers);
             self.title_due |= shared.title_changed;
             if let Some(exit) = shared.take_exit() {
                 self.exit = Some(exit);
             }
-            due
+            if hiding {
+                shared.screen_changed = false;
+                shared.bell_rang = false;
+            }
+            (due, shared.screen_changed, shared.bell_rang)
         };
         self.set_priority(Priority::BelowNormal);
         self.sync_due = due;
@@ -276,6 +309,10 @@ impl Tab {
             }
             answers.clear();
         }
+        let before = self.indicator();
+        self.activity |= wrote;
+        self.bell |= rang;
+        self.indicator() != before
     }
 
     /// While the tab is hidden: takes its title, if its program gave another
@@ -295,6 +332,26 @@ impl Tab {
 impl Label for Tab {
     fn label(&self) -> &str {
         self.title.as_deref().unwrap_or(&self.launch.name)
+    }
+
+    fn indicator(&self) -> Option<Indicator> {
+        indicator(self.session.is_some(), self.bell, self.activity)
+    }
+}
+
+/// What the tab of a program tells: the end of the program, while it does
+/// not run, also while the tab is shown, as in Windows Terminal; otherwise,
+/// while the tab is hidden, the bell, and then what the program wrote (ADR
+/// 0025).
+const fn indicator(runs: bool, bell: bool, activity: bool) -> Option<Indicator> {
+    if !runs {
+        Some(Indicator::Ended)
+    } else if bell {
+        Some(Indicator::Bell)
+    } else if activity {
+        Some(Indicator::Activity)
+    } else {
+        None
     }
 }
 
@@ -436,7 +493,8 @@ impl Tabs {
     /// to date: the screen of the tab that is shown changed, a program gave
     /// another title, which the frame takes, a hidden tab has a
     /// synchronized update open, which ends at a time that the next update
-    /// returns, or a program ended, and its tab closed.
+    /// returns, its program wrote or rang the bell, which its tab tells, or
+    /// a program ended, and its tab closed or tells it.
     ///
     /// The titles wait for the frame so that the window takes them at most
     /// once per frame interval: until it does, the reader does not wake it
@@ -448,20 +506,22 @@ impl Tabs {
             let exit = woken
                 .exit
                 .or_else(|| self.tabs.get_mut(id).and_then(|tab| tab.exit.take()));
-            let closed = exit.is_some_and(|exit| self.ended(window, id, exit, now));
-            return woken.screen || woken.title || closed;
+            let ended = exit.is_some_and(|exit| self.ended(window, id, exit, now));
+            return woken.screen || woken.title || ended;
         }
         // A hidden tab, or none: a tab that closed after its reader woke
         // the window up.
-        let Some(tab) = self.tabs.get_mut(id) else {
+        let (Some(index), Some(tab)) = (self.tabs.index_of(id), self.tabs.get_mut(id)) else {
             return false;
         };
-        tab.learn(now, &mut self.answers);
+        let marked = tab.learn(now, &mut self.answers);
         let due = tab.title_due || tab.sync_due.is_some();
-        match tab.exit.take() {
-            Some(exit) => self.ended(window, id, exit, now) || due,
-            None => due,
+        let exit = tab.exit.take();
+        if marked {
+            self.bar.label_changed(index);
         }
+        let ended = exit.is_some_and(|exit| self.ended(window, id, exit, now));
+        ended || due || marked
     }
 
     /// While a message box was open, the window lost the wake-ups of the
@@ -473,11 +533,14 @@ impl Tabs {
         let mut shown_exit = woken.exit;
         let active = self.tabs.active().id();
         let mut ended = Vec::new();
-        for (id, tab) in self.tabs.contents_mut() {
+        for (index, (id, tab)) in self.tabs.contents_mut().enumerate() {
             let exit = if id == active {
                 shown_exit.take().or_else(|| tab.exit.take())
             } else {
-                tab.learn(now, &mut self.answers);
+                if tab.learn(now, &mut self.answers) {
+                    self.bar.label_changed(index);
+                    changed = true;
+                }
                 changed |= tab.title_due || tab.sync_due.is_some();
                 tab.exit.take()
             };
@@ -497,13 +560,15 @@ impl Tabs {
     /// closes the tab, and the last one the window (ADR 0024). Otherwise
     /// the tab forgets its session, and its terminal, which tells how the
     /// program ended, stays: if the tab is shown, its keys no longer go to
-    /// a program. Returns whether a frame has to show it: the tab closed.
+    /// a program. Its tab in the bar tells it, also while it is shown (ADR
+    /// 0025). Returns whether a frame has to show it: the tab closed, or
+    /// its tab tells it.
     fn ended(&mut self, window: &Window, id: TabId, exit: Exit, now: Instant) -> bool {
         if exit.is_clean() {
             return self.close(window, id, now);
         }
         let shown = id == self.tabs.active().id();
-        let Some(tab) = self.tabs.get_mut(id) else {
+        let (Some(index), Some(tab)) = (self.tabs.index_of(id), self.tabs.get_mut(id)) else {
             return false;
         };
         // Its session closes without waiting, as when the tab closes. Without
@@ -514,7 +579,8 @@ impl Tabs {
         if shown {
             self.view.program_ended();
         }
-        false
+        self.bar.label_changed(index);
+        true
     }
 
     /// Takes the title of the active tab, if its program gave another one,
@@ -577,15 +643,15 @@ impl Tabs {
             TabAction::DuplicateActive => self.duplicate(window, active),
             TabAction::Next => self.tabs.activate_next(),
             TabAction::Previous => self.tabs.activate_previous(),
-            TabAction::Nth(index) => match self.tabs.tabs().get(index) {
-                Some(tab) => self.tabs.activate(tab.id()).ok().flatten(),
-                None => None,
-            },
-            TabAction::Last => match self.tabs.tabs().last() {
-                Some(tab) => self.tabs.activate(tab.id()).ok().flatten(),
-                None => None,
-            },
-            TabAction::Activate(id) => self.tabs.activate(id).ok().flatten(),
+            TabAction::Nth(index) => {
+                let id = self.tabs.tabs().get(index).map(|tab| tab.id());
+                id.and_then(|id| self.select(id))
+            }
+            TabAction::Last => {
+                let id = self.tabs.tabs().last().map(|tab| tab.id());
+                id.and_then(|id| self.select(id))
+            }
+            TabAction::Activate(id) => self.select(id),
             TabAction::Close => return self.close(window, active, now),
             TabAction::CloseTab(id) => return self.close(window, id, now),
             TabAction::CloseOthers(id) => {
@@ -600,11 +666,8 @@ impl Tabs {
             TabAction::CloseRightOfActive => {
                 return self.close_several(window, now, |tabs| tabs.close_to_the_right(active));
             }
-            TabAction::Menu(id, at) => return self.open_menu(window, id, Anchor::At(at), false),
-            TabAction::ActiveMenu => {
-                let tab = self.bar.tab(self.tabs.active_index());
-                return self.open_menu(window, active, Anchor::Below(tab), true);
-            }
+            TabAction::Menu(id, at) => return self.open_menu(window, id, Some(at)),
+            TabAction::ActiveMenu => return self.open_menu(window, active, None),
             TabAction::Restart(id) => return self.restart(window, id, now),
             TabAction::RestartActive => return self.restart(window, active, now),
         };
@@ -615,6 +678,22 @@ impl Tabs {
             }
             None => self.bar.has_damage(),
         }
+    }
+
+    /// Activates the tab `id`, which a shortcut or a click on it chose.
+    /// Returns the change of the active tab. If it is the tab that is shown
+    /// already, the wheel or the buttons that scroll the strip may have left
+    /// it out of view, even in part: then the strip scrolls at once so that
+    /// it is all in view, as when another tab is shown, and the whole bar is
+    /// drawn again (ADR 0025, decision 5). While the tabs keep their width,
+    /// once the mouse closed some, it waits until the pointer leaves the bar.
+    fn select(&mut self, id: TabId) -> Option<Switch> {
+        let switch = self.tabs.activate(id).ok()?;
+        if switch.is_none() {
+            self.bar.shown();
+            self.bar.settle(&self.tabs);
+        }
+        switch
     }
 
     /// Opens a tab at the end, which runs what `launch` says, and activates
@@ -691,8 +770,11 @@ impl Tabs {
     /// Closes the tab `id` and its session, at `now`, and its menu, if it is
     /// open. The last tab closes the window instead. Returns whether a frame
     /// has to show it: the bar without the tab, another tab if it was the
-    /// active one, and what its menu covered.
+    /// active one, and what its menu covered. If the mouse closed it, the
+    /// others keep their width while the pointer stays on the bar (ADR
+    /// 0025).
     fn close(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
+        let index = self.tabs.index_of(id);
         match self.tabs.close(id) {
             Ok(Close::Removed { content, activated }) => {
                 // The menu of the tab closes with it: its items would be for
@@ -709,7 +791,10 @@ impl Tabs {
                 // still wake the window up with the identifier of the tab,
                 // which no tab has any more.
                 drop(content);
-                self.bar.tabs_changed(&self.tabs);
+                // It was there: the model has just closed it.
+                if let Some(index) = index {
+                    self.bar.tab_closed(&self.tabs, index);
+                }
                 true
             }
             Ok(Close::LastTab) => {
@@ -751,12 +836,23 @@ impl Tabs {
         true
     }
 
-    /// Opens the menu of the tab `id` where `anchor` says, with its first
-    /// item highlighted if the keyboard opens it. Returns whether a frame
-    /// has to show it.
-    fn open_menu(&mut self, window: &Window, id: TabId, anchor: Anchor, keyboard: bool) -> bool {
+    /// Opens the menu of the tab `id`, with its top-left corner `at` that
+    /// point of the window, where the right button went up, or otherwise
+    /// below its tab, which the bar scrolls into view, with its first item
+    /// highlighted: the keyboard opens it. Returns whether a frame has to
+    /// show it.
+    fn open_menu(&mut self, window: &Window, id: TabId, at: Option<Point>) -> bool {
         let Some(index) = self.tabs.index_of(id) else {
             return false;
+        };
+        // Before the anchor: the tabs may move.
+        self.leave_bar(window);
+        let anchor = match at {
+            Some(at) => Anchor::At(at),
+            None => {
+                self.bar.scroll_to_tab(&self.tabs, index);
+                Anchor::Below(self.bar.tab(index))
+            }
         };
         let count = self.tabs.tab_count();
         let ended = self.tabs.get(id).is_some_and(|tab| tab.session.is_none());
@@ -773,7 +869,7 @@ impl Tabs {
             ),
         ];
         self.menu_tab = Some(id);
-        self.show_menu(window, entries, anchor, keyboard)
+        self.show_menu(window, entries, anchor, at.is_none())
     }
 
     /// Opens the menu of the profiles below the buttons that open a tab,
@@ -796,16 +892,30 @@ impl Tabs {
                 }
             })
             .collect();
+        // Before the anchor: the buttons may move.
+        self.leave_bar(window);
         let anchor = Anchor::Below(self.bar.buttons());
         self.menu_tab = None;
         self.show_menu(window, entries, anchor, keyboard)
     }
 
+    /// The mouse is for a menu from now on: a button that is down on the
+    /// bar is let go of, and the bar loses the pointer, so the tabs that
+    /// kept their width get it again.
+    fn leave_bar(&mut self, window: &Window) {
+        if self.bar.is_pressed() {
+            self.bar.capture_lost(&self.tabs);
+            window.release_mouse();
+        }
+        self.bar.left(&self.tabs);
+    }
+
     /// Opens a menu of `entries` where `anchor` says, instead of the one
     /// that may be open, with its first item highlighted if the keyboard
-    /// opens it. From now on, the mouse is for the menu: a button that is
-    /// down on the bar or on the terminal is let go of, and they lose the
-    /// pointer. Returns whether a frame has to show it.
+    /// opens it. From now on, the mouse is for the menu: the bar has let it
+    /// go ([`Tabs::leave_bar`]), and a button that is down on the terminal
+    /// is let go of, and the terminal loses the pointer. Returns whether a
+    /// frame has to show it.
     fn show_menu(
         &mut self,
         window: &Window,
@@ -813,11 +923,6 @@ impl Tabs {
         anchor: Anchor,
         keyboard: bool,
     ) -> bool {
-        if self.bar.is_pressed() {
-            self.bar.capture_lost(&self.tabs);
-            window.release_mouse();
-        }
-        self.bar.left(&self.tabs);
         self.view.forget_mouse(window);
         window.set_pointer(Pointer::Arrow);
         let cell = self.bar.font_mut().cell();
@@ -828,7 +933,8 @@ impl Tabs {
     }
 
     /// Shows the tab `switch.to`, at `now`, instead of `switch.from`, which
-    /// may have closed. Its title goes to the window.
+    /// may have closed. Its title goes to the window, and the bar brings it
+    /// into view.
     fn show(&mut self, window: &Window, switch: Switch, now: Instant) {
         // It cannot fail: the model has just activated the tab.
         let Some(to) = self.tabs.get_mut(switch.to) else {
@@ -840,31 +946,38 @@ impl Tabs {
         to.set_priority(Priority::Normal);
         // The view ends now the synchronized update that its program may
         // have open, and from now on the ones that follow, and takes its
-        // title, which it copies now.
+        // title, which it copies now. What its program wrote, and the bell,
+        // are seen now.
         to.sync_due = None;
         to.title_due = false;
+        to.activity = false;
+        to.bell = false;
         let terminal = to.terminal();
         self.view.show(window, terminal, now, &mut to.title);
         window.set_title(to.title.as_deref().unwrap_or(TITLE));
+        self.bar.shown();
         if let Some(from) = self.tabs.get_mut(switch.from) {
             // The view no longer ends the synchronized update that its
             // program may have open, and its reader gets the lower priority.
             // The frame draws the whole bar.
-            from.learn(now, &mut self.answers);
+            from.hide(now, &mut self.answers);
         }
     }
 
     /// Ends the synchronized updates of the hidden tabs whose time is up at
     /// `now`. Returns when the next one ends.
     fn end_hidden_syncs(&mut self, now: Instant) -> Option<Instant> {
-        let active = self.tabs.active().id();
-        let answers = &mut self.answers;
-        self.tabs
-            .contents_mut()
-            .filter(|&(id, _)| id != active)
-            .filter_map(|(_, tab)| {
-                if tab.sync_due.is_some_and(|due| due <= now) {
-                    tab.learn(now, answers);
+        let active = self.tabs.active_index();
+        let Self {
+            tabs, bar, answers, ..
+        } = self;
+        tabs.contents_mut()
+            .enumerate()
+            .filter(|&(index, _)| index != active)
+            .filter_map(|(index, (_, tab))| {
+                // What it wrote meanwhile shows now: its tab tells it.
+                if tab.sync_due.is_some_and(|due| due <= now) && tab.learn(now, answers) {
+                    bar.label_changed(index);
                 }
                 tab.sync_due
             })
@@ -928,14 +1041,20 @@ impl Tabs {
                 response.tab = self.bar.up(&self.tabs, button);
                 if pressed && !self.bar.is_pressed() {
                     window.release_mouse();
-                    // Holding the mouse may have ended the tracking of its
-                    // leave.
                     if self.bar.contains(at) {
+                        // Holding the mouse may have ended the tracking of
+                        // its leave.
                         window.track_mouse_leave();
+                    } else {
+                        // It went up out of the bar, which no longer has the
+                        // pointer: the tabs that kept their width get it.
+                        self.bar.left(&self.tabs);
                     }
                 }
             }
-            // The wheel on the bar does nothing yet (subphase 2.8).
+            Event::Wheel {
+                delta, horizontal, ..
+            } => self.bar.wheel(&self.tabs, delta, horizontal),
             _ => {}
         }
         response.redraw |= self.bar.has_damage();
@@ -1012,6 +1131,10 @@ impl Scene for Tabs {
         self.retitle_active(window);
         let hidden = self.end_hidden_syncs(now);
         self.retitle_hidden();
+        // The tab that is shown comes into view, and the tabs scroll again
+        // while a button that scrolls them stays down.
+        self.bar.settle(&self.tabs);
+        let repeat = self.bar.tick(&self.tabs, now);
         let menu = &self.menu;
         self.bar.take_damage(&mut |area| {
             if !menu.covers(area) {
@@ -1019,7 +1142,7 @@ impl Scene for Tabs {
             }
         });
         self.menu.take_damage(damage);
-        earliest(shown, hidden)
+        earliest(earliest(shown, hidden), repeat)
     }
 
     fn update_hidden(&mut self, window: &Window, now: Instant) -> Option<Instant> {
@@ -1088,4 +1211,19 @@ fn coordinate(pixels: u32) -> i32 {
 /// The earlier of two moments, if there is one.
 fn earliest(first: Option<Instant>, second: Option<Instant>) -> Option<Instant> {
     first.into_iter().chain(second).min()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_end_goes_before_the_bell_and_the_bell_before_what_the_program_wrote() {
+        assert_eq!(indicator(true, false, false), None);
+        assert_eq!(indicator(true, false, true), Some(Indicator::Activity));
+        assert_eq!(indicator(true, true, true), Some(Indicator::Bell));
+        // The end shows also while the tab is shown, which clears the rest.
+        assert_eq!(indicator(false, false, false), Some(Indicator::Ended));
+        assert_eq!(indicator(false, true, true), Some(Indicator::Ended));
+    }
 }

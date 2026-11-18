@@ -19,7 +19,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0002](0002-windows-e-renderizado-cpu.md) | Só Windows, con renderizado por CPU | Aceptado; concretado polos [0009](0009-xanela-que-non-se-ve.md) e [0010](0010-texto-con-directwrite.md) |
 | [0003](0003-nucleo-vt-alacritty-terminal.md) | `alacritty_terminal` como núcleo, detrás dunha fachada | Aceptado; concretado polo [0012](0012-fachada-do-terminal.md) |
 | [0004](0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga | Aceptado; concretado polos [0011](0011-fin-e-peche-das-sesions.md) e [0014](0014-o-teclado.md) |
-| [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polos [0008](0008-temporizador-dos-fotogramas.md), [0011](0011-fin-e-peche-das-sesions.md), [0013](0013-da-saida-a-pantalla.md), [0017](0017-os-fotogramas-por-escritorio-remoto.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
+| [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polos [0008](0008-temporizador-dos-fotogramas.md), [0011](0011-fin-e-peche-das-sesions.md), [0013](0013-da-saida-a-pantalla.md), [0017](0017-os-fotogramas-por-escritorio-remoto.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
 | [0006](0006-licenzas-e-dependencias.md) | Licenzas e dependencias | Aceptado |
 | [0007](0007-integracion-coa-shell.md) | Integración coa shell | Aceptado |
 | [0008](0008-temporizador-dos-fotogramas.md) | Temporizador dos fotogramas | Aceptado |
@@ -33,12 +33,13 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0016](0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0023](0023-os-atallos-de-teclado.md) |
 | [0017](0017-os-fotogramas-por-escritorio-remoto.md) | 30 fotogramas por segundo por Escritorio remoto e 60 en local | Aceptado |
 | [0018](0018-o-modelo-das-tabs.md) | O modelo das tabs | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md), [0021](0021-os-menus-e-o-menu-da-tab.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
-| [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) | Varias sesións e as tabs en segundo plano | Aceptado; concretado polos [0020](0020-a-barra-de-tabs.md), [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
-| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado; concretado polos [0021](0021-os-menus-e-o-menu-da-tab.md) e [0022](0022-os-perfis-e-a-configuracion.md) |
-| [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
+| [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) | Varias sesións e as tabs en segundo plano | Aceptado; concretado polos [0020](0020-a-barra-de-tabs.md), [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
+| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado; concretado polos [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
+| [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
 | [0022](0022-os-perfis-e-a-configuracion.md) | Os perfís e a configuración | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0023](0023-os-atallos-de-teclado.md) | Os atallos de teclado | Aceptado; concretado polo [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
-| [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado |
+| [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polo [0025](0025-moitas-tabs-e-os-indicadores.md) |
+| [0025](0025-moitas-tabs-e-os-indicadores.md) | Moitas tabs: o ancho mínimo, o desprazamento da barra e os indicadores | Aceptado |
 
 ## Como se relacionan
 
@@ -127,6 +128,13 @@ graph TD
     A21 --> A24
     A22 --> A24
     A23 --> A24
+    A5 --> A25["0025 Moitas tabs e os indicadores"]
+    A8 --> A25
+    A16 --> A25
+    A19 --> A25
+    A20 --> A25
+    A21 --> A25
+    A24 --> A25
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.
