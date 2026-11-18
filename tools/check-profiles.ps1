@@ -88,7 +88,8 @@ The executable to check. Defaults to target\release\meiga.exe.
 .PARAMETER TimeoutSeconds
 How long to wait for the window, for the message box, for each step, and
 for the programs of the check to end. The shells of the user get three
-times as long to end, and at least 30 s.
+times as long to end, and at least 30 s; and so does meiga, once its window
+closes, as it waits for their sessions.
 #>
 [CmdletBinding()]
 param(
@@ -1561,7 +1562,10 @@ $process = $null
 $pointer = $null
 $attached = $false
 $passed = $false
-# How long the shells of the user get to end, once their tabs close.
+# How long the shells of the user get to end, once their tabs close; and
+# meiga, once its window closes, as it waits for their sessions before it
+# ends: a session that gets stuck ends its programs once 10 s pass without
+# one of them ending (ADR 0011 and ADR 0026).
 $shellSeconds = [Math]::Max(30, 3 * $TimeoutSeconds)
 try {
     # The profiles that meiga finds, and the ones of its menu with this
@@ -1781,10 +1785,11 @@ try {
     Write-Host 'OK: the button + opens a tab with Probe, the default profile, and Duplicate tab copies it, with the same command line, in the same folder.'
 
     # 7. The window closes: meiga ends, and the programs of its tabs and
-    # their consoles too.
+    # their consoles too. The sessions of the shells of the user, which
+    # their tabs closed, may still be ending.
     $null = $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)
-    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-        throw "$exe was still running $TimeoutSeconds s after its window closed."
+    if (-not $process.WaitForExit($shellSeconds * 1000)) {
+        throw "$exe was still running $shellSeconds s after its window closed."
     }
     if ($process.ExitCode -ne 0) {
         throw "$exe ended with exit code $($process.ExitCode) instead of 0."
@@ -1832,8 +1837,8 @@ try {
     Close-Dialog $dialog
     Wait-Settled $id 10
     $null = $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)
-    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-        throw "With config.toml ignored, $exe was still running $TimeoutSeconds s after its window closed."
+    if (-not $process.WaitForExit($shellSeconds * 1000)) {
+        throw "With config.toml ignored, $exe was still running $shellSeconds s after its window closed."
     }
     if ($process.ExitCode -ne 0) {
         throw "With config.toml ignored, $exe ended with exit code $($process.ExitCode) instead of 0."

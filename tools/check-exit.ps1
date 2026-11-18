@@ -90,9 +90,10 @@ The executable to check. Defaults to target\release\meiga.exe.
 
 .PARAMETER TimeoutSeconds
 How long to wait for the window, for each program to start and to end, for
-each line of the terminal, and for each frame; in the last run, how long
-meiga.exe may take to end beyond 17 s once its window closes, and its tabs
-once it has ended.
+each line of the terminal, and for each frame. In the last run, meiga.exe has
+to end less than 17 s after its window closes: the check waits that much
+longer for it, to tell how long it took, and that long for its tabs once it
+has ended.
 #>
 [CmdletBinding()]
 param(
@@ -434,8 +435,10 @@ public static IntPtr NewJob()
     return job;
 }
 
-// Starts a process and puts it in `job` at once, before it can start any
-// other: the processes that it starts are in the job too.
+// Starts a process and puts it in `job` right away: the processes that it
+// starts from then on are in the job too. Process.Start cannot start it
+// suspended, so it runs outside the job for a moment, and a process that it
+// started then would not be in it: the caller checks the ones it needs.
 public static System.Diagnostics.Process StartInJob(System.Diagnostics.ProcessStartInfo info, IntPtr job)
 {
     var started = System.Diagnostics.Process.Start(info);
@@ -573,7 +576,11 @@ namespace MeigaCheck
             {
                 File.WriteAllText(file, error.Message);
             }
-            // So that it starts before this program ends.
+            // So that it starts before this program ends. And so that this
+            // program ends a while after its console closes, as a shell that
+            // saves its history does: a writer that counted its 10 s from the
+            // close, and not from the last program that ended, would end the
+            // session sooner than 10 s after this program (step 14).
             Thread.Sleep(500);
             return true;
         }
@@ -1400,6 +1407,7 @@ $onNew = $false
 $marks = 0
 $job = [IntPtr]::Zero
 $closerProgram = $null
+$tabConsoles = @()
 $passed = $false
 $saved = Get-Text
 try {
@@ -1590,8 +1598,13 @@ try {
     Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Ctrl+Shift+Home drew nothing: the view did not move to the history.' }
     Wait-Quiet 400
     $what = 'In the history, once Enter started the program again'
-    $null = Assert-Line 0 "probe-$second" -What $what
-    $null = Assert-Line 2 $code3 -What $what
+    # The console of Windows clears the screen when it starts, and
+    # alacritty_terminal moves a blank row to the history when it clears a
+    # blank screen without history: then the history of each tab starts with
+    # that row, until subphase 8.6.
+    $top = if (@(Get-Consoles | Where-Object Name -EQ 'conhost.exe').Count -gt 0) { 1 } else { 0 }
+    $null = Assert-Line $top "probe-$second" -What $what
+    $null = Assert-Line ($top + 2) $code3 -What $what
     $from = @(Get-Log).Count
     Send-Chord 'Ctrl+Shift+End'
     Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Ctrl+Shift+End drew nothing: the view did not move back.' }
@@ -1775,12 +1788,13 @@ try {
     # 14. When the window closes, the program of the first tab, as its
     # console closes, starts another one in it, as the shell of a tab can,
     # such as the git of its prompt: the new program connects to the console
-    # while ConPTY closes it, and the session of the tab does not end. Its
-    # writer thread ends the programs left in it 10 s after the last one of
-    # its programs ended (ADR 0011), and meiga waits for it before it ends
-    # (ADR 0026), also once the session of the second tab, which it closes
-    # after the first one, has ended. meiga runs in a job of the check, where
-    # the check sees what it leaves, and which ends it if the check fails.
+    # while ConPTY closes it, and the session of the tab does not end. meiga
+    # waits for it before it ends, also once the session of the second tab,
+    # which it closes after the first one, has ended; and the writer thread
+    # of the session ends the programs left in it 10 s after the last of its
+    # programs ended (ADR 0011 and ADR 0026). meiga runs in a job of the
+    # check, where the check sees what it leaves, and which ends it if the
+    # check fails.
     $process.Dispose()
     $process = $null
     $log = Join-Path $work 'frames-close.csv'
@@ -1806,14 +1820,18 @@ try {
     $quick = Open-Tab 'Ctrl+Shift+T' @($closer)
     Split-Input
     $inJob = $api::ProcessesIn($job)
-    $missing = @(@($process.Id, $closer, $quick) + @(Get-Consoles | ForEach-Object { [int]$_.ProcessId }) |
-            Where-Object { $_ -notin $inJob })
+    $consoleIds = @(Get-Consoles | ForEach-Object { [int]$_.ProcessId })
+    $missing = @(@($process.Id, $closer, $quick) + $consoleIds | Where-Object { $_ -notin $inJob })
     if ($missing.Count -gt 0) {
         throw "The processes $($missing -join ', '), of $exe and of its tabs, are not in the job of the check."
     }
-    # With its handle open, to read when it ended once it has.
+    # With their handles open, to read when they ended once they have.
     $closerProgram = [Diagnostics.Process]::GetProcessById($closer)
     $null = $closerProgram.Handle
+    $tabConsoles = @($consoleIds | ForEach-Object { [Diagnostics.Process]::GetProcessById($_) })
+    foreach ($console in $tabConsoles) {
+        $null = $console.Handle
+    }
     $closing = [DateTime]::UtcNow
     if (-not $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)) {
         throw "Could not close the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
@@ -1842,6 +1860,12 @@ try {
     $waited = ($process.ExitTime.ToUniversalTime() - $closing).TotalSeconds
     if ($after -lt 9.9) {
         $when = if ($after -lt 0) { 'before the program of the first tab' } else { "$(Format-Seconds $after) s after the program of the first tab" }
+        # A session that does not get stuck ends at once, with its console,
+        # and meiga ends then too: this step cannot check it. A meiga that
+        # does not wait for a stuck session leaves its console running.
+        if (@($tabConsoles | Where-Object { -not $_.HasExited }).Count -eq 0) {
+            throw "$exe ended $(Format-Seconds $waited) s after its window closed, $when, once the consoles of its tabs had ended: with this ConPTY, the session of the first tab did not get stuck, and this step needs one where it does, such as the ConPTY of meiga, which tools\package.ps1 copies next to $exe."
+        }
         throw "$exe ended $(Format-Seconds $waited) s after its window closed, $when, and not 10 s after it: it did not wait for the session of that tab, which ends then the programs left in it."
     }
     if ($waited -ge 17) {
@@ -1871,6 +1895,9 @@ finally {
     }
     if ($closerProgram) {
         $closerProgram.Dispose()
+    }
+    foreach ($console in $tabConsoles) {
+        $console.Dispose()
     }
     # What meiga left in the job of the last run ends with it.
     if ($job -ne [IntPtr]::Zero) {

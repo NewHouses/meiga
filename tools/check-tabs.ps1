@@ -45,14 +45,16 @@ state and posts the keys, and once the thread runs again, it reads the
 posted keys before any input.
 
 Before the output of the hidden tab, the check waits until the shell of the
-new tab has used no processor time for a second, once it has written its
-prompt, and then until the window draws nothing for a second: until the
-cursor of the shown tab stops blinking, if Windows lets it blink. With the
-settings of Windows by default, the cursor changes about every half a
-second while it blinks, and stops blinking 5 s after the screen last
-changed. It also waits for the shell of the third tab before it closes the
-tab: a program that starts as its console closes keeps the console from
-closing, and the session ends its programs 10 s later (ADR 0011).
+new tab, and the programs that it starts, have used no processor time for
+a second, once it has written its prompt, and then until the window draws
+nothing for a second: until the cursor of the shown tab stops blinking, if
+Windows lets it blink. With the settings of Windows by default, the cursor
+changes about every half a second while it blinks, and stops blinking 5 s
+after the screen last changed. It also waits for the shell of the third
+tab, and its programs, before it closes the tab: a program that starts as
+its console closes keeps the console from closing, and the session ends
+its programs 10 s later, which meiga waits for when it ends (ADR 0011 and
+ADR 0026).
 
 It needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal.
 The new tabs run the default profile of meiga, which is PowerShell 7 if
@@ -108,6 +110,17 @@ public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wPar
 
 [StructLayout(LayoutKind.Sequential)]
 public struct RECT { public int Left, Top, Right, Bottom; }
+
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+struct PROCESSENTRY32W
+{
+    public uint dwSize, cntUsage, th32ProcessID;
+    public IntPtr th32DefaultHeapID;
+    public uint th32ModuleID, cntThreads, th32ParentProcessID;
+    public int pcPriClassBase;
+    public uint dwFlags;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szExeFile;
+}
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
@@ -192,6 +205,27 @@ static extern uint ResumeThread(IntPtr thread);
 [return: MarshalAs(UnmanagedType.Bool)]
 static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int id);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetProcessTimes(IntPtr process, out long creation, out long exit, out long kernel, out long user);
+
+[DllImport("kernel32.dll")]
+static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint process);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool Process32FirstW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool Process32NextW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+
 // Types a key in the window: sets the key state of its thread, which this
 // thread shares, to `state`, and posts the messages of the key `code` going
 // down and up, with the lParams `down` and `up`. The thread of the window is
@@ -268,6 +302,80 @@ public static int? PriorityOf(int process, string name)
         }
     }
     return null;
+}
+
+// The process `process` and the ones under it, the programs that it started
+// and the ones that they started, as a text that changes when one of them
+// starts or ends, or uses processor time: the number of each one and its
+// time, in ticks of 100 ns. A process keeps the number of its parent after
+// the parent ends, and Windows can give that number to another process:
+// only the ones that started after their parent count. Null if `process`
+// has ended.
+public static string TreeOf(int process)
+{
+    // TH32CS_SNAPPROCESS
+    IntPtr snapshot = CreateToolhelp32Snapshot(0x2, 0);
+    if (snapshot == new IntPtr(-1)) throw new System.ComponentModel.Win32Exception();
+    var children = new System.Collections.Generic.Dictionary<uint, System.Collections.Generic.List<uint>>();
+    try
+    {
+        var entry = new PROCESSENTRY32W();
+        entry.dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32W));
+        for (bool more = Process32FirstW(snapshot, ref entry); more; more = Process32NextW(snapshot, ref entry))
+        {
+            System.Collections.Generic.List<uint> list;
+            if (!children.TryGetValue(entry.th32ParentProcessID, out list))
+            {
+                list = new System.Collections.Generic.List<uint>();
+                children[entry.th32ParentProcessID] = list;
+            }
+            list.Add(entry.th32ProcessID);
+        }
+    }
+    finally { CloseHandle(snapshot); }
+    long created, used;
+    if (!TimesOf((uint)process, out created, out used)) return null;
+    var tree = new System.Collections.Generic.SortedDictionary<uint, long>();
+    tree[(uint)process] = used;
+    var pending = new System.Collections.Generic.Queue<Tuple<uint, long>>();
+    pending.Enqueue(Tuple.Create((uint)process, created));
+    while (pending.Count > 0)
+    {
+        var parent = pending.Dequeue();
+        System.Collections.Generic.List<uint> list;
+        if (!children.TryGetValue(parent.Item1, out list)) continue;
+        foreach (uint child in list)
+        {
+            long childCreated, childUsed;
+            if (tree.ContainsKey(child) || !TimesOf(child, out childCreated, out childUsed) || childCreated < parent.Item2) continue;
+            tree[child] = childUsed;
+            pending.Enqueue(Tuple.Create(child, childCreated));
+        }
+    }
+    var text = new System.Text.StringBuilder();
+    foreach (var pair in tree) text.Append(pair.Key).Append(' ').Append(pair.Value).Append(';');
+    return text.ToString();
+}
+
+// When the process `process` started, and the processor time that it has
+// used, in ticks of 100 ns; false if it has ended, or cannot be opened.
+static bool TimesOf(uint process, out long created, out long used)
+{
+    created = used = 0;
+    // PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE
+    IntPtr handle = OpenProcess(0x1000 | 0x100000, false, (int)process);
+    if (handle == IntPtr.Zero) return false;
+    try
+    {
+        // A process that has ended, but that somebody holds open, is not
+        // WAIT_TIMEOUT.
+        if (WaitForSingleObject(handle, 0) != 0x102) return false;
+        long exited, kernel, user;
+        if (!GetProcessTimes(handle, out created, out exited, out kernel, out user)) return false;
+        used = kernel + user;
+        return true;
+    }
+    finally { CloseHandle(handle); }
 }
 '@
 }
@@ -569,25 +677,29 @@ function Open-Tab([int[]]$Hidden) {
     $opened
 }
 
-# Waits until the process $Id has used no processor time for a second: a
-# shell that starts has loaded its profile and written its prompt.
+# Waits until the process $Id, and the ones under it, have used no processor
+# time for a second, and no other one has started or ended: a shell that
+# starts has loaded its profile and written its prompt, also when its
+# prompt runs programs, as git for the folder. A program that starts as the
+# console of its tab closes keeps the console from closing, and the session
+# ends its programs 10 s later, which meiga waits for when it ends (ADR 0011
+# and ADR 0026).
 function Wait-Settled([int]$Id, [string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds + 10)
-    $last = -1
+    $last = $null
     $since = [DateTime]::UtcNow
     while ($true) {
-        $program = Get-Process -Id $Id -ErrorAction Ignore
-        if (-not $program) { throw "$What ended." }
-        $time = $program.TotalProcessorTime.Ticks
-        if ($time -ne $last) {
-            $last = $time
+        $tree = $api::TreeOf($Id)
+        if ($null -eq $tree) { throw "$What ended." }
+        if ($tree -cne $last) {
+            $last = $tree
             $since = [DateTime]::UtcNow
         }
         elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 1000) {
             return
         }
         if ([DateTime]::UtcNow -gt $deadline) {
-            throw "$What kept running for $($TimeoutSeconds + 10) s."
+            throw "$What, or the programs that it started, kept running for $($TimeoutSeconds + 10) s."
         }
         Start-Sleep -Milliseconds 100
     }
