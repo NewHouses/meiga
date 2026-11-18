@@ -28,10 +28,11 @@ the window draws in its frame log. It checks that:
   shown; the buttons + and of the profiles go on the right of the bar;
 - with 30 tabs, each one runs its own program, nothing overlaps, and the
   strip shows the last one, which ends before the button that scrolls the
-  strip to the right;
+  strip to the right; that button cannot scroll it further, and the pointer
+  on it, and a click on it, draw nothing;
 - the wheel on the bar scrolls a tab for each step, towards the first one
-  forward and towards the last one backward or to the right, and keeps what
-  is left of a step for the next turn;
+  forward or to the left, and towards the last one backward or to the right,
+  and keeps what is left of a step for the next turn;
 - a click on a button that scrolls the strip scrolls it until the first tab
   that it hides on that side, even in part, is all in view;
 - while the left button stays down on a button that scrolls the strip, with
@@ -1390,12 +1391,14 @@ try {
     Write-Host 'OK: with 30 tabs, each one runs its own program, nothing overlaps, and the strip shows the last one, which ends before the button that scrolls the strip to the right; that button cannot scroll it further, and the pointer on it, and a click on it, draw nothing.'
 
     # 4. The wheel, on the strip: a tab for each step, and the rest of a step
-    # for the next turn.
+    # for the next turn. Two steps to the right and one to the left: if they
+    # were the same, a horizontal wheel that goes the wrong way, or does
+    # nothing, would leave the strip where it has to be.
     $at = Get-Middle (Get-Strip)
     $turns = @(
         @{ Delta = 120; Horizontal = $false }
-        @{ Delta = 360; Horizontal = $false }
-        @{ Delta = 120; Horizontal = $true }
+        @{ Delta = 480; Horizontal = $false }
+        @{ Delta = 240; Horizontal = $true }
         @{ Delta = -120; Horizontal = $false }
         @{ Delta = -120; Horizontal = $true }
         @{ Delta = 50; Horizontal = $false }
