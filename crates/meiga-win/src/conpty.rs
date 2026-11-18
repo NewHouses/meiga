@@ -14,7 +14,9 @@
 //!   and makes sure that the session ends.
 //!
 //! The program, and the programs that it starts, run in a job of the
-//! session, so that they can all be ended if the session gets stuck.
+//! session, so that they can all be ended if the session gets stuck. A
+//! process that exits while it closes sessions ends their writers with it:
+//! [`wait_for_closed_sessions`] waits for them before.
 
 use std::ffi::{CStr, c_void};
 use std::io;
@@ -26,9 +28,10 @@ use std::path::{Path, PathBuf};
 use std::ptr;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 use meiga_core::geometry::GridSize;
-use windows_sys::Win32::Foundation::{FALSE, HANDLE, TRUE, WAIT_OBJECT_0, WAIT_TIMEOUT};
+use windows_sys::Win32::Foundation::{FALSE, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT};
 use windows_sys::Win32::Storage::FileSystem::{ReadFile, WriteFile};
 use windows_sys::Win32::System::Console::{
     COORD, ClosePseudoConsole, CreatePseudoConsole, HPCON, ResizePseudoConsole,
@@ -73,14 +76,27 @@ const GLYPH_WIDTH_WCSWIDTH: u32 = 0x10;
 /// of the pipe.
 const READ_SIZE: u32 = 64 * 1024;
 
-/// How long the writer waits, once it has closed the pseudoconsole, for the
-/// session to end, or else for one more of the programs that it had to end.
-/// Windows asks the programs of a console to end one at a time, and gives
-/// each 5 s to handle `CTRL_CLOSE_EVENT` before it ends it itself: while a
-/// session ends, a program ends at least every 5 s. A session where none
-/// ends for twice as long is stuck, and the writer ends all its programs
-/// (ADR 0011).
+/// How long the writer waits, once it has closed the pseudoconsole, for one
+/// more of the programs that the session had to end, from the last one that
+/// ended. Windows asks the programs of a console to end one at a time, and
+/// gives each 5 s to handle `CTRL_CLOSE_EVENT` before it ends it itself:
+/// while a session ends, a program ends at least every 5 s. A session where
+/// none ends for twice as long is stuck, and the writer ends all its
+/// programs (ADR 0011 and ADR 0026).
 const CLOSE_TIMEOUT_MS: u32 = 10_000;
+
+/// [`CLOSE_TIMEOUT_MS`], to add to a moment.
+const CLOSE_TIMEOUT: Duration = Duration::from_millis(CLOSE_TIMEOUT_MS as u64);
+
+/// The most objects that `WaitForMultipleObjects` waits for. It is in the
+/// `Win32_System_SystemServices` feature of `windows-sys`, which would bring
+/// thousands of declarations for it, as in `event.rs`.
+const MAXIMUM_WAIT_OBJECTS: usize = 64;
+
+/// How many of the programs that a session had when it closed the writer
+/// waits for one by one: two of the objects that it waits for are the
+/// output and the program.
+const WATCHED: usize = MAXIMUM_WAIT_OBJECTS - 2;
 
 /// How long the reader waits for the program to end once the output has
 /// closed, to tell its exit code. The program has usually ended by then, or
@@ -281,16 +297,19 @@ impl Conpty {
                 .name(format!("conpty writer {process_id}"))
                 .spawn(move || write_input(&shared, input_write))
         };
-        if let Err(error) = writer {
-            // End the programs before their pseudoconsole closes, which must
-            // not happen while a program connects to it, and close the
-            // output first, as above.
-            shared.terminate();
-            drop(output_read);
-            let console = shared.lock().console.take();
-            drop(console);
-            return Err(Error::new("CreateThread", error));
-        }
+        let writer = match writer {
+            Ok(writer) => writer,
+            Err(error) => {
+                // End the programs before their pseudoconsole closes, which must
+                // not happen while a program connects to it, and close the
+                // output first, as above.
+                shared.terminate();
+                drop(output_read);
+                let console = shared.lock().console.take();
+                drop(console);
+                return Err(Error::new("CreateThread", error));
+            }
+        };
         let input = Input { shared };
         let reader = {
             let shared = Arc::clone(&input.shared);
@@ -303,6 +322,7 @@ impl Conpty {
                 input,
                 process_id,
                 reader,
+                writer: Some(writer),
             }),
             Err(error) => {
                 // Nobody reads the output: end the programs, tell the writer
@@ -311,6 +331,7 @@ impl Conpty {
                 input.shared.terminate();
                 input.shared.close_output();
                 input.close();
+                keep_closing(writer);
                 Err(Error::new("CreateThread", error))
             }
         }
@@ -391,13 +412,49 @@ pub enum Priority {
 /// Dropping it closes the session without waiting. Its writer thread closes
 /// the pseudoconsole, which asks the program to end, and its reader thread
 /// calls [`Output::ended`] after the last output. If the session gets stuck,
-/// the writer ends the programs of its job.
+/// the writer ends the programs of its job. Before the process exits,
+/// [`wait_for_closed_sessions`] waits for the writers of the sessions that
+/// were closed.
 pub struct Pty {
     input: Input,
     process_id: u32,
     /// The reader thread, whose priority can change. Dropping it does not
     /// wait for the thread: it goes on until the output ends.
     reader: JoinHandle<()>,
+    /// The writer thread, until the `Pty` is dropped: then it goes to
+    /// [`CLOSING`].
+    writer: Option<JoinHandle<()>>,
+}
+
+/// The writer threads of the sessions that were closed, which end once
+/// their sessions have ended: [`wait_for_closed_sessions`] waits for them.
+/// The ones that have ended leave the list each time that another one comes.
+static CLOSING: Mutex<Vec<JoinHandle<()>>> = Mutex::new(Vec::new());
+
+/// Keeps the writer thread of a session that was closed.
+fn keep_closing(writer: JoinHandle<()>) {
+    let mut closing = CLOSING.lock().unwrap_or_else(PoisonError::into_inner);
+    closing.retain(|writer| !writer.is_finished());
+    closing.push(writer);
+}
+
+/// Waits until the sessions that were closed have ended: until the writer of
+/// each one has seen its programs end or, if the session got stuck, has
+/// ended them. Call it before the process exits, once no thread closes more
+/// sessions: when a process exits, its threads end with it, and a session
+/// that got stuck would stay so for ever, with its programs and its ConPTY
+/// (ADR 0026).
+///
+/// It waits as long as the sessions take: a session ends at once, or when
+/// its programs handle `CTRL_CLOSE_EVENT`, or [`CLOSE_TIMEOUT_MS`] after the
+/// last of them ended, if it gets stuck.
+pub fn wait_for_closed_sessions() {
+    let writers = mem::take(&mut *CLOSING.lock().unwrap_or_else(PoisonError::into_inner));
+    for writer in writers {
+        // A writer that panicked has nothing left to wait for: the panic
+        // message has already told why.
+        let _ = writer.join();
+    }
 }
 
 impl Pty {
@@ -444,6 +501,9 @@ impl Pty {
 impl Drop for Pty {
     fn drop(&mut self) {
         self.input.close();
+        if let Some(writer) = self.writer.take() {
+            keep_closing(writer);
+        }
     }
 }
 
@@ -548,28 +608,59 @@ impl Shared {
     /// ConPTY waits for it (ADR 0011). Then every program of the session
     /// ends.
     fn wait_for_end(&self) {
-        let handles = [
-            self.output_closed.as_raw_handle(),
-            self.process.as_raw_handle(),
-        ];
         // Only these count: a program that starts later could hide that
         // others end, or, starting others, keep the session waiting.
         let programs = self.programs();
-        let mut ended = 0;
+        let (watched, others) = programs.split_at(programs.len().min(WATCHED));
+        // The writer waits for these at the same time as for the output and
+        // the program, so it knows when each one ends (ADR 0026). The others,
+        // if a session had so many, are counted when the time runs out.
+        let mut watched: Vec<HANDLE> = watched.iter().map(AsRawHandle::as_raw_handle).collect();
+        let mut others_ended = 0;
+        let output_closed = self.output_closed.as_raw_handle();
+        let process = self.process.as_raw_handle();
+        let (mut closed, mut ended) = (false, false);
+        let mut deadline = Instant::now() + CLOSE_TIMEOUT;
+        let mut handles = Vec::with_capacity(WATCHED + 2);
         loop {
-            // SAFETY: both handles are valid while `self` exists.
-            let result =
-                unsafe { WaitForMultipleObjects(2, handles.as_ptr(), TRUE, CLOSE_TIMEOUT_MS) };
-            // Waiting for all, any result in this range means that both are
-            // signalled.
-            if (WAIT_OBJECT_0..WAIT_OBJECT_0 + 2).contains(&result) {
-                return;
+            // The ones that are signalled leave the list: they would stay
+            // so, and the wait would return them again and again.
+            handles.clear();
+            handles.extend((!closed).then_some(output_closed));
+            handles.extend((!ended).then_some(process));
+            handles.extend_from_slice(&watched);
+            let left = deadline.saturating_duration_since(Instant::now());
+            // Rounded up, so that the time has run out when it returns.
+            let left = u32::try_from(left.as_micros().div_ceil(1000)).unwrap_or(CLOSE_TIMEOUT_MS);
+            // SAFETY: the handles are valid while `self` and `programs`
+            // exist, and there are at most 64 of them, as the function takes.
+            let result = unsafe {
+                WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), FALSE, left)
+            };
+            if let Some(&handle) = handles.get(result.wrapping_sub(WAIT_OBJECT_0) as usize) {
+                if handle == output_closed {
+                    closed = true;
+                } else if handle == process {
+                    ended = true;
+                } else {
+                    watched.retain(|&program| program != handle);
+                    deadline = Instant::now() + CLOSE_TIMEOUT;
+                }
+                if closed && ended {
+                    return;
+                }
+                continue;
             }
-            let now = programs.iter().filter(|program| has_ended(program)).count();
-            if result != WAIT_TIMEOUT || now <= ended {
+            if result != WAIT_TIMEOUT {
+                // The wait failed, and nothing can be waited for any more.
                 break;
             }
-            ended = now;
+            let now = others.iter().filter(|program| has_ended(program)).count();
+            if now <= others_ended {
+                break;
+            }
+            others_ended = now;
+            deadline = Instant::now() + CLOSE_TIMEOUT;
         }
         self.terminate();
     }

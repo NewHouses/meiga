@@ -6,7 +6,13 @@
 // of an integration test, where a panic is also how a test fails.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use std::io;
+use std::env;
+use std::io::{self, BufRead, BufReader, Write};
+use std::mem;
+use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+use std::os::windows::process::CommandExt;
+use std::process::{self, Child, Stdio};
+use std::ptr;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -14,12 +20,21 @@ use std::time::{Duration, Instant};
 use meiga_core::geometry::GridSize;
 use meiga_win::conpty::{Command, Conpty, Input, Output, Priority, Pty, Source};
 use meiga_win::profiles;
+use windows_sys::Win32::Foundation::TRUE;
+use windows_sys::Win32::System::Console::{CTRL_CLOSE_EVENT, SetConsoleCtrlHandler};
+use windows_sys::Win32::System::JobObjects::{
+    AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+    JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+    JobObjectBasicAccountingInformation, JobObjectExtendedLimitInformation,
+    QueryInformationJobObject, SetInformationJobObject,
+};
 use windows_sys::Win32::System::Threading::{
     GetCurrentThread, GetThreadPriority, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL,
 };
+use windows_sys::core::BOOL;
 
 /// How long a test waits for a session at most. A session that gets stuck
-/// while it closes ends after 10 or 20 s.
+/// while it closes ends 10 s after the last of its programs ended.
 const TIMEOUT: Duration = Duration::from_secs(60);
 
 /// `STATUS_CONTROL_C_EXIT`: the exit code of a console program whose console
@@ -400,5 +415,277 @@ fn sessions_dropped_while_the_shell_of_a_launcher_starts_end_too() {
             matches!(exit_code, Some(CONSOLE_CLOSED | KILLED | NOT_CONNECTED)),
             "{exit_code:?} after {elapsed:?}"
         );
+    }
+}
+
+#[test]
+fn a_session_whose_programs_keep_ending_is_not_ended_by_the_writer() {
+    // Windows asks the three programs to end one at a time, and each takes
+    // 4 s: the session takes 12 s to end, longer than the 10 s that the
+    // writer waits for a program to end, but one ends every 4 s.
+    let (pty, mut transcript) = spawn_helper(&bundled(), "slow");
+    for index in 0..3 {
+        transcript.wait_for(&format!("slow-ready-{index}"));
+    }
+    let closing = Instant::now();
+    drop(pty);
+    let exit_code = transcript.wait_for_end();
+    let elapsed = closing.elapsed();
+    // The writer did not end it: its console did, as it asked.
+    assert_eq!(exit_code, Some(CONSOLE_CLOSED), "after {elapsed:?}");
+    assert!(elapsed >= Duration::from_secs(11), "{elapsed:?}");
+}
+
+#[test]
+fn the_sessions_that_were_closed_end_before_the_process_exits() {
+    // Another process closes a session that gets stuck and another one,
+    // waits for them, and exits. Its job ends nothing: the job only counts
+    // its programs, and those of its sessions, which are in it too.
+    let job = Job::new();
+    let mut exiter = process::Command::new(env::current_exe().unwrap())
+        .args(HELPER_ARGUMENTS)
+        .env(HELPER, "exiter")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    job.add(&exiter);
+    writeln!(exiter.stdin.take().unwrap(), "go").unwrap();
+    let lines = lines_of(BufReader::new(exiter.stdout.take().unwrap()));
+    let deadline = Instant::now() + TIMEOUT;
+    let mut output = Vec::new();
+    let waited = loop {
+        let line = lines
+            .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+            .unwrap_or_else(|error| panic!("{error}; the helper wrote {output:?}"));
+        // The test runner writes the name of the test before it, on the same
+        // line.
+        if let Some(ms) = line
+            .rsplit_once("waited ")
+            .and_then(|(_, line)| line.strip_suffix(" ms"))
+        {
+            break Duration::from_millis(ms.parse().unwrap());
+        }
+        output.push(line);
+    };
+    let status = loop {
+        if let Some(status) = exiter.try_wait().unwrap() {
+            break status;
+        }
+        assert!(Instant::now() < deadline, "the helper did not exit");
+        thread::sleep(Duration::from_millis(10));
+    };
+    assert!(status.success(), "{status}");
+    // Its consoles end a moment after their programs.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while job.running() > 0 && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(job.running(), 0, "programs left after it waited {waited:?}");
+    // The stuck session ended 10 s after its last program, once it started
+    // the one that got stuck. The writer used to see that only when it
+    // looked again, after 20 s.
+    assert!(
+        (Duration::from_secs(10)..Duration::from_secs(17)).contains(&waited),
+        "{waited:?}"
+    );
+}
+
+/// The variable that makes this test program run one of the programs of
+/// [`helper`], instead of the tests.
+const HELPER: &str = "MEIGA_TEST_HELPER";
+
+/// The arguments of the test runner that run only [`helper`], with what it
+/// writes in sight.
+const HELPER_ARGUMENTS: [&str; 5] = [
+    "--exact",
+    "helper",
+    "--ignored",
+    "--nocapture",
+    "--test-threads=1",
+];
+
+/// The variable that tells a slow helper which one it is: the first one
+/// starts the other two.
+const SLOW: &str = "MEIGA_TEST_SLOW";
+
+/// How long a slow helper takes to handle `CTRL_CLOSE_EVENT`: less than the
+/// 5 s that Windows gives each program.
+const SLOW_CLOSE: Duration = Duration::from_secs(4);
+
+/// The programs that some tests run, from this same test program, with
+/// [`HELPER`] set to their role. The test runner runs it only with
+/// `--ignored`, and then, without [`HELPER`], it does nothing.
+#[test]
+#[ignore = "a program that other tests run"]
+fn helper() {
+    match env::var(HELPER).as_deref() {
+        Ok("closer") => closer(),
+        Ok("slow") => slow(),
+        Ok("exiter") => exiter(),
+        _ => {}
+    }
+}
+
+/// Runs `role` of [`helper`] in a session.
+fn spawn_helper(conpty: &Conpty, role: &str) -> (Pty, Transcript) {
+    let mut environment = profiles::environment();
+    environment.set(HELPER, role);
+    let block = environment.block();
+    let exe = env::current_exe().unwrap();
+    let line = format!("\"{}\" {}", exe.display(), HELPER_ARGUMENTS.join(" "));
+    let command = Command {
+        line: &line,
+        folder: None,
+        environment: Some(&block),
+    };
+    spawn_command(conpty, &command)
+}
+
+/// A program that, when its console closes, starts another one in it, as
+/// the shell of a tab can start one when the tab closes, such as the git of
+/// its prompt. The session gets stuck: the new program connects to the
+/// console while ConPTY closes it (ADR 0011 and ADR 0026).
+fn closer() {
+    // SAFETY: the handler is a function, which lives as long as the
+    // process.
+    unsafe { SetConsoleCtrlHandler(Some(start_on_close), TRUE) };
+    println!("closer-ready");
+    loop {
+        thread::park();
+    }
+}
+
+unsafe extern "system" fn start_on_close(event: u32) -> BOOL {
+    if event == CTRL_CLOSE_EVENT {
+        let _ = process::Command::new("cmd")
+            .raw_arg("/d /c ping -n 30 127.0.0.1 >nul")
+            .spawn();
+        // So that it starts before this program ends.
+        thread::sleep(Duration::from_millis(500));
+    }
+    TRUE
+}
+
+/// A program that takes [`SLOW_CLOSE`] to handle `CTRL_CLOSE_EVENT`. The
+/// first one starts two more in its console, and waits for them: they end
+/// first, as Windows asks the newest programs first.
+fn slow() {
+    // SAFETY: as in `closer`.
+    unsafe { SetConsoleCtrlHandler(Some(wait_on_close), TRUE) };
+    let index = env::var(SLOW).unwrap_or_else(|_| "0".to_owned());
+    let mut others = Vec::new();
+    if index == "0" {
+        for index in 1..=2 {
+            let other = process::Command::new(env::current_exe().unwrap())
+                .args(HELPER_ARGUMENTS)
+                .env(SLOW, index.to_string())
+                .spawn()
+                .unwrap();
+            others.push(other);
+        }
+    }
+    println!("slow-ready-{index}");
+    for mut other in others {
+        let _ = other.wait();
+    }
+    loop {
+        thread::park();
+    }
+}
+
+unsafe extern "system" fn wait_on_close(event: u32) -> BOOL {
+    if event == CTRL_CLOSE_EVENT {
+        thread::sleep(SLOW_CLOSE);
+    }
+    TRUE
+}
+
+/// A process that closes a session that gets stuck, and then one that ends
+/// at once, waits for them, tells how long it waited, and exits.
+fn exiter() {
+    // The test says go once this process is in its job.
+    let mut go = String::new();
+    io::stdin().read_line(&mut go).unwrap();
+    let conpty = bundled();
+    let (stuck, mut transcript) = spawn_helper(&conpty, "closer");
+    transcript.wait_for("closer-ready");
+    let (quick, mut transcript) = spawn(&conpty, "cmd /k");
+    transcript.wait_for(">");
+    let closing = Instant::now();
+    // The writer of the quick one comes after the one of the stuck one,
+    // which has to stay while it runs.
+    drop(stuck);
+    drop(quick);
+    meiga_win::conpty::wait_for_closed_sessions();
+    println!("waited {} ms", closing.elapsed().as_millis());
+}
+
+/// The lines that `reader` reads, on another thread.
+fn lines_of(reader: impl BufRead + Send + 'static) -> Receiver<String> {
+    let (sender, lines) = mpsc::channel();
+    thread::spawn(move || {
+        for line in reader.lines() {
+            let Ok(line) = line else { break };
+            if sender.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    lines
+}
+
+/// A job for the programs of a test, which ends those still running when it
+/// is dropped, also if the test fails.
+struct Job(OwnedHandle);
+
+impl Job {
+    fn new() -> Self {
+        // SAFETY: no security attributes and no name. It returns null if it
+        // fails.
+        let handle = unsafe { CreateJobObjectW(ptr::null(), ptr::null()) };
+        assert!(!handle.is_null(), "{}", io::Error::last_os_error());
+        // SAFETY: CreateJobObjectW has just created it, and nothing else owns
+        // it.
+        let job = Self(unsafe { OwnedHandle::from_raw_handle(handle) });
+        let mut limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        // SAFETY: the job is valid, and the information is the structure of
+        // its class, with its size.
+        let set = unsafe {
+            SetInformationJobObject(
+                job.0.as_raw_handle(),
+                JobObjectExtendedLimitInformation,
+                ptr::from_ref(&limits).cast(),
+                mem::size_of_val(&limits) as u32,
+            )
+        };
+        assert_ne!(set, 0, "{}", io::Error::last_os_error());
+        job
+    }
+
+    fn add(&self, child: &Child) {
+        // SAFETY: both handles are valid while `self` and `child` exist.
+        let added =
+            unsafe { AssignProcessToJobObject(self.0.as_raw_handle(), child.as_raw_handle()) };
+        assert_ne!(added, 0, "{}", io::Error::last_os_error());
+    }
+
+    /// How many programs of the job are running.
+    fn running(&self) -> u32 {
+        let mut information = JOBOBJECT_BASIC_ACCOUNTING_INFORMATION::default();
+        // SAFETY: the job is valid, and the information is the structure of
+        // its class, with its size.
+        let queried = unsafe {
+            QueryInformationJobObject(
+                self.0.as_raw_handle(),
+                JobObjectBasicAccountingInformation,
+                ptr::from_mut(&mut information).cast(),
+                mem::size_of_val(&information) as u32,
+                ptr::null_mut(),
+            )
+        };
+        assert_ne!(queried, 0, "{}", io::Error::last_os_error());
+        information.ActiveProcesses
     }
 }
