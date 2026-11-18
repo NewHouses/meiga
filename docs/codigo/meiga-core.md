@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.7. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial.
+> Estado: subfase 2.8. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato, e, desde a subfase 2.6, os atallos de teclado; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -34,7 +34,7 @@
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
 | [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: a barra de tabs e os menús; e `scale`, que leva as súas medidas ao DPI da xanela. |
-| [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e os botóns que abren unha tab e o menú dos perfís, ao DPI da xanela; e `Part`, a parte da barra que hai debaixo dun punto. |
+| [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e os botóns que abren unha tab e o menú dos perfís, ao DPI da xanela; desde a 2.8, o ancho mínimo das tabs e, cando nin así caben, a franxa entre os dous botóns que as desprazan, e o seu desprazamento; e `Part`, a parte da barra que hai debaixo dun punto. |
 | [`src/ui/menu.rs`](#cratesmeiga-coresrcuimenurs) | `Menu`: as entradas dun menú, elementos, tamén en negra, e liñas, e o resalte, que moven o teclado e o punteiro; e `Layout`: onde van o menú e as súas entradas, ao DPI da xanela, e a entrada que hai debaixo dun punto. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
 | [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
@@ -5633,20 +5633,21 @@ fn coord(value: u64) -> i32 {
 
 - **`BASE_DPI`**: os puntos por polgada da escala 100 %, 96, na que están en píxeles as medidas das partes.
 - **`scale`**: `pixels` a escala 100 %, a `dpi`: multiplicado por `dpi` e dividido entre 96, redondeado ao máis próximo, e polo menos 1 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2, e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). Sumar a metade de 96 antes de dividir redondea, coma en [`Rgb::mix`](#rgb): a división de enteiros só corta os decimais, e unha metade sobe. Con `max(1)`, ningunha medida desaparece, nin sequera a un DPI moi baixo; e `saturating_mul` e `saturating_add` quedan no máximo dun `u32` en vez de desbordar. A 120 DPI (125 %), os 32 do alto da barra son 40, e o trazo, 1,25, queda en 1; a 144 DPI (150 %), o trazo, 1,5, sobe a 2, e os 11 píxeles entre o resalte e o texto dun menú, 16,5, a 17.
-- **`coord`**: un número de píxeles coma unha coordenada, un `i32`, ou `i32::MAX` se non cabe. Ningunha parte da xanela chega tan lonxe, pero así as contas non desbordan: as da barra, con calquera índice de tab, e as dos menús, con calquera número de entradas.
+- **`coord`**: un número de píxeles coma unha coordenada, un `i32`, ou `i32::MAX` se non cabe. Ningunha parte da xanela chega tan lonxe, pero así as contas non desbordan: as da barra, con calquera índice de tab, e as dos menús, con calquera número de entradas. Desde a 2.8, as posicións das tabs, que mentres a franxa as despraza poden ser negativas, convérteas [`clamped`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size), en `tabbar.rs`, que queda tamén no mínimo dun `i32`.
 
 ## `crates/meiga-core/src/ui/tabbar.rs`
 
-Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), [Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)). Para un número de tabs, un ancho e un DPI, di onde van as tabs, os seus títulos, os seus botóns de pechar (×) e os separadores entre elas, o botón que abre unha tab (+) e, desde a 2.5, xunto a el, o que abre o menú dos perfís (▾) ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6); e que parte da barra hai debaixo dun punto. A barra do programa debúxaa con estes rectángulos, segue con eles o rato e marca as zonas que cambian ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), [Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)). Para un número de tabs, un ancho e un DPI, di onde van as tabs, os seus títulos, os seus botóns de pechar (×) e os separadores entre elas, o botón que abre unha tab (+) e, desde a 2.5, xunto a el, o que abre o menú dos perfís (▾) ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6); e que parte da barra hai debaixo dun punto. Desde a 2.8, as tabs teñen un ancho mínimo e, cando nin así caben, van nunha franxa entre dous botóns de desprazamento (‹ e ›): a disposición garda canto está desprazada a franxa, e desprázaa unha tab, uns píxeles ou o mínimo para que se vexa enteira unha tab ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). A barra do programa debúxaa con estes rectángulos, segue con eles o rato e marca as zonas que cambian ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
 
-**A forma da barra**, coas medidas do Windows Terminal en píxeles a escala 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisións 1, 2 e 3; [Tecnoloxías › As barras de tabs](../tecnoloxias.md#55-as-barras-de-tabs-chrome-e-o-windows-terminal)):
+**A forma da barra**, coas medidas do Windows Terminal en píxeles a escala 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisións 1, 2 e 3; [ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisións 1 e 2; [Tecnoloxías › As barras de tabs](../tecnoloxias.md#55-as-barras-de-tabs-chrome-e-o-windows-terminal)):
 
 - unha franxa de 32 píxeles de alto, de todo o ancho da xanela, enriba do terminal e sempre visíbel, tamén cunha soa tab;
-- as tabs, unha tras outra desde a esquerda, todas do mesmo ancho, ata 240. Se non caben, encóllense todas por igual, sen mínimo: o mínimo e o desprazamento da barra chegan na subfase 2.8;
+- as tabs, unha tras outra desde a esquerda, todas do mesmo ancho, ata 240. Se non caben, encóllense todas por igual, ata 100, coma no Windows Terminal; ata a 2.7, sen mínimo;
 - o +, un cadrado de 28, xusto despois da última tab e, desde a 2.5, unido a el, o ▾, de 24 de ancho e tan alto coma el, coma o botón dividido do Windows Terminal;
-- 4 píxeles de separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +);
+- desde a 2.8, se nin de 100 caben, a barra desprázaas: as tabs van nunha franxa entre dous botóns de desprazamento, o ‹ á esquerda e o › á dereita, de 24 de ancho e tan altos coma o +, que só aparecen entón; a franxa mostra a parte da fila das tabs que di o seu desprazamento, e corta as dos seus lados; e o + e o ▾ van á dereita da barra, despois do ›, sempre no mesmo sitio;
+- 4 píxeles de separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +); mentres as tabs non caben, á esquerda do ‹ e entre o › e o +, no canto de á esquerda da primeira tab e despois da última;
 - cada tab debúxase desde esa separación de enriba ata o bordo de abaixo da barra, para que a activa, coa cor do fondo do terminal, se vexa unida a el; pero, para o rato, ocupa todo o alto da barra;
-- o ×, un cadrado de 24 á dereita da tab, a 4 píxeles do seu bordo dereito e centrado no seu alto, se cabe; e o título, desde 8 píxeles do bordo esquerdo da tab ata o ×;
+- o ×, un cadrado de 24 á dereita da tab, a 4 píxeles do seu bordo dereito e centrado no seu alto, se cabe, e desde a 2.8 cabe sempre; e o título, desde 8 píxeles do bordo esquerdo da tab ata o ×;
 - e todas as medidas, escaladas co DPI da xanela, redondeadas e de polo menos un píxel.
 
 **Un exemplo**, o das probas: tres tabs nunha xanela de 800 píxeles a 96 DPI, a escala 100 %. As tabs caben enteiras, de 240 píxeles:
@@ -5671,11 +5672,31 @@ Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-b
 
 Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `top`, `right`, `bottom`), e os dous últimos non se inclúen: a primeira tab remata no píxel 243, e a segunda empeza no 244. Á dereita do ▾, de 780 a 800, a barra está baleira.
 
+**Un exemplo con moitas tabs**, desde a 2.8, tamén o das probas: na mesma xanela, as tabs teñen un sitio de 736 píxeles, 800 − 3 × 4 − 28 − 24 ([`room`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)). Sete caben, de 105. Oito, de 92, xa non: miden 100, e van na franxa, de 736 − 2 × 24 = 688 píxeles ([`viewport`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)), onde caben seis tabs enteiras e 88 píxeles da sétima. A fila das oito mide 800, así que a franxa se despraza ata 112, 800 − 688; con trinta, a fila mide 3000, e a franxa desprázase ata 2312 ([`max_scroll`](#canto-se-despraza-max_scroll-e-can_scroll)). Oito tabs, coa franxa sen desprazar:
+
+| Parte | Método | Rectángulo |
+|---|---|---|
+| O ‹ | `scroll_button(Side::Left)` | (4, 4, 28, 32) |
+| O que resalta nel o punteiro | `scroll_highlight(Side::Left)` | (6, 6, 26, 30) |
+| A súa frecha | `scroll_chevron(Side::Left)` | (14, 14, 18, 22) |
+| A franxa | `strip()` | (28, 0, 716, 32) |
+| A primeira tab | `tab(0)` | (28, 4, 128, 32) |
+| A oitava, fóra da franxa | `tab(7)` | (728, 4, 828, 32) |
+| O que cambia co aspecto da sétima, que a franxa corta | `tab_area(6)` | (628, 0, 716, 32) |
+| O que cambia co aspecto da oitava | `tab_area(7)` | baleiro |
+| O › | `scroll_button(Side::Right)` | (716, 4, 740, 32) |
+| A súa frecha | `scroll_chevron(Side::Right)` | (726, 14, 730, 22) |
+| O + | `new_tab()` | (744, 4, 772, 32) |
+| O ▾ | `profiles()` | (772, 4, 796, 32) |
+
+Os botóns quedan aí sexan oito tabs ou cen, e estea a franxa onde estea; de 796 a 800 vai a separación da dereita. Coa franxa desprazada 50 píxeles, a primeira tab vai de 28 − 50 = −22 a 78 ([`tab`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)): só se debuxan, e só reciben o rato, os seus 50 píxeles da dereita, desde o 28.
+
 ### As medidas
 
 ```rust
 const HEIGHT: u32 = 32;
 const MAX_TAB: u32 = 240;
+const MIN_TAB: u32 = 100;
 const GAP: u32 = 4;
 const PADDING: u32 = 8;
 const CLOSE: u32 = 24;
@@ -5687,6 +5708,8 @@ const PLUS: u32 = 10;
 const PROFILES: u32 = 24;
 const PROFILES_HIGHLIGHT: u32 = 20;
 const CHEVRON: u32 = 4;
+const SCROLL: u32 = 24;
+const SCROLL_HIGHLIGHT: u32 = 20;
 const SEPARATOR: u32 = 16;
 const STROKE: u32 = 1;
 ```
@@ -5697,8 +5720,9 @@ As medidas, en píxeles a escala 100 %, que é 96 DPI ([`BASE_DPI`](#os-axudante
 |---|---|---|
 | `HEIGHT` | 32 | O alto da barra, o da fila de tabs do Windows Terminal. |
 | `MAX_TAB` | 240 | O ancho máximo dunha tab: o `TabViewItemMaxWidth` do `TabView` de WinUI, que usa o Windows Terminal. |
-| `GAP` | 4 | A separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +). Tamén a que queda á dereita do ×. |
-| `PADDING` | 8 | Desde o bordo esquerdo dunha tab ata o seu título. Nunha tab sen ×, tamén desde o título ata o bordo dereito. |
+| `MIN_TAB` | 100 | Desde a 2.8: o ancho mínimo dunha tab, o `TabViewItemMinWidth` do mesmo `TabView` ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 1). Ten sitio para o × e para uns 8 ou 9 caracteres do título, segundo a escala. Se as tabs non caben nin así, a barra desprázaas. |
+| `GAP` | 4 | A separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +). Desde a 2.8, mentres as tabs non caben, á esquerda do ‹ e entre o › e o +, no canto de á esquerda da primeira tab e despois da última. Tamén a que queda á dereita do ×. |
+| `PADDING` | 8 | Desde o bordo esquerdo dunha tab ata o seu título. Nunha tab sen ×, que desde a 2.8 non hai a ningunha escala de Windows, tamén desde o título ata o bordo dereito. |
 | `CLOSE` | 24 | O lado do ×, un cadrado á dereita da tab: todo el recibe o rato. |
 | `CLOSE_HIGHLIGHT` | 20 | O lado do cadrado que resalta o punteiro, no medio do ×. |
 | `CROSS` | 8 | O lado do cadrado da cruz, tamén no medio do ×. |
@@ -5707,13 +5731,15 @@ As medidas, en píxeles a escala 100 %, que é 96 DPI ([`BASE_DPI`](#os-axudante
 | `PLUS` | 10 | O lado do signo +, no medio do botón. Medra un píxel se non ten a paridade do trazo ([`new`](#crear-e-cambiar-new-height_at-e-resize)). |
 | `PROFILES` | 24 | Desde a 2.5: o ancho do ▾, que abre o menú dos perfís, á dereita do + e tan alto coma el. Todo el recibe o rato. |
 | `PROFILES_HIGHLIGHT` | 20 | O ancho do rectángulo que resalta o punteiro, no medio do ▾. O seu alto é o do resalte do +, `NEW_HIGHLIGHT`. |
-| `CHEVRON` | 4 | O alto da frecha do ▾, que mide o dobre de ancho, 8, para que as súas dúas liñas se xunten a calquera escala ([`chevron`](#o-botón-dos-perfís-profiles-profiles_highlight-e-chevron)). |
+| `CHEVRON` | 4 | O alto da frecha do ▾, que mide o dobre de ancho, 8, para que as súas dúas liñas se xunten a calquera escala ([`chevron`](#o-botón-dos-perfís-profiles-profiles_highlight-e-chevron)). Desde a 2.8, tamén o ancho das frechas do ‹ e do ›, que miden o dobre de alto ([`scroll_chevron`](#os-botóns-de-desprazamento-scroll_button-scroll_highlight-e-scroll_chevron)). |
+| `SCROLL` | 24 | Desde a 2.8: o ancho do ‹ e do ›, os botóns de desprazamento, que son coma o ▾: tan altos coma o +, e todo o botón recibe o rato ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2). |
+| `SCROLL_HIGHLIGHT` | 20 | O ancho do rectángulo que resalta o punteiro, no medio do ‹ e do ›. O seu alto, coma no ▾, é o do resalte do +, `NEW_HIGHLIGHT`. |
 | `SEPARATOR` | 16 | O alto das liñas que separan dúas tabs inactivas, no medio do alto das tabs. Teñen un píxel de ancho a calquera escala. |
-| `STROKE` | 1 | O grosor das liñas da cruz e do signo + e, desde a 2.5, da frecha do ▾. |
+| `STROKE` | 1 | O grosor das liñas da cruz e do signo + e, desde a 2.5, da frecha do ▾; desde a 2.8, tamén das do ‹ e do ›. |
 
 Son privadas: fóra do módulo só se ven escaladas, a través de `Layout`.
 
-### `Part`
+### `Part` e `Side`
 
 ```rust
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -5722,6 +5748,7 @@ pub enum Part {
     Close(usize),
     New,
     Profiles,
+    Scroll(Side),
     Empty,
 }
 ```
@@ -5730,14 +5757,31 @@ A parte da barra que hai nun punto, a resposta de [`part_at`](#o-que-hai-debaixo
 
 | Variante | Que é |
 |---|---|
-| `Tab(índice)` | A tab nesa posición, desde 0 e na orde da barra, fóra do seu ×: tamén na separación de enriba, por riba do que se debuxa. |
+| `Tab(índice)` | A tab nesa posición, desde 0 e na orde da barra, fóra do seu ×: tamén na separación de enriba, por riba do que se debuxa. Desde a 2.8, mentres as tabs non caben, só a súa parte dentro da franxa. |
 | `Close(índice)` | O × da tab nesa posición. |
 | `New` | O +, en todo o alto da barra. |
 | `Profiles` | Desde a 2.5: o ▾, tamén en todo o alto da barra. |
-| `Empty` | A barra fóra das tabs e dos botóns: á esquerda da primeira tab, entre a última e o +, e á dereita do ▾. |
+| `Scroll(lado)` | Desde a 2.8: o botón de desprazamento dese lado, o ‹ ou o ›, tamén en todo o alto da barra. Só os hai mentres as tabs non caben. |
+| `Empty` | A barra fóra das tabs e dos botóns: á esquerda da primeira tab, entre a última e o +, e á dereita do ▾. Desde a 2.8, mentres as tabs non caben, á esquerda do ‹ e entre o › e o +; e, mentres as tabs manteñen o seu ancho despois dun peche co rato, na franxa despois da última. |
 
-- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6): desde a subfase 2.4, o dereito abre o menú da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5), e, desde a 2.5, o esquerdo, ao soltarse enriba do ▾ no que se premeu, o menú dos perfís.
-- É `Copy`, coma os tipos de [`mouse.rs`](#button-modifiers-wheel-e-mouseaction): uns poucos bytes, que van por valor.
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Side {
+    Left,
+    Right,
+}
+```
+
+Desde a 2.8, **`Side`** é un lado da franxa, cara ao que a despraza un botón:
+
+| Variante | Que é |
+|---|---|
+| `Left` | Cara á primeira tab: o ‹, á esquerda da franxa. |
+| `Right` | Cara á última: o ›, á dereita. |
+
+- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6): desde a subfase 2.4, o dereito abre o menú da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5); desde a 2.5, o esquerdo, ao soltarse enriba do ▾ no que se premeu, o menú dos perfís; e, desde a 2.8, o esquerdo nun botón de desprazamento despraza a franxa unha tab, e outra mentres segue premido ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 4).
+- Os dous son `Copy`, coma os tipos de [`mouse.rs`](#button-modifiers-wheel-e-mouseaction): uns poucos bytes, que van por valor.
+- Non é o `Side` da selección, unha metade dunha cela ([`term/selection.rs`](#word_delimiters-selectionkind-e-side)), aínda que teña as mesmas variantes: cada un úsase co seu módulo, `tabbar::Side` e `term::Side`.
 
 ### `Layout`: os campos
 
@@ -5746,6 +5790,7 @@ A parte da barra que hai nun punto, a resposta de [`part_at`](#o-que-hai-debaixo
 pub struct Layout {
     height: u32,
     max_tab: u32,
+    min_tab: u32,
     gap: u32,
     padding: u32,
     close: u32,
@@ -5757,11 +5802,15 @@ pub struct Layout {
     profiles: u32,
     profiles_highlight: u32,
     chevron: u32,
+    scroll_button: u32,
+    scroll_highlight: u32,
     separator: u32,
     stroke: u32,
     width: u32,
     tabs: usize,
     tab_width: u32,
+    overflow: bool,
+    scroll: u32,
 }
 ```
 
@@ -5769,10 +5818,12 @@ Onde van as partes da barra, para un número de tabs, un ancho e unha escala:
 
 | Campo | Que é |
 |---|---|
-| De `height` a `stroke` | As medidas, unha por constante, xa escaladas ao DPI da xanela. |
+| De `height` a `stroke` | As medidas, unha por constante, xa escaladas ao DPI da xanela. A de `SCROLL` chámase `scroll_button`, porque `scroll` é o desprazamento; e `chevron`, desde a 2.8, é o lado curto das tres frechas. |
 | `width` | O ancho da barra: o da área cliente da xanela. |
 | `tabs` | Cantas tabs hai. |
-| `tab_width` | O ancho de cada tab, que sae dos outros ([`fit_tabs`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)). |
+| `tab_width` | O ancho de cada tab, que sae dos outros ([`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)). |
+| `overflow` | Desde a 2.8: se as tabs non caben nin co ancho mínimo, e van na franxa entre os botóns de desprazamento. |
+| `scroll` | Desde a 2.8: mentres as tabs non caben, cantos píxeles da fila das tabs oculta a franxa á súa esquerda. Mentres caben, 0. |
 
 ```rust
 pub const fn height(&self) -> u32 {
@@ -5791,14 +5842,22 @@ pub const fn tab_width(&self) -> u32 {
     self.tab_width
 }
 
+pub const fn overflows(&self) -> bool {
+    self.overflow
+}
+
+pub const fn scroll(&self) -> u32 {
+    self.scroll
+}
+
 pub const fn stroke(&self) -> u32 {
     self.stroke
 }
 ```
 
-- **As medidas escálanse unha vez**, ao facer a disposición, e non en cada consulta. Cambiar o ancho ou o número de tabs só volta calcular o ancho das tabs ([`resize`](#crear-e-cambiar-new-height_at-e-resize)), e cambiar o DPI fai outra disposición.
-- Os campos son privados: ningún método deixa o ancho das tabs sen corresponder ao ancho da barra e ao número de tabs. Lense con `height`, `width`, `tabs`, `tab_width` e `stroke`, que son `const fn`. O alto da barra é tamén onde empeza o terminal.
-- Deriva o mesmo ca `Part`. É `Copy`: dezasete números de 32 bits, catorce ata a 2.4, e un `usize`, que a barra do programa copia ao debuxar cada tab.
+- **As medidas escálanse unha vez**, ao facer a disposición, e non en cada consulta. Cambiar o ancho ou o número de tabs só volta calcular o ancho das tabs e, desde a 2.8, se caben e ata onde chega o desprazamento ([`resize`](#crear-e-cambiar-new-height_at-e-resize)), e cambiar o DPI fai outra disposición.
+- Os campos son privados: ningún método deixa o ancho das tabs sen corresponder ao ancho da barra e ao número de tabs, salvo, desde a 2.8, [`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths), que o fai a propósito mentres se pechan tabs co rato. Lense con `height`, `width`, `tabs`, `tab_width`, `stroke` e, desde a 2.8, `overflows` e `scroll`, que son `const fn`. O alto da barra é tamén onde empeza o terminal.
+- Deriva o mesmo ca `Part`. É `Copy`: vinte e un números de 32 bits, dezasete ata a 2.7 e catorce ata a 2.4, un `usize` e, desde a 2.8, un `bool`, que a barra do programa copia ao debuxar cada tab.
 
 ### Crear e cambiar: `new`, `height_at` e `resize`
 
@@ -5810,6 +5869,7 @@ pub fn new(dpi: u32, width: u32, tabs: usize) -> Self {
     let mut layout = Self {
         height: size(HEIGHT),
         max_tab: size(MAX_TAB),
+        min_tab: size(MIN_TAB),
         gap: size(GAP),
         padding: size(PADDING),
         close: size(CLOSE),
@@ -5821,13 +5881,17 @@ pub fn new(dpi: u32, width: u32, tabs: usize) -> Self {
         profiles: size(PROFILES),
         profiles_highlight: size(PROFILES_HIGHLIGHT),
         chevron: size(CHEVRON),
+        scroll_button: size(SCROLL),
+        scroll_highlight: size(SCROLL_HIGHLIGHT),
         separator: size(SEPARATOR),
         stroke,
         width,
         tabs,
         tab_width: 0,
+        overflow: false,
+        scroll: 0,
     };
-    layout.tab_width = layout.fit_tabs();
+    layout.fit();
     layout
 }
 
@@ -5838,56 +5902,96 @@ pub fn height_at(dpi: u32) -> u32 {
 pub fn resize(&mut self, width: u32, tabs: usize) {
     self.width = width;
     self.tabs = tabs;
-    self.tab_width = self.fit_tabs();
+    self.fit();
 }
 ```
 
-- **`new`** fai a barra de `tabs` tabs nunha xanela de `width` píxeles de ancho, a `dpi`. Escala cada medida con [`scale`](#os-axudantes-base_dpi-scale-e-coord), a través da *closure* `size`, e despois calcula o ancho das tabs, que necesita as medidas xa escaladas: por iso `tab_width` empeza en 0, e `fit_tabs` chámase cando a disposición xa existe.
+- **`new`** fai a barra de `tabs` tabs nunha xanela de `width` píxeles de ancho, a `dpi`. Escala cada medida con [`scale`](#os-axudantes-base_dpi-scale-e-coord), a través da *closure* `size`, e despois dálles ás tabs o seu ancho, que necesita as medidas xa escaladas: por iso `tab_width` empeza en 0, `overflow` en `false` e `scroll` en 0, e [`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit) chámase cando a disposición xa existe. Ata a 2.7, `fit_tabs` daba o ancho, e `new` gardábao en `tab_width`.
 - **O signo + ten os brazos iguais.** A barra do programa debúxao cunha liña horizontal e outra vertical de `stroke` píxeles, que se cruzan no medio dun cadrado de `plus` de lado. Os brazos, o que sobresae cada liña a cada lado da outra, miden `(plus - stroke) / 2` se esa resta é par; se é impar, un brazo tería un píxel máis ca o outro, así que o lado medra un píxel: `abs_diff` dá a diferenza sen signo, e `% 2`, 1 se é impar. A 100 %, o trazo ten 1 e o lado 10, que medra a 11, con brazos de 5; a 150 % (144 DPI), o trazo ten 2 e o lado 15, que medra a 16, con brazos de 7; e a 125 % (120 DPI), o trazo ten 1 e o lado 13, que queda.
 - **`height_at`** dá o alto da barra a un DPI sen facer a disposición: 32 a 96 DPI e 40 a 120. Polo de agora só o usan as probas.
-- **`resize`**: a barra ten agora `width` píxeles de ancho e `tabs` tabs. As medidas quedan, e só cambia o ancho das tabs. A barra do programa chámao cando cambia o ancho da xanela e cando se abre ou se pecha unha tab; cando cambia o DPI, fai outra disposición con `new`.
+- **`resize`**: a barra ten agora `width` píxeles de ancho e `tabs` tabs. As medidas quedan, e só cambian o ancho das tabs e, desde a 2.8, se caben e o desprazamento, que queda onde estaba se a franxa aínda chega alí ([`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)). A barra do programa chámao cando cambia o ancho da xanela e cando se abren ou se pechan tabs; desde a 2.8, salvo cando unha tab se pecha co rato e as outras manteñen o seu ancho ([`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths)), que `resize` lles dá outra vez despois. Cando cambia o DPI, a barra do programa fai outra disposición con `new`, que empeza sen desprazamento, e no seguinte fotograma a franxa móvese ata a tab que se mostra ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 5).
 
-### A barra e as tabs: `bar`, `fit_tabs`, `tab` e `tab_area`
+### A barra e o ancho das tabs: `bar`, `room`, `viewport` e `fit`
 
 ```rust
 pub fn bar(&self) -> Rect {
     Rect::new(0, 0, coord(self.width.into()), coord(self.height.into()))
 }
 
-fn fit_tabs(&self) -> u32 {
-    let room = self
-        .width
+const fn room(&self) -> u32 {
+    self.width
         .saturating_sub(3 * self.gap)
         .saturating_sub(self.new)
-        .saturating_sub(self.profiles);
+        .saturating_sub(self.profiles)
+}
+
+const fn viewport(&self) -> u32 {
+    self.room().saturating_sub(2 * self.scroll_button)
+}
+
+fn fit(&mut self) {
     let tabs = u32::try_from(self.tabs.max(1)).unwrap_or(u32::MAX);
-    (room / tabs).min(self.max_tab)
+    let width = (self.room() / tabs).min(self.max_tab);
+    self.overflow = width < self.min_tab;
+    self.tab_width = if self.overflow { self.min_tab } else { width };
+    self.scroll = self.scroll.min(self.max_scroll());
 }
 ```
 
 - **`bar`**: a barra enteira, desde (0, 0), co ancho da xanela e o alto da barra. A barra do programa mira con ela se un punto está na barra ([`contains_point`](#cratesmeiga-coresrcgeometryrs)), e márcaa enteira cando cambia a disposición.
-- **`fit_tabs`**, privada: o ancho de cada tab, o máximo se caben e, se non, todas iguais, tan anchas como caiban ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3):
-  1. O sitio das tabs é o ancho da barra menos tres separacións, á esquerda da primeira tab, entre a última e o + e á dereita do ▾, e menos os dous botóns: a 100 %, en 800 píxeles, 800 − 3 × 4 − 28 − 24 = 736. Ata a 2.4, sen o ▾, 760.
-  2. Repártese entre as tabs, e cada unha ten como moito `max_tab`: con tres, 245, que quedan en 240; con dez, 73; con trinta, 24.
-  3. O que sobra da división queda á dereita do ▾, coa barra baleira.
+- **`room`**, privada, desde a 2.8: o sitio das tabs mentres caben, o ancho da barra menos tres separacións, á esquerda da primeira tab, entre a última e o + e á dereita do ▾, e menos os dous botóns: a 100 %, en 800 píxeles, 800 − 3 × 4 − 28 − 24 = 736. Ata a 2.7 calculábao `fit_tabs`, e ata a 2.4, sen o ▾, eran 760. É `const fn`, coma `saturating_sub`.
+- **`viewport`**, privada, desde a 2.8: o ancho da franxa mentres as tabs non caben, o sitio menos o ‹ e o ›: 736 − 2 × 24 = 688, seis tabs enteiras e 88 píxeles da sétima. As tres separacións seguen, pero noutros sitios: á esquerda do ‹, entre o › e o +, e á dereita do ▾. Nunha xanela máis estreita ca os botóns, 0.
+- **`fit`**, privada, que desde a 2.8 substitúe a `fit_tabs`: dálles ás tabs o seu ancho, e di se caben ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3, e [ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 1):
+  1. O sitio repártese entre as tabs, e cada unha ten como moito `max_tab`: con tres, 245, que quedan en 240; con sete, 105.
+  2. Se así medisen menos de `min_tab`, non caben (`overflow`), e todas miden `min_tab`, 100: con oito, que medirían 92, e con trinta, que medirían 24. Así, a escala 100 %, nunha xanela de 800 píxeles caben sete tabs, e oito xa non: a súa fila mide 800, e a franxa, 688. Unhas tabs que medirían xusto `min_tab` caben, porque a comparación é `<`.
+  3. O desprazamento queda, ata onde pode chegar a franxa coas tabs e o ancho novos ([`max_scroll`](#canto-se-despraza-max_scroll-e-can_scroll)): se agora caben, 0.
 
-  **Sen mínimo:** con moitas tabs, estréitanse ata quedar sen × e sen título, e, nunha xanela máis estreita ca os dous botóns e as súas separacións, ata 0. O mínimo e o desprazamento da barra chegan na subfase 2.8 ([ADR 0020 › Consecuencias](../adr/0020-a-barra-de-tabs.md#consecuencias)). `saturating_sub` deixa o sitio en 0 en vez de desbordar, `max(1)` evita dividir entre 0 sen tabs, e un número de tabs que non cabe nun `u32` dá tabs de ancho 0.
+  Mentres caben, o que sobra da división queda á dereita do ▾, coa barra baleira; mentres non, os botóns van ao final da barra, e non sobra nada. Ata a 2.7, sen mínimo: con moitas tabs, estreitábanse ata quedar sen × e sen título, e, nunha xanela máis estreita ca os dous botóns e as súas separacións, ata 0 ([ADR 0020 › Consecuencias](../adr/0020-a-barra-de-tabs.md#consecuencias)). `saturating_sub` deixa o sitio en 0 en vez de desbordar, e `max(1)` evita dividir entre 0 sen tabs. Nunha xanela así, a división dá 0: as tabs miden `min_tab` e van nunha franxa de 0 píxeles. Cun número de tabs que non cabe nun `u32`, `try_from` dá `u32::MAX`, e a división tamén 0: non caben. Ao contrario ca `fit_tabs`, que só daba o ancho, `fit` cambia tres campos: recibe `&mut self`, e non dá nada.
+
+### A franxa e as tabs: `strip`, `start`, `tab` e `tab_area`
+
+```rust
+pub fn strip(&self) -> Rect {
+    if !self.overflow {
+        return self.bar();
+    }
+    let left = u64::from(self.gap) + u64::from(self.scroll_button);
+    Rect::new(
+        coord(left),
+        0,
+        coord(left + u64::from(self.viewport())),
+        coord(self.height.into()),
+    )
+}
+
+fn start(&self) -> i64 {
+    if self.overflow {
+        i64::from(self.strip().left) - i64::from(self.scroll)
+    } else {
+        i64::from(self.gap)
+    }
+}
+```
+
+- **`strip`**, desde a 2.8: a parte da barra onde van as tabs. Mentres caben, toda a barra; mentres non, a franxa entre o ‹ e o ›, tan alta coma a barra, desde `gap` + `scroll_button`, 28 a 100 %, e co ancho de `viewport`: en 800 píxeles, (28, 0, 716, 32). A barra do programa recorta a ela o que debuxa das tabs e as zonas que marca, caiban ou non: mentres caben, recortar á barra non corta nada.
+- **`start`**, privada, desde a 2.8: onde empeza a primeira tab, ou onde empezaría: a `gap` píxeles do bordo esquerdo da barra mentres caben e, mentres non, no bordo esquerdo da franxa, menos o desprazamento. É un `i64`, porque pode ser negativo: cun desprazamento de 50, 28 − 50 = −22. `tab` e `part_at` miden desde el.
 
 ```rust
 pub fn tab(&self, index: usize) -> Rect {
-    let left = u64::from(self.gap)
-        .saturating_add((index as u64).saturating_mul(u64::from(self.tab_width)));
+    let left = self.start().saturating_add(signed(
+        (index as u64).saturating_mul(u64::from(self.tab_width)),
+    ));
     Rect::new(
-        coord(left),
+        clamped(left),
         coord(self.gap.into()),
-        coord(left.saturating_add(u64::from(self.tab_width))),
+        clamped(left.saturating_add(self.tab_width.into())),
         coord(self.height.into()),
     )
 }
 
 pub fn tab_area(&self, index: usize) -> Rect {
     let tab = self.tab(index);
-    Rect::new(tab.left, 0, tab.right.saturating_add(1), tab.bottom).intersection(self.bar())
+    Rect::new(tab.left, 0, tab.right.saturating_add(1), tab.bottom).intersection(self.strip())
 }
 
 const fn tab_height(&self) -> u32 {
@@ -5895,8 +5999,10 @@ const fn tab_height(&self) -> u32 {
 }
 ```
 
-- **`tab`**: a tab en `index` como se debuxa: desde `gap` + `index` × `tab_width`, co ancho dunha tab, e desde `gap` píxeles por debaixo do bordo de arriba da barra ata o de abaixo. Para o rato, a tab ocupa tamén a separación de enriba ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)). As contas fanse en `u64`, saturando, e [`coord`](#os-axudantes-base_dpi-scale-e-coord) convérteas en coordenadas: `tab` acepta calquera índice, tamén o da tab despois da última, onde empeza o + ([`new_tab`](#o-botón-que-abre-unha-tab-new_tab-new_highlight-e-plus)). Desde a 2.4, o menú que abre o teclado vai debaixo da tab que se mostra, coma a dá `tab` ([`Anchor::Below`](#onde-se-abre-anchor-e-place)).
-- **`tab_area`**: o que cambia cando a tab en `index` cambia de aspecto, porque pasa a estar activa ou resaltada, ou deixa de estalo: toda a súa columna da barra, desde o bordo de arriba, e un píxel máis á dereita, a primeira columna da tab seguinte, onde vai o separador entre as dúas, que depende tamén do aspecto desta. Recórtase á barra: na primeira tab do exemplo, (4, 0, 245, 32). A barra do programa marca así as tabs que gañan ou perden o resalte do punteiro (decisión 8).
+- **`tab`**: a tab en `index` como se debuxa: desde onde empeza a primeira, máis `index` × `tab_width`, co ancho dunha tab, e desde `gap` píxeles por debaixo do bordo de arriba da barra ata o de abaixo. Para o rato, a tab ocupa tamén a separación de enriba ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)). Desde a 2.8, mentres as tabs se desprazan, pode quedar fóra da franxa, en parte ou enteira: con oito tabs, a oitava vai de 728 a 828, máis alá da franxa, que remata no 716, e da barra; e, co desprazamento de 50, a primeira vai de −22 a 78. A barra do programa só debuxa a súa parte na franxa.
+  - As contas fanse en `u64`, saturando, e desde a 2.8 en `i64`, porque `start` pode ser negativo: [`signed`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size) converte o produto, e [`clamped`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size) converte o resultado nunha coordenada, tamén cara aos negativos. Ata a 2.7, as tabs empezaban sempre en `gap`, e convertíaas [`coord`](#os-axudantes-base_dpi-scale-e-coord). `tab` acepta calquera índice, tamén o da tab despois da última, onde empeza o + mentres as tabs caben ([`new_tab`](#o-botón-que-abre-unha-tab-new_tab-new_highlight-e-plus)).
+  - Desde a 2.4, o menú que abre o teclado vai debaixo da tab que se mostra, coma a dá `tab` ([`Anchor::Below`](#onde-se-abre-anchor-e-place)). Desde a 2.8, a barra do programa despraza antes a franxa ata ela ([`reveal`](#desprazar-a-franxa-scroll_by-step-reveal-e-scroll_to)), e o menú vai debaixo da súa parte na franxa ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 5).
+- **`tab_area`**: o que cambia cando a tab en `index` cambia de aspecto, porque pasa a estar activa ou resaltada, ou deixa de estalo: toda a súa columna da barra, desde o bordo de arriba, e un píxel máis á dereita, a primeira columna da tab seguinte, onde vai o separador entre as dúas, que depende tamén do aspecto desta. Recórtase á barra e, desde a 2.8, á franxa: na primeira tab do exemplo, (4, 0, 245, 32); con oito tabs, na sétima, que a franxa corta no 716, (628, 0, 716, 32), e na oitava, fóra da franxa, un rectángulo baleiro, que a barra do programa non marca ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 10). A barra do programa marca así as tabs que gañan ou perden o resalte do punteiro (decisión 8 do [ADR 0020](../adr/0020-a-barra-de-tabs.md)).
 - **`tab_height`**, privada: o alto das tabs como se debuxan, o da barra menos a separación de enriba, 28 a 100 %. O × e os separadores céntranse nel.
 
 ### O botón de pechar: `close`, `close_highlight` e `cross`
@@ -5927,11 +6033,11 @@ pub fn cross(&self, index: usize) -> Option<Rect> {
 **`close`** dá o × da tab en `index`, ou `None` se a tab é demasiado estreita para el:
 
 1. Remata `gap` píxeles antes do bordo dereito da tab, e mide `close` de ancho.
-2. Se así empezase a menos de `gap` píxeles do bordo esquerdo, non cabe: a tab é máis estreita ca o × e as dúas separacións dos seus lados, 32 píxeles a 100 %, e queda sen el ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3). Esa tab péchase co botón do medio.
-3. Vai centrado no alto da tab que se debuxa ([`tab_height`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)): na primeira tab do exemplo, (216, 6, 240, 30), con 2 píxeles por riba e 2 por debaixo.
+2. Se así empezase a menos de `gap` píxeles do bordo esquerdo, non cabe: a tab é máis estreita ca o × e as dúas separacións dos seus lados, 32 píxeles a 100 %, e queda sen el ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3). Ata a 2.7, as tabs que se encollían tanto pechábanse co botón do medio. Desde a 2.8, a máis estreita mide 100 ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 1), e o × cabe sempre: `None` só sae a 1 e a 2 DPI, onde o redondeo de `scale` deixa a tab máis estreita en 1 e 2 píxeles, e o × coas súas separacións en 3.
+3. Vai centrado no alto da tab que se debuxa ([`tab_height`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)): na primeira tab do exemplo, (216, 6, 240, 30), con 2 píxeles por riba e 2 por debaixo.
 
-- **`close_highlight`** e **`cross`**: o cadrado que resalta o punteiro, de 20 a 100 %, e o da cruz, de 8, no medio do × ([`centered`](#os-axudantes-scale-coord-centered-e-centered_size)); `None` se a tab non ten ×. A barra do programa debuxa a cruz coma dúas diagonais de `stroke` píxeles de grosor, en chanzos dun píxel, coma, desde a 2.5, a frecha do ▾.
-- Para o rato, o × é todo o seu cadrado, aínda que o punteiro só resalte o do medio ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)).
+- **`close_highlight`** e **`cross`**: o cadrado que resalta o punteiro, de 20 a 100 %, e o da cruz, de 8, no medio do × ([`centered`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size)); `None` se a tab non ten ×. A barra do programa debuxa a cruz coma dúas diagonais de `stroke` píxeles de grosor, en chanzos dun píxel, coma, desde a 2.5, a frecha do ▾.
+- Para o rato, o × é todo o seu cadrado, aínda que o punteiro só resalte o do medio ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)); desde a 2.8, só a parte del que está na franxa. O × dunha tab cortada pode quedar fóra da franxa, en parte ou enteiro: `close` dá o seu cadrado enteiro, e a barra do programa recórtao á franxa ao debuxalo e ao marcalo.
 
 ### O título e os separadores: `title` e `separator`
 
@@ -5960,16 +6066,21 @@ pub fn separator(&self, index: usize) -> Option<Rect> {
 }
 ```
 
-- **`title`**: o sitio do título da tab en `index`: desde `padding` píxeles do seu bordo esquerdo ata o ×, ou, se a tab non ten ×, ata `padding` píxeles do bordo dereito; e o alto da tab que se debuxa. Nunca vai ao revés: se non hai sitio, `right.max(left)` deixa un rectángulo baleiro. No exemplo, (12, 4, 216, 32); con trinta tabs de 24, sen ×, (12, 4, 20, 32); e con tabs de ancho 0, (12, 4, 12, 32), baleiro.
-  - A barra do programa corta o título ás columnas que caben neste rectángulo ([`text::fit`](#cratesmeiga-coresrctextrs)) e debúxao centrado no alto da tab, recortado a el. Cando un título cambia, só redebuxa este rectángulo (decisión 8).
+- **`title`**: o sitio do título da tab en `index`: desde `padding` píxeles do seu bordo esquerdo ata o ×, ou, se a tab non ten ×, ata `padding` píxeles do bordo dereito; e o alto da tab que se debuxa. Nunca vai ao revés: se non hai sitio, `right.max(left)` deixa un rectángulo baleiro. No exemplo, (12, 4, 216, 32); con sete tabs de 105, o da última, (642, 4, 711, 32); e nunha tab de 100, 64 píxeles, entre os 8 da esquerda e o ×. Ata a 2.7, con trinta tabs de 24, sen ×, era (12, 4, 20, 32), e con tabs de ancho 0, (12, 4, 12, 32), baleiro.
+  - A barra do programa corta o título ás columnas que caben neste rectángulo ([`text::fit`](#cratesmeiga-coresrctextrs)) e debúxao centrado no alto da tab, recortado a el. Cando un título cambia, só redebuxa este rectángulo (decisión 8 do [ADR 0020](../adr/0020-a-barra-de-tabs.md)). Desde a 2.8, as primeiras columnas poden ser dun indicador, coa cela baleira que o separa do título ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 7); e o rectángulo que se redebuxa recórtase á franxa: o dunha tab fóra dela non debuxa nada (decisión 10).
 - **`separator`**: a liña á esquerda da tab en `index`, entre ela e a anterior: un píxel de ancho, na primeira columna da tab, e `separator` de alto, centrada no alto da tab que se debuxa. No exemplo, a da segunda tab é (244, 10, 245, 26). A primeira tab non ten ningunha, nin hai ningunha despois da última: `None`. A barra do programa só a debuxa entre dúas tabs que non están activas nin resaltadas.
 
 ### O botón que abre unha tab: `new_tab`, `new_highlight` e `plus`
 
 ```rust
 pub fn new_tab(&self) -> Rect {
-    let left = self.tab(self.tabs).left + coord(self.gap.into());
-    let top = coord(self.gap.into());
+    let gap = coord(self.gap.into());
+    let left = if self.overflow {
+        self.strip().right + coord(self.scroll_button.into()) + gap
+    } else {
+        self.tab(self.tabs).left + gap
+    };
+    let top = gap;
     Rect::new(
         left,
         top,
@@ -5987,7 +6098,7 @@ pub fn plus(&self) -> Rect {
 }
 ```
 
-- **`new_tab`**: o +, un cadrado de `new` píxeles, `gap` píxeles despois da última tab: onde empezaría unha tab máis (`tab(self.tabs)`), máis a separación. Vai á altura das tabs, desde `gap` por debaixo do bordo de arriba: a 100 %, de 4 a 32. No exemplo, (728, 4, 756, 32); con dez tabs de 73, (738, 4, 766, 32), co ▾ en (766, 4, 790, 32), e os 10 píxeles que quedan ata o 800 son a separación da dereita e os 6 que sobran da división.
+- **`new_tab`**: o +, un cadrado de `new` píxeles. Mentres as tabs caben, `gap` píxeles despois da última: onde empezaría unha tab máis (`tab(self.tabs)`), máis a separación. Desde a 2.8, mentres non caben, `gap` píxeles despois do ›, á dereita da barra, sempre no mesmo sitio, sexan as tabs que sexan e estea a franxa onde estea ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2): en 800 píxeles, (744, 4, 772, 32). Vai á altura das tabs, desde `gap` por debaixo do bordo de arriba: a 100 %, de 4 a 32. No exemplo, (728, 4, 756, 32); con sete tabs de 105, (743, 4, 771, 32), co ▾ en (771, 4, 795, 32), e os 5 píxeles que quedan ata o 800 son a separación da dereita e o que sobra da división. Ata a 2.7, dez tabs de 73 cabían, e o + ía en (738, 4, 766, 32).
 - **`new_highlight`** e **`plus`**: o cadrado que resalta o punteiro, de 24 a 100 %, e o do signo +, de 11, no medio do botón: no exemplo, (730, 6, 754, 30) e (736, 12, 747, 23).
 
 ### O botón dos perfís: `profiles`, `profiles_highlight` e `chevron`
@@ -6014,9 +6125,169 @@ pub fn chevron(&self) -> Rect {
 }
 ```
 
-- **`profiles`**: o ▾, unido ao +, sen separación: empeza no seu bordo dereito, co seu alto, e mide `profiles` de ancho, 24 a 100 %. No exemplo, (756, 4, 780, 32). Os dous vense coma un botón dividido, pero cada un ten o seu resalte e a súa acción: o + abre unha tab co perfil por defecto, e o ▾, o menú dos perfís, que se abre debaixo dos dous ([`Anchor::Below`](#onde-se-abre-anchor-e-place); [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+- **`profiles`**: o ▾, unido ao +, sen separación: empeza no seu bordo dereito, co seu alto, e mide `profiles` de ancho, 24 a 100 %. No exemplo, (756, 4, 780, 32); desde a 2.8, mentres as tabs non caben, vai co + á dereita da barra: en 800 píxeles, (772, 4, 796, 32). Os dous vense coma un botón dividido, pero cada un ten o seu resalte e a súa acción: o + abre unha tab co perfil por defecto, e o ▾, o menú dos perfís, que se abre debaixo dos dous ([`Anchor::Below`](#onde-se-abre-anchor-e-place); [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
 - **`profiles_highlight`**: o rectángulo que resalta o punteiro, no medio do ▾: `profiles_highlight` de ancho, 20 a 100 %, e tan alto coma o resalte do +, 24, para que os dous queden á mesma altura. Entre os dous resaltes quedan 4 píxeles sen resaltar, 2 de cada botón. No exemplo, (758, 6, 778, 30).
 - **`chevron`**: o rectángulo da frecha, que apunta abaixo: `chevron` de alto, 4 a 100 %, e o dobre de ancho, no medio do botón. No exemplo, (764, 16, 772, 20). A barra do programa debúxaa coma a cruz do ×: dúas liñas de `stroke` píxeles, en chanzos dun píxel, desde as dúas esquinas de arriba, a 45 graos, ata o bordo de abaixo. Nun cadrado, crúzanse; nun rectángulo dúas veces máis ancho ca alto, xúntanse no medio do bordo de abaixo, a calquera escala: 10 × 5 a 125 % (120 DPI), e 12 × 6 a 150 % (144 DPI).
+
+### Os botóns de desprazamento: `scroll_button`, `scroll_highlight` e `scroll_chevron`
+
+Desde a subfase 2.8: o ‹ e o ›, que desprazan a franxa cara á primeira tab e cara á última, aos seus dous lados, só mentres as tabs non caben ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2). Son coma o ▾: de 24 píxeles de ancho, tan altos coma o +, co mesmo resalte, e cunha frecha no medio, que apunta ao seu lado. Coma no Windows Terminal e en Firefox, quedan sempre no mesmo sitio, e o + e o ▾ van despois do ›.
+
+```rust
+pub fn scroll_button(&self, side: Side) -> Option<Rect> {
+    if !self.overflow {
+        return None;
+    }
+    let strip = self.strip();
+    let width = coord(self.scroll_button.into());
+    let left = match side {
+        Side::Left => strip.left - width,
+        Side::Right => strip.right,
+    };
+    let top = coord(self.gap.into());
+    Some(Rect::new(
+        left,
+        top,
+        left + width,
+        top + coord(self.new.into()),
+    ))
+}
+
+pub fn scroll_highlight(&self, side: Side) -> Option<Rect> {
+    self.scroll_button(side)
+        .map(|button| centered_size(button, self.scroll_highlight, self.new_highlight))
+}
+
+pub fn scroll_chevron(&self, side: Side) -> Option<Rect> {
+    self.scroll_button(side)
+        .map(|button| centered_size(button, self.chevron, 2 * self.chevron))
+}
+```
+
+- **`scroll_button`**: o botón que despraza as tabs cara a `side`, ou `None` mentres caben. Vai pegado á franxa, sen separación, o ‹ á súa esquerda e o › á súa dereita, e mide `scroll_button` de ancho, 24 a 100 %; coma o +, empeza `gap` píxeles por debaixo do bordo de arriba, e mide `new` de alto. En 800 píxeles, (4, 4, 28, 32) e (716, 4, 740, 32). Para o rato, coma os outros botóns, ocupa todo o alto da barra ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)).
+- **`scroll_highlight`**: o rectángulo que resalta o punteiro, no medio do botón, coma o do ▾: `scroll_highlight` de ancho, 20 a 100 %, e tan alto coma o resalte do +, 24. No ‹, (6, 6, 26, 30). A barra do programa non o debuxa mentres a franxa non se pode desprazar cara a ese lado ([`can_scroll`](#canto-se-despraza-max_scroll-e-can_scroll)): o botón é entón máis escuro, e o punteiro non o resalta.
+- **`scroll_chevron`**: o rectángulo da frecha, `chevron` de ancho, 4 a 100 %, e o dobre de alto, no medio do botón: (14, 14, 18, 22) no ‹ e (726, 14, 730, 22) no ›. É a frecha do ▾ xirada: a barra do programa debuxa dúas liñas de `stroke` píxeles, en chanzos dun píxel, desde as dúas esquinas do lado contrario ata o medio do lado do botón, onde se xuntan a calquera escala: 5 × 10 a 125 % e 6 × 12 a 150 %.
+- Os tres dan `None` mentres as tabs caben: a barra do programa non os debuxa nin os marca.
+
+### Canto se despraza: `max_scroll` e `can_scroll`
+
+```rust
+pub fn max_scroll(&self) -> u32 {
+    if !self.overflow {
+        return 0;
+    }
+    let row = (self.tabs as u64).saturating_mul(self.tab_width.into());
+    u32::try_from(row.saturating_sub(self.viewport().into())).unwrap_or(u32::MAX)
+}
+
+pub fn can_scroll(&self, side: Side) -> bool {
+    match side {
+        Side::Left => self.scroll > 0,
+        Side::Right => self.scroll < self.max_scroll(),
+    }
+}
+```
+
+- **`max_scroll`**, desde a 2.8: ata onde se pode desprazar a franxa, o que mide a fila das tabs, `tabs` × `tab_width`, menos o ancho da franxa. Con oito tabs en 800 píxeles, 800 − 688 = 112; con trinta, 3000 − 688 = 2312, e entón a última tab vai de 616 a 716, e remata onde empeza o ›. Mentres caben, 0. As contas fanse en `u64`, saturando, e un resultado que non cabe nun `u32` queda en `u32::MAX`. Nunha xanela máis estreita ca os botóns, a franxa mide 0, e o máximo é a fila enteira: con dúas tabs, 200.
+- **`can_scroll`**, desde a 2.8: se a franxa se pode desprazar cara a `side`: cara á esquerda mentres oculta algo á súa esquerda, e cara á dereita mentres non chega ao máximo. Mentres as tabs caben, cara a ningún. Con oito tabs sen desprazar, só cara á dereita. A barra do programa debuxa así cada botón, máis escuro e sen resalte cando non pode ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2), e deixa de repetir o clic ao chegar ao final (decisión 4).
+- O desprazamento queda sempre entre 0 e `max_scroll`, porque só o cambian `scroll_to`, que o limita, e `fit`, que o recorta; salvo mentres as tabs manteñen o seu ancho despois dun peche co rato, cando pode quedar por riba ([`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths)), e `can_scroll(Side::Right)` é falso.
+
+### Desprazar a franxa: `scroll_by`, `step`, `reveal` e `scroll_to`
+
+Desde a subfase 2.8, tres formas de desprazar a franxa, unha para cada cousa que a despraza ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisións 3, 4 e 5): uns píxeles, para a roda; unha tab, para os botóns; e o mínimo para que se vexa enteira unha tab, para a que se mostra. As tres din se a franxa se moveu, e mentres as tabs caben non fan nada, porque `max_scroll` é 0.
+
+```rust
+pub fn scroll_by(&mut self, pixels: i64) -> bool {
+    let target = i64::from(self.scroll).saturating_add(pixels).max(0);
+    self.scroll_to(target.unsigned_abs())
+}
+```
+
+- **`scroll_by`**: despraza a franxa `pixels` píxeles cara á última tab ou, se son negativos, cara á primeira, ata onde pode: o desprazamento novo non baixa de 0 (`max(0)`), e `scroll_to` non o deixa pasar de `max_scroll`. `unsigned_abs` dá o mesmo número nun `u64`, porque xa non é negativo. Con oito tabs, desde 0: +50 deixa a primeira tab en (−22, 4, 78, 32); −80, a franxa en 0, e non en −30; −1, xa en 0, non a move; e +1000, no 112. A barra do programa despraza así a franxa coa roda, o ancho dunha tab por cada paso, 120, e as partes dun paso en píxeles (decisión 3): ao contrario ca os botóns, a roda non deixa as tabs aliñadas coa franxa.
+
+```rust
+pub fn step(&mut self, side: Side) -> bool {
+    if self.tab_width == 0 {
+        return false;
+    }
+    let width = u64::from(self.tab_width);
+    let scroll = u64::from(self.scroll);
+    let target = match side {
+        // The first tab that is all in the strip, and the one before.
+        Side::Left => scroll.div_ceil(width).saturating_sub(1) * width,
+        Side::Right => {
+            let viewport = u64::from(self.viewport());
+            // The first tab that is not all in the strip.
+            let hidden = (scroll + viewport) / width;
+            ((hidden + 1) * width).saturating_sub(viewport)
+        }
+    };
+    self.scroll_to(target)
+}
+```
+
+**`step`** despraza a franxa unha tab cara a `side`, coma os botóns: ata que a primeira tab que oculta por ese lado, aínda que sexa en parte, queda enteira nela, coma en Firefox ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 4). Na fila, a tab en `i` vai de `i` × `width` a (`i` + 1) × `width`, e a franxa mostra o que vai de `scroll` a `scroll` + `viewport`:
+
+- **Cara á esquerda**, `scroll.div_ceil(width)`, a división redondeada cara arriba, é a primeira tab que empeza dentro da franxa, a primeira enteira nela; a anterior é a primeira que a franxa oculta á esquerda, aínda que sexa en parte, e a franxa desprázase ata o seu bordo esquerdo. Con oito tabs, desde 112: 112 / 100 cara arriba é 2, a terceira tab, e a franxa vai ao 100, onde empeza a segunda, que cortaba. Desde 100, a segunda xa está enteira, e a franxa vai ao 0. Desde 0 non oculta nada: `saturating_sub(1)` deixa a tab 0, e `step` di que non se moveu.
+- **Cara á dereita**, (`scroll` + `viewport`) / `width`, a división redondeada cara abaixo, é a primeira tab que non está enteira na franxa: a que corta á dereita ou, se non corta ningunha, a primeira que oculta. A franxa desprázase ata que o bordo dereito desa tab chega ao seu, (`hidden` + 1) × `width` − `viewport`. Desde 0: 688 / 100 é 6, a sétima tab, de 600 a 700, e a franxa vai ao 700 − 688 = 12, coa sétima enteira, en (616, 4, 716, 32). Desde 12: 700 / 100 é 7, a oitava, e a franxa vai ao 800 − 688 = 112, o final. Desde 112, xa non pode, e `scroll_to` deixa o 112.
+- Cada clic deixa enteira unha tab máis do seu lado, e a do outro lado pode quedar cortada, porque a franxa, de 688, non mide un número enteiro de tabs. O botón do Windows Terminal move 50 píxeles, media tab, e deixa tabs cortadas nos dous lados; o da barra nova de Chrome, o ancho da franxa menos 32 DIP, o mínimo dunha tab que non é a activa ([ADR 0025 › Alternativas consideradas](../adr/0025-moitas-tabs-e-os-indicadores.md#alternativas-consideradas)).
+- Con `tab_width` 0 non despraza nada, en vez de dividir entre 0. Desde a 2.8 ese caso non chega: `fit` non deixa ningunha tab máis estreita ca `min_tab`, que é polo menos 1.
+
+```rust
+pub fn reveal(&mut self, index: usize) -> bool {
+    if !self.overflow || index >= self.tabs {
+        return false;
+    }
+    let width = u64::from(self.tab_width);
+    let left = (index as u64).saturating_mul(width);
+    let right = left.saturating_add(width);
+    let scroll = u64::from(self.scroll);
+    let viewport = u64::from(self.viewport());
+    let target = if left < scroll {
+        left
+    } else if right > scroll + viewport {
+        right.saturating_sub(viewport).min(left)
+    } else {
+        return false;
+    };
+    self.scroll_to(target)
+}
+```
+
+**`reveal`** despraza a franxa o mínimo para que a tab en `index` quede enteira nela: a tab que se mostra está sempre á vista ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 5).
+
+1. Mentres as tabs caben, vense todas, e non fai nada; tampouco cun índice sen tab.
+2. Se a tab empeza antes da franxa, a franxa desprázase ata o seu bordo esquerdo.
+3. Se remata despois, ata que o seu bordo dereito chega ao da franxa, `right − viewport`; pero non máis alá do seu bordo esquerdo (`min(left)`): nunha franxa máis estreita ca unha tab, vese o seu principio, onde vai o título.
+4. Se xa está enteira, non se move.
+
+Así a franxa móvese o mínimo, e as outras tabs quedan onde se vían. Con oito tabs, desde 112, a primeira leva a franxa ao 0; desde 0, a sétima, ao 12; a sexta, de 500 a 600, xa está enteira, e non a move; e a oitava, ao 112. A barra do programa chámaa antes do fotograma no que a tab que se mostra ten que ir á vista, salvo mentres as tabs manteñen o seu ancho ([`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths)), e antes de abrir co teclado o menú dunha tab, que vai debaixo dela ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+
+```rust
+fn scroll_to(&mut self, target: u64) -> bool {
+    let scroll = u32::try_from(target.min(self.max_scroll().into())).unwrap_or(0);
+    mem::replace(&mut self.scroll, scroll) != scroll
+}
+```
+
+- **`scroll_to`**, privada: despraza a franxa a `target`, ou ata onde pode: como moito ata `max_scroll`, e, porque `target` é un `u64`, polo menos ata 0. Os tres métodos acaban nela. `mem::replace` garda o desprazamento novo e dá o vello: se son distintos, a franxa moveuse. O mínimo cun `u32` sempre cabe nun, así que `try_from` non falla, e `unwrap_or(0)` só evita un `unwrap`.
+- `use std::mem;`, ao principio do arquivo desde a 2.8, trae o módulo `mem` da biblioteca estándar, para `mem::replace`.
+
+### As tabs no seu sitio ao pechar co rato: `keep_widths`
+
+Desde a subfase 2.8 ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 6). Cando o × ou o botón do medio pecha unha tab co punteiro na barra, as outras quedan co seu ancho, e a franxa co seu desprazamento: a tab da dereita ocupa o sitio da que pechou, co seu × debaixo do punteiro, e pódense pechar varias seguidas sen mover o rato, coma no Windows Terminal.
+
+```rust
+pub fn keep_widths(&mut self, tabs: usize) {
+    self.tabs = tabs;
+}
+```
+
+- **`keep_widths`**: a barra ten agora `tabs` tabs, menos, porque se pecharon co punteiro nela. Só cambia o número de tabs: sen `fit`, `tab_width`, `overflow` e `scroll` quedan coma estaban, e o que as tabs deixan baleiro á dereita queda así ata que `resize` lles dá outra vez o seu ancho.
+- **Mentres caben**, o + segue a última tab: con cinco tabs de 147 en 800 píxeles, e unha pechada, as catro quedan de 147, e o + vai en (596, 4, 624, 32), onde ía a quinta; `resize` dálles despois 184.
+- **Mentres non caben**, a franxa queda co seu desprazamento, aínda que coas tabs que quedan non puidese chegar tan lonxe: con dez tabs e a franxa ao final, 312, e unha pechada, a franxa queda no 312, aínda que o máximo para nove é 212, e xa non se pode desprazar cara á dereita. O sitio da última queda baleiro: no 715, `part_at` dá `Empty`, e no 615, `Tab(8)`, a nova última, que quedou onde estaba. `resize` leva despois a franxa ao 212.
+- A barra do programa chámao cando se pecha unha tab que non era a última, co punteiro na barra, se a pechou o × ou o botón do medio ou se as tabs xa mantiñan o seu ancho. Chama a `resize`, e as tabs recuperan o seu ancho, cando o punteiro sae da barra ou da xanela, cando un menú colle o rato, ao desprazar a franxa, ao cambiar o tamaño ou a escala da xanela, ao abrir tabs e ao pechar a última; e mentres tanto, a tab que se mostra non vai á vista ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+- O seu comentario di que as tabs son menos, pero non o comproba: con máis, pasarían do sitio da barra. A barra do programa só o chama cando se pecha unha.
 
 ### O que hai debaixo dun punto: `part_at`
 
@@ -6025,20 +6296,25 @@ pub fn part_at(&self, at: Point) -> Option<Part> {
     if !self.bar().contains_point(at) {
         return None;
     }
-    let new = self.new_tab();
-    if (new.left..new.right).contains(&at.x) {
+    let across = |rect: Rect| (rect.left..rect.right).contains(&at.x);
+    if across(self.new_tab()) {
         return Some(Part::New);
     }
-    let profiles = self.profiles();
-    if (profiles.left..profiles.right).contains(&at.x) {
+    if across(self.profiles()) {
         return Some(Part::Profiles);
     }
-    let gap = coord(self.gap.into());
-    if self.tab_width == 0 || at.x < gap {
+    for side in [Side::Left, Side::Right] {
+        if self.scroll_button(side).is_some_and(across) {
+            return Some(Part::Scroll(side));
+        }
+    }
+    let from_start = i64::from(at.x) - self.start();
+    if self.tab_width == 0 || !across(self.strip()) || from_start < 0 {
         return Some(Part::Empty);
     }
-    // `at.x - gap` is not negative.
-    let index = ((at.x - gap) as u64 / u64::from(self.tab_width)) as usize;
+    // `from_start` is not negative.
+    let index =
+        usize::try_from(from_start as u64 / u64::from(self.tab_width)).unwrap_or(usize::MAX);
     if index >= self.tabs {
         return Some(Part::Empty);
     }
@@ -6056,14 +6332,15 @@ pub fn part_at(&self, at: Point) -> Option<Part> {
 **`part_at`** dá a parte da barra no píxel `at`, en coordenadas da área cliente, ou `None` fóra da barra. As tabs e os botóns ocupan todo o alto da barra:
 
 1. Fóra da barra, `None`.
-2. Nas columnas do +, `New`; e, desde a 2.5, nas do ▾, `Profiles`. `(new.left..new.right).contains(&at.x)` mira só a columna, cun rango de enteiros que inclúe `left` e non `right`, coma os rectángulos: a columna 756, a primeira do ▾, xa non é do +.
-3. Sen sitio para as tabs (`tab_width` 0), ou á esquerda da primeira, `Empty`.
-4. A tab sae dunha división: a distancia desde o bordo esquerdo da primeira tab, entre o ancho dunha. Despois da última, entre ela e o + ou á dereita do ▾, `Empty`.
+2. Nas columnas do +, `New`; desde a 2.5, nas do ▾, `Profiles`; e, desde a 2.8, nas dos botóns de desprazamento, se os hai, `Scroll` co seu lado. A *closure* `across` mira só a columna, cun rango de enteiros que inclúe `left` e non `right`, coma os rectángulos: a columna 756, a primeira do ▾, xa non é do +. `is_some_and(across)` só a mira se o botón existe.
+3. Fóra da franxa, ou á esquerda da primeira tab, `Empty`. Mentres as tabs caben, a franxa é a barra enteira; mentres non, quedan fóra a separación á esquerda do ‹, a que vai entre o › e o +, e a da dereita do ▾. Con `tab_width` 0, tamén `Empty`, pero desde a 2.8 ningunha tab mide 0 ([`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)).
+4. A tab sae dunha división: a distancia desde onde empeza a primeira tab ([`start`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)), entre o ancho dunha. Mentres a franxa está desprazada, a primeira empeza á esquerda dela, e a este paso só chegan os puntos dentro da franxa: das tabs cortadas, só conta a súa parte nela. Despois da última, entre ela e o + ou á dereita do ▾, `Empty`; e, mentres as tabs manteñen o seu ancho despois dun peche co rato, tamén no sitio que quedou baleiro.
 5. Na tab, `Close` se o punto está no seu × (`contains_point`); se non, `Tab`, tamén por riba e por debaixo do × e na separación de enriba.
 
 - **Unha división, e non unha busca:** as tabs son todas iguais, así que a tab dun punto sae dunha conta, sexan dez ou cen.
-- O comentario lembra por que `at.x - gap` non é negativo: o paso 3 xa descartou os puntos á esquerda de `gap`, así que o `as u64` non perde nada. O cociente, que non pasa de `i32::MAX`, cabe nun `usize`.
-- A barra do programa converte a resposta no que resalta o punteiro, coa tab desa posición ([`Part`](#part)); fóra da barra, `None` non resalta nada. Se cada evento do rato vai á barra ou ao terminal, decídeo antes o programa ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7).
+- O comentario lembra por que `from_start` non é negativo: o paso 3 xa descartou os puntos á esquerda da primeira tab, así que o `as u64` non perde nada. Ata a 2.7, a distancia era `at.x - gap`. O cociente cabe nun `usize` nos sistemas de 64 bits; se non coubese, `usize::MAX` daría `Empty`.
+- Os botóns de desprazamento míranse antes ca a franxa: as tabs cortadas seguen por debaixo deles, pero alí o punteiro está no botón.
+- A barra do programa converte a resposta no que resalta o punteiro, coa tab desa posición ([`Part`](#part-e-side)); fóra da barra, `None` non resalta nada. Se cada evento do rato vai á barra ou ao terminal, decídeo antes o programa ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7).
 
 No exemplo, `the_part_under_the_pointer` comproba:
 
@@ -6080,13 +6357,36 @@ No exemplo, `the_part_under_the_pointer` comproba:
 | (780, 20) e (2, 20) | `Empty` | Á dereita do ▾ e á esquerda da primeira tab. |
 | (100, 32), (−1, 10) e (800, 10) | `None` | Debaixo da barra, á esquerda e á dereita dela. |
 
-### Os axudantes: `scale`, `coord`, `centered` e `centered_size`
+E, desde a 2.8, con oito tabs e a franxa desprazada 50 píxeles, `the_part_under_the_pointer_while_the_tabs_scroll` comproba:
+
+| Punto | Parte | Por que |
+|---|---|---|
+| (3, 20) | `Empty` | A separación á esquerda do ‹. |
+| (4, 20) e (27, 0) | `Scroll(Side::Left)` | O primeiro píxel do ‹ e a súa esquina de arriba á dereita, tamén por riba do que se debuxa. |
+| (28, 31) e (77, 31) | `Tab(0)` | A primeira tab vai de 28 − 50 = −22 a 78: só a súa parte na franxa, desde o 28, está debaixo do punteiro. |
+| (78, 31) | `Tab(1)` | O primeiro píxel da segunda. |
+| (50, 20) | `Close(0)` | O × da primeira, desde 78 − 4 − 24 = 50. |
+| (715, 31) | `Tab(7)` | O último píxel da franxa, na oitava tab, que vai de 678 a 778, e que a franxa corta. |
+| (716, 20) e (739, 31) | `Scroll(Side::Right)` | O primeiro e o último píxel do ›. |
+| (740, 20) | `Empty` | A separación entre o › e o +. |
+| (744, 20) | `New` | O primeiro píxel do +, á dereita da barra. |
+| (795, 20) e (796, 20) | `Profiles` e `Empty` | O último píxel do ▾, e a separación á súa dereita. |
+
+### Os axudantes: `scale`, `coord`, `signed`, `clamped`, `centered` e `centered_size`
 
 ```rust
 use super::{coord, scale};
 ```
 
 ```rust
+fn signed(pixels: u64) -> i64 {
+    i64::try_from(pixels).unwrap_or(i64::MAX)
+}
+
+fn clamped(value: i64) -> i32 {
+    i32::try_from(value).unwrap_or(if value < 0 { i32::MIN } else { i32::MAX })
+}
+
 fn centered(rect: Rect, side: u32) -> Rect {
     centered_size(rect, side, side)
 }
@@ -6099,19 +6399,25 @@ fn centered_size(rect: Rect, width: u32, height: u32) -> Rect {
 }
 ```
 
-- **`scale`** e **`coord`** chegan do módulo pai, `ui`, con `use super::{coord, scale};`: ata a 2.3 estaban neste arquivo, e desde a 2.4 están en `ui/mod.rs`, porque os usan tamén os menús ([Os axudantes](#os-axudantes-base_dpi-scale-e-coord)). `scale` dá as medidas da barra ao DPI da xanela, en [`new`](#crear-e-cambiar-new-height_at-e-resize) e en `height_at`; e `coord` converte en coordenadas os números de píxeles das súas contas, que así non desbordan con ningún índice de tab.
-- **`centered_size`**, desde a 2.5: o rectángulo de `width` por `height` píxeles no medio de `rect`. Se o que sobra é impar, o píxel de máis queda á dereita e debaixo: o signo + de 11 no + de 28 deixa 8 píxeles á esquerda e por riba, e 9 á dereita e por debaixo. Úsano `profiles_highlight` e `chevron`, que non son cadrados.
+- **`scale`** e **`coord`** chegan do módulo pai, `ui`, con `use super::{coord, scale};`: ata a 2.3 estaban neste arquivo, e desde a 2.4 están en `ui/mod.rs`, porque os usan tamén os menús ([Os axudantes](#os-axudantes-base_dpi-scale-e-coord)). `scale` dá as medidas da barra ao DPI da xanela, en [`new`](#crear-e-cambiar-new-height_at-e-resize) e en `height_at`; e `coord` converte en coordenadas os números de píxeles das súas contas, que así non desbordan con ningún índice de tab, agás as sumas e as restas de [`close`](#o-botón-de-pechar-close-close_highlight-e-cross), que non saturan (ver `clamped`).
+- **`signed`**, desde a 2.8: unha distancia na fila das tabs, en `u64`, coma un `i64`, ou `i64::MAX` se non cabe, para sumala a onde empeza a primeira tab, que pode ser negativo ([`tab`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)).
+- **`clamped`**, desde a 2.8: unha posición na fila das tabs, en `i64`, coma unha coordenada da xanela, un `i32`, ou, se non cabe, `i32::MIN` ou `i32::MAX`, segundo o seu signo: unha tab oculta moi lonxe da franxa queda moi lonxe, polo seu lado. `coord`, que só coñece os positivos, levaría á dereita unha tab oculta á esquerda. Ningunha tab chega tan lonxe: faría falta unha fila de máis de 2 147 483 647 píxeles, uns 21 millóns de tabs de 100. Cunha tab así, ou cun índice así, as sumas e as restas de [`close`](#o-botón-de-pechar-close-close_highlight-e-cross) (`tab.left + gap` e `tab.right - gap`), que non saturan, desbordarían, coma xa pasaba ata a 2.7 cun índice tan grande que `coord` deixase a tab en `i32::MAX`.
+- **`centered_size`**, desde a 2.5: o rectángulo de `width` por `height` píxeles no medio de `rect`. Se o que sobra é impar, o píxel de máis queda á dereita e debaixo: o signo + de 11 no + de 28 deixa 8 píxeles á esquerda e por riba, e 9 á dereita e por debaixo. Úsano `profiles_highlight` e `chevron` e, desde a 2.8, `scroll_highlight` e `scroll_chevron`, que non son cadrados.
 - **`centered`**: o cadrado de `side` píxeles no medio de `rect`, coma un `centered_size` cos dous lados iguais; ata a 2.4 facía as contas el. Úsano `close_highlight`, `cross`, `new_highlight` e `plus`.
 
-**Probas.** Cinco, con coordenadas exactas. `three` fai a barra do exemplo: tres tabs en 800 píxeles a 96 DPI.
+**Probas.** Nove, con coordenadas exactas, catro delas desde a 2.8. `three` fai a barra do exemplo: tres tabs en 800 píxeles a 96 DPI. Desde a 2.8, varias usan a mesma xanela con máis tabs: cinco ou sete, que caben, e oito ou dez, que non.
 
 | Proba | Que comproba |
 |---|---|
 | `tabs_are_as_wide_as_in_windows_terminal_and_the_buttons_follow_them` | A barra do exemplo, de 32 de alto, tamén con `height_at(96)`, en (0, 0, 800, 32); as tabs de 240, a primeira en (4, 4, 244, 32) e a terceira en (484, 4, 724, 32); o + en (728, 4, 756, 32), co resalte en (730, 6, 754, 30) e o signo de 11 píxeles en (736, 12, 747, 23), para que os dous brazos dunha liña de 1 teñan 5; e, desde a 2.5, unido a el, o ▾ en (756, 4, 780, 32), co resalte en (758, 6, 778, 30) e a frecha en (764, 16, 772, 20). Ata a 2.4 chamábase `tabs_are_as_wide_as_in_windows_terminal_and_the_button_follows_them`. |
 | `a_tab_has_its_title_and_then_its_close_button` | O × da primeira tab en (216, 6, 240, 30), o seu resalte en (218, 8, 238, 28) e a cruz en (224, 14, 232, 22); o título, (12, 4, 216, 32), ata o ×; o separador da segunda tab, na súa primeira columna, (244, 10, 245, 26), e ningún na primeira nin despois da última; e o que cambia co aspecto da primeira, (4, 0, 245, 32). |
-| `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button` | Na mesma barra, dez tabs miden 73 (800 − 3 × 4 − 28 − 24 = 736, entre 10), o + vai en (738, 4, 766, 32) e o ▾, en (766, 4, 790, 32); trinta, 24, sen ×, co título en (12, 4, 20, 32); e nunha xanela de 20 píxeles, máis estreita ca os botóns, as tabs miden 0, e o título da segunda está baleiro, (12, 4, 12, 32). |
-| `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 1920 píxeles con dúas tabs: a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o ▾ en (774, 6, 810, 48), co resalte en (777, 9, 807, 45) e a frecha en (786, 24, 798, 30), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, a frecha de 10 × 5, o dobre de ancha ca alta coma a calquera escala, e a barra de 40. |
-| `the_part_under_the_pointer` | Os puntos da táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at). |
+| `tabs_that_do_not_fit_shrink_alike_down_to_100_and_keep_their_close_button` | Na mesma barra, sete tabs miden 105 (800 − 3 × 4 − 28 − 24 = 736, entre 7) e caben: a franxa é a barra enteira, sen botóns de desprazamento, e non se despraza; o + vai en (743, 4, 771, 32), e o ▾, en (771, 4, 795, 32); e a última tab ten o seu ×, en (711, 6, 735, 30), co título en (642, 4, 711, 32). E o límite: nunha xanela de 764 píxeles, as sete miden 100, 700 entre 7, e caben; nunha de 763, xa non. Ata a 2.7 chamábase `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button`, e comprobaba dez tabs de 73, co + en (738, 4, 766, 32), trinta de 24, sen ×, e tabs de 0 nunha xanela de 20 píxeles. |
+| `the_narrowest_tabs_that_do_not_fit_go_in_a_strip_between_two_buttons` | Desde a 2.8. Na mesma barra, oito tabs non caben: miden 100, e van na franxa, de 736 − 2 × 24 = 688, en (28, 0, 716, 32), entre o ‹, en (4, 4, 28, 32), e o ›, en (716, 4, 740, 32); o resalte do ‹ en (6, 6, 26, 30), e as frechas, de 4 × 8, no medio dos botóns, en (14, 14, 18, 22) e (726, 14, 730, 22). O + e o ▾ van á dereita da barra, en (744, 4, 772, 32) e (772, 4, 796, 32). A primeira tab vai en (28, 4, 128, 32), e a oitava en (728, 4, 828, 32); o que cambia co aspecto da sétima é (628, 0, 716, 32), cortado pola franxa, e co da oitava, nada. A franxa pode desprazarse ata 112, 800 − 688: sen desprazar, só cara á dereita. E nunha xanela de 20 píxeles, máis estreita ca os botóns, a franxa está baleira, e o máximo é a fila enteira, 200. |
+| `the_strip_scrolls_by_tabs_by_pixels_and_to_show_a_tab` | Desde a 2.8, con oito tabs en 800 píxeles. Cara á dereita, unha tab leva a franxa ao 12, coa sétima, que cortaba, enteira en (616, 4, 716, 32), e outra ao 112, o final, onde xa non pode; cara á esquerda, ao 100, coa segunda, que cortaba, e ao 0, onde xa non pode. En píxeles, +50 deixa a primeira tab en (−22, 4, 78, 32); −80, a franxa en 0; −1 xa non a move; e +1000 lévaa ao 112. Para mostrar unha tab, o mínimo: a primeira, ao 0; a sétima, ao 12; a sexta, que xa está enteira, nada; e a oitava, ao 112. Unha xanela de 700 píxeles deixa o desprazamento no 112, e unha de 850, no 62, o seu máximo: 850 − 64 − 48 = 738, dos 800 da fila. E nunha de 1000, as oito caben, de 117, e a franxa non se despraza, nin para mostrar a oitava. Nunha de 150, a franxa mide 150 − 64 − 48 = 38, menos ca unha tab: para mostrar a segunda, vai ao 100, co lado esquerdo da tab, e non ao 162, co dereito. |
+| `tabs_keep_their_width_and_the_strip_its_scroll_when_some_close_in_place` | Desde a 2.8. Cinco tabs, de 147 en 800 píxeles: con `keep_widths(4)`, as catro seguen de 147, e o + vai despois da última, en (596, 4, 624, 32); con `resize`, miden 184. Dez tabs, coa franxa ao final, no 312: con `keep_widths(9)`, seguen sen caber, a franxa queda no 312, e non se pode desprazar cara á dereita; no 715, onde estaba a última tab, `Empty`, e no 615, na novena, `Tab(8)`. Con `resize`, a franxa vai ao 212. |
+| `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 1920 píxeles con dúas tabs: a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o ▾ en (774, 6, 810, 48), co resalte en (777, 9, 807, 45) e a frecha en (786, 24, 798, 30), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, a frecha de 10 × 5, o dobre de ancha ca alta coma a calquera escala, e a barra de 40. Desde a 2.8, a 150 %, a tab máis estreita mide 150 e os botóns de desprazamento, 36: o sitio das tabs é 1920 − 3 × 6 − 42 − 36 = 1824 píxeles, onde caben doce, de 152, e trece non: miden 150, e van na franxa, de 1824 − 2 × 36, en (42, 0, 1794, 48), co ‹ en (6, 6, 42, 48). |
+| `the_part_under_the_pointer_while_the_tabs_scroll` | Desde a 2.8: os puntos da segunda táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at), con oito tabs e a franxa desprazada 50 píxeles. |
+| `the_part_under_the_pointer` | Os puntos da primeira táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at). |
 
 ## `crates/meiga-core/src/ui/menu.rs`
 
@@ -6391,7 +6697,7 @@ pub enum Anchor {
 | Variante | Onde se abre o menú |
 |---|---|
 | `At(punto)` | Coa súa esquina de arriba á esquerda no punto: onde está o punteiro cando o botón dereito sobe nunha tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5). |
-| `Below(rectángulo)` | Debaixo desa parte da xanela, desde o seu lado esquerdo: a tab que se mostra, coma a debuxa a barra ([`tab`](#a-barra-e-as-tabs-bar-fit_tabs-tab-e-tab_area)), cando o abren a tecla de menú ou Maiús+F10 (decisión 6). O menú empeza entón no bordo de abaixo da barra. Desde a subfase 2.5, tamén o menú dos perfís, que abren o ▾ e Ctrl+Maiús+Espazo: debaixo dos dous botóns, o + e o ▾, xuntos, desde o lado esquerdo do + ou, se non cabe, rematando no dereito do ▾ ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). Na barra do [exemplo de `tabbar.rs`](#cratesmeiga-coresrcuitabbarrs), os dous ocupan (728, 4, 780, 32). |
+| `Below(rectángulo)` | Debaixo desa parte da xanela, desde o seu lado esquerdo: a tab que se mostra, coma a debuxa a barra ([`tab`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)), cando o abren a tecla de menú ou Maiús+F10 (decisión 6); desde a subfase 2.8, a súa parte na franxa, que antes se despraza ata ela ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 5). O menú empeza entón no bordo de abaixo da barra. Desde a subfase 2.5, tamén o menú dos perfís, que abren o ▾ e Ctrl+Maiús+Espazo: debaixo dos dous botóns, o + e o ▾, xuntos, desde o lado esquerdo do + ou, se non cabe, rematando no dereito do ▾ ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6). Na barra do [exemplo de `tabbar.rs`](#cratesmeiga-coresrcuitabbarrs), os dous ocupan (728, 4, 780, 32). |
 
 ```rust
 fn place(anchor: Anchor, size: Size, bounds: Rect) -> Point {

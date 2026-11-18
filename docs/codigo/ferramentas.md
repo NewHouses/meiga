@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 2.7. Na 2.7 chegou `check-exit.ps1`, que comproba o que fai meiga cando remata o programa dunha tab: o código 0 pecha a tab, oculta ou á vista, e a última pecha a xanela; outro fin deixa a tab, que di como rematou o programa, ou por que non arrancou, e o que se pode facer entón; sen programa, Intro reinicia o programa na mesma tab, Ctrl+D pecha a tab, e as outras teclas non fan nada; *Restart tab* reinicia o programa dunha tab oculta sen mostrala; e os fins que chegan coa caixa de mensaxe aberta pechan as súas tabs cando se pecha ela; `check-menu.ps1` conta co elemento novo do menú, *Restart tab*; os outros scripts non cambiaron. Na 2.6 chegou `check-shortcuts.ps1`, que comproba os atallos de teclado de meiga: a caixa de mensaxe cos erros da táboa `[shortcuts]` do `config.toml`; as teclas que lle chegan ao programa, tamén con AltGr e mentres repite unha que baixou para el, e as que colle meiga, tamén mentres repiten; e os atallos que mostran, abren, duplican e pechan as tabs e abren os perfís, cos que o arquivo engade, cambia e libera; os outros scripts non cambiaron. Na 2.5 chegou `check-profiles.ps1`, que comproba os perfís e a configuración de meiga: a caixa de mensaxe cos erros do `config.toml`, o perfil e o contorno da primeira tab, o menú dos perfís, co teclado e co rato, cada perfil que atopa meiga, o botón + e *Duplicate tab*; e as comprobacións con xanela lanzan meiga cun `APPDATA` baleiro, para que o `config.toml` de quen as executa non cambie o que comproban, e `check-tabbar.ps1` e `check-menu.ps1` deixan sitio na barra para o botón dos perfís. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
+> Estado: subfase 2.8. Na 2.8 chegou `check-manytabs.ps1`, que comproba que meiga mantén manexábeis 30 tabs: o ancho mínimo das tabs, e a franxa onde van despois, que desprazan a roda e os seus botóns, cun clic e mantidos; que cada tab se mostra cun clic; que as tabs que pecha o rato deixan as outras no seu sitio mentres o punteiro segue na barra, e que o teclado e a última tab as recolocan no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e os indicadores dunha tab oculta, a actividade, a campá e o fin, que só debuxan o seu título; `check-tabs.ps1` conta co indicador da actividade: a saída dunha tab oculta debuxa só a súa tab na barra, unha vez; e `check-exit.ps1`, co do fin: o fin dunha tab oculta co código 4 debuxa só a súa tab; os outros scripts non cambiaron. Na 2.7 chegou `check-exit.ps1`, que comproba o que fai meiga cando remata o programa dunha tab: o código 0 pecha a tab, oculta ou á vista, e a última pecha a xanela; outro fin deixa a tab, que di como rematou o programa, ou por que non arrancou, e o que se pode facer entón; sen programa, Intro reinicia o programa na mesma tab, Ctrl+D pecha a tab, e as outras teclas non fan nada; *Restart tab* reinicia o programa dunha tab oculta sen mostrala; e os fins que chegan coa caixa de mensaxe aberta pechan as súas tabs cando se pecha ela; `check-menu.ps1` conta co elemento novo do menú, *Restart tab*; os outros scripts non cambiaron. Na 2.6 chegou `check-shortcuts.ps1`, que comproba os atallos de teclado de meiga: a caixa de mensaxe cos erros da táboa `[shortcuts]` do `config.toml`; as teclas que lle chegan ao programa, tamén con AltGr e mentres repite unha que baixou para el, e as que colle meiga, tamén mentres repiten; e os atallos que mostran, abren, duplican e pechan as tabs e abren os perfís, cos que o arquivo engade, cambia e libera; os outros scripts non cambiaron. Na 2.5 chegou `check-profiles.ps1`, que comproba os perfís e a configuración de meiga: a caixa de mensaxe cos erros do `config.toml`, o perfil e o contorno da primeira tab, o menú dos perfís, co teclado e co rato, cada perfil que atopa meiga, o botón + e *Duplicate tab*; e as comprobacións con xanela lanzan meiga cun `APPDATA` baleiro, para que o `config.toml` de quen as executa non cambie o que comproban, e `check-tabbar.ps1` e `check-menu.ps1` deixan sitio na barra para o botón dos perfís. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -14,12 +14,13 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`check-keyboard.ps1`](#toolscheck-keyboardps1) | Comprobar que as teclas que se teclean en `meiga.exe` chegan ao programa do terminal coma as le PowerShell, co teclado español e co estadounidense. |
 | [`check-mouse.ps1`](#toolscheck-mouseps1) | Comprobar que en `meiga.exe` o rato selecciona e copia texto, que as teclas e o botón dereito copian e pegan, e que o rato chega aos programas do terminal que o piden. |
 | [`check-resize.ps1`](#toolscheck-resizeps1) | Comprobar que, cando a xanela de `meiga.exe` cambia de tamaño, tamén coa caixa de mensaxe aberta, a súa pantalla ten as mesmas filas ca a consola do ConPTY; que a roda, as teclas e a barra de desprazamento moven a vista do historial; e que o zoom cambia a grella. |
-| [`check-tabs.ps1`](#toolscheck-tabsps1) | Comprobar que en `meiga.exe` os atallos abren, mostran e pechan as tabs, e que a saída dunha tab oculta non debuxa nada, o seu programa recibe as respostas ás súas preguntas e non copia ao portapapeis, e a tab, cando se mostra, leva o seu título á xanela e colle a grella dela. |
+| [`check-tabs.ps1`](#toolscheck-tabsps1) | Comprobar que en `meiga.exe` os atallos abren, mostran e pechan as tabs, e que a saída dunha tab oculta só debuxa unha vez a súa tab na barra, o seu programa recibe as respostas ás súas preguntas e non copia ao portapapeis, e a tab, cando se mostra, leva o seu título á xanela e colle a grella dela. |
 | [`check-tabbar.ps1`](#toolscheck-tabbarps1) | Comprobar co rato a barra de tabs de `meiga.exe`: que o botón + abre unha tab, que o × e o botón do medio as pechan e un clic as mostra, que cada cambio debuxa só o que cambia, que un programa que cambia o título sen parar, ou que pon o mesmo unha e outra vez, non esperta a xanela miles de veces por segundo, e que a barra segue co rato mentres Ctrl+Tab mostra outra tab. |
 | [`check-menu.ps1`](#toolscheck-menups1) | Comprobar co rato e co teclado o menú dunha tab de `meiga.exe`: que se abre debaixo da tab ou no punteiro, que cada cambio debuxa só o que cambia, que os seus elementos duplican e pechan tabs, que as teclas que colle non lle chegan ao programa, e as que baixaron antes para el si, ao subir, e que se pecha con Esc, tamén cun botón premido nel, cun clic fóra, cando a xanela cambia de tamaño e cando se minimiza. |
 | [`check-profiles.ps1`](#toolscheck-profilesps1) | Comprobar os perfís e a configuración de `meiga.exe`: que os erros do `config.toml` saen nunha caixa de mensaxe da súa xanela, sen parar nada; que a primeira tab corre o perfil por defecto, no seu cartafol e co contorno dun terminal; que Ctrl+Maiús+Espazo e o botón ▾ abren o menú dos perfís, e que cada perfil corre a súa shell no cartafol persoal; e que o + abre o perfil por defecto, e *Duplicate tab* repite o perfil e o cartafol. |
 | [`check-shortcuts.ps1`](#toolscheck-shortcutsps1) | Comprobar os atallos de teclado de `meiga.exe`: que os erros da táboa `[shortcuts]` do `config.toml` saen na caixa de mensaxe, coa súa liña e a súa columna; que Ctrl+T, Ctrl+W, AltGr e as combinacións que libera o arquivo chegan ao programa; que os atallos mostran, abren, duplican e pechan as tabs e abren os perfís, tamén os que engade ou cambia o arquivo; que unha tab ou un perfil que non existe non fai nada, e a súa tecla non chega ao programa; que, mentres se mantén a tecla, Ctrl+Maiús+T abre unha soa tab, e Ctrl+RePáx segue mostrando a anterior; e que AvPáx, se baixou para o programa, segue sendo del ata que sobe, aínda que se prema Ctrl. |
 | [`check-exit.ps1`](#toolscheck-exitps1) | Comprobar o que fai `meiga.exe` cando remata o programa dunha tab: que o código 0 pecha a tab, e a última a xanela, tamén despois dunha caixa de mensaxe e co programa da súa liña de comandos; que calquera outro fin deixa a tab, coa liña do fin nunha fila propia e o que se pode facer debaixo, e o mesmo cun programa que non arranca; que, sen programa, Intro reinicia o programa na mesma tab, no mesmo cartafol, e Ctrl+D pecha a tab, sen que as súas teclas lle cheguen a outro programa, e as outras teclas non fan nada; e que *Restart tab*, desactivado mentres corre o programa, reinicia o dunha tab oculta sen mostrala. |
+| [`check-manytabs.ps1`](#toolscheck-manytabsps1) | Comprobar que `meiga.exe` mantén manexábeis 30 tabs: que se encollen ata un ancho mínimo, e despois van nunha franxa que desprazan a roda e os seus botóns, unha tab cada vez, tamén mentres se mantén o botón; que cada tab se mostra cun clic; que o × e o botón do medio pechan unha tab tras outra sen mover o rato, e o teclado e a última tab recolocan as outras no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e que unha tab oculta di que o seu programa escribiu, tocou a campá ou rematou, debuxando só o seu título. |
 | [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
@@ -3088,7 +3089,7 @@ A CI executa este script en cada PR, despois de `check-mouse.ps1`, no paso *Chec
 
 ## `tools/check-tabs.ps1`
 
-Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Os atallos: Ctrl+Maiús+T abre unha tab co perfil por defecto e móstraa cun fotograma completo; Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior, e dan a volta; e Ctrl+Maiús+W pecha a tab que se mostra, cos seus programas, ou a xanela, se é a última. E unha tab oculta: o seu fío lector baixa de prioridade; a saída do seu programa non debuxa nada, pero o programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que non remata; o seu título non chega á xanela, só á súa tab na barra, ata que se mostra, e o texto que copia ao portapapeis non chega nunca, tampouco dentro dunha actualización sincronizada que o programa mantén aberta ata que se mostra a tab, mentres que o que copia xa á vista si, tamén dentro dunha actualización sincronizada que o programa deixa aberta e que a xanela remata á súa hora límite; e a súa grella non cambia ata que se mostra. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación, coma en [`check-present.ps1`](#toolscheck-presentps1), e escribe nun arquivo o que ve. Teclea os atallos na xanela coma [`check-keyboard.ps1`](#toolscheck-keyboardps1) as súas teclas, pero co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1) as accións do rato, e sabe que tab se mostra pola prioridade dos fíos lectores. A xanela non ten que estar en primeiro plano, pero sen iso a comprobación demostra menos do portapapeis (o paso 8). Leva uns 10 s, boa parte deles agardando a que deixe de pestanexar o cursor da tab nova (o paso 3).
+Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Os atallos: Ctrl+Maiús+T abre unha tab co perfil por defecto e móstraa cun fotograma completo; Ctrl+Tab e Ctrl+Maiús+Tab mostran a seguinte e a anterior, e dan a volta; e Ctrl+Maiús+W pecha a tab que se mostra, cos seus programas, ou a xanela, se é a última. E unha tab oculta: o seu fío lector baixa de prioridade; a saída do seu programa só debuxa a súa tab na barra, unha vez, que di que o programa escribiu algo ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)), e o programa recibe as respostas ás súas preguntas, tamén dentro dunha actualización sincronizada que non remata; o seu título non chega á xanela, só á súa tab na barra, ata que se mostra, e o texto que copia ao portapapeis non chega nunca, tampouco dentro dunha actualización sincronizada que o programa mantén aberta ata que se mostra a tab, mentres que o que copia xa á vista si, tamén dentro dunha actualización sincronizada que o programa deixa aberta e que a xanela remata á súa hora límite; e a súa grella non cambia ata que se mostra. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación, coma en [`check-present.ps1`](#toolscheck-presentps1), e escribe nun arquivo o que ve. Teclea os atallos na xanela coma [`check-keyboard.ps1`](#toolscheck-keyboardps1) as súas teclas, pero co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1) as accións do rato, e sabe que tab se mostra pola prioridade dos fíos lectores. A xanela non ten que estar en primeiro plano, pero sen iso a comprobación demostra menos do portapapeis (o paso 8). Leva uns 10 s, boa parte deles agardando a que deixe de pestanexar o cursor da tab nova (o paso 3).
 
 ```powershell
 .\tools\check-tabs.ps1                                  # comproba target\release\meiga.exe
@@ -3096,7 +3097,7 @@ Desde a subfase 2.2. Comproba as tabs de `meiga.exe` ([ADR 0019](../adr/0019-var
 .\tools\check-tabs.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
 ```
 
-Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script da primeira tab con `pwsh`. As tabs novas corren o perfil por defecto: desde a 2.5, co `APPDATA` baleiro da comprobación, PowerShell, o PowerShell 7 que atopa meiga nos cartafoles onde o deixan os seus instaladores, ou, se non atopa ningún, Windows PowerShell ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 4 e 5); ata a 2.4, o `pwsh` do `PATH`, ou `powershell`, se non o había. E cargan o perfil de PowerShell do usuario: un perfil que debuxe algo segundos despois do *prompt* pode facer fallar a comprobación, porque nos pasos 4 e 5 non pode haber ningún fotograma. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`.
+Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script da primeira tab con `pwsh`. As tabs novas corren o perfil por defecto: desde a 2.5, co `APPDATA` baleiro da comprobación, PowerShell, o PowerShell 7 que atopa meiga nos cartafoles onde o deixan os seus instaladores, ou, se non atopa ningún, Windows PowerShell ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 4 e 5); ata a 2.4, o `pwsh` do `PATH`, ou `powershell`, se non o había. E cargan o perfil de PowerShell do usuario: un perfil que debuxe algo segundos despois do *prompt* pode facer fallar a comprobación, porque no paso 4 só pode haber un fotograma, dentro da primeira tab, e no 5, ningún. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`.
 
 **Coidado:** mentres corre, non uses o rato nin o teclado: as teclas mesturaríanse coas da comprobación, e un clic noutra xanela cambiaría o primeiro plano, que a comprobación mira no paso 8 e que ten que quedar igual ata o final dese paso. Se cambia e o paso falla, a mensaxe de erro dío. E usa o portapapeis: se tiña texto, ao rematar volta deixalo nel, pero calquera outra cousa, coma unha imaxe, pérdese. Ademais, a xanela de meiga cambia de tamaño unha vez.
 
@@ -3104,7 +3105,7 @@ Saída esperada, coa xanela en primeiro plano, coma no *runner* da CI, e cos val
 
 ```text
 OK: Ctrl+Shift+T opens a tab with the default shell (pwsh.exe), and shows it with a full frame; the reader of the hidden tab gets a lower priority.
-OK: while a tab is hidden, the output of its program draws nothing.
+OK: while a tab is hidden, the output of its program draws only its tab in the bar, once.
 OK: a hidden tab gets the answers to its questions, also when it leaves a synchronized update open, which ends at its deadline (… ms), without drawing.
 OK: Ctrl+Tab shows the other tab with one full frame and gives it the grid of the window (…x… -> …x…), which it did not get while it was hidden.
 OK: the title of a hidden tab reaches the window once the tab is shown; the text that it copied to the clipboard never does, also in a synchronized update still open then, and the text that it copies once shown does, also in a synchronized update that the window ends.
@@ -3119,6 +3120,8 @@ OK: closing the last tab closes the window, and it ends with exit code 0.
 - **O portapapeis.** A quinta liña depende da xanela de meiga, coma en [`check-mouse.ps1`](#toolscheck-mouseps1): se non está en primeiro plano, é `OK: the title of a hidden tab reaches the window once the tab is shown; the window is not in the foreground, so no tab copies text to the clipboard, hidden or shown.`
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1; se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coma `check-present.ps1`; e, se é do portapapeis e a xanela entrou ou saíu do primeiro plano mentres tanto, dío, e pide correr a comprobación outra vez. E garda o rexistro dos fotogramas e os informes do script da primeira tab, e di onde, cunha liña `Kept …` por arquivo. Pase o que pase, `meiga.exe` non queda aberto, e o portapapeis volta ter o texto que tiña.
+
+**Comprobado** na 2.8 cunha copia de meiga cun cambio feito a propósito, compilada noutro cartafol en *release* sen LTO, coma as de [`check-exit.ps1`](#toolscheck-exitps1), e co ConPTY ao lado: unha meiga sen o indicador da actividade, cuxa tab oculta non debuxa nada cando escribe o seu programa. Falla no paso 4, despois dunha liña `OK:`: a xanela non debuxa ningún fotograma.
 
 Esta comprobación non ve o foco nin o rato, que pasan á tab nova ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 9), nin os avisos das tabs que se perden mentres está aberta a caixa de mensaxe (decisión 13). Tampouco mide os orzamentos da subfase, os espertares e a CPU con varias tabs: os números dunha máquina compartida, coma o *runner*, non dirían nada ([Subfases › 2.2](../subfases/2.2-sesions.md)).
 
@@ -3167,6 +3170,7 @@ $api = [Meiga.Tools.TabsCheck]
 | `PeekMessageW`, `AttachThreadInput` e `SetKeyboardState` | Poñen abaixo as modificadoras dos atallos, coma en `check-keyboard.ps1`. |
 | `PostMessageW` | Publica na xanela as mensaxes das teclas. |
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
+| `GetClientRect` e `GetDpiForWindow` | O tamaño da área cliente e a escala da xanela, para calcular onde está a primeira tab na barra (`Get-FirstTab`). |
 | `GetForegroundWindow` | A xanela de primeiro plano. |
 | `SetWindowPos` | Cambia o tamaño da xanela. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
@@ -3174,7 +3178,7 @@ $api = [Meiga.Tools.TabsCheck]
 | `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se teclea un atallo, e agardan a que pare. |
 | `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len a prioridade dun fío de meiga polo seu nome. |
 
-- Son as de `check-mouse.ps1` que necesita, sen as do rato nin as da caixa de mensaxe; `SetWindowPos`, coma en `check-resize.ps1`; e catro novas: `GetThreadContext`, para agardar a que pare o fío da xanela, e `GetThreadDescription`, `GetThreadPriority` e `LocalFree`, para ler a prioridade dun fío.
+- Son as de `check-mouse.ps1` que necesita, sen as do rato nin as da caixa de mensaxe; `SetWindowPos`, coma en `check-resize.ps1`; e catro novas: `GetThreadContext`, para agardar a que pare o fío da xanela, e `GetThreadDescription`, `GetThreadPriority` e `LocalFree`, para ler a prioridade dun fío. Desde a 2.8, tamén `GetClientRect` e `GetDpiForWindow`, coa estrutura `RECT`, coma en [`check-menu.ps1`](#toolscheck-menups1), para `Get-FirstTab`.
 - **Unha clase propia,** coma en `check-resize.ps1`: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían as funcións novas.
 - As oito últimas, de `OpenThread` a `GetThreadContext`, non levan `public`: só as usan `TypeKey` e `PriorityOf`, dentro da clase. Son dúas das tres funcións propias da clase, en C#; a terceira é `ClearClipboard`, a de `check-mouse.ps1`.
 
@@ -3496,12 +3500,63 @@ function Test-Full($Line) {
 }
 
 function Show-Lines($Lines) {
-    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels -AutoSize | Out-Host
+    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels, areas -AutoSize | Out-Host
 }
 ```
 
 - `Test-Full` é o de `check-present.ps1`: di se unha liña cubriu a xanela enteira, cos píxeles que presentou iguais ao ancho polo alto.
-- `Show-Lines` mostra unhas liñas do rexistro nunha táboa, antes dun erro: o número, o momento, o tipo e a causa de cada unha, o tamaño do *framebuffer*, e cantos rectángulos e píxeles debuxou.
+- `Show-Lines` mostra unhas liñas do rexistro nunha táboa, antes dun erro: o número, o momento, o tipo e a causa de cada unha, o tamaño do *framebuffer*, cantos rectángulos e píxeles debuxou e, desde a 2.8, as zonas que presentou, para ver onde debuxou no paso 4.
+
+```powershell
+# A rectangle, from its left and top, included, to its right and bottom,
+# excluded.
+function New-Rect([int]$Left, [int]$Top, [int]$Right, [int]$Bottom) {
+    [pscustomobject]@{ Left = $Left; Top = $Top; Right = $Right; Bottom = $Bottom }
+}
+
+function Show-Rect($Rect) {
+    "($($Rect.Left), $($Rect.Top)) to ($($Rect.Right), $($Rect.Bottom))"
+}
+
+# Whether $Inner is inside $Outer.
+function Test-Inside($Inner, $Outer) {
+    $Inner.Left -ge $Outer.Left -and $Inner.Top -ge $Outer.Top -and
+    $Inner.Right -le $Outer.Right -and $Inner.Bottom -le $Outer.Bottom
+}
+
+# The areas that the frames of $Lines presented: "x y w h;x y w h".
+function Get-Areas($Lines) {
+    foreach ($line in $Lines) {
+        foreach ($area in ($line.areas -split ';' | Where-Object { $_ })) {
+            $x, $y, $w, $h = [int[]]($area -split ' ')
+            New-Rect $x $y ($x + $w) ($y + $h)
+        }
+    }
+}
+
+# The first of two tabs, as meiga lays out its bar (see
+# crates/meiga-core/src/ui/tabbar.rs): from a gap on the left and the top of
+# the bar to its bottom, and as wide as two tabs fit beside the buttons +
+# and of the profiles, up to 240 pixels at a scale of 100 %.
+function Get-FirstTab {
+    $client = [Meiga.Tools.TabsCheck+RECT]::new()
+    if (-not $api::GetClientRect($window, [ref]$client)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $dpi = $api::GetDpiForWindow($window)
+    $scale = { param([int]$Pixels) [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96)) }
+    $gap = & $scale 4
+    $room = [Math]::Max(0, $client.Right - 3 * $gap - (& $scale 28) - (& $scale 24))
+    $width = [int][Math]::Min((& $scale 240), [Math]::Floor($room / 2))
+    New-Rect $gap $gap ($gap + $width) (& $scale 32)
+}
+```
+
+**Onde debuxa a primeira tab,** desde a 2.8, para o paso 4.
+
+- `New-Rect`, `Show-Rect`, `Test-Inside` e `Get-Areas` son os de [`check-menu.ps1`](#toolscheck-menups1), letra por letra: un rectángulo coa esquerda e o alto incluídos e a dereita e o baixo excluídos, o seu texto para as mensaxes de erro, se un rectángulo está dentro doutro, e as zonas que presentaron uns fotogramas, do campo `areas` do rexistro ([`--trace-frames`](meiga.md#cratesmeigasrctracers)).
+- **`Get-FirstTab`** calcula o rectángulo da primeira de dúas tabs, coma meiga ([`ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)). Le o ancho da área cliente con `GetClientRect` e a escala da xanela con `GetDpiForWindow`. `$scale` pasa uns píxeles a 100 % aos da escala, arredondando ao máis próximo e polo menos 1, coma meiga. Á esquerda e enriba hai unha separación, `$gap`, 4 píxeles a 100 %; o sitio das tabs, `$room`, é o ancho da xanela menos tres separacións, o botón + de 28 píxeles e o dos perfís de 24; e cada unha das dúas tabs leva a metade, sen pasar de 240 píxeles. O rectángulo vai da separación da esquerda e de enriba ata o baixo da barra, 32 píxeles a 100 %.
+- **Só para dúas tabs que caben.** Desde a 2.8, cando as tabs non caben co seu ancho mínimo, 100 píxeles a 100 %, van nunha franxa con botóns de desprazamento ([`check-manytabs.ps1`](#toolscheck-manytabsps1)), e `Get-FirstTab` non a ten en conta: vale mentres caben dúas tabs, cunha xanela de polo menos 264 píxeles de ancho a 100 %. No paso 4, a xanela ten aínda o tamaño que lle dá Windows ao abrila, que adoita ser moito máis ancho.
 
 ```powershell
 # The reports of the script of the first tab.
@@ -3692,7 +3747,7 @@ try {
 | 1 | O script da primeira tab oculta o cursor e pon un título. | A xanela ten ese título, e o lector da tab, a prioridade normal. |
 | 2 | Ctrl+Maiús+T. | Arranca un programa novo, nunha tab que se mostra cun primeiro fotograma completo. O lector da tab nova ten a prioridade normal, e o da primeira, a de debaixo. |
 | 3 | Nada. | Un segundo sen fotogramas: o cursor da tab nova xa non pestanexa. |
-| 4 | A primeira tab, oculta, escribe durante un segundo. | Ningún fotograma. |
+| 4 | A primeira tab, oculta, escribe durante un segundo. | Un só fotograma, só dentro da primeira tab: o indicador de que o seu programa escribiu algo. |
 | 5 | A primeira tab abre unha actualización sincronizada, pregunta que terminal é e non a remata. | O programa recibe a resposta en menos de 1 s, e a xanela non debuxa nada. |
 | 6 | Un texto propio no portapapeis. A primeira tab pon un título e copia outro texto. | Nin o título da xanela nin o portapapeis cambian. |
 | 7 | A xanela pasa a 640 × 480 píxeles. | A primeira tab segue coa súa grella. |
@@ -3757,22 +3812,30 @@ try {
     Wait-Quiet 1000 ($TimeoutSeconds + 10)
 ```
 
-**3. Un segundo sen fotogramas.** A shell da tab nova mostra o seu cursor e, mentres a xanela ten o foco, o cursor pestanexa, se Windows o deixa: cada cambio é un fotograma ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)). Deixa de pestanexar, visíbel, cando pasa o tempo de espera sen cambios na pantalla, 5 s por defecto, contados desde o último que escribiu a shell ao arrancar. Os pasos 4 e 5 non esperan ningún fotograma, así que antes a comprobación agarda un segundo sen ningún, máis ca medio pestanexo, 530 ms por defecto. Iso pode levar o tempo de espera e uns segundos máis: por iso agarda ata `TimeoutSeconds` + 10 s. Sen o foco, ou cando Windows desactiva o pestanexo, coma pode facer o Escritorio remoto, a espera é máis curta.
+**3. Un segundo sen fotogramas.** A shell da tab nova mostra o seu cursor e, mentres a xanela ten o foco, o cursor pestanexa, se Windows o deixa: cada cambio é un fotograma ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)). Deixa de pestanexar, visíbel, cando pasa o tempo de espera sen cambios na pantalla, 5 s por defecto, contados desde o último que escribiu a shell ao arrancar. No paso 4 só pode haber un fotograma, o do indicador da primeira tab, e no 5, ningún, así que antes a comprobación agarda un segundo sen ningún, máis ca medio pestanexo, 530 ms por defecto. Iso pode levar o tempo de espera e uns segundos máis: por iso agarda ata `TimeoutSeconds` + 10 s. Sen o foco, ou cando Windows desactiva o pestanexo, coma pode facer o Escritorio remoto, a espera é máis curta.
 
 ```powershell
-    # 4. The hidden tab writes for a second.
+    # 4. The hidden tab writes for a second: only its first output wakes the
+    # window up, which draws its tab in the bar, once, with the mark that
+    # tells that its program wrote something.
     $start = @(Get-Log).Count
     $null = Invoke-Step 'write while it is hidden'
     Start-Sleep -Milliseconds 300
     $frames = @(Get-Frames $start)
-    if ($frames.Count -gt 0) {
+    $tab = Get-FirstTab
+    $outside = @(Get-Areas $frames | Where-Object { -not (Test-Inside $_ $tab) })
+    if ($frames.Count -ne 1 -or $outside.Count -gt 0) {
         Show-Lines $frames
-        throw 'The window drew while the output of a hidden tab changed.'
+        throw "While the output of a hidden tab changed, the window drew $($frames.Count) frames, instead of one only inside its tab, $(Show-Rect $tab)."
     }
-    Write-Host 'OK: while a tab is hidden, the output of its program draws nothing.'
+    Write-Host 'OK: while a tab is hidden, the output of its program draws only its tab in the bar, once.'
 ```
 
-**4. A saída dunha tab oculta.** A primeira tab, oculta, escribe 20 liñas nun segundo. O seu fío lector dállas ao seu terminal, pero a xanela non copia nin debuxa a pantalla dunha tab oculta, e o primeiro cambio espértaa unha soa vez ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 3). `Invoke-Step` volta cando o script escribiu a última liña; a pausa de 300 ms dálle tempo á saída para chegar a meiga e, se meiga debuxase, ao fotograma para aparecer no rexistro, coma no paso 6 de `check-present.ps1`. Non pode haber ningún fotograma: nin da tab oculta, nin da que se ve, que está quieta.
+**4. A saída dunha tab oculta.** A primeira tab, oculta, escribe 20 liñas nun segundo. O seu fío lector dállas ao seu terminal, pero a xanela non copia nin debuxa a pantalla dunha tab oculta, e o primeiro cambio espértaa unha soa vez ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 3). Desde a 2.8, ese espertar debuxa o indicador da actividade, ●, antes do título da tab na barra, e só o rectángulo do título ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisións 7, 8 e 10); o resto da saída non esperta a xanela, porque a marca da pantalla queda posta mentres a tab segue oculta. `Invoke-Step` volta cando o script escribiu a última liña; a pausa de 300 ms dálle tempo á saída para chegar a meiga e ao fotograma para aparecer no rexistro, coma no paso 6 de `check-present.ps1`.
+
+- **Un fotograma, dentro da primeira tab.** `Get-FirstTab` di onde está a primeira tab na barra, e `Get-Areas`, as zonas que presentaron os fotogramas: ten que haber un, e ningunha zona fóra da tab. Nin fotogramas da tab que se ve, que está quieta, nin un segundo da oculta. Se non, o erro mostra as liñas, coas súas zonas, e di cantos fotogramas houbo e onde está a tab.
+- Mira onde debuxa, non o que debuxa: un fotograma que pintase outra cousa no título da tab tamén pasaría. Que o indicador vai na cela antes do título, coa cor do título, próbao unha proba de [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), que le os píxeles; e os rectángulos dos tres indicadores, [`check-manytabs.ps1`](#toolscheck-manytabsps1).
+- Ata a 2.7, a tab oculta non debuxaba nada, e o paso non aceptaba ningún fotograma.
 
 ```powershell
     # 5. A question in a synchronized update that the program never ends.
@@ -3796,7 +3859,7 @@ try {
 - O script pregunta que terminal é dentro dunha actualización que deixa aberta, e o seu informe di a resposta e os milisegundos que agardou. A resposta ten que ser `ESC [ ? 6 c` (`\e[?6c` no informe), e chegar en menos de 1 s.
 - **Por que chega.** O fío lector avisa á xanela cando se abre a actualización, a xanela apunta cando remata, e o temporizador dos fotogramas vence a esa hora, aínda que non haxa ningún fotograma que debuxar: meiga remata a actualización sen copiar nin debuxar nada, e a resposta vai ao programa (decisión 4). Os programas que preguntan algo ao terminal esperan a resposta: nunha tab que non se mostrase, quedarían parados.
 - **Os milisegundos** da liña `OK:` son os da hora límite, 150 ms, máis o camiño da pregunta e o da resposta, así que cambian dunha vez a outra. O límite dun segundo deixa marxe para unha máquina ocupada. Unha meiga que non rematase as actualizacións das tabs ocultas gardaría a pregunta ata mostrar a tab, e o script agardaría os seus 5 s sen resposta.
-- Despois, 200 ms máis: rematar a actualización non pode debuxar nada.
+- Despois, 200 ms máis: rematar a actualización non pode debuxar nada, nin a saída nova da tab, que xa ten o indicador da actividade desde o paso 4.
 - `$answer, $milliseconds = …` asigna as dúas palabras de vez. Son textos: `[int]` converte os milisegundos nun número para comparalos.
 
 ```powershell
@@ -10379,7 +10442,7 @@ A CI executa este script en cada PR, despois de `check-profiles.ps1`, no paso *C
 
 ## `tools/check-exit.ps1`
 
-Desde a subfase 2.7. Comproba o que fai `meiga.exe` cando remata o programa dunha tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md); [Arquitectura › O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio)). Os fins limpos: co código 0, a tab péchase, e con ela o seu menú, se está aberto, pero ningún outro: o dos perfís e o doutra tab seguen abertos. Se a tab está oculta, só se debuxa a barra, se non se pecha o seu menú; e, se é a que se mostra, móstrase a da súa esquerda, cun só fotograma completo. Os outros: a tab queda, tamén unha oculta cuxo programa escribiu antes de rematar, e o seu terminal di como rematou o programa, nunha fila propia, e debaixo o aviso, `You can now close this tab with Ctrl+D, or press Enter to restart.`; meiga segue. Sen programa, as teclas que non son atallos non fan nada, nin quitan a selección, e Ctrl+Intro e AltGr+D tampouco; Intro reinicia o programa na mesma tab, coa mesma liña de comandos e no mesmo cartafol, e móstrao cun só fotograma completo, e o que escribiu o programa anterior vai ao historial; e Ctrl+D pecha a tab, e mostra a seguinte. Nin o programa novo nin o da tab seguinte reciben as teclas que baixaron para meiga. No menú da tab, *Restart tab* está desactivado mentres corre o programa; nunha tab oculta cuxo programa rematou, reinicia o programa sen mostrar a tab, co lector na prioridade de debaixo desde o principio. Un programa que non arranca, porque o cartafol do seu perfil non existe, di por que, co mesmo aviso; Intro téntao outra vez, e, cando o cartafol xa existe, arráncao nel. Os programas que rematan co código 0 mentres está aberta unha caixa de mensaxe pechan as súas tabs cando se pecha ela, a oculta e a que se mostra, e a última pecha a xanela: meiga sae co código 0, e as consolas rematan. E o mesmo co programa da liña de comandos de meiga. O código que comproba explícase en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs) e [› `view.rs`](meiga.md#cratesmeigasrcviewrs), e en [Código › meiga-core › `term/mod.rs`](meiga-core.md#cratesmeiga-coresrctermmodrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Probe, o perfil por defecto, e Later, que corren o mesmo script de PowerShell, Later nun cartafol que ao principio non existe; e as shells que atopa meiga, ocultas. O script de cada tab escribe nun arquivo propio o seu cartafol e o tamaño da súa consola, e noutro as teclas que recibe o seu programa; escribe o texto que lle dá a comprobación; e remata cando llo di ela, co código de saída que lle dá, despois dun texto ou sen el. A comprobación le as liñas do terminal cun triplo clic, que as copia ao portapapeis, coma [`check-mouse.ps1`](#toolscheck-mouseps1), e teclea coma [`check-shortcuts.ps1`](#toolscheck-shortcutsps1): publica as mensaxes co fío da xanela suspendido, co estado das teclas que necesitan, que comparte con el. As teclas que non poden facer nada que se vexa van cun movemento do punteiro a un botón da barra detrás delas: cando a xanela debuxa o botón, xa tratou as teclas. E sabe que tab se mostra polas prioridades dos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1).
+Desde a subfase 2.7. Comproba o que fai `meiga.exe` cando remata o programa dunha tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md); [Arquitectura › O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio)). Os fins limpos: co código 0, a tab péchase, e con ela o seu menú, se está aberto, pero ningún outro: o dos perfís e o doutra tab seguen abertos. Se a tab está oculta, só se debuxa a barra, se non se pecha o seu menú; e, se é a que se mostra, móstrase a da súa esquerda, cun só fotograma completo. Os outros: a tab queda, tamén unha oculta cuxo programa escribiu antes de rematar, e o seu terminal di como rematou o programa, nunha fila propia, e debaixo o aviso, `You can now close this tab with Ctrl+D, or press Enter to restart.`; meiga segue. Se a tab está oculta, desde a 2.8 só se debuxa outra vez a súa tab na barra, que o di co indicador do fin ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)). Sen programa, as teclas que non son atallos non fan nada, nin quitan a selección, e Ctrl+Intro e AltGr+D tampouco; Intro reinicia o programa na mesma tab, coa mesma liña de comandos e no mesmo cartafol, e móstrao cun só fotograma completo, e o que escribiu o programa anterior vai ao historial; e Ctrl+D pecha a tab, e mostra a seguinte. Nin o programa novo nin o da tab seguinte reciben as teclas que baixaron para meiga. No menú da tab, *Restart tab* está desactivado mentres corre o programa; nunha tab oculta cuxo programa rematou, reinicia o programa sen mostrar a tab, co lector na prioridade de debaixo desde o principio. Un programa que non arranca, porque o cartafol do seu perfil non existe, di por que, co mesmo aviso; Intro téntao outra vez, e, cando o cartafol xa existe, arráncao nel. Os programas que rematan co código 0 mentres está aberta unha caixa de mensaxe pechan as súas tabs cando se pecha ela, a oculta e a que se mostra, e a última pecha a xanela: meiga sae co código 0, e as consolas rematan. E o mesmo co programa da liña de comandos de meiga. O código que comproba explícase en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs) e [› `view.rs`](meiga.md#cratesmeigasrcviewrs), e en [Código › meiga-core › `term/mod.rs`](meiga-core.md#cratesmeiga-coresrctermmodrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Probe, o perfil por defecto, e Later, que corren o mesmo script de PowerShell, Later nun cartafol que ao principio non existe; e as shells que atopa meiga, ocultas. O script de cada tab escribe nun arquivo propio o seu cartafol e o tamaño da súa consola, e noutro as teclas que recibe o seu programa; escribe o texto que lle dá a comprobación; e remata cando llo di ela, co código de saída que lle dá, despois dun texto ou sen el. A comprobación le as liñas do terminal cun triplo clic, que as copia ao portapapeis, coma [`check-mouse.ps1`](#toolscheck-mouseps1), e teclea coma [`check-shortcuts.ps1`](#toolscheck-shortcutsps1): publica as mensaxes co fío da xanela suspendido, co estado das teclas que necesitan, que comparte con el. As teclas que non poden facer nada que se vexa van cun movemento do punteiro a un botón da barra detrás delas: cando a xanela debuxa o botón, xa tratou as teclas. E sabe que tab se mostra polas prioridades dos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1).
 
 ```powershell
 .\tools\check-exit.ps1                                  # comproba target\release\meiga.exe
@@ -10402,7 +10465,7 @@ OK: then the keys that are not shortcuts do nothing: only the button of the bar 
 OK: Enter starts the program again in its tab, with the same command line and folder, and shows it with one full frame, and the new program gets neither the repeat of Enter nor Enter going up; what the last program wrote goes to the history.
 OK: while the program of a tab runs, Restart tab is disabled in the menu of the tab: Shift+F10 and Down highlight Close tab, which Enter chooses.
 OK: when the program ends with exit code 1 at the start of a row, '[process exited with code 1 (0x00000001)]' goes in that row.
-OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and nothing is drawn; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.
+OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and only its tab is drawn again, which tells it; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.
 OK: Ctrl+D closes the tab that is shown, whose program ended, and shows the next one, with one full frame; its program gets neither D nor Ctrl going up.
 OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.
 OK: while a message box is open, the programs of a hidden tab and of the tab that is shown end with exit code 0, and once it closes, both tabs close: the last one closes the window, which ends with exit code 0, and the consoles end too.
@@ -10413,7 +10476,7 @@ OK: when the program of its command line ends with exit code 0, meiga.exe ends w
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1: se é dunha liña do terminal, a mensaxe di o que ten a fila e o que tiña que ter; se é dunha tab, as prioridades dos lectores, co número do programa de cada tab; se é das teclas, as que recibiu o programa antes do Z; e, se é dos fotogramas, antes mostra as liñas do rexistro que o demostran. Se meiga rematou antes de tempo, dío, co seu código de saída. E garda o cartafol da comprobación, co `config.toml`, os rexistros dos fotogramas e os arquivos das tabs, e di onde, cunha liña `Kept …`. Pase o que pase, `meiga.exe` non queda aberto, o portapapeis volta ter o texto que tiña e o punteiro volta a onde estaba.
 
-**Comprobado** con trinta e seis copias de meiga cun cambio feito a propósito cada unha, compiladas noutro cartafol en *release* sen LTO, coma as de `check-shortcuts.ps1`, e co ConPTY ao lado. Todas fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle.
+**Comprobado** con trinta e sete copias de meiga cun cambio feito a propósito cada unha, trinta e seis na 2.7 e unha na 2.8, compiladas noutro cartafol en *release* sen LTO, coma as de `check-shortcuts.ps1`, e co ConPTY ao lado. Trinta e seis fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle. A outra, unha da 2.7, a que deixa coa prioridade normal o lector dunha tab oculta que reinicia, pasa desde a 2.8, e acéptase (ver o paso 9).
 
 Esta comprobación non remata ningún programa sen código de saída (`Exit::Unknown`), nin co código 0xC000013A, o dunha consola que se pecha, que tampouco son fins limpos (decisión 1); nin co terminal na pantalla alternativa, nin coa vista no historial (decisións 3 e 7). Tampouco remata ningún co cursor ao principio dunha fila con texto, coma a que deixa unha barra de progreso, ou dunha fila na que continúa a de riba; nin con texto debaixo do cursor, nin cunha rexión de desprazamento, nin cunha actualización sincronizada aberta, nin cun xogo de caracteres que non sexa ASCII, nin co modo de inserir, nin sen o paso á fila seguinte despois da última columna (decisión 3). Das teclas que reinician o programa e pechan a tab, só teclea Intro e Ctrl+D, co Ctrl esquerdo e sen Maiús: Maiús+Intro, o Intro do teclado numérico e Ctrl+D co Ctrl dereito ou con Maiús próbanse en Rust (decisión 5). Tampouco mantén abaixo, mentres remata o programa, unha tecla que baixou para el, que despois non fai nada mentres repite. Non mira o título que mostra a tab ao reiniciar, o nome do seu perfil: no paso 9, a tab oculta ten o título `hidden` antes do reinicio, e só a súa etiqueta na barra podería quedar con el, pero a comprobación non le o texto da barra; nin o título da xanela o mostraría, porque, ao mostrarse unha tab, `TerminalView::show` colle o título do seu terminal, que `Terminal::restart` borra. Tampouco mira a grella dun reinicio despois de cambiar o tamaño da xanela (decisión 7); nin escolle *Restart tab* na tab que se mostra, que reinicia con Intro. E non mira onde queda un menú aberto cando cambia a barra: queda onde se abriu, aínda que se movan a súa tab ou os botóns, coma os menús do paso 2. Os fins e o reinicio próbanse tamén en Rust, sen xanela: como rematou o programa e a liña do fin, tamén coa vista no historial, o erro dun programa que non arranca, e o que esquece un reinicio, en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs); as teclas sen programa, en [› `view.rs`](meiga.md#cratesmeigasrcviewrs); e o terminal que volta estar coma o espera un programa novo, en [Código › meiga-core › `term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs).
 
@@ -10471,10 +10534,11 @@ It checks that:
   the exit code goes in that row;
 - when the program of a hidden tab ends with exit code 4, also after it
   wrote a line and gave a title, which draw only its tab in the bar, its tab
-  stays, and nothing is drawn; on the menu that the right button opens on
-  it, Down and Down highlight Restart tab, which Enter chooses: the program
-  starts again in the hidden tab, with the lower priority of a hidden tab
-  from the start, and the tab is not shown;
+  stays, and only its tab is drawn again, which tells it (ADR 0025); on the
+  menu that the right button opens on it, Down and Down highlight Restart
+  tab, which Enter chooses: the program starts again in the hidden tab,
+  with the lower priority of a hidden tab from the start, and the tab is
+  not shown;
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
@@ -11357,8 +11421,8 @@ function Assert-LowerReader([string]$What) {
 - **Con un,** se ten a prioridade de debaixo, `THREAD_PRIORITY_BELOW_NORMAL`, todo vai ben. Se non, garda a lectura, e volta ler; 50 ms despois da primeira vez que o viu, falla, coas prioridades que leu e o número de lecturas.
 - **Sen ningún,** segue lendo, e falla despois de `TimeoutSeconds`: non arrancou ningún programa.
 - **As mensaxes** teñen coma suxeito `$What`, o que arranca o programa, coma as de `Wait-NewShell`: no paso 9, `Down, Down and Enter, on the menu of a hidden tab whose program ended,`, coa coma do final, e despois o que pasou: `started no program`, se meiga rematou; `left … with … reader threads instead of one`, con máis dun lector; `did not start a program`, sen ningún; ou `started a program whose reader thread had the priority …`, se non é a de debaixo.
-- **Por que desde o principio.** meiga arranca o lector coa prioridade normal, coma calquera fío, e `Tabs::restart` báixaa xusto despois, se a tab está oculta. Despois, a xanela só a sobe á normal mentres ten o *lock* do terminal da tab: cada espertar da xanela por unha tab oculta pasa por `Tab::learn`, que a sobe, colle o que trae o espertar, e báixaa ao soltar o *lock*. Así, o primeiro espertar baixa a prioridade tamén nunha meiga cuxo `Tabs::restart` non a baixase; e o programa novo pode espertar a xanela axiña cun título, coma PowerShell cando corre como administrador, na CI (ver o paso 9). Unha comprobación que agardase a prioridade de debaixo, coma `Wait-Shown`, non distinguiría esa meiga cando chega un título. PowerShell tarda máis de 50 ms en arrancar e dar o seu título: se nos 50 ms desde que aparece o lector a súa prioridade non é a de debaixo, non a puxo `Tabs::restart`.
-- **Os 50 ms son un compromiso.** Se a xanela tardase máis en baixar a prioridade despois de arrancar o lector, porque outro fío lle quitase o procesador todo ese tempo, coma pode pasar nun *runner* moi cargado, a comprobación fallaría cunha meiga sen erros. E se un título chegase antes de 50 ms, non distinguiría unha meiga sen a prioridade de `Tabs::restart`.
+- **Por que desde o principio.** meiga arranca o lector coa prioridade normal, coma calquera fío, e `Tabs::restart` báixaa xusto despois, se a tab está oculta. Despois, a xanela só a sobe á normal mentres ten o *lock* do terminal da tab: cada espertar da xanela por unha tab oculta pasa por `Tab::learn`, que a sobe, colle o que trae o espertar, e báixaa ao soltar o *lock*. Así, o primeiro espertar baixa a prioridade tamén nunha meiga cuxo `Tabs::restart` non a baixase; e o programa novo pode espertar a xanela axiña cun título, coma PowerShell cando corre como administrador, na CI, e, desde a 2.8, coa súa primeira saída (ver o paso 9). Unha comprobación que agardase a prioridade de debaixo, coma `Wait-Shown`, non distinguiría esa meiga cando chega un título. PowerShell tarda máis de 50 ms en arrancar e dar o seu título: na 2.7, se nos 50 ms desde que aparecía o lector a súa prioridade non era a de debaixo, non a puxera `Tabs::restart`. Desde a 2.8, a primeira saída chega antes, e a comprobación xa non distingue esa meiga (ver o paso 9).
+- **Os 50 ms son un compromiso.** Se a xanela tardase máis en baixar a prioridade despois de arrancar o lector, porque outro fío lle quitase o procesador todo ese tempo, coma pode pasar nun *runner* moi cargado, a comprobación fallaría cunha meiga sen erros. E un título que chegase antes de 50 ms non deixaría distinguir unha meiga sen a prioridade de `Tabs::restart`: desde a 2.8, a primeira saída do programa novo chega antes, e xa non a distingue (ver o paso 9).
 
 ```powershell
 # Waits until the tab of $Shown is the one with the reader of normal
@@ -11955,7 +12019,7 @@ try {
 | 6 | Intro, cunha repetición, e o Z. Ctrl+Maiús+Inicio e Ctrl+Maiús+Fin. | Intro reinicia o programa na mesma tab e no mesmo cartafol, e móstrao cun só fotograma completo; o programa novo non recibe nada antes do Z, e escribe `probe-<proceso>` na fila 0. No historial, a pantalla do programa de antes: `probe-<proceso>` na fila 0 e a liña do código 3 na 2. |
 | 7 | Ctrl+Maiús+T. Maiús+F10, a frecha abaixo e Intro. | A frecha salta *Restart tab*, desactivado, e Intro escolle *Close tab*: a tab nova péchase, e o seu programa remata. Móstrase a primeira. |
 | 8 | O programa da primeira tab remata co código 1, ao principio dunha fila baleira. | A liña do código 1 vai nesa fila, a 1, e o aviso na 2. |
-| 9 | Ctrl+Maiús+T e Ctrl+1. O programa da segunda tab, oculta, escribe unha liña e dá un título, e despois remata co código 4. O botón dereito nela, a frecha abaixo dúas veces e Intro. | Ctrl+1 mostra a primeira, cun só fotograma completo. A liña e o título debuxan só a segunda tab na barra, e o fin, nada. *Restart tab* reinicia o seu programa, no seu cartafol, co lector na prioridade de debaixo desde que arranca, e sen mostrala: ningún fotograma completo. |
+| 9 | Ctrl+Maiús+T e Ctrl+1. O programa da segunda tab, oculta, escribe unha liña e dá un título, e despois remata co código 4. O botón dereito nela, a frecha abaixo dúas veces e Intro. | Ctrl+1 mostra a primeira, cun só fotograma completo. A liña e o título debuxan só a segunda tab na barra, e o fin, outra vez só ela, co indicador do fin. *Restart tab* reinicia o seu programa, no seu cartafol, co lector na prioridade de debaixo desde que arranca, e sen mostrala: ningún fotograma completo. |
 | 10 | Ctrl+D, e o Z. | Pecha a primeira tab, sen programa, e mostra a segunda, cun só fotograma completo; o seu programa non recibe nada antes do Z. Queda un programa. |
 | 11 | Ctrl+Maiús+2. Intro. Crea o cartafol de Later. Intro, e o Z. | Ábrese ao final unha tab con Later, cun só fotograma completo, que di por que non arrancou o seu programa, e debaixo o aviso. Intro téntao outra vez, cun só fotograma completo, co mesmo erro. Co cartafol, Intro arranca o programa nel, cun só fotograma completo, e o programa non recibe nada antes do Z. |
 | 12 | Ctrl+V, con dúas liñas no portapapeis. Cos programas das dúas tabs rematados co código 0, o botón *Cancel* da caixa. | Ábrese a caixa que pregunta antes de pegar. Ao pecharse, péchanse as dúas tabs, e a última, a xanela: meiga sae co código 0, e as consolas rematan. |
@@ -12293,11 +12357,12 @@ try {
     # title: the window draws only the title of its tab, and does not copy
     # its screen, so the reader does not wake it up again for the screen.
     # Then the program ends with exit code 4: its reader wakes the window up
-    # all the same, and the tab stays, and nothing is drawn. On the menu that
-    # the right button opens on it, nothing is highlighted: Down goes to
-    # Duplicate tab, and Down again to Restart tab, which starts the program
-    # again in the tab, without showing it, and with the lower priority of a
-    # hidden tab from the start (see Assert-LowerReader).
+    # all the same, and the tab stays, and only its tab is drawn again, with
+    # the mark of the end before its title. On the menu that the right
+    # button opens on it, nothing is highlighted: Down goes to Duplicate tab,
+    # and Down again to Restart tab, which starts the program again in the
+    # tab, without showing it, and with the lower priority of a hidden tab
+    # from the start (see Assert-LowerReader).
     $eighth = Open-Tab 'Ctrl+Shift+T' @()
     Wait-Quiet 400
     $start = @(Get-Log).Count
@@ -12310,20 +12375,15 @@ try {
     $start = @(Get-Log).Count
     Stop-Probe $eighth 4
     Wait-Gone $eighth 'The program of the hidden tab'
-    Wait-Quiet 400
-    $frames = @(Get-Frames $start)
-    if ($frames.Count -gt 0) {
-        Show-Lines $frames
-        throw "When the program of a hidden tab ended with exit code 4, the window drew $($frames.Count) frames instead of none."
-    }
+    Assert-Inside $start (Get-Bar 2).Tabs[1].Rect 'When the program of a hidden tab ended with exit code 4'
 ```
 
 **9. Outro fin nunha tab oculta, despois de escribir, e *Restart tab*** (decisións 3, 6, 7 e 8). Ctrl+Maiús+T abre unha tab, `$eighth`, que se mostra. Ctrl+1 mostra a primeira, a de `$again`, cuxo programa rematou: un só fotograma completo, e o lector de `$eighth`, na prioridade de debaixo; a tab que se mostra non ten lector (`Wait-Shown 0`).
 
-- **Unha liña e un título, coa tab oculta.** O script de `$eighth` escribe `hidden` e un salto de liña, e o título `hidden`, cunha secuencia OSC 0 (`Write-Probe`). Só se debuxa a súa tab na barra, co título novo (`Assert-Inside`, co rectángulo da segunda tab): a xanela non copia a pantalla dunha tab oculta. E ten que debuxala, polo título: así a comprobación sabe tamén que o que escribiu o programa chegou a meiga.
-- **A marca da pantalla queda posta.** O lector pon a marca da pantalla, `screen_changed`, cando o programa escribe, e esperta a xanela só se non estaba posta; quítaa a xanela cando copia a pantalla, e a dunha tab oculta non a copia ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Desde a liña `hidden`, a marca segue posta. O paso depende diso: se meiga copiase algún día a pantalla dunha tab oculta, a marca quitaríase, e o paso seguiría pasando, pero xa sen probar o fin coa marca posta.
-- **Despois, o fin, co código 4.** A liña do fin cambia a pantalla, pero, coa marca xa posta, iso non espertaría a xanela: o fin chégalle polo seu propio espertar, o que lle dá sempre o lector, unha vez, cando xa apuntou o fin (decisión 8). Ata a 2.6, só a marca espertaba a xanela polo fin, e unha tab oculta coa marca posta non a espertaba.
-- **Nada que debuxar:** a tab queda, e o seu terminal di como rematou, pero non se ve. Despois de que remate o lector, e de 400 ms sen debuxar, non pode haber ningún fotograma: se a tab se pechase, debuxaríase a barra. Que a xanela soubo do fin vese despois, no menú da tab.
+- **Unha liña e un título, coa tab oculta.** O script de `$eighth` escribe `hidden` e un salto de liña, e o título `hidden`, cunha secuencia OSC 0 (`Write-Probe`). Só se debuxa a súa tab na barra (`Assert-Inside`, co rectángulo da segunda tab), co título novo e, desde a 2.8, co indicador da actividade ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisións 7 e 8): a xanela non copia a pantalla dunha tab oculta. E ten que debuxala, polo título: así a comprobación sabe tamén que o que escribiu o programa chegou a meiga.
+- **A marca da pantalla queda posta.** O lector pon a marca da pantalla, `screen_changed`, cando o programa escribe, e esperta a xanela só se non estaba posta; quítaa a xanela cando copia a pantalla, e a dunha tab oculta non a copia ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Desde a 2.8, quítaa tamén ao ocultar a tab (`Tab::hide`, en [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs)), para que a primeira saída despois esperte a xanela, que debuxa o indicador da actividade. Desde a liña `hidden`, a marca segue posta. O paso depende diso: se meiga copiase algún día a pantalla dunha tab oculta, a marca quitaríase, e o paso seguiría pasando, pero xa sen probar o fin coa marca posta.
+- **Despois, o fin, co código 4.** A liña do fin cambia a pantalla, pero, coa marca xa posta, iso non espertaría a xanela: o fin chégalle polo seu propio espertar, o que lle dá sempre o lector, unha vez, cando xa apuntou o fin ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md), decisión 8). Ata a 2.6, só a marca espertaba a xanela polo fin, e unha tab oculta coa marca posta non a espertaba.
+- **Só a súa tab, outra vez:** a tab queda, e o seu terminal di como rematou, pero non se ve. Desde a 2.8, a súa tab na barra dío co indicador do fin, unha × grosa vermella antes do título, no sitio do da actividade, e só se debuxa o rectángulo do título ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisións 7, 8 e 10). `Assert-Inside` agarda, despois de que remate o lector, a que a xanela debuxe e deixe de debuxar, e todo o que debuxou ten que estar dentro da segunda tab: se a tab se pechase, debuxaríase a barra enteira. Non mira que sexa a ×, nin conta os fotogramas. Que a xanela soubo do fin vese tamén despois, no menú da tab. Ata a 2.7, a tab oculta non debuxaba nada: a comprobación agardaba 400 ms sen debuxar, e non podía haber ningún fotograma.
 
 ```powershell
     Open-TabMenu 2 1 'the tab'
@@ -12340,7 +12400,7 @@ try {
         Show-Lines (Get-Frames $start)
         throw "Restart tab, on a hidden tab, made $($full.Count) full frames: it showed the tab."
     }
-    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and nothing is drawn; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.'
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and only its tab is drawn again, which tells it; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.'
 ```
 
 **Despois, *Restart tab* nunha tab oculta.** O botón dereito na segunda tab, a de `$eighth`, abre o seu menú sen mostrala (`Open-TabMenu`), e sen nada resaltado: a primeira frecha abaixo resalta *Duplicate tab*, e a segunda, *Restart tab*, activado porque a xanela sabe que o programa rematou. Intro escólleo.
@@ -12348,8 +12408,9 @@ try {
 - **O lector novo, na prioridade de debaixo desde que arranca** (`Assert-LowerReader`), lido xusto despois das teclas, antes de saber o número do programa novo.
 - **O programa novo,** `$behind`, na mesma tab, no seu cartafol: a tab segue oculta, co lector na prioridade de debaixo, e a primeira segue á vista, sen lector (`Wait-Shown 0`).
 - **Sen mostrar a tab:** desde que remata o programa de `$eighth` non hai ningún fotograma completo. O menú e a barra debuxan só o seu sitio.
-- **Por que desde que arranca.** Despois, calquera espertar da xanela pola tab baixaría a prioridade igual, con `Tab::learn` (ver `Assert-LowerReader`). O da pantalla do programa novo non chega, porque a marca da pantalla segue posta, e o script non dá ningún título. Pero no *runner* da CI PowerShell corre como administrador, e ao arrancar pon `Administrator: ` diante do título da súa consola (ver [`check-profiles.ps1`](#toolscheck-profilesps1)): ese título esperta a xanela. Unha comprobación que mirase a prioridade só despois, coma `Wait-Shown`, non distinguiría alí unha meiga sen a prioridade de `Tabs::restart`. `Assert-LowerReader` le a prioridade antes de que chegue ese título, en calquera consola.
-- **O que colle:** unha meiga cuxo fin só esperta a xanela pola marca da pantalla, coma ata a 2.6: a xanela non sabe que rematou o programa, e o menú ten *Restart tab* desactivado; as frechas chegan a *Close tab*, Intro pecha a tab, e non arranca ningún programa: `Assert-LowerReader` non atopa ningún lector, e falla despois de `TimeoutSeconds`. O mesmo, unha meiga onde *Restart tab* nunca está activado. Unha onde reinicia a tab que se mostra, e non a do menú; unha onde a mostra; e unha onde o lector da tab oculta queda na prioridade normal: nas tres, o lector do programa novo ten a prioridade normal, e `Assert-LowerReader` falla aos 50 ms.
+- **Por que desde que arranca.** Despois, calquera espertar da xanela pola tab baixaría a prioridade igual, con `Tab::learn` (ver `Assert-LowerReader`). Ata a 2.7, o da pantalla do programa novo non chegaba, porque a marca da pantalla seguía posta, e o script non dá ningún título. Pero no *runner* da CI PowerShell corre como administrador, e ao arrancar pon `Administrator: ` diante do título da súa consola (ver [`check-profiles.ps1`](#toolscheck-profilesps1)): ese título esperta a xanela. Unha comprobación que mirase a prioridade só despois, coma `Wait-Shown`, non distinguiría alí unha meiga sen a prioridade de `Tabs::restart`. `Assert-LowerReader` le a prioridade antes de que chegue ese título, en calquera consola. Desde a 2.8, `Shared::restart` quita a marca da pantalla, para que a tab diga tamén que o programa novo escribiu algo ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)), e o ConPTY escribe algo nada máis arrancar ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)): ese espertar chega axiña, en calquera máquina, antes dos 50 ms, e `Assert-LowerReader` xa non distingue unha meiga sen a prioridade de `Tabs::restart` (ver *O que colle*).
+- **O que colle:** unha meiga cuxo fin só esperta a xanela pola marca da pantalla, coma ata a 2.6: a xanela non sabe que rematou o programa, e o menú ten *Restart tab* desactivado; as frechas chegan a *Close tab*, Intro pecha a tab, e non arranca ningún programa: `Assert-LowerReader` non atopa ningún lector, e falla despois de `TimeoutSeconds`. Iso foi na 2.7; desde a 2.8, esa copia xa fallaría antes, no segundo `Assert-Inside`: sen espertar, a xanela non debuxa o indicador do fin. Coma ela na 2.7, unha meiga onde *Restart tab* nunca está activado. Unha onde reinicia a tab que se mostra, e non a do menú, e unha onde a mostra: nas dúas, o lector do programa novo ten a prioridade normal, e `Assert-LowerReader` falla aos 50 ms. E, na 2.8, unha meiga onde o fin dunha tab oculta non debuxa o seu título: a xanela esperta, pero non debuxa nada, e o segundo `Assert-Inside` falla despois de `TimeoutSeconds`, despois de sete liñas `OK:`.
+- **O que xa non colle:** unha meiga onde o lector da tab oculta queda na prioridade normal. Na 2.7, `Assert-LowerReader` collíaa aos 50 ms, tamén na CI dunha rama temporal; desde a 2.8 pasa, e acéptase. O primeiro que escribe o ConPTY esperta a xanela, e `Tab::learn` baixa a prioridade igual, antes dos 50 ms: esa meiga só deixa o lector coa prioridade normal ata ese primeiro espertar, uns milisegundos despois de arrancar. Nunha copia así, a prioridade xa era a de debaixo na segunda lectura de `Assert-LowerReader`.
 
 ```powershell
     # 10. Ctrl+D closes the tab that is shown, whose program ended, and
@@ -12546,6 +12607,2241 @@ O `finally` é coma o de `check-shortcuts.ps1`, co portapapeis de `check-mouse.p
 - **Se todo foi ben,** bórrase o cartafol da comprobación enteiro. **Se algo fallou,** queda, e a comprobación di onde, cunha liña `Kept …`: nel están o `config.toml`, os rexistros dos fotogramas, `frames.csv` e, se chegou ao paso 13, `frames-command.csv`, e os arquivos das tabs que seguían alí, `info`, `keys`, `exit` e `write`. Tamén o di se o cartafol queda porque non se puido borrar enteiro.
 
 A CI executa este script en cada PR, despois de `check-shortcuts.ps1`, no paso *Check the end of the programs* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
+
+## `tools/check-manytabs.ps1`
+
+Desde a subfase 2.8. Comproba que `meiga.exe` mantén manexábeis 30 tabs, e o que din as tabs ocultas ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md); [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). Con 7 tabs, todas se encollen por igual e caben na barra, co botón + detrás delas. A oitava xa non cabe: as tabs quedan co ancho mínimo, nunha franxa entre os dous botóns de desprazamento, que mostra a tab nova, e os botóns + e dos perfís van á dereita da barra. Con 30, cada tab corre o seu programa, nada se solapa, e a franxa mostra a última, que remata antes do botón da dereita; ese botón xa non pode desprazala, e o punteiro enriba del, e un clic nel, non debuxan nada. A roda na barra despraza unha tab por paso, cara á primeira adiante ou á esquerda, e cara á última atrás ou á dereita, e garda o que sobra dun paso para o seguinte xiro. Un clic nun botón de desprazamento leva a franxa ata que a primeira tab que oculta por ese lado, aínda que sexa en parte, queda enteira á vista; e, mentres o botón esquerdo segue premido nel, co punteiro enriba, despraza outra tab aos 250 ms, e despois cada 100 ms. Cada unha das 30 tabs móstrase cun clic no seu título, cando a roda a trae á vista. Cando o × ou o botón do medio pechan unha tab, as outras quedan co seu ancho e no seu sitio mentres o punteiro segue na barra, e o × seguinte queda debaixo do punteiro; cando o punteiro sae da barra, recolócanse, e a franxa mostra a tab que se mostra. Unha tab que pecha o teclado, co punteiro na barra, recoloca as outras no momento, e despois unha que pecha o rato déixaas no seu sitio; e pechar a última co rato recolócaas tamén no momento, así que o × da nova última queda debaixo do punteiro. Mostrar unha tab co teclado, tamén dando a volta, leva a franxa ata ela; a roda pode deixar fóra da vista a tab que se mostra, e alí queda; e Maiús+F10 leva a franxa ata ela, e abre o seu menú debaixo dela. E unha tab oculta: o primeiro que escribe o seu programa debuxa só o título da súa tab, unha vez, e a primeira campá, outra; mostrala quita os dous indicadores, e a campá da tab que se mostra non debuxa nada; e o fin do seu programa co código 3 debuxa o título outra vez. Ao final, a xanela péchase: meiga sae co código 0, e os programas das tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs) e [› `session.rs`](meiga.md#cratesmeigasrcsessionrs), e en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Light, que corre `cmd` co cursor oculto, para que as súas tabs custen pouco, e Probe, o perfil por defecto, que corre un script de PowerShell que escribe o texto que lle dá a comprobación, e remata cando llo di ela; e as shells que atopa meiga, ocultas. A xanela recibe unha área cliente de 800 × 400 píxeles a escala 100 %, na que caben 7 tabs e non 8. A comprobación calcula a barra coma meiga, coas mesmas regras ca o `Layout` de `meiga-core`, e sabe que tab se mostra polas prioridades dos fíos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Publica os clics, a roda e as teclas na xanela co seu fío suspendido, coma [`check-exit.ps1`](#toolscheck-exitps1), e le no rexistro o que debuxa: o punteiro enriba dunha parte da barra debuxa só esa parte, e onde a debuxa di onde está a franxa.
+
+```powershell
+.\tools\check-manytabs.ps1                              # comproba target\release\meiga.exe
+.\tools\check-manytabs.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-manytabs.ps1 -TimeoutSeconds 30           # nunha máquina moi lenta
+```
+
+Necesita PowerShell 7 no `PATH`, coma `check-exit.ps1`: a liña de comandos de Probe empeza por `pwsh`, sen ruta, e Windows búscao no `PATH`. Light corre o `cmd.exe` de Windows, pola súa ruta. Non necesita o `Cargo.toml`: non mira a versión de meiga. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`. Non le o `config.toml` de quen a executa, porque meiga corre co `APPDATA` da comprobación, nin abre ningunha shell do usuario: a primeira tab corre o script da comprobación, cun pwsh que non carga o perfil de PowerShell (`-NoProfile`), e as outras, `cmd` sen os comandos de AutoRun do rexistro (`/d`). Calcula a barra á escala da xanela, a da pantalla: a xanela de 800 píxeles a escala 100 % ten que ter sitio para 7 tabs e non para 8, coma en todas as escalas de Windows, do 100 ao 500 %; se non, falla antes de nada, e dío. E Windows ten que deixarlle á xanela ese tamaño: se non, tamén falla, e di o que ten.
+
+**Coidado:** mentres corre, non uses o rato nin o teclado, coma con `check-exit.ps1`. A comprobación conta con que o punteiro do sistema non estea enriba da xanela, para que Windows lle diga a meiga en seguida que o punteiro saíu (ver `Assert-Hover`): o punteiro por riba da xanela resaltaría o que tivese debaixo, e as tabs conxeladas non se recolocarían. E as teclas que premeses mesturaríanse coas da comprobación, que comparte o estado das teclas co fío da xanela. Ao principio, se o punteiro está enriba da xanela, a comprobación apártao; no paso 6, se pode, lévao un segundo ao botón de desprazamento da esquerda, e despois apártao outra vez; e ao rematar devólveo a onde estaba. Cambia o tamaño da xanela de meiga, unha vez, ao principio. Non usa o portapapeis.
+
+Saída esperada, cos tamaños que dependen da pantalla, e co punteiro do sistema no botón do paso 6, coma na CI:
+
+```text
+The bar is … pixels high, and its tabs from … to … wide: 7 of them fit in the window, … pixels wide, and 8 do not.
+OK: with 7 tabs, they shrink alike, and fit in the bar, with the button + after them: the pointer on the last tab, on the button +, and on the first tab draws only that part.
+OK: an eighth tab does not fit: the tabs keep their narrowest width, and the strip, between the buttons that scroll it, shows the new one, which is shown; the buttons + and of the profiles go on the right of the bar.
+OK: with 30 tabs, each one runs its own program, nothing overlaps, and the strip shows the last one, which ends before the button that scrolls the strip to the right; that button cannot scroll it further, and the pointer on it, and a click on it, draw nothing.
+OK: the wheel on the bar scrolls a tab for each step, towards the first one forward or to the left, and towards the last one backward or to the right, and keeps what is left of a step for the next turn.
+OK: a click on a button that scrolls the strip scrolls it until the first tab that it hides on that side, even in part, is all in view.
+OK: while the left button stays down on a button that scrolls the strip, with the pointer on it, the strip scrolls another tab after 250 ms, and then after each 100 ms: … tabs in a second.
+OK: each of the 30 tabs can be shown with a click on its title, once the wheel brings it into view.
+OK: when the close button or the middle button closes a tab, the others keep their width and their place while the pointer stays on the bar, and the next close button is under the pointer; once the pointer leaves the bar, they get their width again, and the strip shows the tab that is shown.
+OK: a tab that the keyboard closes, with the pointer on the bar, lets the others get their width at once; then a tab that the mouse closes makes them keep it.
+OK: the last tab, closed with the mouse, lets the others get their width at once, so the close button of the new last one comes under the pointer.
+OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays; Shift+F10 scrolls the strip until it is in view again, and opens its menu below it.
+OK: while a tab is hidden, its program writes, which draws only the title of its tab, once, and rings the bell, which draws it once more; showing the tab clears both, and a bell while it is shown draws nothing; the end of its program with exit code 3, while it is hidden, draws its title once more.
+OK: it ends with exit code 0 when its window closes, and the programs of its tabs and their consoles end too.
+```
+
+- **A primeira liña** di o alto da barra, os anchos mínimo e máximo das tabs e o ancho da xanela, en píxeles á escala da pantalla, cos que a comprobación calcula a barra: a escala 100 %, `The bar is 32 pixels high, and its tabs from 100 to 240 wide: 7 of them fit in the window, 800 pixels wide, and 8 do not.`, coma na CI; a escala 150 %, 48, 150, 360 e 1200.
+- **A sexta** di cantas veces se desprazou a franxa no segundo en que o botón esquerdo estivo premido: na CI, 9, ao premelo, aos 250 ms e despois cada 100 ms ata os 950. A comprobación acepta 3 ou máis, se ningunha chega antes de tempo. Se non pode levar o punteiro do sistema ao botón, coma co cliente do Escritorio remoto minimizado, a sexta liña é outra: `OK: the left button down on a button that scrolls the strip scrolls it once, and no more once the pointer leaves the button; the check could not move the pointer of the system onto the button to hold it there.`
+- As outras liñas `OK:` son as mesmas en calquera máquina e pantalla.
+
+Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1: se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coas zonas que presentaron, e a mensaxe di o rectángulo que esperaba; se é da tab que se mostra, a mensaxe di cal tiña que ser, pola súa posición na barra, e cantas tabs hai. As que empezan por `The check expects` din que a barra que calcula a comprobación non é a que necesita o paso: algo que a comprobación non contempla, máis ca un erro de meiga. Se meiga rematou antes de tempo, dío, co seu código de saída. E garda o cartafol da comprobación, co `config.toml` e o rexistro dos fotogramas, e di onde, cunha liña `Kept …`. Pase o que pase, nin `meiga.exe` nin os programas das súas tabs quedan abertos, e o punteiro volta a onde estaba.
+
+**Comprobado** con trinta e tres copias de meiga cun cambio feito a propósito cada unha, compiladas noutro cartafol en *release* sen LTO, coma as de `check-exit.ps1`, e co ConPTY ao lado. Vinte e nove fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle. Tres dependen do punteiro do sistema no paso 6: unha falla só onde a comprobación non o pode levar ao botón, e dúas, só onde pode, coma na CI. E unha pasa, e acéptase (ver o paso 12).
+
+Esta comprobación non mira os debuxos, só os rectángulos que se debuxan, e cantas veces: nin os glifos dos indicadores, a × grosa do fin, a 🔔 da campá e o ● da actividade, nin as súas cores, nin a cela baleira despois deles; nin as frechas dos botóns de desprazamento, nin o seu aspecto máis escuro cando non poden desprazar, nin as tabs cortadas polos lados da franxa. Iso próbano as probas de [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), que len os píxeles. Tampouco oe a campá da tab que se mostra, que non soa (decisión 9): só ve que non debuxa nada. Non conta os espertares da xanela, coma [`check-tabbar.ps1`](#toolscheck-tabbarps1): a segunda saída e a segunda campá dunha tab oculta non poden debuxar nada, pero unha meiga que espertase a xanela por elas, sen debuxar, pasaría; que a campá só esperta a xanela unha vez próbao `the_bell_wakes_the_window_once_until_the_tab_is_hidden_again`, en [› `session.rs`](meiga.md#cratesmeigasrcsessionrs). O botón mantido só se mide onde a comprobación pode levar alí o punteiro do sistema; e, aínda así, non comproba que pare cando o punteiro sae do botón, nin que siga cando volta, nin que as repeticións non tarden máis de 250 e 100 ms, só que non cheguen antes, e que haxa polo menos tres: todo iso próbao `the_buttons_on_the_sides_scroll_a_tab_and_again_while_they_stay_down`. Non move a roda coas tabs que caben, nin cun botón premido na barra, nin cara a un lado cara ao que a franxa non pode desprazarse; e, no botón que non pode desprazar, só mira que o punteiro e o clic non debuxan nada: que tampouco recolocan as tabs conxeladas, nin esquecen levar á vista a tab que se mostra, próbao `what_cannot_scroll_the_strip_changes_nothing`. As tabs conxeladas só se recolocan porque o punteiro sae da xanela: non porque vaia ao terminal, nin porque un menú colla o rato, nin porque se desprace a franxa, se abra unha tab ou cambie o tamaño ou a escala da xanela; e, mentres están conxeladas, a tab que se mostra nunca está fóra da vista. Por iso non colle tres copias que collen as probas de Rust, en `the_tab_that_is_shown_comes_into_view`: unha que leva á vista a tab que se mostra tamén coas tabs conxeladas; unha onde desprazar a franxa non esquece que a tab que se mostra ten que ir á vista, porque, cando a roda a deixa fóra (paso 11), meiga xa a levou á vista antes; e unha onde o que debuxa un indicador non se corta coa franxa, porque a tab dos indicadores está enteira nela. Nin unha onde o fin vai despois da campá, que colle `the_end_goes_before_the_bell_and_the_bell_before_what_the_program_wrote`: no paso 12, o programa remata cando a tab non ten campá. Tampouco usa Ctrl+Tab nin a tecla de menú, nin mira o indicador do fin na tab que se mostra, nin o que fai co indicador un reinicio. E só corre á escala da pantalla, nunha xanela de 800 píxeles a escala 100 %: as outras medidas próbanse en Rust, en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs).
+
+Explicación por partes. Moito é coma en [`check-exit.ps1`](#toolscheck-exitps1), e a barra calcúlase coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1), pero coa franxa: o código vai enteiro, e o que xa se explicou alí explícase eiquí en breve.
+
+```powershell
+<#
+.SYNOPSIS
+Checks that meiga.exe keeps 30 tabs usable: the tabs keep a narrowest width,
+the bar scrolls them with the wheel and with its buttons, the mouse can close
+one tab after another without moving, and a hidden tab tells its activity,
+its bell and the end of its program.
+
+.DESCRIPTION
+Starts meiga.exe with its frame log (--trace-frames) and an APPDATA of its
+own, whose config.toml has two profiles, Light, which runs cmd with a hidden
+cursor, and Probe, the default one, which runs a PowerShell script that
+writes the text that the check gives it, and ends when the check tells it
+to; and hides the shells that meiga finds. The window gets a client area of
+800 x 400 pixels at a scale of 100 %, so that 7 tabs fit in the bar and 8 do
+not.
+
+The check computes the layout of the bar as meiga does (see
+crates/meiga-core/src/ui/tabbar.rs), and follows the tab that is shown by
+the priority of the reader thread of each session. It posts the clicks, the
+wheel and the keys to the window, as check-tabbar.ps1 does, and reads what
+the window draws in its frame log. It checks that:
+
+- with 7 tabs, they shrink alike, and fit in the bar, with the button +
+  after them: the pointer on the last tab, on the button +, and on the first
+  tab draws only that part;
+- an eighth tab does not fit: the tabs keep their narrowest width, and the
+  strip, between the buttons that scroll it, shows the new one, which is
+  shown; the buttons + and of the profiles go on the right of the bar;
+- with 30 tabs, each one runs its own program, nothing overlaps, and the
+  strip shows the last one, which ends before the button that scrolls the
+  strip to the right; that button cannot scroll it further, and the pointer
+  on it, and a click on it, draw nothing;
+- the wheel on the bar scrolls a tab for each step, towards the first one
+  forward or to the left, and towards the last one backward or to the right,
+  and keeps what is left of a step for the next turn;
+- a click on a button that scrolls the strip scrolls it until the first tab
+  that it hides on that side, even in part, is all in view;
+- while the left button stays down on a button that scrolls the strip, with
+  the pointer on it, the strip scrolls another tab after 250 ms, and then
+  after each 100 ms. If the check cannot move the pointer of the system onto
+  the button, as with the client of the Remote Desktop minimized, it checks
+  instead that the strip scrolls once, and no more once the pointer leaves
+  the button;
+- each of the 30 tabs can be shown with a click on its title, once the wheel
+  brings it into view;
+- when the close button or the middle button closes a tab, the others keep
+  their width and their place while the pointer stays on the bar, and the
+  next close button is under the pointer; once the pointer leaves the bar,
+  they get their width again, and the strip shows the tab that is shown;
+- a tab that the keyboard closes, with the pointer on the bar, lets the
+  others get their width at once; then a tab that the mouse closes makes
+  them keep it;
+- the last tab, closed with the mouse, lets the others get their width at
+  once, so the close button of the new last one comes under the pointer;
+- showing a tab with the keyboard, also round the bar, scrolls the strip so
+  that it is in view; the wheel can then move the tab that is shown out of
+  view, where it stays; Shift+F10 scrolls the strip until it is in view
+  again, and opens its menu below it;
+- while a tab is hidden, its program writes, which draws only the title of
+  its tab, once, and rings the bell, which draws it once more; showing the
+  tab clears both, and a bell while it is shown draws nothing; the end of
+  its program with exit code 3, while it is hidden, draws its title once
+  more (ADR 0025);
+- it ends with exit code 0 when its window closes, and the programs of its
+  tabs and their consoles end too.
+
+It needs PowerShell 7 (pwsh) in the PATH, for the script of Probe.
+
+If a check fails, the script ends meiga.exe and the programs of its tabs, and
+keeps its folder, with the frame log.
+
+.PARAMETER Path
+The executable to check. Defaults to target\release\meiga.exe.
+
+.PARAMETER TimeoutSeconds
+How long to wait for the window, for each program to start and to end, and
+for each frame.
+#>
+[CmdletBinding()]
+param(
+    [string]$Path,
+
+    [ValidateRange(1, 600)]
+    [int]$TimeoutSeconds = 10
+)
+```
+
+**A axuda e os parámetros.** A axuda integrada en PowerShell di en inglés o que comproba, en que orde e como: `Get-Help .\tools\check-manytabs.ps1 -Full` móstraa, cos parámetros. Os parámetros son os de `check-exit.ps1`: `-Path`, o `meiga.exe` que se comproba, e `-TimeoutSeconds`, o tempo máximo de cada espera: que se abra a xanela, que arranque e remate cada programa, e cada fotograma. Os programas que arrancan teñen 10 s máis para quedar quietos (`Wait-Settled`).
+
+```powershell
+# Windows PowerShell 5.1 can read this file but not run it: tell how to run
+# it with PowerShell 7. tools/check-powershell.ps1 checks that this works.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $command = "pwsh -File $(Resolve-Path -Relative $PSCommandPath)"
+    if ($PSBoundParameters.Count -gt 0) { $command += ' <the same parameters>' }
+    Write-Host "This script needs PowerShell 7. Run it with: $command" -ForegroundColor Yellow
+    exit 1
+}
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $Path) {
+    $Path = Join-Path $PSScriptRoot '..\target\release\meiga.exe'
+}
+$Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "$Path does not exist. Build it first with: cargo build --release"
+}
+$exe = Split-Path -Leaf $Path
+```
+
+O comezo é o de todos os scripts, coma en `check-exit.ps1`: a comprobación da versión de PowerShell (ver [`check-powershell.ps1`](#toolscheck-powershellps1)); as dúas liñas que deteñen o script ante calquera erro; e a ruta de `meiga.exe`, por defecto `target\release\meiga.exe`, e, se non existe, un erro que di como compilalo.
+
+**As funcións de Windows**, declaradas en C# nunha clase propia, `ManyTabsCheck`:
+
+```powershell
+if (-not ('Meiga.Tools.ManyTabsCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name ManyTabsCheck -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT { public int Left, Top, Right, Bottom; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct POINT { public int X, Y; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wParam; public IntPtr lParam; public uint time; public int x, y; }
+
+public delegate bool EnumProc(IntPtr window, IntPtr parameter);
+
+[DllImport("user32.dll")]
+public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+
+[DllImport("kernel32.dll")]
+public static extern uint GetCurrentThreadId();
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool PeekMessageW(out MSG message, IntPtr window, uint first, uint last, uint remove);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool AttachThreadInput(uint thread, uint to, [MarshalAs(UnmanagedType.Bool)] bool attach);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetKeyboardState(byte[] state);
+
+[DllImport("user32.dll")]
+public static extern IntPtr GetKeyboardLayout(uint thread);
+
+[DllImport("user32.dll")]
+public static extern uint MapVirtualKeyExW(uint code, uint type, IntPtr layout);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetClientRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
+
+[DllImport("user32.dll")]
+public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetCursorPos(out POINT point);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetCursorPos(int x, int y);
+
+[DllImport("user32.dll")]
+public static extern IntPtr WindowFromPoint(POINT point);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool ScreenToClient(IntPtr window, ref POINT point);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool ClientToScreen(IntPtr window, ref POINT point);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool PostMessageW(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+
+[DllImport("user32.dll")]
+public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool EnumWindows(EnumProc callback, IntPtr parameter);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern int GetClassNameW(IntPtr window, System.Text.StringBuilder name, int count);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+static extern uint GetLongPathNameW(string path, System.Text.StringBuilder longPath, uint length);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
+
+[DllImport("kernel32.dll")]
+static extern int GetThreadPriority(IntPtr thread);
+
+[DllImport("kernel32.dll")]
+static extern int GetThreadDescription(IntPtr thread, out IntPtr description);
+
+[DllImport("kernel32.dll")]
+static extern IntPtr LocalFree(IntPtr memory);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool CloseHandle(IntPtr handle);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern uint SuspendThread(IntPtr thread);
+
+[DllImport("kernel32.dll")]
+static extern uint ResumeThread(IntPtr thread);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetThreadContext(IntPtr thread, IntPtr context);
+```
+
+| Función | Para que |
+|---|---|
+| `GetWindowThreadProcessId` e `GetCurrentThreadId` | O fío da xanela de meiga, e o do script. |
+| `PeekMessageW`, `AttachThreadInput` e `SetKeyboardState` | Poñen abaixo os modificadores de cada combinación, coma en `check-shortcuts.ps1`. |
+| `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
+| `GetClientRect`, `GetWindowRect` e `SetWindowPos` | O tamaño da área cliente e o da xanela enteira, para darlle á área cliente o tamaño que necesita a comprobación. |
+| `GetDpiForWindow` | A escala da xanela, para calcular a barra coma meiga. |
+| `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Apartan o punteiro da xanela, se está enriba dela, lévano ao botón do paso 6, e devólveno ao rematar; e dan o punto da pantalla das mensaxes da roda. |
+| `WindowFromPoint` | Se o punteiro, no botón do paso 6, está enriba da xanela de meiga. |
+| `PostMessageW` | Publica na xanela as mensaxes das teclas e do rato, e a que a pecha. |
+| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
+| `EnumWindows` e `GetClassNameW` | Atopan a xanela de meiga, aínda que estea oculta. |
+| `GetLongPathNameW` | Os nomes longos do cartafol da comprobación. |
+| `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
+| `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len as prioridades dos lectores de meiga polo seu nome. |
+
+- **Son as de `check-exit.ps1` con tres máis e sen sete.** Máis: `GetWindowRect` e `SetWindowPos`, para o tamaño da xanela (`Resize-Window`), e `WindowFromPoint`, para saber se o punteiro do sistema quedou enriba da xanela (`Set-RealPointer`). Sen: `EnumThreadWindows`, `IsWindowVisible`, `GetWindow` e `GetDlgItemTextW`, porque non abre ningunha caixa de mensaxe, e as tres do portapapeis, que non usa.
+- **As estruturas.** `RECT`, `POINT`, `MSG` e `EnumProc` son as de `check-exit.ps1`.
+- **As once que non levan `public`,** as tres desde `EnumWindows` e as oito desde `OpenThread`, só as usan as funcións propias da clase, en C#.
+- **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
+
+```csharp
+// Posts messages to a window: each one is three numbers, the message, its
+// wParam and its lParam. The thread of the window is suspended meanwhile,
+// so it reads all of them before the input that Windows makes: a thread
+// reads the posted messages first. Unless `state` is null, the thread of
+// the window gets it as its key state, which this thread shares: the key
+// state changes as the thread reads its input, so it is set while the
+// thread is suspended, for the keys of the messages. The messages of the
+// mouse leave it as it is.
+public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] state)
+{
+    // THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT
+    IntPtr handle = OpenThread(0x0002 | 0x0008, false, thread);
+    if (handle == IntPtr.Zero) throw new System.ComponentModel.Win32Exception();
+    // A CONTEXT of x64: 1232 bytes, aligned to 16.
+    IntPtr memory = Marshal.AllocHGlobal(1232 + 16);
+    try
+    {
+        if (SuspendThread(handle) == uint.MaxValue) throw new System.ComponentModel.Win32Exception();
+        try
+        {
+            // SuspendThread does not wait until the thread stops; reading its
+            // context does. ContextFlags: CONTEXT_CONTROL of x64.
+            IntPtr context = new IntPtr((memory.ToInt64() + 15) & ~15L);
+            Marshal.WriteInt32(context, 0x30, 0x00100001);
+            if (!GetThreadContext(handle, context)) throw new System.ComponentModel.Win32Exception();
+            if (state != null && !SetKeyboardState(state)) throw new System.ComponentModel.Win32Exception();
+            for (int i = 0; i + 2 < messages.Length; i += 3)
+            {
+                if (!PostMessageW(window, (uint)messages[i], new UIntPtr((ulong)messages[i + 1]), new IntPtr(messages[i + 2])))
+                    throw new System.ComponentModel.Win32Exception();
+            }
+        }
+        finally { ResumeThread(handle); }
+    }
+    finally
+    {
+        Marshal.FreeHGlobal(memory);
+        CloseHandle(handle);
+    }
+}
+```
+
+**`PostAll`** é a de `check-exit.ps1`, letra por letra (ver alí): publica de vez as mensaxes dunha acción, co fío da xanela suspendido, e pon o estado das teclas só se `state` non é `null`. As combinacións lévano (`Send-Keys`), e as mensaxes do rato, non (`Send-Mouse`).
+
+```csharp
+// The priorities of the threads of a process whose names start with
+// `prefix`, by name, or null if the process has ended.
+public static System.Collections.Generic.Dictionary<string, int> PrioritiesOf(int process, string prefix)
+{
+    System.Diagnostics.Process target;
+    try { target = System.Diagnostics.Process.GetProcessById(process); }
+    catch (ArgumentException) { return null; }
+    var found = new System.Collections.Generic.Dictionary<string, int>();
+    using (target)
+    {
+        System.Diagnostics.ProcessThreadCollection threads;
+        try { threads = target.Threads; }
+        catch (InvalidOperationException) { return null; }
+        foreach (System.Diagnostics.ProcessThread thread in threads)
+        {
+            // THREAD_QUERY_LIMITED_INFORMATION
+            IntPtr handle = OpenThread(0x0800, false, (uint)thread.Id);
+            if (handle == IntPtr.Zero) continue;
+            try
+            {
+                IntPtr text;
+                if (GetThreadDescription(handle, out text) < 0) continue;
+                string description;
+                try { description = Marshal.PtrToStringUni(text); }
+                finally { LocalFree(text); }
+                if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
+                    found[description] = GetThreadPriority(handle);
+            }
+            finally { CloseHandle(handle); }
+        }
+    }
+    return found;
+}
+```
+
+**`PrioritiesOf`** é a de `check-exit.ps1`, letra por letra (ver *As prioridades dos fíos*): as prioridades dos fíos de meiga cuxo nome empeza por `prefix`, nun dicionario polo seu nome; un dicionario baleiro, se non hai ningún, e `null`, se meiga xa rematou. Esta comprobación non ten `PriorityOf`: le os lectores todos de vez (`Get-Readers`), tamén para a prioridade dun só (`Get-Priority`).
+
+```csharp
+static string ClassOf(IntPtr window)
+{
+    var name = new System.Text.StringBuilder(256);
+    GetClassNameW(window, name, name.Capacity);
+    return name.ToString();
+}
+
+// The top-level window of the class `name` of the process `process`, also a
+// hidden one, or zero.
+public static IntPtr WindowOf(int process, string name)
+{
+    IntPtr found = IntPtr.Zero;
+    EnumWindows((window, parameter) =>
+    {
+        uint owner;
+        GetWindowThreadProcessId(window, out owner);
+        if (owner != (uint)process || ClassOf(window) != name) return true;
+        found = window;
+        return false;
+    }, IntPtr.Zero);
+    return found;
+}
+
+// The long form of the path of a folder that exists: with the long names of
+// the folders that have a short one too, as RUNNER~1.
+public static string LongPathOf(string path)
+{
+    var longPath = new System.Text.StringBuilder(32768);
+    uint length = GetLongPathNameW(path, longPath, (uint)longPath.Capacity);
+    if (length == 0 || length >= longPath.Capacity) throw new System.ComponentModel.Win32Exception();
+    return longPath.ToString();
+}
+```
+
+**A xanela e o cartafol.** `ClassOf`, `WindowOf` e `LongPathOf` son as de `check-exit.ps1`, letra por letra: a clase dunha xanela; a xanela de nivel superior de meiga, aínda que estea oculta; e a ruta dun cartafol que existe, cos nomes longos dos cartafoles que tamén teñen un curto, coma `RUNNER~1`.
+
+```powershell
+'@
+}
+$api = [Meiga.Tools.ManyTabsCheck]
+
+$WM_CLOSE = 0x0010
+$WM_KEYDOWN = 0x0100
+$WM_KEYUP = 0x0101
+$WM_SYSKEYDOWN = 0x0104
+$WM_SYSKEYUP = 0x0105
+$WM_MOUSEMOVE = 0x0200
+$WM_LBUTTONDOWN = 0x0201
+$WM_LBUTTONUP = 0x0202
+$WM_MBUTTONDOWN = 0x0207
+$WM_MBUTTONUP = 0x0208
+$WM_MOUSEWHEEL = 0x020A
+$WM_MOUSEHWHEEL = 0x020E
+$MK_LBUTTON = 0x0001
+$MK_MBUTTON = 0x0010
+$WHEEL_DELTA = 120
+$SWP_NOMOVE = 0x0002
+$SWP_NOZORDER = 0x0004
+$SWP_NOACTIVATE = 0x0010
+$MAPVK_VK_TO_VSC = 0
+$VK_CONTROL = 0x11
+$VK_MENU = 0x12
+$VK_F10 = 0x79
+$THREAD_PRIORITY_NORMAL = 0
+$THREAD_PRIORITY_BELOW_NORMAL = -1
+# The name of the reader thread of a session, before the number of its
+# program (see crates/meiga-win/src/conpty.rs).
+$readerPrefix = 'conpty reader '
+# The console of each tab: the one of the ConPTY of meiga, or the one of
+# Windows if the ConPTY is not next to meiga.exe.
+$consoles = 'OpenConsole.exe', 'conhost.exe'
+# The modifier keys of the chords: the keys whose messages go down and up,
+# each one with whether it is an extended key, and the keys that they set
+# down in the key state.
+$chordKeys = @{
+    Ctrl = , @{ Code = 0x11; Extended = $false; Down = 0x11, 0xA2 }
+    Shift = , @{ Code = 0x10; Extended = $false; Down = 0x10, 0xA0 }
+    Alt = , @{ Code = 0x12; Extended = $false; Down = 0x12, 0xA4 }
+}
+# The keys that a keyboard sends as extended ones: Page Up, Page Down, End,
+# Home, the arrows, Insert and Delete.
+$extendedKeys = @(0x21..0x28) + @(0x2D, 0x2E)
+```
+
+**A clase e as constantes,** coma en `check-exit.ps1`, coas que necesita esta comprobación:
+
+- `'@` remata a definición en C#, e `$api` garda a clase, para chamar as súas funcións con `$api::`.
+- **`WM_CLOSE`,** a mensaxe que pecha a xanela, coma o botón X (paso 13).
+- **As mensaxes das teclas,** a dunha tecla que baixa e a dunha que sobe, e as das teclas do sistema (ver `Get-Key`); e **as do rato**: mover o punteiro, premer e soltar o botón esquerdo e o do medio, e a roda, a vertical e a horizontal, co bit de `wParam` do botón que está abaixo, `MK_LBUTTON` ou `MK_MBUTTON`. **`WHEEL_DELTA`**, 120, é un paso da roda, coma o conta Windows, e meiga (`WHEEL_STEP`).
+- **`SWP_NOMOVE`, `SWP_NOZORDER` e `SWP_NOACTIVATE`:** `SetWindowPos` cambia o tamaño da xanela sen movela, sen cambiar a súa orde entre as outras e sen activala (`Resize-Window`).
+- `MAPVK_VK_TO_VSC`, a conversión dunha tecla virtual no seu código de exploración; e as teclas virtuais que o script nomea, Ctrl e Alt, para saber se unha combinación vai coma teclas do sistema, e F10, que Windows envía coma tecla do sistema tamén sen Alt (ver `Get-Key`). Sen o Z: esta comprobación non le as teclas de ningún programa.
+- **As dúas prioridades dos lectores,** a normal e a de debaixo; **`$readerPrefix`**, o comezo do nome do fío lector dunha sesión, `conpty reader `, antes do número do seu programa ([Código › meiga-win › `Conpty::spawn`](meiga-win.md#conptyspawn)); e os nomes das consolas das tabs, coma en `check-exit.ps1`.
+- **`$chordKeys` e `$extendedKeys`** son os de `check-exit.ps1`, sen AltGr: ningunha combinación desta comprobación o leva.
+
+```powershell
+# The script of the tabs of Probe. It hides the cursor, so that it never
+# blinks, and then writes the text that the check gives it, each time, and a
+# file with how many times it did, until the check tells it how to end: with
+# an exit code, after some text or none.
+$program = @'
+param([Parameter(Mandatory)][string]$Work)
+$ErrorActionPreference = 'Stop'
+[Console]::Out.Write("$([char]27)[?25l")
+[Console]::Out.Flush()
+# The check sets it once it has written how this script ends.
+$stop = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::ManualReset, "meiga-check-manytabs-$PID")
+# And this one once it has written some text for this script to write.
+$write = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "meiga-check-manytabs-write-$PID")
+$written = 0
+[IO.File]::WriteAllText((Join-Path $Work "ready-$PID.txt"), '')
+while ($true) {
+    if ([Threading.WaitHandle]::WaitAny([Threading.WaitHandle[]]@($stop, $write)) -eq 0) {
+        # Its exit code, and the text to write before, if there is one.
+        $end = [IO.File]::ReadAllLines((Join-Path $Work "exit-$PID.txt"))
+        if ($end.Count -gt 1) {
+            [Console]::Out.Write($end[1])
+            [Console]::Out.Flush()
+        }
+        exit [int]$end[0]
+    }
+    [Console]::Out.Write([IO.File]::ReadAllText((Join-Path $Work "write-$PID.txt")))
+    [Console]::Out.Flush()
+    $written++
+    [IO.File]::WriteAllText((Join-Path $Work "written-$PID.txt"), "$written")
+}
+'@
+```
+
+**O script de Probe,** o que corre a primeira tab, co parámetro que lle pon a súa liña de comandos (ver *O `config.toml`*): `-Work`, o cartafol da comprobación. É coma o de `check-exit.ps1`, sen as teclas (ver *O script das tabs*):
+
+- **Oculta o cursor** (`ESC [ ? 25 l`), para que non pestanexe: o pestanexo debuxaría fotogramas que non pide a comprobación. Non escribe nada máis ao principio.
+- **Os eventos con nome:** `meiga-check-manytabs-<proceso>`, de reinicio manual, que pon a comprobación cando xa escribiu como ten que rematar o script (`Stop-Probe`); e `meiga-check-manytabs-write-<proceso>`, de reinicio automático, que pon cando xa escribiu un texto para el (`Write-Probe`). Despois crea `ready-<proceso>.txt`, baleiro: os eventos xa existen, e a comprobación pode abrilos.
+- **Agarda os dous eventos** (`WaitAny`), sen tempo límite. Se é o primeiro, le `exit-<proceso>.txt`: na primeira liña, o código de saída, e na segunda, se a hai, un texto que escribe antes de saír, que esta comprobación non usa. Se é o segundo, escribe o texto de `write-<proceso>.txt` tal como está, sen salto de liña detrás; conta as veces que o fixo, e escribe a conta en `written-<proceso>.txt`, para que a comprobación saiba que xa o escribiu (ver `Write-Probe`); e segue agardando.
+- **Sen `Add-Type`:** non le a súa consola, e os eventos e os arquivos son de .NET.
+
+```powershell
+$name = "meiga-check-manytabs-$PID"
+# All the files of the check, with the APPDATA of meiga. With the long names
+# of the folders, which .NET gives as the current one.
+$work = Join-Path ($api::LongPathOf([IO.Path]::GetTempPath())) $name
+$appdata = Join-Path $work 'appdata'
+$config = Join-Path $appdata 'meiga\config.toml'
+$script = Join-Path $work 'probe.ps1'
+$log = Join-Path $work 'frames.csv'
+Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+$null = New-Item -ItemType Directory -Force -Path (Split-Path $config)
+$utf8 = [Text.UTF8Encoding]::new($false)
+[IO.File]::WriteAllText($script, $program, $utf8)
+```
+
+**Os arquivos da comprobación,** coma en `check-exit.ps1`, todos nun cartafol propio, `$work`, no cartafol temporal, cos seus nomes longos (`LongPathOf`): `meiga-check-manytabs-<PID>`, co número do proceso de PowerShell. Dentro: `appdata`, o `APPDATA` de meiga, co `config.toml`; o script de Probe, `probe.ps1`, en UTF-8 sen BOM; o rexistro dos fotogramas, `frames.csv`; e, mentres corre o script, os seus arquivos: `ready`, `exit`, `write` e `written`, co número do seu proceso.
+
+```powershell
+# The names of the shells that meiga finds (see
+# crates/meiga-win/src/profiles.rs): the ones of Windows and of Git, and the
+# distributions of WSL of the user. A profile of config.toml that only hides
+# a shell that meiga does not find does nothing.
+function Get-ShellNames {
+    'PowerShell'
+    'Windows PowerShell'
+    'Command Prompt'
+    'Git Bash'
+    $lxss = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Lxss')
+    if (-not $lxss) { return }
+    try {
+        foreach ($subkey in $lxss.GetSubKeyNames()) {
+            $key = $lxss.OpenSubKey($subkey)
+            if (-not $key) { continue }
+            try {
+                $distribution = $key.GetValue('DistributionName')
+                if ($distribution -is [string] -and $distribution) { $distribution }
+            }
+            finally { $key.Dispose() }
+        }
+    }
+    finally { $lxss.Dispose() }
+}
+
+# $Text as a basic string of TOML.
+function ConvertTo-TomlString([string]$Text) {
+    '"' + $Text.Replace('\', '\\').Replace('"', '\"') + '"'
+}
+
+$hidden = [Collections.Generic.List[string]]::new()
+$names = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+foreach ($shell in Get-ShellNames) {
+    if ($names.Add($shell)) { $hidden.Add($shell) }
+}
+```
+
+**As shells, ocultas,** coma en `check-exit.ps1`: `Get-ShellNames`, `ConvertTo-TomlString` e `$hidden` son os de alí, letra por letra (ver *As shells, ocultas* en [`check-shortcuts.ps1`](#toolscheck-shortcutsps1)). O menú dos perfís ten que ter só Light e Probe en calquera equipo, para que Ctrl+Maiús+1 abra Light.
+
+```powershell
+# The configuration: Light, the first profile of the menu, which Ctrl+Shift+1
+# opens, runs cmd with a prompt that only hides the cursor, so that its tabs
+# cost little; Probe, the default profile, runs the script above; and the
+# shells that meiga finds, hidden.
+$lightCommand = '%SystemRoot%\System32\cmd.exe /d /q /k prompt $E[?25l'
+$probeCommand = 'pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%MEIGA_CHECK_WORK%\probe.ps1" -Work "%MEIGA_CHECK_WORK%"'
+$configLines = @(
+    '# Written by tools/check-manytabs.ps1.'
+    'default_profile = "Probe"'
+    ''
+    '[[profiles]]'
+    'name = "Light"'
+    "command = '$lightCommand'"
+    "directory = '%MEIGA_CHECK_WORK%'"
+    ''
+    '[[profiles]]'
+    'name = "Probe"'
+    "command = '$probeCommand'"
+    "directory = '%MEIGA_CHECK_WORK%'"
+    foreach ($shell in $hidden) {
+        ''
+        '[[profiles]]'
+        "name = $(ConvertTo-TomlString $shell)"
+        'hidden = true'
+    }
+)
+[IO.File]::WriteAllText($config, ($configLines -join "`n") + "`n", $utf8)
+```
+
+**O `config.toml`,** nun equipo sen distribucións de WSL:
+
+```toml
+# Written by tools/check-manytabs.ps1.
+default_profile = "Probe"
+
+[[profiles]]
+name = "Light"
+command = '%SystemRoot%\System32\cmd.exe /d /q /k prompt $E[?25l'
+directory = '%MEIGA_CHECK_WORK%'
+
+[[profiles]]
+name = "Probe"
+command = 'pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%MEIGA_CHECK_WORK%\probe.ps1" -Work "%MEIGA_CHECK_WORK%"'
+directory = '%MEIGA_CHECK_WORK%'
+
+[[profiles]]
+name = "PowerShell"
+hidden = true
+
+[[profiles]]
+name = "Windows PowerShell"
+hidden = true
+
+[[profiles]]
+name = "Command Prompt"
+hidden = true
+
+[[profiles]]
+name = "Git Bash"
+hidden = true
+```
+
+- **`default_profile = "Probe"`:** a primeira tab corre Probe ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5).
+- **Light,** o primeiro perfil do menú, o que abre Ctrl+Maiús+1 ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 6), corre o `cmd.exe` de Windows, pola súa ruta, con `%SystemRoot%`, que expande meiga: `/d`, sen os comandos de AutoRun do rexistro; `/q`, sen eco; e `/k prompt $E[?25l`, que deixa `cmd` aberto cun *prompt* que só oculta o cursor (`$E` é ESC). Así, as súas tabs non mostran nada nin pestanexan, e custan pouco: son 29.
+- **Probe** corre o script, coas opcións de pwsh de `check-exit.ps1`, e `-Work`, o cartafol da comprobación.
+- **Os dous** corren no cartafol da comprobación, `%MEIGA_CHECK_WORK%`, que meiga expande, coma na liña de comandos de Probe; as liñas de comandos e os cartafoles van entre comiñas simples, as cadeas literais de TOML.
+- **As shells, ocultas** (`hidden = true`): o menú dos perfís ten só Light e Probe, nesa orde.
+- **Sen `[shortcuts]`:** os atallos son os de meiga.
+
+```powershell
+# What the tabs of Light and of Probe run.
+$lightLine = $lightCommand.Replace('%SystemRoot%', $env:SystemRoot)
+$probeLine = $probeCommand.Replace('%MEIGA_CHECK_WORK%', $work)
+
+# As per monitor (v2), the same as meiga, the size of the window is in pixels.
+$previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+```
+
+**O que corren as tabs, e a escala.** `$lightLine` e `$probeLine` son as liñas de comandos de Light e de Probe coas variábeis expandidas, coma as ten que expandir meiga: a primeira tab compara a súa coa de Probe, e o paso 3, as de todas. E a escala por monitor (v2), a de meiga, para o fío de PowerShell, coma en `check-exit.ps1`, que garda a de antes en `$previousDpi`: así, as medidas da xanela e do punteiro están en píxeles, coma as usa meiga para a barra.
+
+```powershell
+# Waits until $Condition is true, or throws what $Failure says.
+function Wait-For([scriptblock]$Condition, [scriptblock]$Failure) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (-not (& $Condition)) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode): $(& $Failure)"
+        }
+        if ([DateTime]::UtcNow -gt $deadline) { throw (& $Failure) }
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+# The lines of the frame log, as objects. meiga writes each line at once.
+function Get-Log {
+    if (-not (Test-Path -LiteralPath $log)) { return }
+    Get-Content -LiteralPath $log | ConvertFrom-Csv
+}
+
+# How many lines of the frame log there are, without its header: where the
+# lines that come next start.
+function Get-Mark {
+    if (-not (Test-Path -LiteralPath $log)) { return 0 }
+    [Math]::Max(0, @(Get-Content -LiteralPath $log).Count - 1)
+}
+
+# The frames after the first $From lines of the log.
+function Get-Frames([int]$From) {
+    @(Get-Log | Select-Object -Skip $From | Where-Object kind -EQ 'frame')
+}
+
+# Waits until meiga has written nothing in its log for $Milliseconds.
+function Wait-Quiet([int]$Milliseconds) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $count = -1
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $lines = Get-Mark
+        if ($lines -ne $count) {
+            $count = $lines
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge $Milliseconds) {
+            return
+        }
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) while the check waited for it to stop drawing."
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$exe kept drawing for $TimeoutSeconds s."
+        }
+        Start-Sleep -Milliseconds 50
+    }
+}
+
+function Test-Full($Line) {
+    [long]$Line.pixels -eq [long]$Line.width * [long]$Line.height -and [long]$Line.pixels -gt 0
+}
+
+function Show-Lines($Lines) {
+    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels, areas -AutoSize | Out-Host
+}
+```
+
+**As esperas e o rexistro dos fotogramas.** `Wait-For`, `Get-Log`, `Get-Frames`, `Test-Full` e `Show-Lines` son os de `check-exit.ps1`, letra por letra (ver alí): agardar unha condición ata `TimeoutSeconds`, e fallar antes se meiga rematou; as liñas do rexistro, coma obxectos, e os fotogramas despois das `$From` primeiras; se unha liña cubre a xanela enteira; e mostrar unhas liñas, coas súas zonas, cando algo falla.
+
+- **`Get-Mark`** é nova: cantas liñas ten o rexistro, sen a cabeceira, contadas sen convertelas en obxectos. É onde empezan as liñas que veñen despois, o `$From` de `Get-Frames`, coma o `@(Get-Log).Count` de `check-exit.ps1`, pero sen ler cada liña coma CSV: o rexistro medra paso a paso, e a comprobación mira onde remata moitas veces, tamén cada 50 ms mentres agarda a calma. meiga escribe cada liña enteira dunha vez, así que contar liñas e contar obxectos dá o mesmo.
+- **`Wait-Quiet`** é a de `check-exit.ps1`, con `Get-Mark` en vez de `@(Get-Log).Count`: agarda a que meiga leve `$Milliseconds` sen escribir no rexistro, e falla se remata, ou se segue escribindo `TimeoutSeconds`.
+
+```powershell
+# Waits until meiga stops drawing, and checks that it drew one full frame
+# after the first $From lines of the log; otherwise throws $What.
+function Assert-OneFull([int]$From, [string]$What) {
+    Wait-Quiet 400
+    $full = @(Get-Frames $From | Where-Object { Test-Full $_ })
+    if ($full.Count -ne 1) {
+        Show-Lines (Get-Frames $From)
+        throw "$What made $($full.Count) full frames instead of 1."
+    }
+}
+
+# Waits until meiga draws a full frame after the first $From lines of the
+# log, and checks that it drew only one once it stops drawing.
+function Wait-OneFull([int]$From, [string]$What) {
+    Wait-For { @(Get-Frames $From | Where-Object { Test-Full $_ }).Count -gt 0 } { "$What did not draw a full frame." }
+    Assert-OneFull $From $What
+}
+```
+
+**Un fotograma completo.** `Assert-OneFull` e `Wait-OneFull` son as de `check-exit.ps1`, letra por letra (ver alí): agardar, ata `TimeoutSeconds`, a que meiga presente un fotograma completo despois das `$From` primeiras liñas, e, cando leva 400 ms sen debuxar, comprobar que foi un só. Mostrar outra tab debuxa a xanela enteira (decisión 10): `Assert-Scroll` e `Show-Tab` agardan ese fotograma.
+
+```powershell
+# A rectangle, from its left and top, included, to its right and bottom,
+# excluded.
+function New-Rect([int]$Left, [int]$Top, [int]$Right, [int]$Bottom) {
+    [pscustomobject]@{ Left = $Left; Top = $Top; Right = $Right; Bottom = $Bottom }
+}
+
+function Show-Rect($Rect) {
+    "($($Rect.Left), $($Rect.Top)) to ($($Rect.Right), $($Rect.Bottom))"
+}
+
+# Whether $Inner is inside $Outer.
+function Test-Inside($Inner, $Outer) {
+    $Inner.Left -ge $Outer.Left -and $Inner.Top -ge $Outer.Top -and
+    $Inner.Right -le $Outer.Right -and $Inner.Bottom -le $Outer.Bottom
+}
+
+# Whether $One and $Other have some pixel in common.
+function Test-Overlap($One, $Other) {
+    $One.Left -lt $Other.Right -and $Other.Left -lt $One.Right -and
+    $One.Top -lt $Other.Bottom -and $Other.Top -lt $One.Bottom
+}
+
+# Whether $One and $Other are the same rectangle.
+function Test-Same($One, $Other) {
+    $One.Left -eq $Other.Left -and $One.Top -eq $Other.Top -and
+    $One.Right -eq $Other.Right -and $One.Bottom -eq $Other.Bottom
+}
+
+# The pixels that $One and $Other have in common: an empty rectangle if none.
+function Get-Intersection($One, $Other) {
+    $left = [Math]::Max($One.Left, $Other.Left)
+    $top = [Math]::Max($One.Top, $Other.Top)
+    New-Rect $left $top ([Math]::Max($left, [Math]::Min($One.Right, $Other.Right))) ([Math]::Max($top, [Math]::Min($One.Bottom, $Other.Bottom)))
+}
+
+# The areas that the frames of $Lines presented: "x y w h;x y w h".
+function Get-Areas($Lines) {
+    foreach ($line in $Lines) {
+        foreach ($area in ($line.areas -split ';' | Where-Object { $_ })) {
+            $x, $y, $w, $h = [int[]]($area -split ' ')
+            New-Rect $x $y ($x + $w) ($y + $h)
+        }
+    }
+}
+```
+
+**Os rectángulos e as zonas dos fotogramas.** `New-Rect`, `Show-Rect`, `Test-Inside`, `Test-Overlap` e `Get-Areas` son os de `check-exit.ps1`, letra por letra (ver alí): un rectángulo, desde o seu lado esquerdo e o de arriba, incluídos, ata o dereito e o de abaixo, fóra; o seu texto, para as mensaxes; se un está dentro doutro; se dous teñen algún píxel en común; e as zonas que presentaron uns fotogramas, coma rectángulos. Dúas son novas:
+
+- **`Test-Same`:** se dous rectángulos son o mesmo. O punteiro e os indicadores teñen que debuxar exactamente o rectángulo que di a comprobación (`Assert-Hover` e `Assert-Drawn`), nin máis nin menos: así sabe, ao píxel, onde está cada parte da barra.
+- **`Get-Intersection`:** os píxeles que teñen en común dous rectángulos, coma `Rect::intersection` en `meiga-core`. Se non teñen ningún, un rectángulo sen ancho ou sen alto, que empeza onde empezaría a parte común; en Rust, `Rect::EMPTY`. A comprobación só mira se ten ancho (paso 11). Corta coa franxa as columnas das tabs (`Get-TabArea`) e o sitio dos seus títulos (`Get-LabelArea`), coma meiga.
+
+```powershell
+# The programs of the tabs: the processes that meiga started, but for the
+# consoles. A process that ended before meiga started may have had a
+# process with the same number as its parent.
+function Get-Shells {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -notin $consoles -and $_.CreationDate -ge $started })
+}
+
+# The consoles of the tabs.
+function Get-Consoles {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -in $consoles -and $_.CreationDate -ge $started })
+}
+
+# Waits until the process $Id has ended, also after meiga.
+function Wait-Ended([int]$Id, [string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (Get-Process -Id $Id -ErrorAction Ignore) {
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What was still running after $TimeoutSeconds s."
+        }
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+# Waits until the consoles of $Consoles have ended, once meiga has.
+function Wait-ConsolesEnded($Consoles) {
+    foreach ($console in $Consoles) {
+        Wait-Ended ([int]$console.ProcessId) "The console $($console.Name) of a tab"
+    }
+}
+```
+
+**Os programas das tabs e os finais.** `Get-Shells`, `Get-Consoles` e `Wait-Ended` son os de `check-exit.ps1` (ver alí): os programas das tabs e as súas consolas, os fillos de meiga desde WMI, e agardar a que remate un proceso. **`Wait-ConsolesEnded`** cambia: agarda as consolas dunha lista que lle dá o paso 13, as que había antes de pechar a xanela, e non as que atopa `Get-Consoles` despois.
+
+```powershell
+# The priorities of the reader threads of the sessions of meiga, by name,
+# or null if meiga has ended.
+function Get-Readers {
+    $api::PrioritiesOf($process.Id, $readerPrefix)
+}
+
+# The priority of the reader thread of the tab whose program is $Program,
+# or $null if it has none.
+function Get-Priority([int]$Program) {
+    $readers = Get-Readers
+    $priority = 0
+    if ($null -eq $readers -or -not $readers.TryGetValue("$readerPrefix$Program", [ref]$priority)) { return $null }
+    $priority
+}
+
+# Waits until the processes of $Ids have used no processor time for a
+# second: a shell that starts has written its prompt, and given its title.
+function Wait-Settled([int[]]$Ids, [string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds + 10)
+    $last = -1
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $programs = @(Get-Process -Id $Ids -ErrorAction Ignore)
+        if ($programs.Count -ne $Ids.Count) { throw "$What`: a program ended." }
+        $time = ($programs | Measure-Object -Sum { $_.TotalProcessorTime.Ticks }).Sum
+        if ($time -ne $last) {
+            $last = $time
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 1000) {
+            return
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What`: the programs kept running for $($TimeoutSeconds + 10) s."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+}
+```
+
+**Os lectores e as súas prioridades.**
+
+- **`Get-Readers`** dá as prioridades de todos os lectores de meiga, polo seu nome, `conpty reader <proceso>` (`PrioritiesOf`, co prefixo `$readerPrefix`), ou nada, se meiga xa rematou. Unha lectura dá todas as tabs de vez: `Wait-NewReader` e `Wait-Active` comparan todas.
+- **`Get-Priority`** dá a do lector da tab do programa `$Program`, ou nada, se xa non existe, coma a de `check-exit.ps1`, pero desde o dicionario de `Get-Readers`.
+- **`Wait-Settled`** agarda a que uns programas leven un segundo sen usar o procesador, coma a de [`check-tabbar.ps1`](#toolscheck-tabbarps1) (ver alí), pero con varios de vez: suma o tempo de procesador de todos, en *ticks*, e empeza a contar outra vez cada vez que a suma cambia. Unha shell que arranca xa escribiu entón o seu *prompt* e deu o seu título. Se algún programa remata, falla (`a program ended`), e tamén se seguen usando o procesador ata `TimeoutSeconds` + 10 s, coma alí.
+
+```powershell
+# How many times the script of the tab of $Id has written the text that the
+# check gave it.
+function Get-Written([int]$Id) {
+    try { [int][IO.File]::ReadAllText((Join-Path $work "written-$Id.txt")) } catch { 0 }
+}
+
+# Tells the script of the tab of $Id to write $Text, without a new line, and
+# waits until it has.
+function Write-Probe([int]$Id, [string]$Text) {
+    $before = Get-Written $Id
+    [IO.File]::WriteAllText((Join-Path $work "write-$Id.txt"), $Text, $utf8)
+    $write = [Threading.EventWaitHandle]::OpenExisting("meiga-check-manytabs-write-$Id")
+    try { $null = $write.Set() }
+    finally { $write.Dispose() }
+    Wait-For { (Get-Written $Id) -gt $before } { 'The script of a tab did not write its text.' }
+}
+
+# Tells the script of the tab of $Id to end with exit code $Code.
+function Stop-Probe([int]$Id, [int]$Code) {
+    [IO.File]::WriteAllText((Join-Path $work "exit-$Id.txt"), "$Code`n", $utf8)
+    $stop = [Threading.EventWaitHandle]::OpenExisting("meiga-check-manytabs-$Id")
+    try { $null = $stop.Set() }
+    finally { $stop.Dispose() }
+}
+
+# Waits until the program of the tab of $Id has ended, and the reader thread
+# of its session too, whose last work is to post the wake-up that tells the
+# window that the program ended, which it ignores if it closed the tab
+# already: what the check posts to the window from then on comes after it.
+# The files of its script go too, so that the check does not take them for
+# the ones of a program that gets the same number later.
+function Wait-Gone([int]$Id, [string]$What) {
+    Wait-Ended $Id $What
+    Wait-For { $null -eq (Get-Priority $Id) } { "$What ended, and the reader thread of its session did not." }
+    foreach ($file in "ready-$Id.txt", "exit-$Id.txt", "write-$Id.txt", "written-$Id.txt") {
+        Remove-Item -LiteralPath (Join-Path $work $file) -ErrorAction SilentlyContinue
+    }
+}
+```
+
+**Escribir, rematar e agardar o fin.**
+
+- **`Get-Written`** le cantas veces escribiu o script de Probe o texto que lle deu a comprobación (`written-<proceso>.txt`): 0, se o arquivo aínda non existe, ou se non se pode ler mentres o escribe o script.
+- **`Write-Probe`** escribe o texto en `write-<proceso>.txt`, e pon o evento de escribir, coma en `check-exit.ps1`; despois, a diferenza de alí, agarda a que medre a conta de `Get-Written`: cando volta, o script xa escribiu o texto na súa consola. O paso 12 mide desde entón o que debuxa a xanela.
+- **`Stop-Probe`** é a de `check-exit.ps1` sen o texto: escribe en `exit-<proceso>.txt` só o código de saída, e pon o outro evento.
+- **`Wait-Gone`** é a de `check-exit.ps1` (ver alí): agarda a que remate o programa, e despois o lector da súa sesión, cuxo último traballo é publicar o espertar que lle di á xanela que rematou, e que a xanela ignora se xa pechou a tab: o que publique despois a comprobación chega detrás del. Úsana o paso 12, co fin do programa de Probe, e os pasos 8 a 10, cos programas das tabs que pechan o rato e o teclado, cuxos espertares ignora a xanela. Ao final borra os arquivos do script, `ready`, `exit`, `write` e `written`, para que a comprobación non os tome polos dun programa posterior co mesmo número, como di o comentario: agarda a que exista o `ready`, antes do paso 1, e le a conta do `written` (`Get-Written`). Hoxe só hai un programa de Probe, o da primeira tab, e só os limpa; pero, se un paso abrise outro e Windows lle dese o mesmo número, a comprobación non tomaría os vellos polos seus. En `check-exit.ps1` o motivo é outro, o do seu comentario: o script crea o arquivo das teclas con `CreateNew`, que fallaría; eiquí, o script escribe os seus con `WriteAllText`, que substitúe o que haxa.
+
+```powershell
+# The client area of the window.
+function Get-Client {
+    $client = [Meiga.Tools.ManyTabsCheck+RECT]::new()
+    if (-not $api::GetClientRect($window, [ref]$client)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $client
+}
+
+# `$Pixels` at a scale of 100 %, at the scale of the window, as meiga does:
+# rounded, and at least one.
+function Get-Scaled([int]$Pixels) {
+    [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
+}
+
+# Gives the window a client area of $Width x $Height pixels.
+function Resize-Window([int]$Width, [int]$Height) {
+    $client = Get-Client
+    $outer = [Meiga.Tools.ManyTabsCheck+RECT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$outer)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $outerWidth = $Width + ($outer.Right - $outer.Left - $client.Right)
+    $outerHeight = $Height + ($outer.Bottom - $outer.Top - $client.Bottom)
+    if (-not $api::SetWindowPos($window, [IntPtr]::Zero, 0, 0, $outerWidth, $outerHeight, $SWP_NOMOVE -bor $SWP_NOZORDER -bor $SWP_NOACTIVATE)) {
+        throw "SetWindowPos failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    $client = Get-Client
+    if ($client.Right -ne $Width -or $client.Bottom -ne $Height) {
+        throw "The window of $exe has a client area of $($client.Right) x $($client.Bottom) pixels instead of $Width x $Height."
+    }
+}
+```
+
+**A xanela e a escala.**
+
+- **`Get-Client`** e **`Get-Scaled`** son as de `check-exit.ps1`, coa clase desta comprobación: a área cliente da xanela, ou un erro; e uns píxeles a escala 100 %, á escala da xanela, coma os escala meiga: `(píxeles × DPI + 48) / 96`, sen decimais, e polo menos un.
+- **`Resize-Window`** é nova: dálle á xanela unha área cliente de `$Width` × `$Height` píxeles. `SetWindowPos` cambia o tamaño da xanela enteira, co seu bordo e a súa barra de título: a comprobación súmalle ao que quere o que hai entre a xanela enteira (`GetWindowRect`) e a súa área cliente, e cambia o tamaño sen mover a xanela, sen cambiar a súa orde e sen activala. Despois comproba que a área cliente ten ese tamaño: se Windows non llo dá, coma nunha pantalla pequena para a súa escala, falla, e di o que ten.
+
+```powershell
+# The pixel in the middle of $Rect.
+function Get-Middle($Rect) {
+    [pscustomobject]@{ X = [int][Math]::Floor(($Rect.Left + $Rect.Right) / 2); Y = [int][Math]::Floor(($Rect.Top + $Rect.Bottom) / 2) }
+}
+
+# $Point of the client area on the screen.
+function Get-OnScreen($Point) {
+    $screen = [Meiga.Tools.ManyTabsCheck+POINT]::new()
+    $screen.X = $Point.X
+    $screen.Y = $Point.Y
+    if (-not $api::ClientToScreen($window, [ref]$screen)) {
+        throw "Could not find a point of the window of $exe on the screen."
+    }
+    $screen
+}
+
+# A mouse message at a point: the message, its wParam and its lParam.
+function Get-Mouse([int]$Message, [int]$Keys, $Point) {
+    $Message, $Keys, (([int]$Point.X -band 0xFFFF) -bor (([int]$Point.Y -band 0xFFFF) -shl 16))
+}
+
+# A message of the wheel, $Delta, at a point of the client area: the
+# message, its wParam and its lParam, which has the point on the screen, as
+# Windows gives it.
+function Get-Wheel([int]$Message, [int]$Delta, $Point) {
+    $screen = Get-OnScreen $Point
+    $Message, (([long]$Delta -band 0xFFFF) -shl 16), (([int]$screen.X -band 0xFFFF) -bor (([int]$screen.Y -band 0xFFFF) -shl 16))
+}
+
+# Posts $Messages to the window at once, with the state of the keys of
+# $State, if it is not null: see PostAll. If meiga has ended, it says so,
+# instead of the error of its thread, which is not there any more.
+function Send-Posted([long[]]$Messages, [byte[]]$State) {
+    try {
+        $api::PostAll($window, $thread, $Messages, $State)
+    }
+    catch {
+        if ($process.WaitForExit(2000)) {
+            throw "$exe ended with exit code $($process.ExitCode), and the check could not post its keys or its clicks to its window."
+        }
+        throw
+    }
+}
+
+# Posts mouse messages at once.
+function Send-Mouse([long[]]$Messages) {
+    Send-Posted $Messages $null
+}
+```
+
+**Os puntos e as mensaxes do rato.**
+
+- **`Get-Middle`, `Get-Mouse`, `Send-Posted` e `Send-Mouse`** son os de `check-exit.ps1` (ver alí): o píxel do medio dun rectángulo; unha mensaxe do rato nun punto da área cliente, coa mensaxe, o seu `wParam` e o seu `lParam`; publicar unhas mensaxes de vez, e dicir se meiga rematou, se non pode; e publicar mensaxes do rato, sen tocar o estado das teclas.
+- **`Get-OnScreen`** é nova: un punto da área cliente na pantalla (`ClientToScreen`), ou un erro.
+- **`Get-Wheel`** é nova: unha mensaxe da roda, `WM_MOUSEWHEEL` ou `WM_MOUSEHWHEEL`, co xiro, `$Delta`, en 120 avos de paso, na palabra de arriba do `wParam`, e o punto na pantalla no `lParam`, coma os dá Windows: a xanela pásao á súa área cliente ([Código › meiga-win › `decode`](meiga-win.md#decode)). A palabra de abaixo do `wParam`, a dos botóns e das teclas, vai a 0: sen botóns, nin Ctrl nin Maiús.
+
+```powershell
+# If the pointer is over the window, moves it out, above the window: the
+# moves that Windows makes at its place would reach the bar, which would draw.
+function Move-Pointer {
+    $point = [Meiga.Tools.ManyTabsCheck+POINT]::new()
+    if (-not $api::GetCursorPos([ref]$point)) { return }
+    $inside = [Meiga.Tools.ManyTabsCheck+POINT]::new()
+    $inside.X = $point.X
+    $inside.Y = $point.Y
+    $rect = [Meiga.Tools.ManyTabsCheck+RECT]::new()
+    if (-not $api::ScreenToClient($window, [ref]$inside) -or -not $api::GetClientRect($window, [ref]$rect) -or
+        $inside.X -lt 0 -or $inside.Y -lt 0 -or $inside.X -ge $rect.Right -or $inside.Y -ge $rect.Bottom) {
+        return
+    }
+    if ($null -eq $script:pointer) { $script:pointer = $point }
+    $title = Get-OnScreen ([pscustomobject]@{ X = [Math]::Floor($rect.Right / 2); Y = -8 })
+    if (-not $api::SetCursorPos($title.X, $title.Y)) {
+        throw "Could not move the pointer out of the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+}
+```
+
+**O punteiro: `Move-Pointer`.** É o de `check-exit.ps1` (ver alí), cun cambio: o punto por riba da xanela dao `Get-OnScreen`, que falla se Windows non pode calculalo; en `check-exit.ps1`, un fallo de `ClientToScreen` pasaba sen aviso. Se o punteiro está na área cliente da xanela, apártao por riba dela, á barra de título, e a primeira vez garda onde estaba, para devolvelo ao rematar. Os movementos que fai Windows no sitio do punteiro chegarían á barra, que debuxaría. Úsano o principio e o paso 6.
+
+```powershell
+# Moves the pointer of the system onto $Point of the client area, and
+# returns whether it is there, on the window. With the client of the Remote
+# Desktop minimized, Windows does not let a program read nor move it.
+function Set-RealPointer($Point) {
+    $now = [Meiga.Tools.ManyTabsCheck+POINT]::new()
+    if (-not $api::GetCursorPos([ref]$now)) { return $false }
+    if ($null -eq $script:pointer) { $script:pointer = $now }
+    $screen = Get-OnScreen $Point
+    if (-not $api::SetCursorPos($screen.X, $screen.Y)) { return $false }
+    $at = [Meiga.Tools.ManyTabsCheck+POINT]::new()
+    $api::GetCursorPos([ref]$at) -and $at.X -eq $screen.X -and $at.Y -eq $screen.Y -and
+    $api::WindowFromPoint($screen) -eq $window
+}
+```
+
+**O punteiro do sistema nun punto: `Set-RealPointer`.** O paso 6 necesita o punteiro do sistema enriba do botón de desprazamento: a repetición só segue mentres o punteiro está no botón, e Windows dille á xanela que o punteiro saíu en canto ela o pregunta, se o do sistema non está enriba dela (ver `Assert-Hover`). A función:
+
+- le onde está o punteiro (`GetCursorPos`) e, se aínda non o gardou `Move-Pointer`, gárdao, para devolvelo ao rematar;
+- lévao ao punto da área cliente, na pantalla (`Get-OnScreen` e `SetCursorPos`);
+- e di se está alí de verdade: se `GetCursorPos` o le nese punto, e se a xanela debaixo del (`WindowFromPoint`) é a de meiga, e non outra por riba dela.
+
+Co cliente do Escritorio remoto minimizado, Windows non deixa ler nin mover o punteiro: `GetCursorPos` ou `SetCursorPos` fallan, ou o punteiro non queda onde se lle di, e a función dá `$false`. Entón, o paso 6 comproba outra cousa (ver alí).
+
+```powershell
+# Shares the input of this thread with the one of the window, whose key
+# state Send-Keys sets: SetKeyboardState sets the key state of the thread
+# that calls it. This thread needs a message queue, which PeekMessageW
+# creates.
+function Join-Input {
+    $message = [Meiga.Tools.ManyTabsCheck+MSG]::new()
+    $null = $api::PeekMessageW([ref]$message, [IntPtr]::Zero, 0, 0, 0)
+    if (-not $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $true)) {
+        throw "AttachThreadInput failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    $script:attached = $true
+}
+
+# Stops sharing the input with the thread of the window, with no key down.
+function Split-Input {
+    if ($script:attached) {
+        $null = $api::SetKeyboardState([byte[]]::new(256))
+        $null = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $false)
+        $script:attached = $false
+    }
+}
+```
+
+**O estado das teclas compartido.** `Join-Input` e `Split-Input` son os de `check-exit.ps1`, coa clase desta comprobación (ver alí): o fío de PowerShell comparte a súa entrada co da xanela, para que `SetKeyboardState`, en `PostAll`, poña o estado das teclas do fío da xanela; e, ao rematar, deixa de compartila, sen ningunha tecla abaixo.
+
+```powershell
+# The message of $Code going down, or up: the message, its wParam and its
+# lParam, with the scan code of the key; as a system key if $System, with
+# the context code, Alt down; and with the bit of the extended keys if
+# $Extended. F10 is a system key also without Alt, as Windows sends it.
+function Get-Key([int]$Code, [bool]$Down, [bool]$System = $false, [bool]$Extended = $false) {
+    $scan = $api::MapVirtualKeyExW($Code, $MAPVK_VK_TO_VSC, $layout)
+    [long]$bits = 1 -bor ($scan -shl 16)
+    if ($Extended) { $bits = $bits -bor 0x01000000L }
+    if ($System) { $bits = $bits -bor 0x20000000L }
+    $asSystem = $System -or $Code -eq $VK_F10
+    if ($Down) {
+        $message = if ($asSystem) { $WM_SYSKEYDOWN } else { $WM_KEYDOWN }
+    }
+    else {
+        # The key was down (bit 30), and goes up (bit 31).
+        $bits = $bits -bor 0xC0000000L
+        $message = if ($asSystem) { $WM_SYSKEYUP } else { $WM_KEYUP }
+    }
+    $message, $Code, $bits
+}
+```
+
+**A mensaxe dunha tecla: `Get-Key`.** É a de `check-exit.ps1` sen as repeticións (ver alí): esta comprobación non mantén ningunha tecla abaixo. F10 vai sempre coma tecla do sistema, tamén sen Alt, coma o envía Windows (Maiús+F10, no paso 11).
+
+```powershell
+# The key messages of typing $Chord, such as "Ctrl+Shift+T", "Ctrl+1" or
+# "Shift+F10", with the names of System.ConsoleKey for the keys that are not
+# a letter nor a digit, and the keys that are down meanwhile: its modifier
+# keys go down, its key goes down and up, and its modifier keys go up, the
+# other way round. With Alt and without Ctrl, they are system keys, as
+# Windows sends them, but for Alt going up: after another key, Windows sends
+# it as a key that is not a system one, and then it does not open the menu
+# of the window.
+function Get-Chord([string]$Chord) {
+    $parts = $Chord -split '\+'
+    $modifiers = @(foreach ($part in ($parts | Select-Object -SkipLast 1)) {
+            if (-not $chordKeys.ContainsKey($part)) { throw "$part, in $Chord, is not a modifier key of the check." }
+            $chordKeys[$part]
+        })
+    $down = @($modifiers | ForEach-Object { $_.Down })
+    $system = $down -contains $VK_MENU -and $down -notcontains $VK_CONTROL
+    $key = $parts[-1]
+    $code = if ($key -cmatch '^[0-9A-Z]$') { [int][char]$key } else { [int][ConsoleKey]$key }
+    $extended = $code -in $extendedKeys
+    $reversed = @(for ($index = $modifiers.Count - 1; $index -ge 0; $index--) { $modifiers[$index] })
+    $messages = @(
+        foreach ($modifier in $modifiers) { Get-Key $modifier.Code $true $system $modifier.Extended }
+        Get-Key $code $true $system $extended
+        Get-Key $code $false $system $extended
+        foreach ($modifier in $reversed) { Get-Key $modifier.Code $false ($system -and $modifier.Code -ne $VK_MENU) $modifier.Extended }
+    )
+    [pscustomobject]@{ Messages = [long[]]$messages; Down = [int[]]$down }
+}
+```
+
+**Unha combinación: `Get-Chord`.** É a de `check-exit.ps1` sen as repeticións (ver alí): as modificadoras baixan, a tecla baixa e sobe, e as modificadoras soben, ao revés; e, con Alt e sen Ctrl, van coma teclas do sistema, menos Alt cando sobe, como di o comentario. As combinacións desta comprobación son Ctrl+Maiús+1, que abre Light; Ctrl+1 e Ctrl+2, que mostran a primeira tab e a segunda ([ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 5); Ctrl+Maiús+Tab, que mostra a anterior; Ctrl+Maiús+W, que pecha a que se mostra; Maiús+F10, que abre o seu menú; e Esc, que o pecha. Ningunha leva Alt: a regra das teclas do sistema queda para as que se engadan, coma en `check-exit.ps1`.
+
+```powershell
+# Posts key messages at once, with the keys of $Down down and no other one
+# (see PostAll). The input has to be shared with the thread of the window:
+# see Join-Input.
+function Send-Keys([long[]]$Messages, [int[]]$Down = @()) {
+    $state = [byte[]]::new(256)
+    foreach ($key in $Down) { $state[$key] = 0x80 }
+    Send-Posted $Messages $state
+}
+
+# Types $Chord (see Get-Chord).
+function Send-Chord([string]$Chord) {
+    $typed = Get-Chord $Chord
+    Send-Keys $typed.Messages $typed.Down
+}
+```
+
+**Teclear: `Send-Keys` e `Send-Chord`.** `Send-Keys` é a de `check-exit.ps1`, letra por letra: publica de vez unhas mensaxes, coas teclas de `$Down` abaixo no estado das teclas, e ningunha outra; o paso 9 publica así, co atallo, tamén clics. `Send-Chord` teclea unha combinación, sen repeticións.
+
+```powershell
+# The bar, as meiga lays it out (see crates/meiga-core/src/ui/tabbar.rs): its
+# sizes, once the window is known; the width of its tabs, whether they do not
+# fit, and how far the strip scrolls them; what is left of the steps of the
+# wheel (see crates/meiga/src/tabbar.rs); and its tabs, by the number of
+# their programs, with the one that is shown.
+$barWidth = 0
+$barHeight = 0
+$gap = 0
+$padding = 0
+$closeSide = 0
+$newSide = 0
+$profilesSide = 0
+$scrollSide = 0
+$maxTab = 0
+$minTab = 0
+$barTabWidth = 0
+$barOverflow = $false
+$barScroll = 0
+$barRest = 0
+$tabs = [Collections.Generic.List[int]]::new()
+$active = 0
+```
+
+**A barra, coma a calcula meiga.** meiga non di onde debuxa cada cousa, nin canto desprazou a franxa: a comprobación lévao nun modelo propio, coas mesmas regras ca o `Layout` de [`ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs), e cada paso fai nel o mesmo que lle pide a meiga. As variábeis do modelo son do script, e as funcións cámbianas con `$script:`:
+
+- **As medidas,** en píxeles á escala da xanela, que pon o principio da comprobación (ver *A xanela e a barra*): o ancho e o alto da barra; o oco, `$gap`; a marxe antes do título, `$padding`; os lados do ×, do +, do botón dos perfís e dos botóns de desprazamento; e o ancho máximo e o mínimo das tabs.
+- **O estado da barra:** o ancho das tabs, `$barTabWidth`; se non caben, `$barOverflow`; canto desprazou a franxa, `$barScroll`, os píxeles da fila das tabs que oculta á súa esquerda; e o que sobra dos xiros da roda, `$barRest`, en píxeles por 120, coma o `wheel` de `TabBar` ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+- **As tabs:** `$tabs`, os números dos programas das tabs, na orde da barra; e `$active`, a posición da que se mostra.
+
+**Por que coma meiga, ao píxel.** A comprobación non le a barra: sabe onde está cada cousa porque a calcula coas mesmas regras, e comproba que meiga debuxa xusto eses rectángulos (`Assert-Hover` e `Assert-Drawn`), e que un clic nun punto mostra ou pecha a tab que di o modelo. Se `Layout` cambiase as súas medidas ou as súas regras, a comprobación fallaría, coma `check-tabbar.ps1`, aínda que meiga fose ben: hai que cambiar as dúas.
+
+```powershell
+# The width of the bar without the buttons that open a tab and three gaps.
+function Get-Room {
+    [Math]::Max(0, $barWidth - 3 * $gap - $newSide - $profilesSide)
+}
+
+# The width of the strip while the tabs do not fit.
+function Get-Viewport {
+    [Math]::Max(0, (Get-Room) - 2 * $scrollSide)
+}
+
+function Get-MaxScroll {
+    if (-not $barOverflow) { return 0 }
+    [Math]::Max(0, $tabs.Count * $barTabWidth - (Get-Viewport))
+}
+
+# Gives the tabs their width, as meiga does when they open or close, but for
+# the ones that close with the mouse while the pointer is on the bar.
+function Update-Fit {
+    $width = [Math]::Min([Math]::Floor((Get-Room) / [Math]::Max(1, $tabs.Count)), $maxTab)
+    $script:barOverflow = $width -lt $minTab
+    $script:barTabWidth = if ($barOverflow) { $minTab } else { [int]$width }
+    $script:barScroll = [Math]::Min($barScroll, (Get-MaxScroll))
+}
+```
+
+**O sitio das tabs e o seu ancho,** coma `room`, `viewport`, `max_scroll` e `fit` en `Layout`:
+
+- **`Get-Room`:** o ancho da barra sen os botóns + e dos perfís nin os tres ocos: onde van as tabs mentres caben. A escala 100 %, 800 − 12 − 28 − 24 = 736.
+- **`Get-Viewport`:** o ancho da franxa mentres non caben, sen os dous botóns de desprazamento: 736 − 48 = 688.
+- **`Get-MaxScroll`:** canto pode desprazarse a franxa, o que mide a fila das tabs e non cabe nela; 0, mentres caben. Con 30 tabs de 100, 3 000 − 688 = 2 312.
+- **`Update-Fit`** dálles ás tabs o seu ancho, coma meiga cando se abren ou se pechan, ou cando se recolocan: o que lles toca do sitio, sen decimais, ata o máximo; se é menos ca o mínimo, non caben, e teñen o mínimo, na franxa. O desprazamento queda, ata onde pode chegar. Con 7 tabs, 736 / 7 = 105; con 8, 92, menos de 100: non caben. Cando o rato pecha unha tab co punteiro na barra, non se chama: as outras quedan co seu ancho, e a franxa co seu desprazamento, aínda que pase do máximo, coma con `Layout::keep_widths`.
+
+```powershell
+function Get-Strip {
+    if (-not $barOverflow) { return New-Rect 0 0 $barWidth $barHeight }
+    $left = $gap + $scrollSide
+    New-Rect $left 0 ($left + (Get-Viewport)) $barHeight
+}
+
+# Where the first tab is, or would be.
+function Get-Start {
+    if ($barOverflow) { (Get-Strip).Left - $barScroll } else { $gap }
+}
+
+function Get-TabRect([int]$Index) {
+    $left = (Get-Start) + $Index * $barTabWidth
+    New-Rect $left $gap ($left + $barTabWidth) $barHeight
+}
+
+# What the pointer draws when it comes onto the tab at $Index, or leaves it:
+# its column of the bar, with the separator on its right, in the strip.
+function Get-TabArea([int]$Index) {
+    $tab = Get-TabRect $Index
+    Get-Intersection (New-Rect $tab.Left 0 ($tab.Right + 1) $barHeight) (Get-Strip)
+}
+
+# The close button of the tab at $Index, or $null if it is too narrow.
+function Get-CloseRect([int]$Index) {
+    $tab = Get-TabRect $Index
+    $right = $tab.Right - $gap
+    $left = $right - $closeSide
+    if ($left -lt $tab.Left + $gap) { return $null }
+    $top = $tab.Top + [Math]::Floor(($barHeight - $gap - $closeSide) / 2)
+    New-Rect $left $top $right ($top + $closeSide)
+}
+
+function Get-TitleRect([int]$Index) {
+    $tab = Get-TabRect $Index
+    $left = $tab.Left + $padding
+    $close = Get-CloseRect $Index
+    $right = if ($null -ne $close) { $close.Left } else { $tab.Right - $padding }
+    New-Rect $left $tab.Top ([Math]::Max($right, $left)) $tab.Bottom
+}
+
+# What the title of the tab at $Index draws when it changes: its room, in the
+# strip.
+function Get-LabelArea([int]$Index) {
+    Get-Intersection (Get-TitleRect $Index) (Get-Strip)
+}
+
+function Get-NewRect {
+    $left = if ($barOverflow) { (Get-Strip).Right + $scrollSide + $gap } else { (Get-TabRect $tabs.Count).Left + $gap }
+    New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
+}
+
+function Get-ProfilesRect {
+    $new = Get-NewRect
+    New-Rect $new.Right $new.Top ($new.Right + $profilesSide) $new.Bottom
+}
+
+# The button that scrolls the strip towards $Side, Left or Right.
+function Get-ScrollRect([string]$Side) {
+    $strip = Get-Strip
+    $left = if ($Side -eq 'Left') { $strip.Left - $scrollSide } else { $strip.Right }
+    New-Rect $left $gap ($left + $scrollSide) ($gap + $newSide)
+}
+```
+
+**As partes da barra,** coma os métodos de `Layout` que van entre parénteses:
+
+- **`Get-Strip`** (`strip`): a barra enteira, mentres as tabs caben; se non, a franxa, despois do oco e do botón de desprazamento da esquerda, tan ancha coma `Get-Viewport` e tan alta coma a barra.
+- **`Get-Start`** (`start`): onde está, ou estaría, o lado esquerdo da primeira tab: despois do oco, mentres caben; se non, no lado esquerdo da franxa, menos o desprazamento.
+- **`Get-TabRect`** (`tab`): a tab da posición `$Index`, coa súa posición desde `Get-Start`, e desde o oco de arriba ata o fondo da barra. Pode estar fóra da franxa, en parte ou enteira.
+- **`Get-TabArea`** (`tab_area`): o que debuxa o punteiro cando entra nunha tab ou sae dela, toda a súa columna e un píxel máis á dereita, o separador da seguinte, coma o `Area` de `check-tabbar.ps1`; agora, cortada coa franxa.
+- **`Get-CloseRect`** (`close`): o ×, á dereita da tab, cun oco ao seu lado, e centrado no alto da tab debuxada; ou nada, se a tab é tan estreita que non cabe, que con 100 píxeles non pasa (decisión 1).
+- **`Get-TitleRect`** (`title`): o sitio do título, desde a marxe esquerda ata o ×.
+- **`Get-LabelArea`:** o que debuxa o título dunha tab cando cambia, o seu sitio cortado coa franxa, coma `TabBar::label_changed`: é o que debuxa un indicador que aparece ou cambia (decisión 10).
+- **`Get-NewRect`** (`new_tab`): o +, despois da última tab e dun oco, mentres caben; se non, despois do botón de desprazamento da dereita e dun oco, sempre no mesmo sitio.
+- **`Get-ProfilesRect`** (`profiles`): o botón dos perfís, pegado ao +.
+- **`Get-ScrollRect`** (`scroll_button`): o botón de desprazamento de `$Side`, `Left` ou `Right`, a cada lado da franxa, tan alto coma o +.
+
+A escala 100 %, coas tabs que non caben: o botón esquerdo, de 4 a 28; a franxa, de 28 a 716; o botón dereito, de 716 a 740; o +, de 744 a 772; e o botón dos perfís, de 772 a 796. Nunha tab de 100, o seu título vai de 8 a 72 desde o seu lado esquerdo, e o seu ×, de 72 a 96.
+
+```powershell
+# Scrolls the strip to $Target, or as far as it can. Returns whether it
+# scrolled.
+function Set-BarScroll([long]$Target) {
+    $scroll = [Math]::Min([Math]::Max(0, $Target), (Get-MaxScroll))
+    $moved = $scroll -ne $barScroll
+    $script:barScroll = [int]$scroll
+    $moved
+}
+
+# Scrolls the strip as a button does, towards $Side: until the first tab
+# that it hides on that side, even in part, is all in view.
+function Step-Bar([string]$Side) {
+    if ($Side -eq 'Left') {
+        $target = [Math]::Max(0, [Math]::Ceiling($barScroll / $barTabWidth) - 1) * $barTabWidth
+    }
+    else {
+        $hidden = [Math]::Floor(($barScroll + (Get-Viewport)) / $barTabWidth)
+        $target = [Math]::Max(0, ($hidden + 1) * $barTabWidth - (Get-Viewport))
+    }
+    Set-BarScroll $target
+}
+
+# Scrolls the strip as little as it can so that the tab at $Index is all in
+# view, as meiga does before a frame once a tab is shown, or before it opens
+# the menu of a tab with the keyboard. Returns whether it scrolled.
+function Show-BarTab([int]$Index) {
+    if (-not $barOverflow -or $Index -ge $tabs.Count) { return $false }
+    $left = $Index * $barTabWidth
+    $right = $left + $barTabWidth
+    $viewport = Get-Viewport
+    if ($left -lt $barScroll) { return Set-BarScroll $left }
+    if ($right -gt $barScroll + $viewport) { return Set-BarScroll ([Math]::Min($right - $viewport, $left)) }
+    $false
+}
+
+# The wheel turns $Delta 120ths of a step, forward or, $Horizontal, to the
+# right, if it is positive: a tab for each step, towards the first one
+# forward, and what is left of a step stays for the next turn.
+function Add-Wheel([int]$Delta, [bool]$Horizontal) {
+    if (-not $barOverflow) {
+        $script:barRest = 0
+        return
+    }
+    $towardsLast = if ($Horizontal) { $Delta } else { -$Delta }
+    [long]$turn = $barRest + [long]$towardsLast * $barTabWidth
+    # As in Rust, the division truncates, and the rest has the sign of the
+    # turn.
+    [long]$pixels = [Math]::Truncate($turn / $WHEEL_DELTA)
+    $script:barRest = $turn - $pixels * $WHEEL_DELTA
+    $null = Set-BarScroll ($barScroll + $pixels)
+}
+```
+
+**Desprazar a franxa,** coma meiga:
+
+- **`Set-BarScroll`** (`scroll_to`): leva a franxa a `$Target`, ou ata onde pode, entre 0 e o máximo, e di se se moveu.
+- **`Step-Bar`** (`step`), coma un clic nun botón de desprazamento (decisión 4). Cara á esquerda, ata a tab de antes da primeira enteira á vista: `(⌈desprazamento / ancho⌉ − 1) × ancho`, e polo menos 0. Cara á dereita, ata que a primeira tab que non está enteira á vista pola dereita queda enteira, no bordo dereito da franxa: `(⌊(desprazamento + franxa) / ancho⌋ + 1) × ancho − franxa`.
+- **`Show-BarTab`** (`reveal`) despraza o mínimo para que a tab de `$Index` quede enteira á vista, se as tabs non caben: se está á esquerda, ata o seu lado esquerdo; se está á dereita, ata que o seu lado dereito chegue ao da franxa, ou ata o seu lado esquerdo, se a franxa fose máis estreita ca unha tab. Di se se moveu. É o que fai meiga antes dun fotograma, cando se mostrou outra tab (`TabBar::settle`), e antes de abrir co teclado o menú dunha tab (`TabBar::scroll_to_tab`).
+- **`Add-Wheel`** (`TabBar::wheel`): un xiro da roda de `$Delta` 120 avos de paso, adiante ou á dereita se é positivo (decisión 3). Mentres as tabs caben, non despraza nada, e esquece o que sobraba. Se non, o xiro horizontal vai cara á última tab, e o vertical, co signo cambiado; o xiro, en píxeles por 120, é o que sobraba máis ese xiro polo ancho dunha tab; os píxeles, o xiro entre 120; e o que sobra, o resto. Coma en Rust, a división trunca cara a 0, e o resto ten o signo do xiro: `[Math]::Truncate` fai o primeiro, e `$turn - $pixels * $WHEEL_DELTA`, o segundo. A escala 100 %, un paso adiante, 120, son −120 × 100 / 120 = −100 píxeles: unha tab cara á primeira.
+
+```powershell
+# Whether the tab at $Index is all in view.
+function Test-AllInView([int]$Index) {
+    if (-not $barOverflow) { return $true }
+    $left = $Index * $barTabWidth
+    $left -ge $barScroll -and $left + $barTabWidth -le $barScroll + (Get-Viewport)
+}
+
+# The first tab that is all in view and not shown.
+function Get-OtherTab {
+    for ($index = 0; $index -lt $tabs.Count; $index++) {
+        if ($index -ne $active -and (Test-AllInView $index)) { return $index }
+    }
+    throw 'The check found no tab all in view but the one that is shown.'
+}
+
+# How many steps of the wheel forward, or backward if they are negative,
+# bring the tab at $Index all in view.
+function Get-StepsTo([int]$Index) {
+    if ($barRest -ne 0) { throw 'The check counts the steps of the wheel without a rest.' }
+    $left = $Index * $barTabWidth
+    $right = $left + $barTabWidth
+    if ($left -lt $barScroll) { return [int][Math]::Ceiling(($barScroll - $left) / $barTabWidth) }
+    $end = $barScroll + (Get-Viewport)
+    if ($right -gt $end) { return -1 * [int][Math]::Ceiling(($right - $end) / $barTabWidth) }
+    0
+}
+```
+
+**Que tabs se ven.**
+
+- **`Test-AllInView`:** se a tab de `$Index` está enteira á vista, coma a quere `reveal`; sempre, mentres as tabs caben.
+- **`Get-OtherTab`:** a primeira tab enteira á vista que non se mostra, a de `Assert-Scroll`, que necesita unha tab que mostrar cun clic. Se non hai ningunha, falla.
+- **`Get-StepsTo`:** cantos pasos da roda adiante, ou atrás se son negativos, traen enteira á vista a tab de `$Index`: cada paso despraza unha tab. Só sen nada que sobre dun xiro de antes; se non, falla.
+
+```powershell
+# The tab whose close button is at $Point, as meiga finds it, or -1.
+function Get-CloseAt($Point) {
+    $across = { param($Rect) $Point.X -ge $Rect.Left -and $Point.X -lt $Rect.Right }
+    if ($Point.Y -lt 0 -or $Point.Y -ge $barHeight -or (& $across (Get-NewRect)) -or (& $across (Get-ProfilesRect))) { return -1 }
+    if ($barOverflow -and ((& $across (Get-ScrollRect 'Left')) -or (& $across (Get-ScrollRect 'Right')))) { return -1 }
+    $fromStart = $Point.X - (Get-Start)
+    if (-not (& $across (Get-Strip)) -or $fromStart -lt 0) { return -1 }
+    $index = [int][Math]::Floor($fromStart / $barTabWidth)
+    if ($index -ge $tabs.Count) { return -1 }
+    $close = Get-CloseRect $index
+    if ($null -eq $close -or $Point.Y -lt $close.Top -or $Point.Y -ge $close.Bottom -or -not (& $across $close)) { return -1 }
+    $index
+}
+
+# The tab at $Index closes, and the one that is shown is the one on its
+# right or, after the last one, the one on its left. The others keep their
+# width and their place, as when the mouse closes it with the pointer on the
+# bar: Update-Fit gives them their width again.
+function Remove-Tab([int]$Index) {
+    $tabs.RemoveAt($Index)
+    if ($Index -lt $active -or ($Index -eq $active -and $Index -eq $tabs.Count)) {
+        $script:active--
+    }
+}
+```
+
+**Pechar tabs no modelo.**
+
+- **`Get-CloseAt`** dá a tab cuxo × está en `$Point`, coma a atopa meiga (`part_at`), ou −1. Fóra da barra, no +, no botón dos perfís ou nun botón de desprazamento, ningunha; nin fóra da franxa. Se non, a tab baixo o punto é a distancia desde `Get-Start` entre o ancho das tabs, sen decimais; e, se existe e o punto está no seu ×, é ela. Os pasos 8 a 10 comproban con ela, antes de publicar os clics, que o × que queda debaixo do punteiro despois de cada peche é o que esperan.
+- **`Remove-Tab`** quita do modelo a tab de `$Index`. Se era a que se mostraba, móstrase a da súa dereita, que pasa á súa posición, ou, se era a última, a da súa esquerda, coma en meiga; se estaba á esquerda da que se mostra, esa baixa unha posición. As outras quedan co seu ancho e no seu sitio, coma cando o rato pecha unha tab co punteiro na barra: se non, despois vai `Update-Fit`.
+
+```powershell
+# Waits until a tab opens and is shown: meiga has a reader thread for a
+# program that is not one of the tabs, with the normal priority of the tab
+# that is shown, and the readers of the tabs have the lower one. Returns the
+# number of its program.
+function Wait-NewReader([string]$What) {
+    $script:newReader = 0
+    Wait-For {
+        $readers = Get-Readers
+        if ($null -eq $readers) { return $false }
+        $fresh = @($readers.Keys | Where-Object { [int]$_.Substring($readerPrefix.Length) -notin $tabs })
+        if ($fresh.Count -gt 1) { throw "$What opened $($fresh.Count) tabs instead of one." }
+        if ($fresh.Count -ne 1 -or $readers[$fresh[0]] -ne $THREAD_PRIORITY_NORMAL) { return $false }
+        $script:newReader = [int]$fresh[0].Substring($readerPrefix.Length)
+        @($tabs | Where-Object { $readers["$readerPrefix$_"] -ne $THREAD_PRIORITY_BELOW_NORMAL }).Count -eq 0
+    } { "$What did not open a tab that is shown." }
+    $script:newReader
+}
+
+# Opens a tab of Light, the first profile, with Ctrl+Shift+1: at the end,
+# and shown, so that the strip shows it before the next frame.
+function Open-Light {
+    Send-Chord 'Ctrl+Shift+1'
+    $tabs.Add((Wait-NewReader 'Ctrl+Shift+1'))
+    $script:active = $tabs.Count - 1
+    Update-Fit
+    $null = Show-BarTab $active
+}
+
+# Waits until the tab that is shown is the one of the model: the reader of
+# its session has the normal priority, and the ones of all the other tabs,
+# and only them, the lower one.
+function Wait-Active([string]$What) {
+    Wait-For {
+        $readers = Get-Readers
+        if ($null -eq $readers -or $readers.Count -ne $tabs.Count) { return $false }
+        for ($index = 0; $index -lt $tabs.Count; $index++) {
+            $expected = if ($index -eq $active) { $THREAD_PRIORITY_NORMAL } else { $THREAD_PRIORITY_BELOW_NORMAL }
+            $priority = 0
+            if (-not $readers.TryGetValue("$readerPrefix$($tabs[$index])", [ref]$priority) -or $priority -ne $expected) {
+                return $false
+            }
+        }
+        $true
+    } { "$What`: the tab at $($active + 1) of $($tabs.Count) is not the one that is shown, or another tab is." }
+}
+```
+
+**Abrir tabs, e a que se mostra.** A comprobación sabe que tab se mostra polas prioridades dos lectores, coma `check-tabs.ps1`: o da tab que se mostra ten a prioridade normal, e os das ocultas, a de debaixo ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)).
+
+- **`Wait-NewReader`** agarda a que se abra e se mostre unha tab: meiga ten un lector dun programa que non é o de ningunha tab do modelo, coa prioridade normal, e os de todas as tabs do modelo teñen a de debaixo. Se aparece máis dun lector novo, falla: abríronse varias tabs. Devolve o número do programa novo, a través de `$newReader`: o bloque da condición corre noutro ámbito, e só así pode pasar o que atopou.
+- **`Open-Light`** teclea Ctrl+Maiús+1, que abre o primeiro perfil do menú, Light, nunha tab ao final, que se mostra; agarda o seu lector, e engade a tab ao modelo, coma a que se mostra: as tabs reciben o seu ancho, e a franxa leva á vista a nova, coma fará meiga antes do seguinte fotograma. Non agarda ningún fotograma: a seguinte tab pode abrirse antes, e a franxa vai igual ata o final.
+- **`Wait-Active`** agarda a que a tab que se mostra sexa a do modelo: meiga ten tantos lectores coma tabs o modelo, o da tab de `$active` coa prioridade normal, e os de todas as outras, a de debaixo. Se non, falla, e di a posición da tab que tiña que mostrarse e cantas hai.
+
+```powershell
+# Moves the pointer to $Point, and checks that the window draws only $Area,
+# once or twice: the pointer of the system is not on the window, so Windows
+# tells it at once that the pointer left, and what it highlighted goes.
+function Assert-Hover($Point, $Area, [string]$What) {
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $Point)
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { "The pointer on $What drew nothing." }
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    $other = @(Get-Areas $frames | Where-Object { -not (Test-Same $_ $Area) })
+    if ($frames.Count -gt 2 -or $other.Count -gt 0) {
+        Show-Lines $frames
+        throw "The pointer on $What did not draw only $(Show-Rect $Area), once or twice."
+    }
+}
+
+# A click of the left button at $Point: the pointer comes, and the button
+# goes down and up.
+function Get-Click($Point) {
+    (Get-Mouse $WM_MOUSEMOVE 0 $Point) + (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $Point) + (Get-Mouse $WM_LBUTTONUP 0 $Point)
+}
+
+# Checks where the strip is: the pointer on the title of the tab at $Index,
+# which is not the one that is shown, draws its column of the bar, which
+# depends on the scroll. Then a click there shows that tab, which is all in
+# view, so the strip stays; and the check waits for its full frame, before
+# which the strip brings the tab that is shown into view.
+function Assert-Scroll([int]$Index, [string]$What) {
+    if ($Index -eq $active) { throw "The check expects a tab that is not shown, $What." }
+    $point = Get-Middle (Get-TitleRect $Index)
+    Assert-Hover $point (Get-TabArea $Index) "the title of the tab at $($Index + 1) of $($tabs.Count), $What,"
+    $from = Get-Mark
+    Send-Mouse (Get-Click $point)
+    $script:active = $Index
+    Wait-Active "A click on the title of the tab at $($Index + 1), $What"
+    Wait-OneFull $from "A click on the title of the tab at $($Index + 1), $What,"
+}
+```
+
+**O punteiro nunha parte da barra: `Assert-Hover`.** Cando meiga leva 400 ms sen debuxar, publica un movemento do punteiro a `$Point`, e agarda algún fotograma; despois de 400 ms máis sen debuxar, comproba que houbo un ou dous, e que todas as súas zonas son exactamente `$Area` (`Test-Same`). Se non, mostra os fotogramas, e falla.
+
+- **Por que un ou dous.** O movemento resalta a parte da barra que ten debaixo, e meiga pídelle a Windows que lle diga cando saia o punteiro ([Código › meiga-win › `Window::track_mouse_leave`](meiga-win.md#windowtrack_mouse_leave)). O punteiro do sistema non está enriba da xanela, así que Windows envía en seguida `WM_MOUSELEAVE`, que quita o resalte ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)). Poñer e quitar o resalte debuxan a mesma zona: nun fotograma, se a saída chega antes del, ou en dous.
+- **A zona di onde está a barra.** O punteiro nunha tab debuxa a súa columna (`Get-TabArea`), e nun botón, o seu rectángulo, e nada máis ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 8). Se a franxa estivese noutro sitio, ou as tabs tivesen outro ancho, a zona sería outra. Un botón de desprazamento que non pode desprazar non se resalta, nin debuxa nada co punteiro enriba ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2): o paso 3 compróbao con `Assert-NothingDrawn`.
+- **O que non di.** A columna dunha tab é a mesma se a franxa está unha tab enteira máis alá: o punteiro estaría na tab do lado, no mesmo sitio. Por iso `Assert-Scroll`, despois, preme.
+
+**`Get-Click`:** un clic do botón esquerdo nun punto: o punteiro chega, e o botón baixa e sobe.
+
+**Onde está a franxa: `Assert-Scroll`.** Comproba que a franxa está onde di o modelo, coa tab de `$Index`, que ten que estar enteira á vista, e que non pode ser a que se mostra:
+
+- primeiro, o punteiro no medio do seu título debuxa a súa columna (`Assert-Hover`): a franxa está onde di o modelo, ou unha ou máis tabs enteiras máis alá;
+- despois, un clic alí mostra esa tab (`Wait-Active`): meiga mostra a tab que ten debaixo en canto baixa o botón; se a franxa estivese unha tab máis alá, mostraría outra;
+- e, por último, agarda o seu fotograma completo (`Wait-OneFull`), antes do cal meiga leva á vista a tab que se mostra (`TabBar::settle`): a do clic xa está enteira á vista, e a franxa queda. Así, cando a comprobación segue, meiga xa fixo todo o que tiña pendente (ver `Show-Tab`).
+
+Os pasos 2 a 6, 8, 10 e 11 rematan con ela: case sempre, coa primeira tab enteira á vista que non se mostra (`Get-OtherTab`).
+
+```powershell
+# The frames after the first $From lines of the log that draw the whole bar:
+# the strip scrolled, or the tabs changed.
+function Get-BarFrames([int]$From) {
+    $bar = New-Rect 0 0 $barWidth $barHeight
+    @(Get-Frames $From | Where-Object { @(Get-Areas $_ | Where-Object { Test-Inside $bar $_ }).Count -gt 0 })
+}
+
+# Posts $Messages, which scroll the strip or change the tabs, once meiga
+# stops drawing what came before, and waits until the window draws the whole
+# bar.
+function Send-ToBar([long[]]$Messages, [string]$What) {
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Mouse $Messages
+    Wait-For { @(Get-BarFrames $from).Count -gt 0 } { "$What did not draw the bar again." }
+}
+```
+
+**A barra enteira.**
+
+- **`Get-BarFrames`** dá os fotogramas que debuxan a barra enteira: algunha das súas zonas cobre o rectángulo da barra. Desprazar a franxa, pechar unha tab ou recolocar as tabs debuxa a barra enteira (decisión 10); e mostrar outra tab, a xanela enteira, que tamén a cobre. O paso 6 conta con ela os desprazamentos.
+- **`Send-ToBar`** publica unhas mensaxes que desprazan a franxa ou cambian as tabs, cando meiga leva 400 ms sen debuxar o de antes, e agarda a que debuxe a barra enteira. Non agarda a que deixe de debuxar: `Assert-Scroll`, despois, agárdao.
+
+```powershell
+# Does $Action, and checks that the window draws only $Area, once.
+function Assert-Drawn($Area, [scriptblock]$Action, [string]$What) {
+    Wait-Quiet 400
+    $from = Get-Mark
+    & $Action
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { "$What drew nothing." }
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    if ($frames.Count -ne 1 -or @(Get-Areas $frames | Where-Object { -not (Test-Same $_ $Area) }).Count -gt 0) {
+        Show-Lines $frames
+        throw "$What did not draw only $(Show-Rect $Area), once."
+    }
+}
+
+# Does $Action, and checks that the window draws nothing.
+function Assert-NothingDrawn([scriptblock]$Action, [string]$What) {
+    Wait-Quiet 400
+    $from = Get-Mark
+    & $Action
+    Start-Sleep -Milliseconds 300
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    if ($frames.Count -gt 0) {
+        Show-Lines $frames
+        throw "$What drew $($frames.Count) frames instead of none."
+    }
+}
+```
+
+**O que debuxa unha acción.**
+
+- **`Assert-Drawn`** fai `$Action` cando meiga leva 400 ms sen debuxar, e agarda algún fotograma; despois de 400 ms máis sen debuxar, comproba que houbo un só, e que todas as súas zonas son exactamente `$Area`. É a dos indicadores do paso 12: un indicador que aparece ou cambia nunha tab oculta debuxa só o sitio do título da súa tab, unha vez.
+- **`Assert-NothingDrawn`** fai `$Action` cando meiga leva 400 ms sen debuxar, agarda 300 ms, e despois a que meiga leve outros 400 sen debuxar: non pode haber ningún fotograma. Os 300 ms dan tempo a que o que escribiu o programa chegue a meiga, coma no paso 4 de `check-tabs.ps1`.
+- **Unha acción, e non unhas liñas:** as dúas reciben un bloque, `$Action`, e cóntano desde xusto antes del, despois da calma.
+
+```powershell
+# Types $Chord, which shows the tab at $Index, once meiga stops drawing what
+# came before, and waits until it is shown, with one full frame: before it,
+# the strip scrolls so that the tab is in view. Only the tab that is shown at
+# the frame comes into view: two tabs shown before a frame would scroll the
+# strip once.
+function Show-Tab([string]$Chord, [int]$Index) {
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Chord $Chord
+    $script:active = $Index
+    $null = Show-BarTab $Index
+    Wait-Active $Chord
+    Wait-OneFull $from $Chord
+}
+```
+
+**Mostrar unha tab co teclado: `Show-Tab`.** Cando meiga leva 400 ms sen debuxar, teclea `$Chord`, que mostra a tab de `$Index`; o modelo fai dela a que se mostra, e lévaa á vista (`Show-BarTab`). Despois agarda a que se mostre (`Wait-Active`), e o seu fotograma completo (`Wait-OneFull`).
+
+- **Por que o fotograma completo, eiquí e en `Assert-Scroll`.** meiga non leva a tab á vista cando a mostra: apunta que o ten que facer (`TabBar::shown`), e faino o seguinte fotograma, antes de debuxar (`TabBar::settle`), se as tabs non están conxeladas (decisión 5). Ata entón, a franxa está onde estaba, e o que chegue antes pode cambiar o que fará: a roda e os botóns desprazan a franxa e esquecen o apuntado (`TabBar::scroll`), e, se se mostran dúas tabs antes dun fotograma, só a segunda vai á vista. O modelo leva a tab á vista no momento: só coincide con meiga despois dese fotograma, que debuxa a xanela enteira, porque mostra outra tab.
+
+```powershell
+# The command line of meiga: its frame log, and no program, so that its first
+# tab runs the default profile, Probe.
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+$info.WorkingDirectory = $work
+$info.Environment['APPDATA'] = $appdata
+$info.Environment['MEIGA_CHECK_WORK'] = $work
+$info.ArgumentList.Add('--trace-frames')
+$info.ArgumentList.Add($log)
+$process = $null
+$started = [DateTime]::MinValue
+$window = [IntPtr]::Zero
+$thread = [uint32]0
+$layout = [IntPtr]::Zero
+$dpi = 96
+$pointer = $null
+$attached = $false
+$newReader = 0
+$passed = $false
+try {
+    $process = [Diagnostics.Process]::Start($info)
+    $started = $process.StartTime
+```
+
+**Abrir meiga,** coma en `check-exit.ps1`: a liña de comandos leva o rexistro dos fotogramas, e ningún programa, así que a primeira tab corre o perfil por defecto, Probe ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5). O cartafol de meiga é o da comprobación, e o contorno, o de PowerShell, co `APPDATA` da comprobación e `MEIGA_CHECK_WORK`, o cartafol que expanden as liñas de comandos e os cartafoles dos perfís.
+
+- **As variábeis que len as funcións e o `finally`** créanse antes do `try`, porque, con `Set-StrictMode`, ler unha variábel que non existe sería un erro: o proceso e a hora á que empezou, para `Get-Shells` e `Get-Consoles`; a xanela, o seu fío, a distribución do teclado e a escala; o punteiro, a entrada compartida, o último lector novo, e `$passed`.
+
+```powershell
+    Wait-For { $api::WindowOf($process.Id, 'meiga') -ne [IntPtr]::Zero } { "$exe did not open its window." }
+    $window = $api::WindowOf($process.Id, 'meiga')
+    $processId = [uint32]0
+    $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
+    $layout = $api::GetKeyboardLayout($thread)
+    $dpi = $api::GetDpiForWindow($window)
+    $barWidth = Get-Scaled 800
+    $barHeight = Get-Scaled 32
+    $gap = Get-Scaled 4
+    $padding = Get-Scaled 8
+    $closeSide = Get-Scaled 24
+    $newSide = Get-Scaled 28
+    $profilesSide = Get-Scaled 24
+    $scrollSide = Get-Scaled 24
+    $maxTab = Get-Scaled 240
+    $minTab = Get-Scaled 100
+    $fits = { param($Count) [Math]::Floor((Get-Room) / $Count) -ge $minTab }
+    if (-not (& $fits 7) -or (& $fits 8)) {
+        throw "At $dpi DPI, the check needs a bar where 7 tabs fit and 8 do not."
+    }
+    Resize-Window $barWidth (Get-Scaled 400)
+```
+
+**A xanela e a barra.**
+
+- **A xanela e o seu fío,** coma en `check-exit.ps1`: `WindowOf` agarda a xanela de meiga, e `GetWindowThreadProcessId` dá o seu fío; `$layout` é a distribución do teclado dese fío, para os códigos de exploración, e `$dpi`, a escala da xanela, para `Get-Scaled`.
+- **As medidas da barra,** as de `ui/tabbar.rs` a escala 100 %, á escala da xanela: o ancho da xanela, 800; o alto da barra, 32; o oco, 4; a marxe do título, 8; o ×, 24; o +, 28; o botón dos perfís e os de desprazamento, 24; e as tabs, de 100 a 240 (decisións 1 e 2).
+- **7 tabs caben, e 8 non:** `$fits` di se caben `$Count` tabs co ancho mínimo. Se non caben 7, ou se caben 8, falla antes de nada: os pasos 1 e 2 contan con iso.
+- **A área cliente,** 800 × 400 a escala 100 %, coa xanela onde estea (`Resize-Window`). O ancho da barra é o da área cliente.
+
+```powershell
+    # The first tab runs Probe, the default profile.
+    $first = Wait-NewReader 'The first tab'
+    $line = (Get-CimInstance Win32_Process -Filter "ProcessId = $first").CommandLine
+    if ($line -cne $probeLine) {
+        throw "The first tab runs '$line' instead of '$probeLine'."
+    }
+    Wait-For { Test-Path -LiteralPath (Join-Path $work "ready-$first.txt") } { 'The script of the first tab did not start.' }
+    $tabs.Add($first)
+    $active = 0
+    Update-Fit
+    Join-Input
+    Move-Pointer
+    Wait-Settled @($first) 'The first tab'
+    Write-Host "The bar is $barHeight pixels high, and its tabs from $minTab to $maxTab wide: 7 of them fit in the window, $barWidth pixels wide, and 8 do not."
+```
+
+**A primeira tab.** `Wait-NewReader` agarda o seu lector, coa prioridade normal, e o seu programa ten que correr exactamente `$probeLine`, distinguindo maiúsculas: a liña de Probe, o perfil por defecto. Despois, agarda a que o script estea listo (`ready-<proceso>.txt`). O modelo empeza con ela, que se mostra, co seu ancho. Despois, `Join-Input`, para teclear, `Move-Pointer`, e `Wait-Settled`, ata que o script leva un segundo sen usar o procesador. Ao final, a primeira liña: o alto da barra, os anchos das tabs, e o ancho da xanela.
+
+**Os pasos,** trece, numerados no código, e cada un remata cunha liña `OK:`. As tabs cóntanse desde a esquerda, desde 1, coma nas mensaxes da comprobación; e os números son píxeles a escala 100 %, coma na CI, co punteiro do sistema no botón do paso 6.
+
+| Paso | Que fai a comprobación | Que ten que pasar |
+|---|---|---|
+| 1 | Ctrl+Maiús+1 seis veces. O punteiro no título da última tab, no + e no título da primeira. | Ábrense seis tabs de Light ao final, e cada unha móstrase. As sete encóllense por igual e caben: cada sitio do punteiro debuxa só a súa parte, onde a pon a barra de sete tabs. |
+| 2 | Ctrl+Maiús+1. O punteiro no botón de desprazamento da esquerda, no + e no botón dos perfís. Un clic no título doutra tab. | A oitava tab non cabe: as tabs teñen o ancho mínimo, na franxa, entre os botóns de desprazamento, e o + e o botón dos perfís van á dereita da barra. A franxa leva á vista a tab nova. O clic mostra a tab do título. |
+| 3 | Ctrl+Maiús+1 ata 30 tabs. O punteiro no botón de desprazamento da dereita, e un clic nel. O punteiro no título da última tab. Un clic no título doutra. | Cada tab corre o seu programa: a primeira, Probe, e as outras, Light. A última tab está enteira á vista, antes do botón da dereita, que xa non pode desprazar a franxa: o punteiro enriba del, e o clic, non debuxan nada. |
+| 4 | A roda no medio da franxa, sete xiros de vez: un paso adiante, catro adiante, dous á dereita, un atrás, un á esquerda, e dous anacos adiante, de 50 e de 70. Un clic no título doutra tab. | A franxa desprázase unha tab por paso: cara á primeira adiante ou á esquerda, e cara á última atrás ou á dereita; os dous anacos suman un paso. |
+| 5 | Un clic no botón de desprazamento da esquerda, outro, e un no da dereita; detrás de cada un, un clic no título doutra tab. | Cada clic leva a franxa ata que a primeira tab que oculta por ese lado queda enteira á vista. |
+| 6 | O botón esquerdo, premido un segundo no botón de desprazamento da esquerda: co punteiro do sistema nel, se o pode levar; se non, co punteiro que sae en seguida. Un clic no título doutra tab. | Co punteiro do sistema, a franxa desprázase ao premer o botón, outra vez polo menos 250 ms despois, e despois cada polo menos 100 ms: polo menos tres veces. Sen el, unha vez. |
+| 7 | Para cada tab, a roda que a trae á vista, se fai falta, e un clic no seu título, de vez. | Móstrase cada unha das 30 tabs. |
+| 8 | Dous clics de vez, no mesmo sitio: no × dunha tab do medio da franxa, co botón esquerdo, e despois co do medio. Despois de saír o punteiro, un clic no título doutra tab. | Péchanse a tab e a que vén ao seu sitio: as outras quedan co seu ancho e no seu sitio mentres o punteiro segue na barra. Cando sae, recolócanse, e a franxa vai ata o final, que xa está dúas tabs antes. |
+| 9 | Co punteiro no × da tab que se mostra, de vez: Ctrl+Maiús+W, un clic alí mesmo, e un clic no título da antepenúltima tab. Despois de saír o punteiro, o punteiro no título desa tab. | Ctrl+Maiús+W pecha a tab, e as outras recolócanse no momento: o × da tab da súa esquerda queda debaixo do punteiro, e o clic pecha esa. Pechada co rato, as outras quedan no seu sitio: o clic mostra a antepenúltima, e non a da súa esquerda. |
+| 10 | Dous clics de vez no × da última tab. Un clic no título doutra. | Péchanse a última e a anterior: pechar a última recoloca as outras no momento, e o × da nova última queda debaixo do punteiro. |
+| 11 | Ctrl+1, e o punteiro no título da primeira tab; Ctrl+Maiús+Tab, e o punteiro no título da última. A roda dous pasos adiante e un clic no título doutra tab, de vez; a roda tres pasos atrás. Maiús+F10, e Esc. Un clic no título doutra tab. | Ctrl+1 e Ctrl+Maiús+Tab mostran a primeira e a última, e a franxa vai ata elas. A roda deixa fóra da vista a tab que se mostra, e alí queda. Maiús+F10 leva a franxa ata ela, e abre o seu menú debaixo dela; Esc pécháo. |
+| 12 | Ctrl+1 e Ctrl+2: a primeira tab, a de Probe, queda oculta. O seu programa escribe `x`, `y`, a campá, e a campá outra vez. Ctrl+1, e a campá. Ctrl+2; o programa escribe `z`, e remata co código 3. | `x` debuxa só o sitio do título da primeira tab, unha vez, e `y`, nada; a primeira campá, o mesmo sitio, unha vez, e a segunda, nada. A campá coa tab á vista non debuxa nada. Oculta outra vez, `z` debuxa o sitio do título, e o fin, outra vez. |
+| 13 | Pecha a xanela. | meiga sae co código 0, e os programas das tabs e as súas consolas rematan. |
+
+```powershell
+    # 1. Six tabs of Light more: the seven tabs fit, alike.
+    for ($count = 1; $count -lt 7; $count++) { Open-Light }
+    Wait-Settled $tabs.ToArray() 'The first 7 tabs'
+    Assert-Hover (Get-Middle (Get-TitleRect 6)) (Get-TabArea 6) 'the title of the last tab'
+    Assert-Hover (Get-Middle (Get-NewRect)) (Get-NewRect) 'the button +'
+    Assert-Hover (Get-Middle (Get-TitleRect 0)) (Get-TabArea 0) 'the title of the first tab'
+    Write-Host 'OK: with 7 tabs, they shrink alike, and fit in the bar, with the button + after them: the pointer on the last tab, on the button +, and on the first tab draws only that part.'
+```
+
+**1. Sete tabs, que caben** (decisión 1). Ctrl+Maiús+1 abre seis veces Light, o primeiro perfil do menú (`Open-Light`): cada tab vai ao final, e móstrase. Despois, `Wait-Settled` agarda a que os sete programas leven un segundo sen usar o procesador: xa escribiron o seu *prompt*, e deron o seu título, que a barra debuxa. Sete tabs de 240 non caben: encóllense por igual, ata 105 píxeles, o que lles toca dos 736 de `Get-Room`.
+
+- **O punteiro en tres sitios** (`Assert-Hover`): no título da última tab debuxa só a súa columna, de 634 a 740; no +, só o seu rectángulo, de 743 a 771; e no título da primeira, a súa columna, de 4 a 110. Tabs máis anchas, ou que non se encollesen por igual, poñerían a última tab ou o + noutro sitio.
+
+```powershell
+    # 2. An eighth tab does not fit: the tabs keep the narrowest width, and
+    # the strip scrolls to show the new one.
+    Open-Light
+    Wait-Settled @($tabs[$tabs.Count - 1]) 'The eighth tab'
+    Assert-Hover (Get-Middle (Get-ScrollRect 'Left')) (Get-ScrollRect 'Left') 'the button that scrolls the strip to the left'
+    Assert-Hover (Get-Middle (Get-NewRect)) (Get-NewRect) 'the button + on the right of the bar'
+    Assert-Hover (Get-Middle (Get-ProfilesRect)) (Get-ProfilesRect) 'the button of the profiles'
+    Assert-Scroll (Get-OtherTab) 'with eight tabs'
+    Write-Host 'OK: an eighth tab does not fit: the tabs keep their narrowest width, and the strip, between the buttons that scroll it, shows the new one, which is shown; the buttons + and of the profiles go on the right of the bar.'
+```
+
+**2. A oitava tab non cabe** (decisións 1, 2 e 5). Outra tab de Light: oito tabs de 105, ou de 100, o ancho mínimo, non caben, así que quedan con 100, e van na franxa, entre os dous botóns de desprazamento; o + e o botón dos perfís van á dereita da barra, despois do botón da dereita. A tab nova, a oitava, móstrase, e o seu fotograma lévaa á vista: a franxa mide 688, e as oito tabs, 800, así que a franxa desprázase 112, ata o final.
+
+- **O punteiro** no botón de desprazamento da esquerda, no + e no botón dos perfís: cada un debuxa só o seu rectángulo, onde o pon a barra que non cabe. O botón da esquerda só existe se as tabs non caben, e os outros dous só van alí se tampouco.
+- **Onde está a franxa** (`Assert-Scroll`), coa tab 3, a primeira enteira á vista.
+- **O que colle:** unha meiga onde as tabs non teñen ancho mínimo, e as oito caben, de 92: non hai botóns de desprazamento, e o punteiro no sitio do da esquerda debuxa a primeira tab. E unha onde a tab que se mostra non vai á vista: a franxa queda ao principio, e o punteiro no título da tab 3 cae na tab 2, que ten a súa columna noutro sitio.
+
+```powershell
+    # 3. Up to 30 tabs, each one with its own program.
+    while ($tabs.Count -lt 30) { Open-Light }
+    Wait-Settled $tabs.ToArray() 'The 30 tabs'
+    $shells = @(Get-Shells)
+    $ids = @($shells | ForEach-Object { [int]$_.ProcessId } | Sort-Object)
+    if (($ids -join ' ') -ne (@($tabs | Sort-Object) -join ' ')) {
+        throw "The 30 tabs run the programs $($ids -join ', '), instead of the ones of their readers, $(@($tabs | Sort-Object) -join ', ')."
+    }
+    foreach ($shell in $shells) {
+        $expected = if ([int]$shell.ProcessId -eq $first) { $probeLine } else { $lightLine }
+        if ($shell.CommandLine -cne $expected) {
+            throw "A tab runs '$($shell.CommandLine)' instead of '$expected'."
+        }
+    }
+    $last = $tabs.Count - 1
+    if (-not (Test-AllInView $last) -or (Get-TabArea $last).Right -gt (Get-ScrollRect 'Right').Left) {
+        throw 'The check expects the last tab all in view, before the button that scrolls the strip to the right.'
+    }
+    # The strip is at its end: the button that scrolls it to the right
+    # cannot, so it looks the same under the pointer, and a click on it does
+    # nothing.
+    Assert-NothingDrawn { Send-Mouse (Get-Click (Get-Middle (Get-ScrollRect 'Right'))) } 'The pointer on the button that scrolls the strip to the right, at its end, and a click on it,'
+    Assert-Hover (Get-Middle (Get-TitleRect $last)) (Get-TabArea $last) 'the title of the last tab'
+    Assert-Scroll (Get-OtherTab) 'with 30 tabs'
+    Write-Host 'OK: with 30 tabs, each one runs its own program, nothing overlaps, and the strip shows the last one, which ends before the button that scrolls the strip to the right; that button cannot scroll it further, and the pointer on it, and a click on it, draw nothing.'
+```
+
+**3. Trinta tabs.** Ctrl+Maiús+1 ata que hai 30 tabs, e `Wait-Settled` para todas. Despois:
+
+- **Cada tab, co seu programa:** os programas das tabs (`Get-Shells`) son exactamente os dos lectores, un por tab; e as súas liñas de comandos, distinguindo maiúsculas, a de Probe para a primeira, e a de Light para as outras.
+- **A última tab, enteira á vista e antes do botón da dereita.** Iso é o que calcula o modelo, coa franxa desprazada ata o final, 2 312; se non, falla, cunha mensaxe `The check expects …`. A segunda condición, que a columna da última tab non pase do botón da dereita, nunca falla soa: a columna está cortada coa franxa, que remata onde empeza o botón.
+- **O botón da dereita, que xa non pode desprazar** (decisión 2), desde a revisión do código: un movemento, o botón esquerdo que baixa e o que sobe, no medio del, nunha soa publicación (`Get-Click`), non debuxan nada (`Assert-NothingDrawn`). Para meiga, ese botón non é ningunha parte que resaltar nin premer ([`target_at`](meiga.md#o-punteiro-moved-left-e-target_at)): ten sempre o mesmo aspecto, faga o que faga o punteiro, e o clic non despraza nada nin desconxela as tabs. Ata a revisión, o punteiro debuxaba o seu rectángulo, sen resaltalo, e o paso contaba con iso (`Assert-Hover`).
+- **O punteiro** no título da última tab debuxa a súa columna, de 616 a 716, cortada pola franxa: nada se solapa.
+- **Onde está a franxa** (`Assert-Scroll`), coa tab 25.
+- **O que colle,** desde a revisión: unha meiga onde o botón que non pode desprazar segue sendo unha parte do punteiro, e o seu rectángulo se debuxa outra vez, coma antes da corrección. O punteiro enriba del debúxao, e o paso falla despois de dúas liñas `OK:`.
+
+```powershell
+    # 4. The wheel, on the strip: a tab for each step, and the rest of a step
+    # for the next turn. Two steps to the right and one to the left: if they
+    # were the same, a horizontal wheel that goes the wrong way, or does
+    # nothing, would leave the strip where it has to be.
+    $at = Get-Middle (Get-Strip)
+    $turns = @(
+        @{ Delta = 120; Horizontal = $false }
+        @{ Delta = 480; Horizontal = $false }
+        @{ Delta = 240; Horizontal = $true }
+        @{ Delta = -120; Horizontal = $false }
+        @{ Delta = -120; Horizontal = $true }
+        @{ Delta = 50; Horizontal = $false }
+        @{ Delta = 70; Horizontal = $false }
+    )
+    $messages = @(foreach ($turn in $turns) {
+            $message = if ($turn.Horizontal) { $WM_MOUSEHWHEEL } else { $WM_MOUSEWHEEL }
+            Get-Wheel $message $turn.Delta $at
+        })
+    Send-ToBar $messages 'The wheel'
+    foreach ($turn in $turns) { Add-Wheel $turn.Delta $turn.Horizontal }
+    Assert-Scroll (Get-OtherTab) 'after the wheel'
+    Write-Host 'OK: the wheel on the bar scrolls a tab for each step, towards the first one forward or to the left, and towards the last one backward or to the right, and keeps what is left of a step for the next turn.'
+```
+
+**4. A roda** (decisión 3). Sete mensaxes da roda no medio da franxa, nunha soa publicación (`Send-ToBar`): un paso adiante, 120; catro adiante, 480; dous á dereita, en horizontal, 240; e, desde a revisión do código, un atrás, −120, e un á esquerda, en horizontal, −120; e dous anacos adiante, 50 e 70, que suman un paso. Cada paso despraza unha tab, e cada anaco, a súa parte, en píxeles; o modelo fai o mesmo (`Add-Wheel`): −100, −400, +200, +100, −100, −41 e −59, de 2 312 a 1 912.
+
+- **Os catro sentidos.** Adiante e á esquerda levan a franxa cara á primeira tab; atrás e á dereita, cara á última. En horizontal, dous pasos á dereita e un á esquerda: se fosen iguais, desfaríanse, e unha roda horizontal que fose ao revés, ou que non desprazase, deixaría a franxa onde ten que quedar.
+- **Por que dous anacos.** 50 avos de paso son 41,67 píxeles: meiga despraza 41, e garda o que sobra, −80 en píxeles por 120. Co seguinte, 70, o xiro é −80 − 7 000 = −7 080, 59 píxeles xustos: os dous anacos desprazan 100, coma un paso. Unha meiga que tirase o que sobra desprazaría 41 e 58, un píxel menos.
+- **Onde está a franxa** (`Assert-Scroll`), coa tab 21.
+- **O que colle:** unha meiga onde a roda non despraza; unha onde vai ao revés, en vertical e en horizontal; unha onde só vai ao revés en horizontal: a franxa queda dúas tabs máis cara á primeira; unha que tira o que sobra dun xiro: a franxa queda un píxel máis alá, e a columna da tab 21 tamén; e, desde a revisión, unha onde a roda vertical non despraza cara atrás, e outra onde a horizontal non despraza á esquerda: a franxa queda unha tab máis cara á primeira ou á última. Antes da revisión, o paso só xiraba adiante e á dereita, aínda que a liña `OK:` dicía tamén «backward»: atrás xirábana despois os pasos 7 e 11, e á esquerda, ningún. E a primeira versión cos catro sentidos xiraba un paso a cada lado en horizontal, e tres adiante: os dous pasos en horizontal desfacíanse, e a meiga que vai ao revés en horizontal pasaba a comprobación enteira. Atopouno a volta das copias estragadas sobre o código final.
+
+```powershell
+    # 5. The buttons that scroll the strip, with a click.
+    foreach ($side in 'Left', 'Left', 'Right') {
+        Send-ToBar (Get-Click (Get-Middle (Get-ScrollRect $side))) "A click on the button that scrolls the strip to the $($side.ToLowerInvariant())"
+        $null = Step-Bar $side
+        Assert-Scroll (Get-OtherTab) "after a click on the button that scrolls the strip to the $($side.ToLowerInvariant())"
+    }
+    Write-Host 'OK: a click on a button that scrolls the strip scrolls it until the first tab that it hides on that side, even in part, is all in view.'
+```
+
+**5. Os botóns de desprazamento, cun clic** (decisión 4). Un clic no botón da esquerda, outro, e un no da dereita, cada un cos seus fotogramas (`Send-ToBar`); despois de cada un, `Step-Bar` despraza a franxa do modelo coma o botón, e `Assert-Scroll` comproba onde está. O da esquerda leva a franxa de 1 912 a 1 900, que deixa enteira á vista a tab 20, que estaba cortada, e de 1 900 a 1 800; e o da dereita, de 1 800 a 1 812, que deixa enteira á vista a tab 25, no bordo dereito da franxa.
+
+- **O que colle:** dúas meigas onde os botóns desprazan o ancho dunha tab: o da esquerda, de 1 912 a 1 812, e o da dereita, de 1 800 a 1 900.
+
+```powershell
+    # 6. The left button held down on the button that scrolls the strip to the
+    # left, with the pointer of the system on it, if the check can put it
+    # there.
+    $button = Get-ScrollRect 'Left'
+    $arrow = Get-Middle $button
+    Wait-Quiet 400
+    $from = Get-Mark
+    if (Set-RealPointer $arrow) {
+        Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $arrow)
+        Wait-For { @(Get-Areas (Get-Frames $from) | Where-Object { Test-Overlap $_ $button }).Count -gt 0 } {
+            'The pointer on the button that scrolls the strip to the left drew nothing.'
+        }
+        Wait-Quiet 400
+        $from = Get-Mark
+        Send-Mouse (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $arrow)
+        Start-Sleep -Milliseconds 1000
+        Send-Mouse (Get-Mouse $WM_LBUTTONUP 0 $arrow)
+        Move-Pointer
+        Wait-Quiet 400
+        $scrolls = @(Get-BarFrames $from)
+        $times = @($scrolls | ForEach-Object { [double]$_.time_ms })
+        $gaps = @(for ($index = 1; $index -lt $times.Count; $index++) { $times[$index] - $times[$index - 1] })
+        $early = @(for ($index = 0; $index -lt $gaps.Count; $index++) {
+                if ($gaps[$index] -lt $(if ($index -eq 0) { 249.9 } else { 99.9 })) { $index }
+            })
+        if ($scrolls.Count -lt 3 -or $early.Count -gt 0) {
+            Show-Lines $scrolls
+            $count = if ($scrolls.Count -eq 1) { 'once' } else { "$($scrolls.Count) times" }
+            $after = if ($gaps.Count -gt 0) { ', after ' + (($gaps | ForEach-Object { '{0:0.0} ms' -f $_ }) -join ', ') } else { '' }
+            throw "While the left button stayed down for a second on the button that scrolls the strip to the left, the strip scrolled $count$($after): it has to scroll at once, 250 ms later, and then every 100 ms."
+        }
+        $ok = "OK: while the left button stays down on a button that scrolls the strip, with the pointer on it, the strip scrolls another tab after 250 ms, and then after each 100 ms: $($scrolls.Count) tabs in a second."
+    }
+    else {
+        Send-Mouse ((Get-Mouse $WM_MOUSEMOVE 0 $arrow) + (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $arrow))
+        Start-Sleep -Milliseconds 1000
+        Send-Mouse (Get-Mouse $WM_LBUTTONUP 0 $arrow)
+        Wait-Quiet 400
+        $scrolls = @(Get-BarFrames $from)
+        if ($scrolls.Count -ne 1) {
+            Show-Lines $scrolls
+            throw "The left button down for a second on the button that scrolls the strip to the left, with the pointer that left at once, scrolled the strip $($scrolls.Count) times instead of once."
+        }
+        $ok = 'OK: the left button down on a button that scrolls the strip scrolls it once, and no more once the pointer leaves the button; the check could not move the pointer of the system onto the button to hold it there.'
+    }
+    foreach ($scroll in $scrolls) { $null = Step-Bar 'Left' }
+    Assert-Scroll (Get-OtherTab) 'after the button held down'
+    Write-Host $ok
+```
+
+**6. O botón mantido** (decisión 4). O botón esquerdo, premido un segundo no botón de desprazamento da esquerda. A repetición só segue mentres o punteiro está no botón (`TabBar::tick`), e o punteiro, para meiga, é o que lle din as mensaxes: as que publica a comprobación, e as que xera Windows. Se o punteiro do sistema non está enriba da xanela, Windows dille en seguida que saíu (ver `Assert-Hover`), e a repetición para. Por iso o paso ten dous camiños, e escolle con `Set-RealPointer`: se pode levar o punteiro do sistema ao medio do botón, e alí está, enriba da xanela de meiga, mide a repetición; se non, comproba o que se pode ver sen ela.
+
+- **Co punteiro do sistema no botón,** coma na CI. Primeiro, un movemento publicado ao mesmo punto, e agarda o resalte do botón: algún fotograma que toque o seu rectángulo (`Test-Overlap`). Despois, cando meiga leva 400 ms sen debuxar, o botón esquerdo baixa; un segundo despois, sobe, e `Move-Pointer` aparta o punteiro. Cada desprazamento debuxa a barra enteira (`Get-BarFrames`): ten que haber polo menos tres, e entre cada un e o seguinte, polo `time_ms` dos seus fotogramas, polo menos 250 ms o primeiro e 100 ms os outros, con 0,1 ms de marxe. Se non, mostra os fotogramas, e di cantas veces se desprazou a franxa, e cada canto. Na CI, 9: ao baixar, aos 250 ms, e despois cada 100 ms ata os 950.
+- **Por que o `time_ms`.** É o momento no que empeza cada fotograma, o `now` co que a escena chama `TabBar::tick` antes de debuxalo ([Código › meiga › `trace.rs`](meiga.md#cratesmeigasrctracers)): o desprazamento vai nese fotograma, e o seguinte conta desde ese momento. O primeiro fotograma despois de baixar o botón, o do primeiro desprazamento, conta os 250 ms ata o segundo.
+- **Sen o punteiro do sistema,** coma co cliente do Escritorio remoto minimizado. O movemento e o botón que baixa van nunha publicación, e o botón sobe un segundo despois. Windows dille á xanela que o punteiro saíu cando meiga o pregunta, ao tratar o movemento, e esa mensaxe vai detrás do botón: a franxa desprázase unha vez, ao baixar o botón, e non máis. Ten que haber exactamente un fotograma da barra enteira, e a liña `OK:` di que a comprobación non puido levar alí o punteiro.
+- **Despois, nos dous camiños,** a franxa do modelo desprázase coma o botón unha vez por cada fotograma da barra enteira, e `Assert-Scroll` comproba onde está, coa primeira tab enteira á vista: de 1 812 a 1 800, e despois, na CI, ata 1 000. Só entón escribe a liña `OK:` do camiño que seguiu, que gardou en `$ok`: desde a revisión do código, se isto falla, falla despois de cinco, e non despois da sexta.
+- **O que colle:** unha meiga cuxa repetición segue co punteiro fóra do botón: sen o punteiro do sistema, a franxa desprázase máis dunha vez. Co punteiro do sistema, esa pasaría, porque o punteiro non sae do botón ata que sobe o botón esquerdo; cóllea `the_buttons_on_the_sides_scroll_a_tab_and_again_while_they_stay_down`, en [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs). E dúas que só fallan co punteiro do sistema, na CI: unha sen repetición, que despraza unha vez, e unha cuxa primeira repetición chega aos 100 ms, que despraza 11 veces, a segunda 100 ms despois da primeira. Sen el, pasan as dúas: a repetición non pode empezar, porque o punteiro saíu. Para probalas na CI, nunhas ramas temporais, houbo que ignorar esa proba de Rust, que as colle antes.
+
+```powershell
+    # 7. Each of the 30 tabs, with a click on its title, once the wheel
+    # brings it all into view, if it is not: the wheel and the click go
+    # together.
+    $at = Get-Middle (Get-Strip)
+    for ($index = 0; $index -lt $tabs.Count; $index++) {
+        $messages = @()
+        $steps = Get-StepsTo $index
+        if ($steps -ne 0) {
+            $messages += Get-Wheel $WM_MOUSEWHEEL ($steps * $WHEEL_DELTA) $at
+            Add-Wheel ($steps * $WHEEL_DELTA) $false
+        }
+        $messages += Get-Click (Get-Middle (Get-TitleRect $index))
+        Send-Mouse $messages
+        $active = $index
+        Wait-Active "A click on the title of the tab at $($index + 1) of $($tabs.Count)"
+    }
+    Write-Host 'OK: each of the 30 tabs can be shown with a click on its title, once the wheel brings it into view.'
+```
+
+**7. Cada tab, cun clic** (decisión 3). Para cada unha das 30 tabs, en orde: se non está enteira á vista, a roda que a trae, cos pasos de `Get-StepsTo`, e un clic no medio do seu título, todo nunha publicación; despois, `Wait-Active` agarda a que se mostre. A primeira tab necesita dez pasos adiante, desde 1 000, ou 18 sen o punteiro do sistema no paso 6; as cinco seguintes, ningún; e cada unha das outras, un atrás. Ao final, a franxa está desprazada ata o final, 2 312, coa última tab á vista.
+
+- **A roda e o clic, xuntos.** meiga trata as mensaxes en orde, e o clic chega cando a roda xa desprazou a franxa: se a franxa non estivese onde di o modelo, ou case, o clic caería noutra tab, e `Wait-Active` fallaría.
+- **Sen agardar o fotograma completo:** a tab do clic xa está enteira á vista, e levala á vista non despraza nada.
+
+```powershell
+    # 8. The close button, and then the middle button, at the same place,
+    # close two tabs in the middle of the strip: the second one is the tab
+    # that came onto the place of the first one, which kept its width and
+    # the strip, though the strip could not scroll so far with a tab less.
+    $closing = [int][Math]::Floor(($barScroll + (Get-Viewport) / 2) / $barTabWidth)
+    if ($closing -lt 1 -or $closing + 1 -ge $active -or -not (Test-AllInView $closing) -or $barScroll -ne (Get-MaxScroll)) {
+        throw 'The check expects two tabs all in view in the middle of the strip, after the first tab and before the one that is shown, and the strip scrolled as far as it goes.'
+    }
+    $point = Get-Middle (Get-CloseRect $closing)
+    Assert-Hover (Get-Middle (Get-TitleRect $closing)) (Get-TabArea $closing) "the title of the tab at $($closing + 1) of $($tabs.Count), once a click showed the last one,"
+    $gone = @($tabs[$closing], $tabs[$closing + 1])
+    foreach ($id in $gone) {
+        if ((Get-CloseAt $point) -ne $closing) {
+            throw 'The check expects the close button of the tab on the right under the pointer, once a tab closes.'
+        }
+        Remove-Tab $closing
+    }
+```
+
+**8. As tabs conxeladas** (decisión 6). Primeiro, a tab que ten debaixo o medio da franxa, `$closing`: coa franxa ata o final, a tab 27 de 30, de 316 a 416. O paso necesita que ela e a da súa dereita estean despois da primeira e antes da que se mostra, a última; que ela estea enteira á vista; e que a franxa estea ata o final; se non, falla, cunha mensaxe `The check expects …`. O punteiro no seu título debuxa a súa columna (`Assert-Hover`): a franxa está onde di o modelo. O modelo pecha esa tab, e despois a que vén ao seu sitio, sen recolocar as outras, e comproba cada vez que o × baixo o medio do × da primeira, `$point`, é o da tab de `$closing` (`Get-CloseAt`).
+
+```powershell
+    $messages = (Get-Click $point) + (Get-Mouse $WM_MOUSEMOVE 0 $point) +
+    (Get-Mouse $WM_MBUTTONDOWN $MK_MBUTTON $point) + (Get-Mouse $WM_MBUTTONUP 0 $point)
+    Send-Mouse $messages
+    foreach ($id in $gone) { Wait-Gone $id 'The program of a tab that the mouse closed' }
+    Wait-Active 'Once the mouse closed two tabs'
+    Update-Fit
+    $null = Show-BarTab $active
+    $shown = $closing - 1
+    if (-not (Test-AllInView $shown) -or $barScroll -ne (Get-MaxScroll)) {
+        throw 'The check expects the tab on the left of the closed ones all in view, and the strip scrolled as far as it goes.'
+    }
+    Assert-Scroll $shown 'once the pointer left the bar after two tabs closed'
+    Write-Host 'OK: when the close button or the middle button closes a tab, the others keep their width and their place while the pointer stays on the bar, and the next close button is under the pointer; once the pointer leaves the bar, they get their width again, and the strip shows the tab that is shown.'
+```
+
+**Despois, os dous peches, de vez.** Nunha publicación: un clic en `$point`, un movemento ao mesmo punto, e o botón do medio, que baixa e sobe alí.
+
+- **O clic** pecha a tab 27 co seu ×, e meiga apunta que a pechou o rato (`closing`): co punteiro na barra, as outras tabs quedan co seu ancho, e a franxa co seu desprazamento, 2 312, aínda que con 29 tabs só podería chegar a 2 212 (`TabBar::tab_closed` e `Layout::keep_widths`). A tab da súa dereita vai ao seu sitio, co seu × debaixo do punteiro.
+- **O botón do medio** pecha a tab que ten debaixo, a que veu ao sitio, e as outras seguen conxeladas.
+- **Os dous programas rematan,** cos seus lectores (`Wait-Gone`), e a tab que se mostra segue sendo a última, xa a 28 de 28.
+- **O punteiro sae.** Co primeiro movemento, meiga pediulle a Windows que lle diga cando saia o punteiro, e Windows publicou `WM_MOUSELEAVE` en seguida, detrás de toda a publicación: as tabs quedaron conxeladas para os dous peches, e recolócanse despois (`TabBar::left`). A franxa queda ata onde pode chegar, 2 112, e o modelo fai o mesmo (`Update-Fit` e `Show-BarTab`).
+- **Onde está a franxa** (`Assert-Scroll`), coa tab da esquerda das que se pecharon, a 26 de 28, que ten que estar enteira á vista, coa franxa ata o final.
+- **O que colle:** unha meiga onde o rato non conxela as tabs; unha onde o clic non apunta que tab pecha o rato, e que entón non as conxela; e unha onde `keep_widths` lles dá o seu ancho, coma ao abrir ou pechar tabs. Nas tres, a franxa desprázase xa unha tab ao pechar a primeira, e o botón do medio pecha a tab da esquerda, e non a que veu ao seu sitio: `Wait-Gone` agarda en balde o programa desa. E unha onde as tabs nunca se recolocan: cando o punteiro sae, a franxa segue en 2 312, e o título da tab 26 cae onde está a 28, a que se mostra, coa mesma columna; o clic mostra a que xa se mostraba, e `Wait-Active` falla.
+
+```powershell
+    # 9. With the pointer on the close button of the tab that is shown,
+    # Ctrl+Shift+W closes it: the strip scrolls a tab less at once, and the
+    # close button of the tab on its left comes under the pointer. A click
+    # closes that one, and then the others keep their place: a click on the
+    # title of the third tab from the end, where it is then, shows that tab,
+    # and not the one on its left.
+    $point = Get-Middle (Get-CloseRect $shown)
+    if ((Get-CloseAt $point) -ne $shown) {
+        throw 'The check expects the close button of the tab that is shown under the pointer.'
+    }
+    $keyboard = $tabs[$shown]
+    Remove-Tab $shown
+    Update-Fit
+    if (Show-BarTab $active) {
+        throw 'The check expects the tab on the right of the closed one all in view.'
+    }
+    $under = Get-CloseAt $point
+    if ($under -ne $shown - 1) {
+        throw 'The check expects the close button of the tab on the left of the closed one under the pointer, once the tabs get their width.'
+    }
+    $mouse = $tabs[$under]
+    Remove-Tab $under
+    $target = $tabs.Count - 3
+    if (-not (Test-AllInView $target) -or $target -eq $active) {
+        throw 'The check expects the third tab from the end all in view, and not shown.'
+    }
+```
+
+**9. O teclado recoloca, e o rato conxela** (decisión 6). Coa tab 26 de 28 á vista, `$shown`, e o punteiro fóra da barra, o modelo fai antes o que vai pasar, e comproba que o × de cada peche quede onde ten que estar:
+
+- **Ctrl+Maiús+W** pecha a tab que se mostra, e móstrase a da súa dereita. Co teclado, as tabs non se conxelan: recolócanse no momento, e a franxa, que estaba ata o final, desprázase unha tab menos, de 2 112 a 2 012 (`Update-Fit`). A tab que se mostra xa está á vista. O × baixo o punteiro, no medio do × da tab pechada, ten que ser o da tab da súa esquerda (`Get-CloseAt`).
+- **Un clic** pecha esa tab, co rato: as outras quedan conxeladas (`Remove-Tab`, sen `Update-Fit`).
+- **O último clic** vai ao título da antepenúltima, a tab 24 de 26, onde está coas tabs conxeladas: ten que estar enteira á vista, e non ser a que se mostra.
+
+```powershell
+    $typed = Get-Chord 'Ctrl+Shift+W'
+    $messages = (Get-Mouse $WM_MOUSEMOVE 0 $point) + $typed.Messages +
+    (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $point) + (Get-Mouse $WM_LBUTTONUP 0 $point) +
+    (Get-Click (Get-Middle (Get-TitleRect $target)))
+    Send-Keys $messages $typed.Down
+    $active = $target
+    Wait-Gone $keyboard 'The program of the tab that Ctrl+Shift+W closed'
+    Wait-Gone $mouse 'The program of the tab that the close button closed then'
+    Wait-Active 'A click on a title, once Ctrl+Shift+W and then the close button closed two tabs,'
+    Update-Fit
+    if ((Show-BarTab $active) -or $barScroll -ne (Get-MaxScroll)) {
+        throw 'The check expects the tab that is shown all in view, and the strip scrolled as far as it goes.'
+    }
+    Assert-Hover (Get-Middle (Get-TitleRect $target)) (Get-TabArea $target) "the title of the tab at $($target + 1) of $($tabs.Count), once the pointer left the bar,"
+    Write-Host 'OK: a tab that the keyboard closes, with the pointer on the bar, lets the others get their width at once; then a tab that the mouse closes makes them keep it.'
+```
+
+**Despois, todo de vez.** Unha publicación: o punteiro ao × da tab que se mostra, as teclas de Ctrl+Maiús+W, o botón esquerdo que baixa e sobe alí, e o clic no título da antepenúltima. Vai con `Send-Keys`, co estado das teclas de Ctrl+Maiús+W para toda a publicación: meiga le Ctrl e Maiús dos clics no seu `wParam`, que non os leva. Despois, os programas das dúas tabs pechadas rematan, e móstrase a antepenúltima: o clic caeu nela, e non na da súa esquerda, que estaría no seu sitio se as tabs se recolocasen. O punteiro sae, e as tabs recolócanse: a franxa vai ata o final, 1 912, coa tab que se mostra á vista, e o punteiro no seu título debuxa a súa columna (`Assert-Hover`).
+
+- **O que colle:** unha meiga onde o teclado tamén conxela as tabs: despois de Ctrl+Maiús+W, a franxa non se despraza, e debaixo do punteiro queda o × da tab da dereita, a que se mostra entón. O clic pecha esa, e `Wait-Gone` agarda en balde o programa da da esquerda.
+
+```powershell
+    # 10. Two clicks on the close button of the last tab close it, and then
+    # the one before it, whose close button comes under the pointer.
+    $last = $tabs.Count - 1
+    $point = Get-Middle (Get-CloseRect $last)
+    if ((Get-CloseAt $point) -ne $last) {
+        throw 'The check expects the close button of the last tab under the pointer.'
+    }
+    $gone = @($tabs[$last], $tabs[$last - 1])
+    foreach ($id in $gone) {
+        if ((Get-CloseAt $point) -ne $tabs.Count - 1) {
+            throw 'The check expects the close button of the new last tab under the pointer, once the last one closes.'
+        }
+        Remove-Tab ($tabs.Count - 1)
+        Update-Fit
+        if (Show-BarTab $active) {
+            throw 'The check expects the tab that is shown all in view, once the last tab closes.'
+        }
+    }
+    $click = (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $point) + (Get-Mouse $WM_LBUTTONUP 0 $point)
+    Send-Mouse ((Get-Mouse $WM_MOUSEMOVE 0 $point) + $click + $click)
+    foreach ($id in $gone) { Wait-Gone $id 'The program of a last tab that the mouse closed' }
+    Wait-Active 'Once the mouse closed the last tab twice'
+    Assert-Scroll (Get-OtherTab) 'once the mouse closed the last tab twice'
+    Write-Host 'OK: the last tab, closed with the mouse, lets the others get their width at once, so the close button of the new last one comes under the pointer.'
+```
+
+**10. A última tab, co rato** (decisión 6). Dous clics de vez no × da última tab, a 26 de 26, sen mover o punteiro. Pechar a última tab da barra recoloca as outras no momento, coma no Windows Terminal: a franxa, que estaba ata o final, desprázase unha tab menos, e o × da nova última queda debaixo do punteiro, onde estaba o da que se pechou; o segundo clic pecha esa. Antes de publicalos, o modelo comproba, en cada peche, que o × baixo o punteiro é o da última tab, e que a tab que se mostra segue á vista. Despois, os dous programas rematan; a tab que se mostra, a antepenúltima de antes, é xa a última, a 24 de 24; e `Assert-Scroll` comproba onde está a franxa, en 1 712, coa tab 19.
+
+- **O que colle:** unha meiga onde pechar a última tab tamén conxela as outras: a franxa queda, e o segundo clic cae no oco baleiro que deixou a última. `Wait-Gone` agarda en balde o programa da 25.
+
+```powershell
+    # 11. The keyboard shows a tab, and the strip scrolls so that it is in
+    # view: Ctrl+1 the first one, and Ctrl+Shift+Tab, round the bar, the last
+    # one. The wheel can move the tab that is shown out of view, and the strip
+    # stays there; Shift+F10 scrolls it until that tab is in view, and opens
+    # its menu below it.
+    Show-Tab 'Ctrl+1' 0
+    Assert-Hover (Get-Middle (Get-TitleRect 0)) (Get-TabArea 0) 'the title of the first tab, once Ctrl+1 showed it,'
+    $last = $tabs.Count - 1
+    Show-Tab 'Ctrl+Shift+Tab' $last
+    Assert-Hover (Get-Middle (Get-TitleRect $last)) (Get-TabArea $last) 'the title of the last tab, once Ctrl+Shift+Tab showed it from the first one,'
+    $at = Get-Middle (Get-Strip)
+    $messages = Get-Wheel $WM_MOUSEWHEEL (2 * $WHEEL_DELTA) $at
+    Add-Wheel (2 * $WHEEL_DELTA) $false
+    $target = Get-OtherTab
+    $messages += Get-Click (Get-Middle (Get-TitleRect $target))
+    Send-Mouse $messages
+    $active = $target
+    Wait-Active 'A click on the title of a tab, once the wheel scrolled the strip,'
+```
+
+**11. A tab que se mostra, á vista** (decisión 5).
+
+- **Ctrl+1** mostra a primeira tab (`Show-Tab`; [ADR 0023](../adr/0023-os-atallos-de-teclado.md), decisión 5), e o seu fotograma completo leva a franxa ao principio. O punteiro no seu título debuxa a súa columna.
+- **Ctrl+Maiús+Tab,** desde a primeira, dá a volta, e mostra a última: a franxa vai ata o final. O punteiro no título da última debuxa a súa columna, cortada pola franxa: o separador da súa dereita quedaría fóra.
+- **A roda e un clic, de vez:** dous pasos adiante, de 1 712 a 1 512, e un clic no título da primeira tab enteira á vista que non se mostra, a 17, que se mostra.
+
+```powershell
+    Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (-3 * $WHEEL_DELTA) $at) 'The wheel backward'
+    Add-Wheel (-3 * $WHEEL_DELTA) $false
+    $area = Get-TabArea $target
+    if ($area.Right -gt $area.Left) {
+        throw 'The check expects the tab that is shown out of view, once the wheel scrolls the strip backward.'
+    }
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Chord 'Shift+F10'
+    if (-not (Show-BarTab $target)) {
+        throw 'The check expects the strip to scroll so that the tab that is shown is in view.'
+    }
+    $tab = Get-TabRect $target
+    $bar = New-Rect 0 0 $barWidth $barHeight
+    Wait-For {
+        $areas = @(Get-Areas (Get-Frames $from))
+        @($areas | Where-Object { Test-Same $_ $bar }).Count -gt 0 -and
+        @($areas | Where-Object { $_.Left -eq $tab.Left -and $_.Top -eq $tab.Bottom }).Count -gt 0
+    } {
+        Show-Lines (Get-Frames $from)
+        "Shift+F10 did not draw the whole bar and a menu from $(Show-Rect $tab) down: it did not scroll the strip until the tab that is shown is in view, or did not open its menu below it."
+    }
+    $menu = @(Get-Areas (Get-Frames $from) | Where-Object { $_.Left -eq $tab.Left -and $_.Top -eq $tab.Bottom })[0]
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Chord 'Escape'
+    Wait-For { @(Get-Areas (Get-Frames $from) | Where-Object { Test-Inside $menu $_ }).Count -gt 0 } { 'Esc did not close the menu.' }
+    Assert-Scroll (Get-OtherTab) 'once Shift+F10 scrolled the strip'
+    Write-Host 'OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays; Shift+F10 scrolls the strip until it is in view again, and opens its menu below it.'
+```
+
+**Despois, a tab que se mostra, fóra da vista.** Tres pasos atrás, cos seus fotogramas (`Send-ToBar`): a franxa vai ata o final, 1 712, e a tab que se mostra queda fóra, á esquerda; o modelo comproba que a súa columna, cortada coa franxa, non ten ancho. A roda non mostra ningunha tab, e, se a tab que se mostra tiña que ir á vista, esquéceo (`TabBar::scroll`): alí queda.
+
+- **Maiús+F10** abre co teclado o menú da tab que se mostra, debaixo dela, desde o seu lado esquerdo ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 4); antes, leva a franxa ata ela, no momento (`TabBar::scroll_to_tab`). O modelo fai o mesmo (`Show-BarTab`), e ten que desprazar: de 1 712 a 1 600, coa tab 17 ao principio da franxa. A comprobación agarda unha zona que sexa a barra enteira, e outra que empece no lado esquerdo e no fondo da tab, onde a pon o modelo: o menú. Se non chegan en `TimeoutSeconds`, mostra os fotogramas, e falla.
+- **Esc** pecha o menú: algunha zona cobre a do menú, o que tapaba.
+- **Onde está a franxa** (`Assert-Scroll`), coa tab 18.
+- **O que colle:** unha meiga onde mostrar unha tab non a leva á vista: Ctrl+1 deixa a franxa onde estaba, e o punteiro no título da primeira cae noutra tab, cuxa columna está noutro sitio. E unha onde o menú do teclado non leva a franxa ata a tab: Maiús+F10 non debuxa a barra enteira.
+
+```powershell
+    # 12. Probe, the first tab, while it is hidden: its program writes, rings
+    # the bell, and ends with exit code 3.
+    Show-Tab 'Ctrl+1' 0
+    Show-Tab 'Ctrl+2' 1
+    $probe = $tabs[0]
+    $label = Get-LabelArea 0
+    $bell = [string][char]7
+    Assert-Drawn $label { Write-Probe $probe 'x' } 'The program of a hidden tab, which wrote,'
+    Assert-NothingDrawn { Write-Probe $probe 'y' } 'The program of a hidden tab, which wrote again,'
+    Assert-Drawn $label { Write-Probe $probe $bell } 'The bell of a hidden tab'
+    Assert-NothingDrawn { Write-Probe $probe $bell } 'The bell of a hidden tab, which rang again,'
+    Show-Tab 'Ctrl+1' 0
+    Assert-NothingDrawn { Write-Probe $probe $bell } 'The bell of the tab that is shown'
+    Show-Tab 'Ctrl+2' 1
+    Assert-Drawn $label { Write-Probe $probe 'z' } 'The program of a hidden tab, which wrote once the tab had been shown,'
+    Assert-Drawn $label { Stop-Probe $probe 3 } 'The end of the program of a hidden tab, with exit code 3,'
+    Wait-Gone $probe 'The program of the hidden tab, which ended with exit code 3,'
+    Write-Host 'OK: while a tab is hidden, its program writes, which draws only the title of its tab, once, and rings the bell, which draws it once more; showing the tab clears both, and a bell while it is shown draws nothing; the end of its program with exit code 3, while it is hidden, draws its title once more.'
+```
+
+**12. Os indicadores dunha tab oculta** (decisións 7 a 10). Ctrl+1 e Ctrl+2 (`Show-Tab`): a primeira tab, a de Probe, móstrase, e despois ocúltase, coa franxa ao principio. `Get-LabelArea` dá o sitio do seu título, cortado coa franxa, o que debuxa un indicador que aparece ou cambia: de 36 a 100. Cada cousa que fai o programa vai nun `Assert-Drawn`, que ten que debuxar exactamente ese rectángulo, nun só fotograma, ou nun `Assert-NothingDrawn`, que non pode debuxar nada:
+
+- **`x`:** o primeiro que escribe o programa desde que se ocultou a tab esperta a xanela, porque, ao ocultala, a xanela esqueceu a marca da súa pantalla (`Tab::hide`); a tab di que o seu programa escribiu algo, ●: só o sitio do seu título.
+- **`y`:** a marca da pantalla segue posta, e non esperta a xanela; e, aínda que a espertase, o indicador non cambiaría: nada.
+- **A campá,** o carácter 7, BEL: a primeira esperta a xanela pola marca da campá (`bell_rang`), e a campá vai antes ca a actividade: 🔔, o mesmo sitio, outra vez. **Outra campá:** nada.
+- **Ctrl+1** mostra a tab, e quita os dous indicadores, co seu fotograma completo. **A campá, coa tab á vista,** non debuxa nada (decisión 9).
+- **Ctrl+2** oculta a tab outra vez, e a xanela esquece as marcas da pantalla e da campá: **`z`** espértaa outra vez, e a actividade volta: o mesmo sitio.
+- **O fin, co código 3** (`Stop-Probe`): o fin vai antes ca a campá e a actividade, e o seu espertar debuxa o mesmo sitio, outra vez, coa × do fin. Despois, `Wait-Gone` agarda o programa e o seu lector.
+- **Por que `Write-Probe` agarda.** Cando volta, o script xa escribiu o texto: o que debuxe a xanela despois é del.
+- **O que colle:** unha meiga sen o indicador da actividade, e unha sen o da campá: `x`, ou a campá, non debuxan nada. Unha onde a actividade vai antes ca a campá: a campá non cambia o indicador, e non debuxa nada. Unha onde ocultar a tab non esquece as marcas, e unha onde non esquece a da campá: ao ocultala outra vez, a tab colle unha campá de antes, e `z` non cambia o indicador. Unha onde mostrar a tab non quita a actividade, e unha onde non quita a campá: tamén `z`. Unha onde o espertar dunha tab oculta non debuxa o seu título, e unha onde o fin dunha tab oculta non o debuxa: `x`, ou o fin, non debuxan nada. E unha onde un indicador debuxa a barra enteira: debuxa máis ca o título.
+- **A que pasa, e acéptase:** unha meiga onde ocultar a tab non esquece a marca da súa pantalla. A vista colle esa marca con cada fotograma da tab que se mostra, e a comprobación só oculta a tab cando meiga leva 400 ms sen debuxar: ao ocultala, a marca nunca está posta. Só faltaría se o programa escribise entre o último fotograma e o momento de ocultala, unha carreira que a comprobación non provoca.
+
+```powershell
+    # 13. The window closes, with the tab of Probe, whose program ended, and
+    # 23 tabs of Light.
+    $shells = @(Get-Shells)
+    $tabConsoles = @(Get-Consoles)
+    Split-Input
+    if (-not $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)) {
+        throw "Could not close the window of ${exe}: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "$exe was still running $TimeoutSeconds s after its window closed."
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0."
+    }
+    foreach ($shell in $shells) {
+        Wait-Ended ([int]$shell.ProcessId) "The program $($shell.Name) of a tab"
+    }
+    Wait-ConsolesEnded $tabConsoles
+    Write-Host 'OK: it ends with exit code 0 when its window closes, and the programs of its tabs and their consoles end too.'
+    $passed = $true
+}
+```
+
+**13. A xanela péchase.** Antes, a comprobación apunta os programas das tabs (`Get-Shells`), os 23 de Light, porque o de Probe xa rematou, e as súas consolas (`Get-Consoles`); e deixa de compartir a entrada co fío da xanela (`Split-Input`). Despois publica `WM_CLOSE`, coma o botón X da xanela: meiga ten que saír en `TimeoutSeconds`, co código 0, e os programas e as consolas que apuntou teñen que rematar. Despois, `$passed` di que todo foi ben.
+
+```powershell
+finally {
+    Split-Input
+    if ($process) {
+        if (-not $process.HasExited) {
+            # With the programs of its tabs, and their consoles.
+            try { $process.Kill($true) }
+            catch { Write-Host "Could not end $exe and the programs of its tabs: $($_.Exception.Message)" }
+        }
+        $process.Dispose()
+    }
+    if ($null -ne $pointer) {
+        $null = $api::SetCursorPos($pointer.X, $pointer.Y)
+    }
+    $null = $api::SetThreadDpiAwarenessContext($previousDpi)
+    if ($passed) {
+        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    if (Test-Path -LiteralPath $work) {
+        Write-Host "Kept $work"
+    }
+}
+```
+
+O `finally` é coma o de `check-exit.ps1`, sen o portapapeis:
+
+- Primeiro, `Split-Input`, se a entrada aínda se comparte: o estado das teclas queda sen ningunha abaixo.
+- meiga non queda aberto: se a comprobación fallou no medio, remátao cos programas das súas tabs e as súas consolas, toda a árbore de procesos (`Kill($true)`); en `check-exit.ps1`, só meiga. Se non pode, dío, e segue.
+- O punteiro volta a onde estaba, se `Move-Pointer` ou `Set-RealPointer` o moveron, e o fío, á súa escala.
+- **Se todo foi ben,** bórrase o cartafol da comprobación enteiro. **Se algo fallou,** queda, e a comprobación di onde, cunha liña `Kept …`: nel están o `config.toml`, o rexistro dos fotogramas e os arquivos do script de Probe que seguían alí. Tamén o di se o cartafol queda porque non se puido borrar enteiro.
+
+A CI executa este script en cada PR, despois de `check-exit.ps1`, no paso *Check many tabs* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
 
 ## `tools/terminal-sample.ps1`
 
