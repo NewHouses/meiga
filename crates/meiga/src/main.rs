@@ -65,7 +65,10 @@ fn run(options: &Options) -> Result<(), Box<dyn Error>> {
             })?),
             None => None,
         };
-    let window = Window::create(&WindowOptions { title: TITLE })?;
+    let window = Window::create(&WindowOptions {
+        title: TITLE,
+        title_bar: false,
+    })?;
     let mut app = App::new(&window, options, trace)?;
     window.run(&mut app)
 }

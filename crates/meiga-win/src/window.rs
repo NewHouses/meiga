@@ -1,44 +1,60 @@
 //! The main window, its frame timer and the message loop.
 
 use std::cell::{Cell, RefCell};
-use std::ptr;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+use std::{io, mem, ptr};
 
 use meiga_core::geometry::{Point, Rect, Size};
-use meiga_core::mouse::ClickSettings;
+use meiga_core::mouse::{Button, ClickSettings, Modifiers};
+use meiga_core::ui::titlebar::{Hit, TitleBar, min_client};
 use windows_sys::Win32::Foundation::{
-    CloseHandle, HANDLE, HWND, LPARAM, LRESULT, POINT, RECT, WAIT_FAILED, WAIT_OBJECT_0, WPARAM,
+    CloseHandle, ERROR_CLASS_ALREADY_EXISTS, HANDLE, HWND, LPARAM, LRESULT, POINT, RECT,
+    WAIT_FAILED, WAIT_OBJECT_0, WPARAM,
 };
 use windows_sys::Win32::Graphics::Gdi::{
-    BeginPaint, EndPaint, InvalidateRect, PAINTSTRUCT, ScreenToClient, UpdateWindow, ValidateRect,
+    BeginPaint, EndPaint, GetMonitorInfoW, InvalidateRect, MONITOR_DEFAULTTONEAREST, MONITORINFO,
+    MonitorFromWindow, PAINTSTRUCT, ScreenToClient, UpdateWindow, ValidateRect,
 };
-use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows_sys::Win32::System::LibraryLoader::{
+    GetModuleHandleW, GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW,
+};
 use windows_sys::Win32::System::Threading::{
     CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, CancelWaitableTimer, CreateWaitableTimerExW, INFINITE,
     SetWaitableTimer, TIMER_ALL_ACCESS,
 };
-use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
+use windows_sys::Win32::UI::HiDpi::{GetDpiForWindow, GetSystemMetricsForDpi};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     GetCapture, GetDoubleClickTime, GetKeyState, ReleaseCapture, SetCapture, TME_LEAVE,
-    TRACKMOUSEEVENT, TrackMouseEvent, VK_MENU,
+    TME_NONCLIENT, TRACKMOUSEEVENT, TrackMouseEvent, VK_CONTROL, VK_MENU, VK_SHIFT,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA,
-    GetCaretBlinkTime, GetClientRect, GetForegroundWindow, GetSystemMetrics, GetWindowLongPtrW,
-    HCURSOR, HTCLIENT, IDC_ARROW, IDC_IBEAM, IDOK, IsIconic, IsWindow, KillTimer, LoadCursorW,
-    MB_DEFBUTTON2, MB_ICONERROR, MB_ICONWARNING, MB_OK, MB_OKCANCEL, MSG, MWMO_INPUTAVAILABLE,
-    MessageBoxW, MsgWaitForMultipleObjectsEx, PM_REMOVE, PeekMessageW, PostMessageW,
-    PostQuitMessage, QS_ALLINPUT, RegisterClassExW, SM_CARETBLINKINGENABLED, SM_CXDOUBLECLK,
-    SM_CYDOUBLECLK, SM_REMOTESESSION, SPI_GETCARETTIMEOUT, SPI_GETCARETWIDTH,
-    SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES, SW_SHOWDEFAULT, SWP_NOACTIVATE, SWP_NOZORDER,
-    SetCursor, SetTimer, SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow,
-    SystemParametersInfoW, TranslateMessage, USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM,
-    USER_TIMER_MINIMUM, WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE,
-    WM_ERASEBKGND, WM_EXITMENULOOP, WM_EXITSIZEMOVE, WM_PAINT, WM_QUIT, WM_SETCURSOR, WM_TIMER,
-    WNDCLASSEXW, WS_OVERLAPPEDWINDOW,
+    CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW,
+    EnableMenuItem, GWLP_USERDATA, GetCaretBlinkTime, GetClientRect, GetCursorPos,
+    GetForegroundWindow, GetSystemMenu, GetSystemMetrics, GetWindowLongPtrW, GetWindowRect,
+    HCURSOR, HTCAPTION, HTCLIENT, HTCLOSE, HTMAXBUTTON, HTMINBUTTON, HTTOP, HTTOPLEFT, IDC_ARROW,
+    IDC_IBEAM, IDOK, IsIconic, IsWindow, IsZoomed, KillTimer, LoadCursorW, MB_DEFBUTTON2,
+    MB_ICONERROR, MB_ICONWARNING, MB_OK, MB_OKCANCEL, MF_BYCOMMAND, MF_ENABLED, MF_GRAYED,
+    MINMAXINFO, MSG, MWMO_INPUTAVAILABLE, MessageBoxW, MsgWaitForMultipleObjectsEx, PM_REMOVE,
+    PeekMessageW, PostMessageW, PostQuitMessage, QS_ALLINPUT, RegisterClassExW, SC_CLOSE,
+    SC_MAXIMIZE, SC_MINIMIZE, SC_MOVE, SC_RESTORE, SC_SIZE, SM_CARETBLINKINGENABLED,
+    SM_CXDOUBLECLK, SM_CXPADDEDBORDER, SM_CYDOUBLECLK, SM_CYSIZEFRAME, SM_REMOTESESSION,
+    SPI_GETCARETTIMEOUT, SPI_GETCARETWIDTH, SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES,
+    SW_SHOWDEFAULT, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+    SetCursor, SetMenuDefaultItem, SetTimer, SetWindowLongPtrW, SetWindowPos, SetWindowTextW,
+    ShowWindow, SystemParametersInfoW, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu,
+    TranslateMessage, USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_CLOSE,
+    WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP,
+    WM_EXITSIZEMOVE, WM_GETMINMAXINFO, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
+    WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCHITTEST, WM_NCMBUTTONDBLCLK, WM_NCMOUSELEAVE, WM_NCMOUSEMOVE,
+    WM_PAINT, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETCURSOR, WM_SYSCOMMAND, WM_TIMER,
+    WNDCLASSEXW, WS_OVERLAPPEDWINDOW, WindowFromPoint,
 };
 
-use crate::event::{Event, Handler, HandlerError, WM_WAKE, decode};
+use crate::event::{
+    Event, Handler, HandlerError, NonClient, WM_MOUSELEAVE, WM_WAKE, decode, decode_nonclient,
+    point,
+};
 use crate::keyboard::{Destination, Keyboard, is_keyboard_message};
 use crate::{Error, wide};
 
@@ -59,10 +75,34 @@ const MAX_BLINK_MS: u32 = 10_000;
 /// say: its default value.
 const DEFAULT_CARET_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// Where the flag of the title bar of meiga ([`WindowOptions::title_bar`])
+/// is, in the extra bytes of each window of the class: the window procedure
+/// reads it also before [`Window::run`], while Windows creates the window
+/// and asks for its frame.
+const CUSTOM_FRAME: i32 = 0;
+
+/// How far from its left side the top edge of a window resizes it also to
+/// the left, in pixels at any scale: as on a window of Windows 11 with the
+/// title bar of Windows, which does not scale it.
+const TOP_LEFT_CORNER: i32 = 19;
+
+/// The pixels that a maximized window leaves free on an edge of its monitor
+/// with a taskbar that hides itself, so that the pointer can show it, as in
+/// Windows Terminal.
+const AUTOHIDE_TASKBAR: i32 = 2;
+
 /// How a new window looks.
 pub struct WindowOptions<'a> {
-    /// Text of the title bar.
+    /// The text of the window, which the taskbar shows, and the title bar of
+    /// Windows, if the window has it.
     pub title: &'a str,
+    /// Whether the window has the title bar of meiga: its client area goes
+    /// up to the top of the window, where the title bar of Windows would
+    /// be, and the handler draws it, and tells the window what each part of
+    /// it is with [`Window::set_title_bar`]. The window keeps the frame of
+    /// Windows on its other sides, which resizes it. Without it, the window
+    /// has the frame and the title bar of Windows.
+    pub title_bar: bool,
 }
 
 /// The shape of the mouse pointer over the client area of the window.
@@ -86,12 +126,39 @@ pub struct Window {
     text: HCURSOR,
     /// The pointer over the client area.
     pointer: Cell<HCURSOR>,
+    /// Whether the window has the title bar of meiga.
+    custom: bool,
+    /// What each part of the title bar of meiga is, from the handler.
+    title_bar: Cell<Option<TitleBar>>,
+    /// What the pointer was over for Windows in the last mouse message: its
+    /// answer to `WM_NCHITTEST`, `HTCLIENT` over the client area.
+    hit: Cell<u32>,
+    /// Whether the window watches for the pointer to leave it.
+    leave: Cell<Leave>,
+    /// Whether the window asked Windows again to tell when the pointer
+    /// leaves, after it went from a part of the window to another, since the
+    /// pointer last moved.
+    retracked: Cell<bool>,
+}
+
+/// Whether the window watches for the pointer to leave it, for
+/// [`Event::MouseLeft`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Leave {
+    /// It does not: the handler did not ask, or the event already came.
+    Off,
+    /// Windows tells it when the pointer leaves the part of the window where
+    /// it is: the client area, or the title bar of meiga or its buttons,
+    /// which are not of the client area for Windows.
+    Armed,
+    /// The pointer went from one of those parts to another, which are all
+    /// of the handler: the window asks Windows again when the pointer moves.
+    Rearm,
 }
 
 impl Window {
-    /// Registers the window class and creates the window, still hidden.
-    ///
-    /// Call it once per process: a window class can be registered only once.
+    /// Registers the window class, unless this process did, and creates the
+    /// window, still hidden.
     pub fn create(options: &WindowOptions<'_>) -> Result<Self, Error> {
         let timer = FrameTimer::new()?;
 
@@ -120,6 +187,8 @@ impl Window {
         let class = WNDCLASSEXW {
             cbSize: size_of::<WNDCLASSEXW>() as u32,
             lpfnWndProc: Some(window_proc),
+            // The flag of the title bar of meiga (CUSTOM_FRAME).
+            cbWndExtra: size_of::<isize>() as i32,
             hInstance: instance,
             hCursor: arrow,
             lpszClassName: class_name.as_ptr(),
@@ -128,7 +197,11 @@ impl Window {
         // SAFETY: `class` is fully initialised and its strings are
         // null-terminated and outlive the call, which copies them.
         if unsafe { RegisterClassExW(&class) } == 0 {
-            return Err(Error::last("RegisterClassExW"));
+            // Another window of this process registered it: the same class.
+            let error = io::Error::last_os_error();
+            if error.raw_os_error() != Some(ERROR_CLASS_ALREADY_EXISTS as i32) {
+                return Err(Error::new("RegisterClassExW", error));
+            }
         }
 
         let title = wide(options.title);
@@ -154,12 +227,18 @@ impl Window {
         if handle.is_null() {
             return Err(Error::last("CreateWindowExW"));
         }
+        let custom = options.title_bar && own_title_bar(handle);
         Ok(Self {
             handle,
             timer,
             arrow,
             text,
             pointer: Cell::new(arrow),
+            custom,
+            title_bar: Cell::new(None),
+            hit: Cell::new(HTCLIENT),
+            leave: Cell::new(Leave::Off),
+            retracked: Cell::new(false),
         })
     }
 
@@ -168,8 +247,8 @@ impl Window {
         self.handle
     }
 
-    /// The size of the client area: the window without its title bar and
-    /// borders.
+    /// The size of the client area: the window without the frame and the
+    /// title bar of Windows.
     pub fn client_size(&self) -> Result<Size, Error> {
         let mut rect = RECT::default();
         // SAFETY: `rect` is a valid RECT for GetClientRect to fill in.
@@ -186,18 +265,59 @@ impl Window {
     /// The dots per inch of the monitor of the window: 96 at a scale of
     /// 100 %, 120 at 125 % and 144 at 150 %.
     pub fn dpi(&self) -> u32 {
-        // SAFETY: GetDpiForWindow accepts any handle, and returns 0 for one
-        // that is not a window.
-        match unsafe { GetDpiForWindow(self.handle) } {
-            0 => USER_DEFAULT_SCREEN_DPI,
-            dpi => dpi,
-        }
+        window_dpi(self.handle)
     }
 
     /// Whether the window is minimized.
     pub fn is_minimized(&self) -> bool {
         // SAFETY: IsIconic accepts any handle.
         unsafe { IsIconic(self.handle) != 0 }
+    }
+
+    /// Whether the window is maximized.
+    pub fn is_maximized(&self) -> bool {
+        // SAFETY: IsZoomed accepts any handle.
+        unsafe { IsZoomed(self.handle) != 0 }
+    }
+
+    /// Whether the window has the title bar of meiga
+    /// ([`WindowOptions::title_bar`]).
+    pub const fn has_title_bar(&self) -> bool {
+        self.custom
+    }
+
+    /// How many pixels at the top of the client area, at `dpi`, resize the
+    /// window from its top edge: as many as its frame, while it has the
+    /// title bar of meiga and is not maximized, or else none.
+    pub fn resize_band(&self, dpi: u32) -> u32 {
+        if self.custom && !self.is_maximized() {
+            frame(dpi)
+        } else {
+            0
+        }
+    }
+
+    /// Tells the window what each part of its title bar is, from the next
+    /// time that Windows asks: what drags the window, what resizes it, and
+    /// its buttons. Without the title bar of meiga, Windows never asks.
+    pub fn set_title_bar(&self, bar: TitleBar) {
+        self.title_bar.set(Some(bar));
+    }
+
+    /// Minimizes the window, as the button of its title bar does, once the
+    /// handler returns.
+    pub fn minimize(&self) {
+        self.command(SC_MINIMIZE);
+    }
+
+    /// Maximizes the window, or restores it if it is maximized, as the button
+    /// of its title bar does, once the handler returns.
+    pub fn toggle_maximize(&self) {
+        self.command(if self.is_maximized() {
+            SC_RESTORE
+        } else {
+            SC_MAXIMIZE
+        });
     }
 
     /// Shows the window, paints it, tells `handler` with [`Event::Shown`],
@@ -290,11 +410,25 @@ impl Window {
     }
 
     /// Asks for [`Event::MouseLeft`] when the pointer leaves the client
-    /// area, once.
+    /// area, once. With the title bar of meiga, which is of the client area
+    /// for the handler, also its buttons, it comes when the pointer leaves
+    /// the window, or goes to the frame that resizes it.
     pub fn track_mouse_leave(&self) {
+        self.leave.set(Leave::Armed);
+        self.track(self.hit.get());
+    }
+
+    /// Asks Windows to tell when the pointer leaves the part of the window
+    /// where it is for Windows, `hit`: the client area, or another part. If
+    /// it is elsewhere, Windows tells it at once.
+    fn track(&self, hit: u32) {
+        let mut flags = TME_LEAVE;
+        if hit != HTCLIENT {
+            flags |= TME_NONCLIENT;
+        }
         let mut track = TRACKMOUSEEVENT {
             cbSize: size_of::<TRACKMOUSEEVENT>() as u32,
-            dwFlags: TME_LEAVE,
+            dwFlags: flags,
             hwndTrack: self.handle,
             dwHoverTime: 0,
         };
@@ -302,6 +436,67 @@ impl Window {
         // thread. If it fails, the event does not come, and the pointer
         // only looks over the window for longer.
         unsafe { TrackMouseEvent(&mut track) };
+    }
+
+    /// The pointer moved over the window: if it went from a part of the
+    /// window to another, asks Windows again to tell when it leaves, now
+    /// that the window knows where it is. Not while the window has the
+    /// mouse: the handler asks again when it lets the mouse go.
+    fn rearm(&self) {
+        // SAFETY: GetCapture has no preconditions.
+        if self.leave.get() == Leave::Rearm && unsafe { GetCapture() } != self.handle {
+            self.leave.set(Leave::Armed);
+            self.track(self.hit.get());
+        }
+    }
+
+    /// Windows says that the pointer left the client area, or another part
+    /// of the window.
+    fn mouse_left(&self, state: &State<'_>) {
+        match self.leave.get() {
+            Leave::Off => {}
+            // It went between the client area and the title bar of meiga,
+            // which are both of the handler. The move that took it there
+            // comes after this message, which Windows posted: until then,
+            // the window does not know where it is for Windows. It asks again
+            // once, which is right if the move already came, and else waits
+            // for the move: asking with the wrong part, Windows would tell
+            // it at once, again and again, before the move.
+            _ if self.custom && self.pointer_inside() => {
+                if self.retracked.replace(true) {
+                    self.leave.set(Leave::Rearm);
+                } else {
+                    self.leave.set(Leave::Armed);
+                    self.track(self.hit.get());
+                }
+            }
+            _ => {
+                self.leave.set(Leave::Off);
+                state.dispatch(Event::MouseLeft);
+            }
+        }
+    }
+
+    /// Whether the pointer is over the client area of the window, and not
+    /// over another window in front of it. If Windows cannot tell where the
+    /// pointer is, as while the client of Remote Desktop is minimized, it
+    /// is not.
+    fn pointer_inside(&self) -> bool {
+        let mut cursor = POINT::default();
+        // SAFETY: `cursor` is a valid POINT for GetCursorPos to fill in.
+        if unsafe { GetCursorPos(&mut cursor) } == 0 {
+            return false;
+        }
+        // SAFETY: WindowFromPoint has no preconditions.
+        (unsafe { WindowFromPoint(cursor) } == self.handle)
+            && self.in_client_area(self.client_point(Point::new(cursor.x, cursor.y)))
+    }
+
+    /// Whether `at`, a point from the top-left corner of the client area,
+    /// is in it.
+    fn in_client_area(&self, at: Point) -> bool {
+        self.client_size()
+            .is_ok_and(|size| Rect::from_size(size).contains_point(at))
     }
 
     /// Whether the window is the one that the user is using: the
@@ -492,6 +687,159 @@ impl Window {
         Point::new(point.x, point.y)
     }
 
+    /// Asks Windows for a command of the menu of the window, such as
+    /// `SC_MINIMIZE`, once the handler returns.
+    fn command(&self, command: u32) {
+        // SAFETY: PostMessageW accepts any handle. DefWindowProcW does the
+        // command when it gets the message.
+        unsafe { PostMessageW(self.handle, WM_SYSCOMMAND, command as WPARAM, 0) };
+    }
+
+    /// What the point `on_screen` of the client area is for Windows, with
+    /// the title bar of meiga: its answer to `WM_NCHITTEST`.
+    fn hit_test(&self, on_screen: Point) -> u32 {
+        let Some(bar) = self.title_bar.get() else {
+            return HTCLIENT;
+        };
+        let at = self.client_point(on_screen);
+        // The frame on the left of the client area: the top edge resizes the
+        // window also to the left as far from the side of the window as on a
+        // window with the title bar of Windows.
+        let mut rect = RECT::default();
+        // SAFETY: `rect` is a valid RECT for GetWindowRect to fill in.
+        let left = if unsafe { GetWindowRect(self.handle, &mut rect) } == 0 {
+            0
+        } else {
+            on_screen.x - at.x - rect.left
+        };
+        match bar.hit(at, TOP_LEFT_CORNER - left) {
+            Hit::Client => HTCLIENT,
+            Hit::Caption => HTCAPTION,
+            Hit::Top => HTTOP,
+            Hit::TopLeft => HTTOPLEFT,
+            Hit::Minimize => HTMINBUTTON,
+            Hit::Maximize => HTMAXBUTTON,
+            Hit::Close => HTCLOSE,
+        }
+    }
+
+    /// A mouse message of a part of the window that is not of its client
+    /// area for Windows, with the title bar of meiga: the title bar, its
+    /// buttons, the band that resizes the window from its top edge and the
+    /// frame. Returns whether Windows does what it does with the message
+    /// too: drag the window, resize it, or maximize it with a double click.
+    fn nonclient_mouse(&self, state: &State<'_>, mouse: NonClient) -> bool {
+        self.hit.set(mouse.hit);
+        let button = matches!(mouse.hit, HTMINBUTTON | HTMAXBUTTON | HTCLOSE);
+        match mouse.event {
+            Event::MouseMoved { at, modifiers, .. } => {
+                self.retracked.set(false);
+                let at = self.client_point(at);
+                if self.in_client_area(at) {
+                    self.rearm();
+                    state.dispatch(Event::MouseMoved {
+                        at,
+                        button: None,
+                        modifiers,
+                    });
+                } else if self.leave.get() != Leave::Off {
+                    // The frame, which resizes the window, is not of the
+                    // handler.
+                    self.leave.set(Leave::Off);
+                    state.dispatch(Event::MouseLeft);
+                }
+                // Over its buttons, Windows would draw its own ones: the
+                // handler draws them. Windows opens the snap layouts of
+                // Windows 11 below the button to maximize anyway, because
+                // of WM_NCHITTEST.
+                !button
+            }
+            Event::MouseDown {
+                button: pressed,
+                at,
+                modifiers,
+            } if button => {
+                state.dispatch(Event::MouseDown {
+                    button: pressed,
+                    at: self.client_point(at),
+                    modifiers,
+                });
+                false
+            }
+            Event::MouseUp {
+                button: released,
+                at,
+                modifiers,
+            } if button => {
+                state.dispatch(Event::MouseUp {
+                    button: released,
+                    at: self.client_point(at),
+                    modifiers,
+                });
+                false
+            }
+            // Windows does nothing with the right button on the title bar of
+            // meiga: the window opens its menu.
+            Event::MouseUp {
+                button: Button::Right,
+                at,
+                ..
+            } if mouse.hit == HTCAPTION => {
+                self.system_menu(at);
+                false
+            }
+            _ => true,
+        }
+    }
+
+    /// Opens the menu of the window at `at`, a point from the top-left
+    /// corner of the screen, as the title bar of Windows does with the right
+    /// button, and does the command that the user chooses.
+    ///
+    /// The menu runs a message loop of Windows, whose messages reach the
+    /// window procedure, and the handler, until it closes.
+    fn system_menu(&self, at: Point) {
+        // SAFETY: the window is of this thread. FALSE: the menu of the
+        // window, and not a copy of the default one.
+        let menu = unsafe { GetSystemMenu(self.handle, 0) };
+        if menu.is_null() {
+            return;
+        }
+        let maximized = self.is_maximized();
+        for (command, enabled) in [
+            (SC_RESTORE, maximized),
+            (SC_MOVE, !maximized),
+            (SC_SIZE, !maximized),
+            (SC_MINIMIZE, true),
+            (SC_MAXIMIZE, !maximized),
+            (SC_CLOSE, true),
+        ] {
+            let state = if enabled { MF_ENABLED } else { MF_GRAYED };
+            // SAFETY: the menu is the one of the window, which lives as long
+            // as it. It returns the state before, or -1 without the item.
+            unsafe { EnableMenuItem(menu, command, MF_BYCOMMAND | state) };
+        }
+        // SAFETY: as above. u32::MAX: no item is the default one, in bold.
+        unsafe { SetMenuDefaultItem(menu, u32::MAX, 0) };
+        // SAFETY: the menu and the window are of this thread, and there is no
+        // rectangle. TPM_RETURNCMD: it returns the command that the user
+        // chose, or 0, instead of sending it.
+        let command = unsafe {
+            TrackPopupMenu(
+                menu,
+                TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                at.x,
+                at.y,
+                0,
+                self.handle,
+                ptr::null(),
+            )
+        };
+        if command > 0 {
+            self.command(command as u32);
+        }
+    }
+
     /// WM_PAINT: the handler paints the area that Windows asks for.
     fn paint(&self, state: &State<'_>) {
         let mut paint = PAINTSTRUCT::default();
@@ -529,6 +877,175 @@ impl Drop for Window {
                 DestroyWindow(self.handle);
             }
         }
+    }
+}
+
+/// Gives `window` the title bar of meiga: its client area goes up to its
+/// top, and it keeps the frame of Windows on its other sides. Returns
+/// whether it has it.
+fn own_title_bar(window: HWND) -> bool {
+    // SAFETY: the window is of this thread, and its class has the extra
+    // bytes of the flag. It returns the flag before, 0.
+    unsafe { SetWindowLongPtrW(window, CUSTOM_FRAME, 1) };
+    // Windows asks for the frame again, with WM_NCCALCSIZE, now with the
+    // flag.
+    // SAFETY: the window is of this thread. It keeps its place, size and
+    // order.
+    let changed = unsafe {
+        SetWindowPos(
+            window,
+            ptr::null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+        )
+    } != 0;
+    if !changed {
+        // SAFETY: as above.
+        unsafe { SetWindowLongPtrW(window, CUSTOM_FRAME, 0) };
+    }
+    changed && custom_frame(window)
+}
+
+/// Whether `window`, of the class of meiga, has the title bar of meiga.
+fn custom_frame(window: HWND) -> bool {
+    // SAFETY: the windows of the class have the extra bytes of the flag,
+    // which are 0 until `own_title_bar` sets them.
+    unsafe { GetWindowLongPtrW(window, CUSTOM_FRAME) != 0 }
+}
+
+/// The dots per inch of the monitor of `window`.
+fn window_dpi(window: HWND) -> u32 {
+    // SAFETY: GetDpiForWindow accepts any handle, and returns 0 for one that
+    // is not a window.
+    match unsafe { GetDpiForWindow(window) } {
+        0 => USER_DEFAULT_SCREEN_DPI,
+        dpi => dpi,
+    }
+}
+
+/// The frame of Windows on each side of a window at `dpi`, which resizes it,
+/// in pixels: 8 at a scale of 100 %, 9 at 125 %, 11 at 150 % and 13 at
+/// 200 %. Most of it is invisible.
+fn frame(dpi: u32) -> u32 {
+    // SAFETY: GetSystemMetricsForDpi has no preconditions, and gives 0 for a
+    // metric that it does not know.
+    let metric = |index| unsafe { GetSystemMetricsForDpi(index, dpi) };
+    u32::try_from(metric(SM_CXPADDEDBORDER).saturating_add(metric(SM_CYSIZEFRAME))).unwrap_or(0)
+}
+
+/// What `SHAppBarMessage` takes: the `APPBARDATA` of shellapi.h, which
+/// windows-sys has in a feature that meiga does not use.
+#[repr(C)]
+struct AppBarData {
+    size: u32,
+    window: HWND,
+    callback_message: u32,
+    edge: u32,
+    rect: RECT,
+    lparam: LPARAM,
+}
+
+// As in shellapi.h for x64, where its members have their natural alignment.
+const _: () = assert!(size_of::<AppBarData>() == 48);
+
+impl AppBarData {
+    fn new(edge: u32, rect: RECT) -> Self {
+        Self {
+            size: size_of::<Self>() as u32,
+            window: ptr::null_mut(),
+            callback_message: 0,
+            edge,
+            rect,
+            lparam: 0,
+        }
+    }
+}
+
+/// `SHAppBarMessage`.
+type AppBarFn = unsafe extern "system" fn(u32, *mut AppBarData) -> usize;
+
+/// The messages of `SHAppBarMessage` that say whether the taskbar hides
+/// itself, and whether it does on an edge of a monitor.
+const ABM_GETSTATE: u32 = 4;
+const ABM_GETAUTOHIDEBAREX: u32 = 11;
+
+/// What `ABM_GETSTATE` gives when the taskbar hides itself.
+const ABS_AUTOHIDE: usize = 1;
+
+/// The edges of a monitor.
+const ABE_LEFT: u32 = 0;
+const ABE_TOP: u32 = 1;
+const ABE_RIGHT: u32 = 2;
+const ABE_BOTTOM: u32 = 3;
+
+/// `SHAppBarMessage`, in `shell32.dll`, which meiga loads only the first
+/// time that a window is maximized, because it takes about a millisecond.
+/// `None` if it cannot.
+fn app_bar_message() -> Option<AppBarFn> {
+    static FUNCTION: OnceLock<Option<AppBarFn>> = OnceLock::new();
+    *FUNCTION.get_or_init(|| {
+        let name = wide("shell32.dll");
+        // SAFETY: the name is null-terminated, and the flag looks for the
+        // library, and the ones that it needs, only in System32.
+        let module =
+            unsafe { LoadLibraryExW(name.as_ptr(), ptr::null_mut(), LOAD_LIBRARY_SEARCH_SYSTEM32) };
+        if module.is_null() {
+            return None;
+        }
+        // The module is never freed: the function points into it.
+        // SAFETY: the module is loaded, and the name is null-terminated.
+        let function = unsafe { GetProcAddress(module, c"SHAppBarMessage".as_ptr().cast()) }?;
+        // SAFETY: shellapi.h declares SHAppBarMessage with this signature.
+        Some(unsafe { mem::transmute::<unsafe extern "system" fn() -> isize, AppBarFn>(function) })
+    })
+}
+
+/// Maximized, a window covers the whole work area of its monitor, which is
+/// the whole monitor on the edges with a taskbar that hides itself: leaves
+/// a few pixels of `client` free there, so that the pointer can show the
+/// taskbar, as in Windows Terminal.
+fn leave_room_for_hidden_taskbars(window: HWND, client: &mut RECT) {
+    let Some(app_bar_message) = app_bar_message() else {
+        return;
+    };
+    let mut query = AppBarData::new(0, RECT::default());
+    // SAFETY: the function is SHAppBarMessage, and `query` is a valid
+    // APPBARDATA for it, which outlives the call. Explorer answers, and the
+    // messages that this thread gets meanwhile reach the window procedure.
+    if unsafe { app_bar_message(ABM_GETSTATE, &mut query) } & ABS_AUTOHIDE == 0 {
+        return;
+    }
+    // SAFETY: MonitorFromWindow accepts any handle, and always gives a
+    // monitor with MONITOR_DEFAULTTONEAREST.
+    let monitor = unsafe { MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) };
+    let mut info = MONITORINFO {
+        cbSize: size_of::<MONITORINFO>() as u32,
+        ..Default::default()
+    };
+    // SAFETY: `info` is a valid MONITORINFO for GetMonitorInfoW to fill in.
+    if unsafe { GetMonitorInfoW(monitor, &mut info) } == 0 {
+        return;
+    }
+    let hides_on = |edge| {
+        let mut query = AppBarData::new(edge, info.rcMonitor);
+        // SAFETY: as above. It gives the taskbar that hides itself on that
+        // edge of the monitor, or 0.
+        unsafe { app_bar_message(ABM_GETAUTOHIDEBAREX, &mut query) != 0 }
+    };
+    if hides_on(ABE_LEFT) {
+        client.left += AUTOHIDE_TASKBAR;
+    }
+    if hides_on(ABE_TOP) {
+        client.top += AUTOHIDE_TASKBAR;
+    }
+    if hides_on(ABE_RIGHT) {
+        client.right -= AUTOHIDE_TASKBAR;
+    }
+    if hides_on(ABE_BOTTOM) {
+        client.bottom -= AUTOHIDE_TASKBAR;
     }
 }
 
@@ -863,6 +1380,53 @@ unsafe extern "system" fn window_proc(
             unsafe { PostQuitMessage(0) };
             return 0;
         }
+        // With the title bar of meiga, the client area goes up to the top of
+        // the window, and Windows keeps its frame on the other sides.
+        WM_NCCALCSIZE if custom_frame(window) => {
+            // For WM_NCCALCSIZE, `lparam` points to the rectangle of the
+            // window, alone or as the first member of a NCCALCSIZE_PARAMS,
+            // and DefWindowProcW leaves the client area in it.
+            let rect = lparam as *mut RECT;
+            // SAFETY: as above: it is valid while the message is handled.
+            let top = unsafe { (*rect).top };
+            // SAFETY: the arguments are the ones that Windows passed to this
+            // window procedure.
+            let result = unsafe { DefWindowProcW(window, message, wparam, lparam) };
+            // SAFETY: as above.
+            let mut client = unsafe { *rect };
+            client.top = top;
+            // Maximized, the window goes beyond its monitor as far as its
+            // frame on each side: its client area starts below the frame, at
+            // the top of the monitor, as with the title bar of Windows.
+            // SAFETY: IsZoomed accepts any handle.
+            if unsafe { IsZoomed(window) } != 0 {
+                client.top += frame(window_dpi(window)) as i32;
+                leave_room_for_hidden_taskbars(window, &mut client);
+            }
+            // SAFETY: as above.
+            unsafe { *rect = client };
+            return result;
+        }
+        // The smallest window has room for the narrowest title bar of meiga,
+        // with the frame of Windows on its sides and below it.
+        WM_GETMINMAXINFO if custom_frame(window) => {
+            let dpi = window_dpi(window);
+            let band = frame(dpi);
+            let min = min_client(dpi, band);
+            let pixels = |value: u32| i32::try_from(value).unwrap_or(i32::MAX);
+            // SAFETY: for WM_GETMINMAXINFO, `lparam` points to a MINMAXINFO
+            // that is valid while the message is handled.
+            let info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
+            info.ptMinTrackSize.x = info
+                .ptMinTrackSize
+                .x
+                .max(pixels(min.width.saturating_add(band.saturating_mul(2))));
+            info.ptMinTrackSize.y = info
+                .ptMinTrackSize
+                .y
+                .max(pixels(min.height.saturating_add(band)));
+            return 0;
+        }
         _ => {}
     }
 
@@ -891,6 +1455,47 @@ unsafe extern "system" fn window_proc(
             unsafe { SetCursor(this.pointer.get()) };
             return 1;
         }
+        // With the title bar of meiga, what a point of the client area is for
+        // Windows: the title bar drags the window, its top edge resizes it,
+        // and its buttons are the ones of the window, so that the one to
+        // maximize opens the snap layouts of Windows 11.
+        WM_NCHITTEST if this.custom => {
+            // The frame of Windows, on the sides and below. The answer stays
+            // a LRESULT, because HTERROR is negative.
+            // SAFETY: the arguments are the ones that Windows passed to this
+            // window procedure.
+            let default = unsafe { DefWindowProcW(window, message, wparam, lparam) };
+            if default != HTCLIENT as LRESULT {
+                return default;
+            }
+            return this.hit_test(point(lparam)) as LRESULT;
+        }
+        WM_NCMOUSEMOVE..=WM_NCMBUTTONDBLCLK if this.custom => {
+            // SAFETY: GetKeyState has no preconditions. The high bit of the
+            // state of a key says that it is down, as the thread got the
+            // message.
+            let down = |key: u16| unsafe { GetKeyState(i32::from(key)) } < 0;
+            let modifiers = || Modifiers {
+                shift: down(VK_SHIFT),
+                alt: down(VK_MENU),
+                ctrl: down(VK_CONTROL),
+            };
+            if let Some(mouse) = decode_nonclient(message, wparam, lparam, modifiers)
+                && !this.nonclient_mouse(state, mouse)
+            {
+                return 0;
+            }
+            // SAFETY: the arguments are the ones that Windows passed to this
+            // window procedure.
+            return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+        }
+        WM_MOUSELEAVE => this.mouse_left(state),
+        WM_NCMOUSELEAVE if this.custom => {
+            this.mouse_left(state);
+            // SAFETY: the arguments are the ones that Windows passed to this
+            // window procedure.
+            return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+        }
         _ if is_keyboard_message(message) => {
             let mut send = |key| state.dispatch(Event::Key(key));
             let destination = state
@@ -903,6 +1508,18 @@ unsafe extern "system" fn window_proc(
             }
         }
         _ => {
+            match message {
+                // The pointer is over the client area for Windows, or the
+                // window has the mouse.
+                WM_MOUSEMOVE => {
+                    this.hit.set(HTCLIENT);
+                    this.retracked.set(false);
+                    this.rearm();
+                }
+                WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONDOWN | WM_MBUTTONUP | WM_RBUTTONDOWN
+                | WM_RBUTTONUP => this.hit.set(HTCLIENT),
+                _ => {}
+            }
             // The mouse messages do not say whether Alt is down. The high
             // bit of the state of the key says it, as the thread got the
             // message.
@@ -948,8 +1565,11 @@ fn timer_millis(delay: Duration) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use windows_sys::Win32::Graphics::Gdi::HDC;
-    use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowRect, SendMessageW};
+    use meiga_core::ui::tabbar::{CaptionButton, Layout};
+    use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, HDC};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        HTBOTTOM, HTLEFT, SendMessageW, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP,
+    };
 
     use super::*;
 
@@ -968,11 +1588,60 @@ mod tests {
         }
     }
 
-    // The only test that creates a window: a process registers the window
-    // class once.
+    /// The rectangle of the window on the screen.
+    fn window_rect(window: &Window) -> RECT {
+        let mut rect = RECT::default();
+        // SAFETY: `rect` is a valid RECT for GetWindowRect to fill in.
+        unsafe { GetWindowRect(window.handle(), &mut rect) };
+        rect
+    }
+
+    /// Gives the window `width` × `height` pixels, or as many as it can have.
+    fn resize(window: &Window, width: i32, height: i32) {
+        // SAFETY: the window is of this thread. It keeps its place and order.
+        unsafe {
+            SetWindowPos(
+                window.handle(),
+                ptr::null_mut(),
+                0,
+                0,
+                width,
+                height,
+                SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+            )
+        };
+    }
+
+    /// Sends a mouse message of the frame to the window, at `at`, a point of
+    /// its client area.
+    fn send(window: &Window, message: u32, hit: u32, at: Point) -> LRESULT {
+        let mut point = POINT { x: at.x, y: at.y };
+        // SAFETY: the window is of this thread, and `point` is a valid POINT
+        // for ClientToScreen to change.
+        unsafe { ClientToScreen(window.handle(), &mut point) };
+        // The screen point in two signed words, as Windows sends it.
+        let lparam = (point.x as u16 as LPARAM) | ((point.y as u16 as LPARAM) << 16);
+        // SAFETY: the window is of this thread, and the message is handled
+        // before the call returns.
+        unsafe { SendMessageW(window.handle(), message, hit as WPARAM, lparam) }
+    }
+
+    fn center(rect: Rect) -> Point {
+        Point::new(
+            rect.left + (rect.right - rect.left) / 2,
+            rect.top + (rect.bottom - rect.top) / 2,
+        )
+    }
+
+    // Each test that creates a window registers the class, unless the other
+    // one did.
     #[test]
     fn a_new_scale_reaches_the_handler_before_the_new_size() {
-        let window = Window::create(&WindowOptions { title: "meiga" }).unwrap();
+        let window = Window::create(&WindowOptions {
+            title: "meiga",
+            title_bar: false,
+        })
+        .unwrap();
         let mut recorder = Recorder::default();
         {
             let state = State {
@@ -999,9 +1668,7 @@ mod tests {
                 )
             };
         }
-        let mut rect = RECT::default();
-        // SAFETY: `rect` is a valid RECT for GetWindowRect to fill in.
-        unsafe { GetWindowRect(window.handle(), &mut rect) };
+        let rect = window_rect(&window);
         assert_eq!(
             (rect.left, rect.top, rect.right, rect.bottom),
             (40, 30, 817, 585)
@@ -1009,10 +1676,114 @@ mod tests {
         let resized = Event::Resized {
             size: window.client_size().unwrap(),
             minimized: false,
+            maximized: false,
         };
         let events = &recorder.0;
         assert_eq!(events.first(), Some(&Event::DpiChanged { dpi: 144 }));
         assert!(events.contains(&resized), "{events:?}");
+    }
+
+    #[test]
+    fn the_title_bar_of_meiga_tells_windows_what_each_of_its_parts_is() {
+        let window = Window::create(&WindowOptions {
+            title: "meiga",
+            title_bar: true,
+        })
+        .unwrap();
+        assert!(window.has_title_bar());
+        resize(&window, 800, 600);
+        // The test is not aware of the DPI: 96.
+        let dpi = window.dpi();
+        let band = frame(dpi);
+        let side = i32::try_from(band).unwrap();
+        assert!(side > 0);
+        assert_eq!(window.resize_band(dpi), band);
+
+        // The client area goes up to the top of the window, and the frame of
+        // Windows stays on the other sides.
+        let rect = window_rect(&window);
+        assert_eq!(
+            window.client_point(Point::new(rect.left, rect.top)),
+            Point::new(-side, 0)
+        );
+        let size = window.client_size().unwrap();
+        assert_eq!(
+            (
+                i32::try_from(size.width).unwrap() + 2 * side,
+                i32::try_from(size.height).unwrap() + side
+            ),
+            (rect.right - rect.left, rect.bottom - rect.top)
+        );
+
+        let mut recorder = Recorder::default();
+        let layout = Layout::new(dpi, size.width, 3, band);
+        let close = center(layout.caption(CaptionButton::Close));
+        let left_frame = Point::new(-side / 2, 100);
+        {
+            let state = State {
+                window: &window,
+                handler: RefCell::new(&mut recorder),
+                failure: RefCell::new(None),
+                keyboard: Keyboard::default(),
+            };
+            let _installed = Installed::new(window.handle(), &state);
+            window.set_title_bar(TitleBar::new(layout, false));
+            let captions = layout.captions();
+            let corner = TOP_LEFT_CORNER - side;
+            let bottom = i32::try_from(size.height).unwrap();
+            for (at, expected) in [
+                (center(layout.caption(CaptionButton::Minimize)), HTMINBUTTON),
+                (center(layout.caption(CaptionButton::Maximize)), HTMAXBUTTON),
+                (close, HTCLOSE),
+                (center(layout.tab(0)), HTCLIENT),
+                (Point::new(captions.left - 1, side + 5), HTCAPTION),
+                (Point::new(captions.left - 1, 0), HTTOP),
+                (Point::new(corner, 0), HTTOP),
+                (Point::new(corner - 1, 0), HTTOPLEFT),
+                (left_frame, HTLEFT),
+                (Point::new(100, bottom + side / 2), HTBOTTOM),
+            ] {
+                let hit = send(&window, WM_NCHITTEST, 0, at);
+                assert_eq!(hit, expected as LRESULT, "{at:?}");
+            }
+
+            // The handler draws the buttons of the window, and gets their
+            // clicks.
+            send(&window, WM_NCLBUTTONDOWN, HTCLOSE, close);
+            send(&window, WM_NCLBUTTONUP, HTCLOSE, close);
+            // The frame, which resizes the window, is not of the handler.
+            window.track_mouse_leave();
+            send(&window, WM_NCMOUSEMOVE, HTLEFT, left_frame);
+        }
+        let modifiers = Modifiers::default();
+        assert_eq!(
+            recorder.0,
+            [
+                Event::MouseDown {
+                    button: Button::Left,
+                    at: close,
+                    modifiers,
+                },
+                Event::MouseUp {
+                    button: Button::Left,
+                    at: close,
+                    modifiers,
+                },
+                Event::MouseLeft,
+            ]
+        );
+
+        // The smallest window has room for the narrowest title bar.
+        resize(&window, 100, 10);
+        let rect = window_rect(&window);
+        let min = min_client(dpi, band);
+        assert_eq!(
+            (rect.right - rect.left, rect.bottom - rect.top),
+            (
+                i32::try_from(min.width + 2 * band).unwrap(),
+                i32::try_from(min.height + band).unwrap()
+            )
+        );
     }
 
     #[test]
