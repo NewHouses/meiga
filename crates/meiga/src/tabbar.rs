@@ -55,8 +55,9 @@ const HOVERED_TEXT: Rgb = Rgb::new(0xc9, 0xcd, 0xd4);
 const SEPARATOR: Rgb = Rgb::new(0x2b, 0x2f, 0x37);
 const BUTTON_HOVERED: Rgb = Rgb::new(0x2b, 0x2f, 0x37);
 const BUTTON_PRESSED: Rgb = Rgb::new(0x3a, 0x3f, 0x49);
-/// A button that scrolls the tabs, while they cannot scroll towards its
-/// side: as the separators.
+/// The arrow of a button that scrolls the tabs, while they cannot scroll
+/// towards its side: in the colour of a pressed button, darker than the
+/// text.
 const DISABLED_TEXT: Rgb = Rgb::new(0x3a, 0x3f, 0x49);
 /// The indicators: the end of the program, in the bright red of the
 /// palette of the terminal, and the bell, in amber. The activity has the

@@ -125,10 +125,11 @@ impl Shared {
     /// Ends the synchronized update that the program has open, if it has
     /// one: what it wrote meanwhile is shown as it is, and its answers go to
     /// `answers`. A title, or text for the clipboard, that it gave meanwhile
-    /// waits for the window to take it, without waking it up: the window is
-    /// the one that ends the update, or the end of the program, which wakes
-    /// it up anyway. None is left open, so the next one that the program
-    /// leaves open wakes the window up again.
+    /// waits for the window to take it, and a bell that it rang meanwhile
+    /// is noted for its tab (ADR 0025), without waking the window up: the
+    /// window is the one that ends the update, or the end of the program,
+    /// which wakes it up anyway. None is left open, so the next one that the
+    /// program leaves open wakes the window up again.
     pub fn end_sync(&mut self, answers: &mut Vec<u8>) {
         if self.terminal.sync_deadline().is_some() {
             let changes = self.terminal.end_sync();
@@ -180,10 +181,12 @@ impl Shared {
     /// Leaves the terminal as a new program expects it, for the session
     /// that starts again in its tab, as [`Terminal::restart`] says. The
     /// title, the text for the clipboard and the end that the last program
-    /// gave, and that the window did not take, are dropped. The screen is
-    /// left as it was: the window copies all of it when it shows the tab.
-    /// The first output and the first bell of the new program wake the
-    /// window up, also while the tab is hidden: its tab tells them.
+    /// gave, and that the window did not take, are dropped. The window
+    /// forgets the screen and the bell too, as when the tab is hidden: it
+    /// copies the whole screen when it shows the tab, at once if the tab is
+    /// shown, and the first output and the first bell of the new program
+    /// wake it up, once, also while the tab is hidden, so that its tab
+    /// tells them (ADR 0025).
     pub fn restart(&mut self) {
         self.terminal.restart();
         self.screen_changed = false;
