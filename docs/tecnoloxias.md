@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 2.8. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: mantemento M2, despois da subfase 2.8. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -691,7 +691,7 @@ Nun terminal, cada carácter ocupa unha cela ou dúas, e algúns ningunha. Unico
 | Onde está | En `kernel32.dll`: `CreatePseudoConsole`, `ClosePseudoConsole`… | En `conpty.dll`, ao lado de `meiga.exe`: `ConptyCreatePseudoConsole`, `ConptyClosePseudoConsole`… |
 | Anfitrión | `conhost.exe`, de Windows. | `OpenConsole.exe`, ao lado de `conpty.dll`. |
 | Versión | A do Windows de cada máquina. | A do paquete NuGet, a mesma en todas ([§33](#33-nuget-e-as-sinaturas-authenticode)). |
-| `ClosePseudoConsole` | Volta de inmediato desde Windows 11 24H2; antes, espera ata que remata o anfitrión. | Volta de inmediato. |
+| `ClosePseudoConsole` | Volta de inmediato desde Windows 11 24H2; antes, espera ata que remata o anfitrión. Desde o mantemento M2, meiga chámao nun fío propio. | Volta de inmediato. |
 | Medir os caracteres con `wcswidth` | Non: ignora o *flag*. | Si. |
 
 meiga usa o empaquetado se os dous arquivos están ao lado de `meiga.exe`, e se non, o de Windows. Fan falta os dous: sen `OpenConsole.exe`, `conpty.dll` arrancaría sen avisar o `conhost.exe` de Windows.
@@ -716,8 +716,9 @@ O ConPTY empaquetado pásalle a medida ao seu anfitrión como unha opción (`--t
 
 **Pechar.** `ClosePseudoConsole` envía `CTRL_CLOSE_EVENT` aos programas conectados, como cando se pecha a xanela dunha consola: dun en dun, do máis novo ao máis vello. Windows dálle a cada un o tempo de `SPI_GETHUNGAPPTIMEOUT`, 5 s, para atendelo, e despois remátao e pasa ao seguinte. Un programa que remata así sae co código `0xC000013A` ([§32](#32-procesos-tubaxes-e-eventos)).
 
-- Antes de Windows 11 24H2, o `ClosePseudoConsole` de Windows espera ata que remata o anfitrión, e o anfitrión non remata mentres teña saída pendente que ninguén le. Por iso non se pode chamar no fío da interface nin no fío que le a saída.
-- Se a pseudoconsola se pecha nos primeiros milisegundos dun programa, mentres aínda se está a conectar a ela, o anfitrión e o programa poden quedar esperando un polo outro. Pode ser o programa da sesión ou un que este acaba de arrancar. Se pasan 10 s sen que remate ningún dos programas que tiña a sesión ao pechala, meiga remata todos os do seu *job* ([§32](#32-procesos-tubaxes-e-eventos) e [ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
+- Antes de Windows 11 24H2, o `ClosePseudoConsole` de Windows espera ata que remata o anfitrión, e o anfitrión non remata mentres teña saída pendente que ninguén le. Por iso non se pode chamar no fío da interface nin no fío que le a saída. Microsoft dío na documentación de [`ClosePseudoConsole`](https://learn.microsoft.com/en-us/windows/console/closepseudoconsole), e vese no código do ConPTY: na versión 1.18.10301.0, [`ConptyClosePseudoConsole`](https://github.com/microsoft/terminal/blob/v1.18.10301.0/src/winconpty/winconpty.cpp#L556-L559) pecha con `INFINITE`, e [`_ClosePseudoConsoleMembers`](https://github.com/microsoft/terminal/blob/v1.18.10301.0/src/winconpty/winconpty.cpp#L352-L385) pecha os *handles* e despois agarda polo proceso do anfitrión, e había outro peche cun límite de tempo, [`ConptyClosePseudoConsoleTimeout`](https://github.com/microsoft/terminal/blob/v1.18.10301.0/src/winconpty/winconpty.cpp#L568-L571); na 1.25.3131.0, a do empaquetado, [`_ClosePseudoConsoleMembers`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/winconpty/winconpty.cpp#L395-L415) só pecha os *handles*, e o peche con límite xa non está. Windows tampouco ten un peche con límite.
+- Se a pseudoconsola se pecha nos primeiros milisegundos dun programa, mentres aínda se está a conectar a ela, o anfitrión e o programa poden quedar esperando un polo outro. Pode ser o programa da sesión ou un que este acaba de arrancar. Se pasan 10 s sen que remate ningún dos programas que tiña a sesión ao pechala, meiga remata todos os do seu *job* ([§32](#32-procesos-tubaxes-e-eventos) e [ADR 0011](adr/0011-fin-e-peche-das-sesions.md)), tamén despois de pechar a xanela: desde o mantemento M2, meiga agarda por iso antes de saír ([§61](#61-o-fin-dun-proceso-e-dos-seus-fíos) e [ADR 0026](adr/0026-o-peche-das-sesions-ao-sair.md)).
+- Os dous puntos xuntos: co ConPTY de Windows anterior a 24H2, o peche dunha sesión bloqueada non volta ata que rematan os seus programas, e quen os remata é o escritor, despois de pechar. Por iso, desde o M2, co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, curto, que ninguén agarda ([ADR 0026](adr/0026-o-peche-das-sesions-ao-sair.md), decisión 6). Co empaquetado, péchaa el mesmo.
 
 **Liberar a referencia.** O Windows Terminal chama a `ConptyReleasePseudoConsole` despois de arrancar a shell: así, o anfitrión remata cando se desconecta o último programa da consola, aínda que a shell xa saíse. meiga non o fai: as súas sesións rematan cando remata a shell ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
 
@@ -742,7 +743,7 @@ O ConPTY empaquetado pásalle a medida ao seu anfitrión como unha opción (`--t
 - `STARTF_USESTDHANDLES` con *handles* nulos: o programa non ten entrada nin saída estándar propias, e usa as da pseudoconsola. Sen isto, podería quedar coas de meiga.
 - Devolve dous *handles*, o do proceso e o do seu primeiro fío, e o identificador do proceso.
 
-**Os eventos e as esperas.** Un **evento** (`CreateEventW`) é un obxecto que está sinalado ou non. `SetEvent` sinálao. Se é de **reinicio automático**, a espera que o atopa sinalado volta deixalo sen sinalar; se é de **reinicio manual**, segue sinalado ata que alguén o reinicia, e todas as esperas o atopan sinalado. `WaitForSingleObject` e `WaitForMultipleObjects` bloquean o fío ata que se sinala un dos obxectos, ou ata un tempo máximo; se hai varios sinalados, `WaitForMultipleObjects` di o primeiro da lista. Con `bWaitAll` a `TRUE`, `WaitForMultipleObjects` espera ata que estean sinalados todos. O *handle* dun proceso sinálase cando o proceso remata: un fío pode esperar á vez por un evento e polo fin dun proceso, sen gastar nada mentres tanto.
+**Os eventos e as esperas.** Un **evento** (`CreateEventW`) é un obxecto que está sinalado ou non. `SetEvent` sinálao. Se é de **reinicio automático**, a espera que o atopa sinalado volta deixalo sen sinalar; se é de **reinicio manual**, segue sinalado ata que alguén o reinicia, e todas as esperas o atopan sinalado. `WaitForSingleObject` e `WaitForMultipleObjects` bloquean o fío ata que se sinala un dos obxectos, ou ata un tempo máximo; se hai varios sinalados, `WaitForMultipleObjects` di o primeiro da lista, e agarda como moito 64 obxectos á vez ([§61](#61-o-fin-dun-proceso-e-dos-seus-fíos)). Con `bWaitAll` a `TRUE`, `WaitForMultipleObjects` espera ata que estean sinalados todos. O *handle* dun proceso sinálase cando o proceso remata: un fío pode esperar á vez por un evento e polo fin dun proceso, sen gastar nada mentres tanto.
 
 **Os *jobs*.** Un *job* (`CreateJobObjectW`) agrupa procesos para tratalos xuntos. Un proceso pode crearse xa nun *job*, co atributo `PROC_THREAD_ATTRIBUTE_JOB_LIST` (desde Windows 10), e os procesos que crea entran nel tamén. Un proceso non pode saír dun *job*, pero os que crea si, se o piden (`CREATE_BREAKAWAY_FROM_JOB`) e o *job* o permite: `JOB_OBJECT_LIMIT_BREAKAWAY_OK`, un dos límites **estendidos**, que se fixan con `SetInformationJobObject` e a estrutura `JOBOBJECT_EXTENDED_LIMIT_INFORMATION`. Se non o permite, o programa que o pide non arranca. `TerminateJobObject` remata todos os procesos do *job* á vez, co código que se lle diga, e `QueryInformationJobObject` con `JobObjectBasicProcessIdList` dá a lista dos seus procesos. Para esperar por un proceso que non creou, un programa ábreo con `OpenProcess`, pedindo só o dereito `SYNCHRONIZE`: mentres teña ese *handle*, Windows non reutiliza o identificador do proceso. Pechar o último *handle* dun *job* non remata os seus procesos, salvo co límite `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. Desde Windows 8, un proceso pode estar en varios *jobs* aniñados, así que meiga pode crealos aínda que el mesmo xa corra nun *job*. Cada sesión de meiga ten un, sen ese límite: só se usa para rematar unha sesión bloqueada ([ADR 0011](adr/0011-fin-e-peche-das-sesions.md)).
 
@@ -757,7 +758,7 @@ O ConPTY empaquetado pásalle a medida ao seu anfitrión como unha opción (`--t
 
 **Cargar unha DLL.** `LoadLibraryExW` carga unha DLL e `GetProcAddress` dá a dirección dunha das súas funcións, que en Rust se converte nun punteiro a función coa súa firma (`mem::transmute`). meiga carga `conpty.dll` coa ruta completa e coas opcións `LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR` e `LOAD_LIBRARY_SEARCH_SYSTEM32`: as DLL que ela necesite só se buscan no seu cartafol e en System32, nunca no cartafol actual nin no `PATH`, onde alguén podería deixar unha DLL falsa.
 
-**Os fíos en Rust.** `std::thread::Builder` crea un fío cun nome, que se ve nos depuradores e nos perfís de WPA. Os datos que comparten varios fíos van nun `Arc`, unha conta de referencias atómica, e, se cambian, nun `Mutex`. Se un fío falla (*panic*) co `Mutex` collido, o `Mutex` queda **envelenado**, e quen o colla despois recibe un erro. En meiga, os datos dos seus `Mutex` nunca quedan a medias, así que se collen igual (`PoisonError::into_inner`).
+**Os fíos en Rust.** `std::thread::Builder` crea un fío cun nome, que se ve nos depuradores e nos perfís de WPA, e devolve o seu `JoinHandle`, co que se pode agardar a que remate ([§61](#61-o-fin-dun-proceso-e-dos-seus-fíos)). Os datos que comparten varios fíos van nun `Arc`, unha conta de referencias atómica, e, se cambian, nun `Mutex`. Se un fío falla (*panic*) co `Mutex` collido, o `Mutex` queda **envelenado**, e quen o colla despois recibe un erro. En meiga, os datos dos seus `Mutex` nunca quedan a medias, así que se collen igual (`PoisonError::into_inner`).
 
 ## 33. NuGet e as sinaturas Authenticode
 
@@ -1552,3 +1553,42 @@ O botón que abre unha tab non se despraza: no Windows Terminal vai despois da c
 Sen fíos nin temporizadores novos: os botóns repiten co temporizador dos fotogramas, só mentres seguen premidos; e unha tab oculta esperta a xanela, desde que se oculta, unha vez pola súa primeira saída e outra pola súa primeira campá.
 
 O código explícase en [Código › meiga › `tabbar.rs`](codigo/meiga.md#cratesmeigasrctabbarrs), [› `tabs.rs`](codigo/meiga.md#cratesmeigasrctabsrs) e [› `session.rs`](codigo/meiga.md#cratesmeigasrcsessionrs), e en [Código › meiga-core › `ui/tabbar.rs`](codigo/meiga-core.md#cratesmeiga-coresrcuitabbarrs).
+
+## 61. O fin dun proceso e dos seus fíos
+
+**Cando sae un proceso.** Cando un proceso de Windows sae, os seus outros fíos rematan no momento, sen acabar o que estaban a facer, e péchanse todos os *handles* que tiña abertos ([`ExitProcess`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess)). Nun programa de Rust, isto pasa cando remata o fío principal, ao voltar `main`: remata o programa enteiro, aínda que sigan correndo outros fíos ([`std::thread`](https://doc.rust-lang.org/std/thread/index.html)). Un fío que debe acabar algo antes de que saia o programa ten que ter a alguén que agarde por el.
+
+**`JoinHandle`.** Crear un fío ([§32](#32-procesos-tubaxes-e-eventos)) devolve un [`JoinHandle`](https://doc.rust-lang.org/std/thread/struct.JoinHandle.html), o permiso para agardar por el:
+
+| | Que fai |
+|---|---|
+| `join` | Agarda a que remate o fío, e devolve o que devolveu a súa función, ou un erro se fallou cun *panic*. Se o fío xa rematou, volta no momento. Consome o `JoinHandle`. |
+| `is_finished` | Di, sen agardar, se a función do fío xa voltou. Pode dicir que si un intre antes de que o fío remate de todo, pero un `join` despois só agardaría ese intre. |
+| Soltalo | O fío queda ceibe (*detached*): segue correndo, pero xa non hai forma de agardar por el. |
+
+En Windows, cada `JoinHandle` garda aberto un *handle* do seu fío ata que se solta ou se agarda por el: con el cambia meiga a prioridade dos lectores ([§54](#54-a-prioridade-dos-fíos-setthreadpriority)).
+
+**Agardar por varios obxectos á vez.** [`WaitForMultipleObjects`](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitformultipleobjects) agarda por unha lista de obxectos, coma eventos ou procesos ([§32](#32-procesos-tubaxes-e-eventos)):
+
+- A lista ten polo menos un obxecto, e como moito 64 (`MAXIMUM_WAIT_OBJECTS`).
+- Con `bWaitAll` a `FALSE`, volta en canto se sinala calquera deles, coa súa posición na lista (`WAIT_OBJECT_0` máis a posición); se hai varios sinalados, coa do primeiro. Con `TRUE`, agarda a que estean sinalados todos á vez.
+- Un obxecto que queda sinalado, coma un proceso que rematou ou un evento de reinicio manual, fai que a seguinte espera volte no momento con el outra vez: para agardar polos outros, hai que quitalo da lista.
+- Se pasa o tempo máximo, volta con `WAIT_TIMEOUT`, e se falla, con `WAIT_FAILED`.
+
+**Os avisos dun *job*.** Un *job* pode avisar nun porto de completado ([`JOBOBJECT_ASSOCIATE_COMPLETION_PORT`](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_associate_completion_port)) cando entra ou sae del cada proceso, ou cando xa non lle queda ningún. Pero, salvo os dos seus límites de notificación, Microsoft di que a súa entrega non está garantida: que non chegue un aviso non quere dicir que non pasase.
+
+**O Windows Terminal ao pechar unha conexión.** [`ConptyConnection::Close`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalConnection/ConptyConnection.cpp#L667-L702) pecha a pseudoconsola, para que o ConPTY lles envíe `CTRL_CLOSE_EVENT` aos seus programas; despois, mentres o seu fío da saída non remata, cancela as súas lecturas (`CancelIoEx`) e agarda por el ata 1 s, outra vez e outra; e por último solta o *handle* do programa e a tubaxe. Non usa *jobs* nin remata ningún programa.
+
+**En meiga** ([ADR 0026](adr/0026-o-peche-das-sesions-ao-sair.md)):
+
+| Regra | Por que |
+|---|---|
+| Antes de saír, `main` agarda polos escritores das sesións que se pecharon (`conpty::wait_for_closed_sessions`), sen límite de tempo | Ao saír, os escritores rematarían no medio da súa espera, e unha sesión bloqueada quedaría así para sempre, co seu ConPTY e os seus programas |
+| Cada sesión garda o `JoinHandle` do seu escritor; ao pechala, pasa a unha lista, da que saen os que xa remataron (`is_finished`) | Ata a 2.8 soltábase ao arrancar o fío, e ninguén podía agardar por el |
+| Só os escritores, e non os lectores | Un lector remata cando se pecha a saída, e un ConPTY que non a pecha nunca deixaría meiga sen saír; o escritor xa asegura o fin |
+| O escritor agarda nunha soa chamada a saída, o programa e ata 62 dos programas que tiña a sesión ao pechala; os que se sinalan saen da lista, e cada programa que remata dálle á sesión outros 10 s | 64 obxectos como moito; e así ve cada fin no momento, e non esperta mentres non remata ningún |
+| Os programas que pasan de 62 cóntanse só cando pasan 10 s sen que remate ningún | Non caben na mesma espera |
+| Sen porto de completado | Un aviso perdido faría parecer bloqueada unha sesión que avanza |
+| Co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, e ninguén agarda por ese fío | Antes de Windows 11 24H2, o peche agarda a que remate o ConPTY ([§31](#31-conpty-a-pseudoconsola-de-windows)), e nunha sesión bloqueada o escritor quedaría nel para sempre; e se meiga agardase polo fío do peche, non sairía nunca cun ConPTY que mantén vivo un programa que saíu do *job* |
+
+O código explícase en [Código › meiga-win › `conpty.rs`](codigo/meiga-win.md#cratesmeiga-winsrcconptyrs) e en [Código › meiga › `main.rs`](codigo/meiga.md#cratesmeigasrcmainrs).

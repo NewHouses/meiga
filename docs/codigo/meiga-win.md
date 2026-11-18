@@ -1,6 +1,6 @@
 # Código › `meiga-win`
 
-> Estado: subfase 2.5. Contén a xanela, que o programa tamén pode pechar, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, entre eles o de que a xanela xa está na pantalla e pintada, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar e a que só avisa, o portapapeis, as sesións de ConPTY, co cartafol e o contorno do seu programa, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, cun exemplo que as mostra e as grava, as shells instaladas, que atopa sen lanzar ningún proceso, o contorno de meiga e o cartafol do sistema, e o tipo dos erros de Windows. Na 2.3 e na 2.4 non cambiou o código. Na 2.5 chegaron `profiles.rs`, coas shells instaladas, o contorno de meiga e o cartafol do sistema; `Command`, co que unha sesión recibe tamén o cartafol onde empeza o seu programa e o seu contorno; `Event::Shown`, o aviso de que a xanela xa está na pantalla e pintada; e `Window::alert`, a caixa de mensaxe que só avisa.
+> Estado: mantemento M2, despois da subfase 2.8. Contén a xanela, que o programa tamén pode pechar, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, entre eles o de que a xanela xa está na pantalla e pintada, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar e a que só avisa, o portapapeis, as sesións de ConPTY, co cartafol e o contorno do seu programa, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, e a lista das sesións pechadas, polas que agarda un proceso antes de saír, cun exemplo que as mostra e as grava, as shells instaladas, que atopa sen lanzar ningún proceso, o contorno de meiga e o cartafol do sistema, e o tipo dos erros de Windows. Na 2.3 e na 2.4 non cambiou o código. Na 2.5 chegaron `profiles.rs`, coas shells instaladas, o contorno de meiga e o cartafol do sistema; `Command`, co que unha sesión recibe tamén o cartafol onde empeza o seu programa e o seu contorno; `Event::Shown`, o aviso de que a xanela xa está na pantalla e pintada; e `Window::alert`, a caixa de mensaxe que só avisa. Na 2.6, na 2.7 e na 2.8 non cambiou o código. No M2, o fío escritor dunha sesión pechada ve rematar cada un dos programas que tiña, e unha sesión bloqueada remata 10 s despois do último deles, e non 10 ou 20 s despois de pecharse; o `Pty` garda o seu fío escritor e, ao pecharse a sesión, pásao á lista `CLOSING`, pola que agarda `wait_for_closed_sessions`: meiga chámaa antes de saír, e o exemplo `conpty` tamén; co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, que ninguén agarda, porque antes de Windows 11 24H2 ese peche agarda a que remate o ConPTY, cunha proba unitaria; e chegaron dúas probas de integración, que lanzan coma axudante o propio programa das probas.
 
 **Responsabilidade:** a capa de plataforma. Envolve todo o que é específico de Windows: ConPTY, a detección das shells instaladas e o contorno dos seus programas, o sistema de arquivos, o portapapeis, a xanela Win32 e a xestión do DPI. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -13,15 +13,15 @@
 | [`src/keyboard.rs`](#cratesmeiga-winsrckeyboardrs) | O teclado da xanela: as mensaxes das teclas e dos seus caracteres, xuntas en eventos de tecla, e as que son para Windows. |
 | [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o seu DPI, tamén cando cambia, o seu título e o seu peche desde o programa, o bucle de mensaxes, o temporizador dos fotogramas, o `Waker` que a esperta desde outro fío cun número, a captura do rato, a forma do punteiro e o aviso de cando sae da xanela, se está en primeiro plano, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta, a que só avisa e a mensaxe de erro. |
 | [`src/clipboard.rs`](#cratesmeiga-winsrcclipboardrs) | O portapapeis de Windows: ler e escribir texto. |
-| [`src/conpty.rs`](#cratesmeiga-winsrcconptyrs) | As sesións: un programa nunha pseudoconsola, co cartafol onde empeza e o seu contorno, cos seus fíos lector e escritor, a prioridade do lector, que se pode cambiar mentres a sesión corre, e a súa entrada, que se pode usar desde calquera fío, tamén para cambiar o tamaño da pseudoconsola. |
+| [`src/conpty.rs`](#cratesmeiga-winsrcconptyrs) | As sesións: un programa nunha pseudoconsola, co cartafol onde empeza e o seu contorno, cos seus fíos lector e escritor, a prioridade do lector, que se pode cambiar mentres a sesión corre, e a súa entrada, que se pode usar desde calquera fío, tamén para cambiar o tamaño da pseudoconsola. Desde o mantemento M2, tamén a espera polas sesións pechadas, que fai un proceso antes de saír. |
 | [`src/profiles.rs`](#cratesmeiga-winsrcprofilesrs) | As shells instaladas, atopadas sen lanzar ningún proceso, nos cartafoles onde as deixan os seus instaladores e no rexistro de Windows; o contorno de meiga e o cartafol do sistema. |
-| [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) | Probas de integración: programas de verdade nos dous ConPTY, tamén nun cartafol e cun contorno. |
+| [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) | Probas de integración: programas de verdade nos dous ConPTY, tamén nun cartafol e cun contorno; e, desde o M2, unha sesión que tarda en pecharse e un proceso que agarda polas súas sesións antes de saír. |
 | [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs) | Probas de integración: as shells do equipo onde corren e o contorno do programa da proba. |
-| [`examples/conpty.rs`](#cratesmeiga-winexamplesconptyrs) | Un programa de consola que mostra o que escribe un programa nunha pseudoconsola, e envíalle o que se teclea. |
+| [`examples/conpty.rs`](#cratesmeiga-winexamplesconptyrs) | Un programa de consola que mostra o que escribe un programa nunha pseudoconsola, e envíalle o que se teclea. Desde o M2, se pecha a sesión, agarda a que remate antes de saír. |
 
 Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); o rato, en [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows); o portapapeis e a caixa que pregunta antes de pegar, en [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows) e [› Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste); o cambio de escala e a saída do punteiro, en [Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged) e [› O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent); o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos), e o cambio do tamaño dunha pseudoconsola, en [Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor); a prioridade dos fíos, en [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority); e as shells instaladas, o rexistro de Windows e o contorno e o cartafol dos programas, en [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows). O camiño dun clic, da xanela á selección, ao portapapeis ou ao programa, está en [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); o dun cambio de tamaño, da xanela ao ConPTY, en [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom); e o dun perfil, do arquivo de configuración e das shells instaladas á sesión dunha tab, en [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración). As tabs, cada unha coa súa sesión, e o que fan as que non se ven, coa prioridade do seu fío lector máis baixa, decídense no [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md); e os perfís, coas shells que atopa meiga e o contorno e o cartafol dos seus programas, no [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md).
 
-O crate ten 26 probas unitarias nos arquivos de `src/` (23 na 2.4, as mesmas ca na subfase 1.9: a 2.5 trouxo unha en `conpty.rs` e dúas en `profiles.rs`), e 14 de integración: as 12 de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (10 na 2.4 e 9 na 1.9) e as 2 de [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs), novas na 2.5. `cargo test -p meiga-win` córreas todas.
+O crate ten 26 probas unitarias nos arquivos de `src/` (23 na 2.4, as mesmas ca na subfase 1.9: a 2.5 trouxo unha en `conpty.rs` e dúas en `profiles.rs`), e 16 de integración: as 14 de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (12 ata a 2.8, 10 na 2.4 e 9 na 1.9) e as 2 de [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs), novas na 2.5. `cargo test -p meiga-win` córreas todas. Desde o M2, `tests/conpty.rs` ten ademais `helper`, unha proba ignorada que non comproba nada: é a entrada dos programas axudantes das outras, e Cargo non a corre: cóntaa á parte (`14 passed; 1 ignored`).
 
 ## `crates/meiga-win/Cargo.toml`
 
@@ -83,15 +83,15 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 
 | *Feature* | Que trae | Que se usa |
 |---|---|---|
-| `Win32_Foundation` | Os tipos básicos. | `HWND`, `HANDLE`, `RECT`, `WPARAM`, `LPARAM`, `LRESULT`, `FALSE`, `TRUE`, `CloseHandle` e os resultados das esperas (`WAIT_OBJECT_0`, `WAIT_TIMEOUT` e `WAIT_FAILED`). Desde a subfase 1.8, tamén `POINT`, para o punto da roda, e a memoria global do portapapeis: o seu tipo, `HGLOBAL`, e `GlobalFree`. Desde a 2.5, `ERROR_SUCCESS` e `ERROR_MORE_DATA`, dous dos resultados das funcións do rexistro. |
+| `Win32_Foundation` | Os tipos básicos. | `HWND`, `HANDLE`, `RECT`, `WPARAM`, `LPARAM`, `LRESULT`, `FALSE`, `TRUE`, `CloseHandle` e os resultados das esperas (`WAIT_OBJECT_0`, `WAIT_TIMEOUT` e `WAIT_FAILED`). Desde a subfase 1.8, tamén `POINT`, para o punto da roda, e a memoria global do portapapeis: o seu tipo, `HGLOBAL`, e `GlobalFree`. Desde a 2.5, `ERROR_SUCCESS` e `ERROR_MORE_DATA`, dous dos resultados das funcións do rexistro. Desde o mantemento M2, `TRUE` só o usan as probas de integración: [`wait_for_end`](#a-espera-do-fin-wait_for_end) xa non agarda por todos os obxectos á vez. |
 | `Win32_Graphics_Gdi` | GDI, a API clásica de debuxo. | `BeginPaint`, `EndPaint`, `InvalidateRect`, `ValidateRect` e `UpdateWindow`. Desde a 1.8, tamén `ScreenToClient`, que pasa o punto da roda á área cliente. |
 | `Win32_Security` | A seguridade dos obxectos de Windows. | Nada directamente: `CreateWaitableTimerExW`, `CreatePipe`, `CreateEventW`, `CreateJobObjectW` e `CreateProcessW` reciben uns `SECURITY_ATTRIBUTES`, e `windows-sys` só declara cada función se existen os tipos que usa. Por iso vai co comentario. |
 | `Win32_Storage_FileSystem` | Os arquivos e o que se le e escribe coma eles. | `ReadFile` e `WriteFile`, para as tubaxes, desde a subfase 1.4; e, desde a 2.5, `GetFileAttributesW`, `INVALID_FILE_ATTRIBUTES` e `FILE_ATTRIBUTE_DIRECTORY`, que din se un programa existe ([`is_file`](#is_file)). |
-| `Win32_System_Console` | A consola. | `CreatePseudoConsole`, `ClosePseudoConsole`, `HPCON` e `COORD`, desde a 1.4, e `ResizePseudoConsole`, desde a 1.9. |
+| `Win32_System_Console` | A consola. | `CreatePseudoConsole`, `ClosePseudoConsole`, `HPCON` e `COORD`, desde a 1.4, e `ResizePseudoConsole`, desde a 1.9. Desde o M2, nas probas de integración, `SetConsoleCtrlHandler` e `CTRL_CLOSE_EVENT`, cos que os programas axudantes atenden o peche da súa consola. |
 | `Win32_System_DataExchange` | O intercambio de datos entre programas, coma o portapapeis. | `OpenClipboard`, `CloseClipboard`, `EmptyClipboard`, `GetClipboardData` e `SetClipboardData`, desde a subfase 1.8. |
 | `Win32_System_Environment` | As variábeis de contorno. | `GetEnvironmentStringsW` e `FreeEnvironmentStringsW`, desde a subfase 2.5: o bloque co contorno de meiga ([`environment`](#environment)). |
 | `Win32_System_IO` | A E/S solapada. | Nada directamente: `ReadFile` e `WriteFile` reciben un `OVERLAPPED`, que meiga pasa nulo. O comentario de `Win32_Storage_FileSystem` explícao. |
-| `Win32_System_JobObjects` | Os *jobs*, que agrupan procesos. | `CreateJobObjectW`, `SetInformationJobObject`, `JOBOBJECT_EXTENDED_LIMIT_INFORMATION`, `JOB_OBJECT_LIMIT_BREAKAWAY_OK`, `QueryInformationJobObject`, `JOBOBJECT_BASIC_PROCESS_ID_LIST` e `TerminateJobObject`, desde a 1.4. |
+| `Win32_System_JobObjects` | Os *jobs*, que agrupan procesos. | `CreateJobObjectW`, `SetInformationJobObject`, `JOBOBJECT_EXTENDED_LIMIT_INFORMATION`, `JOB_OBJECT_LIMIT_BREAKAWAY_OK`, `QueryInformationJobObject`, `JOBOBJECT_BASIC_PROCESS_ID_LIST` e `TerminateJobObject`, desde a 1.4. Desde o M2, nas probas de integración, tamén `AssignProcessToJobObject`, `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, `JobObjectBasicAccountingInformation` e `JOBOBJECT_BASIC_ACCOUNTING_INFORMATION`: o *job* dunha proba, que conta os seus programas e remata os que queden. |
 | `Win32_System_LibraryLoader` | A carga de DLL e módulos. | `GetModuleHandleW` e, desde a 1.4, `LoadLibraryExW`, `GetProcAddress` e as opcións da busca das DLL. |
 | `Win32_System_Memory` | A memoria: a global, a virtual, os *heaps*… | `GlobalAlloc`, `GlobalLock`, `GlobalSize`, `GlobalUnlock` e `GMEM_MOVEABLE`, desde a 1.8: a memoria onde vai o texto do portapapeis. |
 | `Win32_System_Pipes` | As tubaxes. | `CreatePipe`, desde a 1.4. |
@@ -102,9 +102,9 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 | `Win32_UI_Input_KeyboardAndMouse` | O teclado e o rato. | `SetCapture`, `GetCapture` e `ReleaseCapture`, que capturan o rato; desde a subfase 1.7, o teclado: `GetKeyboardState`, `ToUnicodeEx`, `GetKeyboardLayout`, `MapVirtualKeyW` e os códigos de tecla virtual (`VK_…`); desde a 1.8, `GetKeyState`, que di se Alt está premido cos eventos do rato, e `GetDoubleClickTime`; e, desde a 1.9, `TrackMouseEvent`, coa súa estrutura, `TRACKMOUSEEVENT`, e `TME_LEAVE`, que piden o aviso de cando o punteiro sae da xanela. |
 | `Win32_UI_WindowsAndMessaging` | As xanelas, as mensaxes, os temporizadores das xanelas, os cursores e as caixas de mensaxe. | O resto. |
 
-Algunhas constantes defínense no propio código en vez de activar a súa *feature*, que traería milleiros de declaracións por uns poucos números: os bits dos botóns e das teclas modificadoras nas mensaxes do rato (`MK_LBUTTON`…), de `Win32_System_SystemServices` (ver [`event.rs`](#cratesmeiga-winsrceventrs)); desde a subfase 1.8, o formato do texto no portapapeis, `CF_UNICODETEXT`, de `Win32_System_Ole` (ver [`clipboard.rs`](#cratesmeiga-winsrcclipboardrs)); e, desde a 1.9, a mensaxe que chega cando o punteiro sae da xanela, `WM_MOUSELEAVE`, de `Win32_UI_Controls` (ver [`decode`](#decode)). Outra, `WHEEL_PAGE`, o `WHEEL_PAGESCROLL` de Windows, non está en `windows-sys` (ver [`mouse_settings`](#mousesettings-e-mouse_settings)). O tipo `HRESULT` está en `windows_sys::core`, que non necesita ningunha *feature*.
+Algunhas constantes defínense no propio código en vez de activar a súa *feature*, que traería milleiros de declaracións por uns poucos números: os bits dos botóns e das teclas modificadoras nas mensaxes do rato (`MK_LBUTTON`…), de `Win32_System_SystemServices` (ver [`event.rs`](#cratesmeiga-winsrceventrs)); desde a subfase 1.8, o formato do texto no portapapeis, `CF_UNICODETEXT`, de `Win32_System_Ole` (ver [`clipboard.rs`](#cratesmeiga-winsrcclipboardrs)); e, desde a 1.9, a mensaxe que chega cando o punteiro sae da xanela, `WM_MOUSELEAVE`, de `Win32_UI_Controls` (ver [`decode`](#decode)); e, desde o M2, os obxectos que agarda como moito `WaitForMultipleObjects`, `MAXIMUM_WAIT_OBJECTS`, tamén de `Win32_System_SystemServices` (ver [`conpty.rs`](#constantes-e-tipos)). Outra, `WHEEL_PAGE`, o `WHEEL_PAGESCROLL` de Windows, non está en `windows-sys` (ver [`mouse_settings`](#mousesettings-e-mouse_settings)). O tipo `HRESULT` está en `windows_sys::core`, que non necesita ningunha *feature*, coma `BOOL`, que usan desde o M2 as probas de integración.
 
-A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes. A 2.3 e a 2.4 non cambiaron o crate. A 2.5 necesitou tres, coma din os seus comentarios: `Win32_System_Environment`, para o contorno de meiga, que reciben os programas das tabs con poucos cambios; `Win32_System_Registry`, para o rexistro, onde WSL garda as súas distribucións e Git for Windows o seu cartafol; e `Win32_System_SystemInformation`, para `GetSystemDirectoryW`, o cartafol de `cmd.exe`, `wsl.exe` e Windows PowerShell. O resto xa estaba: `GetFileAttributesW`, en `Win32_Storage_FileSystem`, coma `ReadFile`; `ERROR_SUCCESS` e `ERROR_MORE_DATA`, en `Win32_Foundation`; e `CREATE_UNICODE_ENVIRONMENT`, en `Win32_System_Threading`, con `CreateProcessW`.
+A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes. A 2.3 e a 2.4 non cambiaron o crate. A 2.5 necesitou tres, coma din os seus comentarios: `Win32_System_Environment`, para o contorno de meiga, que reciben os programas das tabs con poucos cambios; `Win32_System_Registry`, para o rexistro, onde WSL garda as súas distribucións e Git for Windows o seu cartafol; e `Win32_System_SystemInformation`, para `GetSystemDirectoryW`, o cartafol de `cmd.exe`, `wsl.exe` e Windows PowerShell. O resto xa estaba: `GetFileAttributesW`, en `Win32_Storage_FileSystem`, coma `ReadFile`; `ERROR_SUCCESS` e `ERROR_MORE_DATA`, en `Win32_Foundation`; e `CREATE_UNICODE_ENVIRONMENT`, en `Win32_System_Threading`, con `CreateProcessW`. A 2.6, a 2.7 e a 2.8 non cambiaron o crate. O M2 non necesitou ningunha *feature* nova: `WaitForMultipleObjects` xa estaba en `Win32_System_Threading`; e o que usan as súas probas de integración, en `Win32_System_Console`, coas funcións das pseudoconsolas, en `Win32_System_JobObjects`, coas dos *jobs*, e en `Win32_Foundation`.
 
 **As DLL.** Cada función de `windows-sys` di de que DLL vén, e `meiga.exe` importa as DLL das funcións que usa. As do rexistro (`RegOpenKeyExW`, `RegEnumKeyExW`, `RegGetValueW` e `RegCloseKey`) están en `advapi32.dll`, que `meiga.exe` non importaba ata a 2.5; as outras funcións novas, `GetEnvironmentStringsW`, `FreeEnvironmentStringsW`, `GetSystemDirectoryW` e `GetFileAttributesW`, en `kernel32.dll`, coma as dos procesos e as tubaxes. Desde a 2.5, [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1) mostra `meiga.exe imports: kernel32.dll, dwrite.dll, ntdll.dll, oleaut32.dll, combase.dll, api-ms-win-core-synch-l1-2-0.dll, gdi32.dll, user32.dll, advapi32.dll`: todas son do sistema ([Código › meiga](meiga.md#comprobacións-feitas)).
 
@@ -2238,13 +2238,13 @@ impl Drop for Global {
 
 ## `crates/meiga-win/src/conpty.rs`
 
-Desde a subfase 1.4. As **sesións**: un programa, normalmente unha shell, que corre nunha pseudoconsola e fala con meiga por dúas tubaxes ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). meiga le da tubaxe de saída o que mostra o programa, texto UTF-8 con secuencias VT, e escribe na tubaxe de entrada as respostas ás preguntas que fai o programa e, desde a subfase 1.7, as teclas. Desde a 1.9, o tamaño da pseudoconsola cambia co da grella do terminal ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)). Cada sesión ten dous fíos, que dormen mentres non hai nada que facer ([ADR 0005](../adr/0005-fios-e-fotogramas.md)), e pódese pechar en calquera momento sen esperar. Desde a subfase 2.2, a prioridade do fío lector pódese baixar e voltar subir mentres a sesión corre: meiga báixaa mentres non se ve a tab da sesión, agás os momentos nos que a xanela ten o *lock* do seu terminal ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)). Desde a subfase 2.5, a sesión recibe nun [`Command`](#command), ademais da liña de comandos do programa, o cartafol onde empeza e o seu contorno, que meiga fai para os programas das súas tabs ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 9 e 10). O programa, e os que este arranque, corren nun *job* da sesión, para poder rematalos todos se a sesión se bloquea ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). O seu sitio na arquitectura explícase en [Arquitectura › Sesións](../arquitectura.md#sesións-a-shell-o-conpty-e-os-dous-fíos).
+Desde a subfase 1.4. As **sesións**: un programa, normalmente unha shell, que corre nunha pseudoconsola e fala con meiga por dúas tubaxes ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). meiga le da tubaxe de saída o que mostra o programa, texto UTF-8 con secuencias VT, e escribe na tubaxe de entrada as respostas ás preguntas que fai o programa e, desde a subfase 1.7, as teclas. Desde a 1.9, o tamaño da pseudoconsola cambia co da grella do terminal ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)). Cada sesión ten dous fíos, que dormen mentres non hai nada que facer ([ADR 0005](../adr/0005-fios-e-fotogramas.md)), e pódese pechar en calquera momento sen esperar. Desde a subfase 2.2, a prioridade do fío lector pódese baixar e voltar subir mentres a sesión corre: meiga báixaa mentres non se ve a tab da sesión, agás os momentos nos que a xanela ten o *lock* do seu terminal ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority)). Desde a subfase 2.5, a sesión recibe nun [`Command`](#command), ademais da liña de comandos do programa, o cartafol onde empeza e o seu contorno, que meiga fai para os programas das súas tabs ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisións 9 e 10). O programa, e os que este arranque, corren nun *job* da sesión, para poder rematalos todos se a sesión se bloquea ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Desde o mantemento M2, o fío escritor ve rematar cada un dos programas que tiña a sesión ao pechala, e unha sesión bloqueada remata 10 s despois do último deles ([`wait_for_end`](#a-espera-do-fin-wait_for_end)); e, coma di o comentario do módulo, un proceso que sae mentres pecha sesións remata con el os seus fíos escritores: [`wait_for_closed_sessions`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions) agarda por eles antes ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), [Tecnoloxías › O fin dun proceso e dos seus fíos](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos)). Tamén desde o M2, co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, curto, que ninguén agarda: antes de Windows 11 24H2, ese peche agarda a que remate o ConPTY, e nunha sesión bloqueada o escritor quedaría nel para sempre ([`close_console`](#o-fío-escritor-write_input-close_console-e-write_all)). O seu sitio na arquitectura explícase en [Arquitectura › Sesións](../arquitectura.md#sesións-a-shell-o-conpty-e-os-dous-fíos).
 
 Así se usa:
 
 ```rust
 use meiga_core::geometry::GridSize;
-use meiga_win::conpty::{Command, Conpty, Input, Output, Priority};
+use meiga_win::conpty::{self, Command, Conpty, Input, Output, Priority};
 
 struct Screen;
 
@@ -2270,9 +2270,10 @@ pty.resize(GridSize::new(100, 40))?; // The grid changed size.
 pty.set_reader_priority(Priority::BelowNormal)?; // Its tab is hidden.
 let input = pty.input(); // To write from elsewhere, also from another thread.
 drop(pty); // Closes the session, without waiting.
+conpty::wait_for_closed_sessions(); // Before the process exits.
 ```
 
-Desde a subfase 1.6, o `Output` de meiga dálle a saída ao núcleo do terminal, respóndelle ao programa e avisa á xanela ([Código › meiga](meiga.md#cratesmeigasrcsessionrs)); desde a 1.9, a vista do terminal cambia o tamaño da pseudoconsola cando cambia a grella ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)); e desde a 2.2, cada tab ten a súa sesión, e o programa cambia a prioridade do seu fío lector cando a tab se oculta ou se mostra, e mentres colle o *lock* do terminal dunha tab oculta ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)); e desde a 2.5, o `Command` de cada tab leva a liña de comandos do seu perfil, o seu cartafol e o bloque do contorno que fai meiga ao arrancar ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Tamén usan as sesións as [probas](#cratesmeiga-wintestsconptyrs) e o [exemplo](#cratesmeiga-winexamplesconptyrs).
+Desde a subfase 1.6, o `Output` de meiga dálle a saída ao núcleo do terminal, respóndelle ao programa e avisa á xanela ([Código › meiga](meiga.md#cratesmeigasrcsessionrs)); desde a 1.9, a vista do terminal cambia o tamaño da pseudoconsola cando cambia a grella ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)); e desde a 2.2, cada tab ten a súa sesión, e o programa cambia a prioridade do seu fío lector cando a tab se oculta ou se mostra, e mentres colle o *lock* do terminal dunha tab oculta ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)); e desde a 2.5, o `Command` de cada tab leva a liña de comandos do seu perfil, o seu cartafol e o bloque do contorno que fai meiga ao arrancar ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)); e desde o M2, `main` agarda polas sesións pechadas antes de saír ([Código › meiga › `main.rs`](meiga.md#cratesmeigasrcmainrs)). Tamén usan as sesións as [probas](#cratesmeiga-wintestsconptyrs) e o [exemplo](#cratesmeiga-winexamplesconptyrs).
 
 Unha sesión, de principio a fin:
 
@@ -2296,17 +2297,18 @@ sequenceDiagram
     M->>R: Pty::set_reader_priority, desde calquera fío: SetThreadPriority, sen que o fío o note
     alt o programa remata
         P-->>W: o proceso remata
-        W->>C: ClosePseudoConsole
+        W->>C: ClosePseudoConsole (co ConPTY de Windows, nun fío propio)
     else meiga pecha a sesión
-        M->>W: drop(Pty) esperta o fío
-        W->>C: ClosePseudoConsole
+        M->>W: drop(Pty) esperta o fío, e o seu JoinHandle pasa a CLOSING
+        W->>C: ClosePseudoConsole (co ConPTY de Windows, nun fío propio)
         C->>P: CTRL_CLOSE_EVENT
         P-->>W: o proceso remata
     end
     C-->>R: a tubaxe de saída rompe
     R-->>W: a saída pechouse
-    Note over W: se pasan 10 s sen que remate ningún dos programas que tiña: TerminateJobObject
+    Note over W: agarda á vez a saída, o programa e os programas que tiña. Se pasan 10 s sen que remate ningún dos programas, contados desde o último que rematou: TerminateJobObject
     R->>M: Output::ended (o código de saída)
+    M->>W: antes de saír, wait_for_closed_sessions agarda polos escritores de CLOSING (join)
 ```
 
 Os fragmentos de código desta sección son extractos: coma en [`window.rs`](#cratesmeiga-winsrcwindowrs), omiten os comentarios `// SAFETY:` e algún outro.
@@ -2319,6 +2321,9 @@ const HOST: &str = "OpenConsole.exe";
 const GLYPH_WIDTH_WCSWIDTH: u32 = 0x10;
 const READ_SIZE: u32 = 64 * 1024;
 const CLOSE_TIMEOUT_MS: u32 = 10_000;
+const CLOSE_TIMEOUT: Duration = Duration::from_millis(CLOSE_TIMEOUT_MS as u64);
+const MAXIMUM_WAIT_OBJECTS: usize = 64;
+const WATCHED: usize = MAXIMUM_WAIT_OBJECTS - 2;
 const EXIT_TIMEOUT_MS: u32 = CLOSE_TIMEOUT_MS + 1_000;
 const KILLED_EXIT_CODE: u32 = 1;
 
@@ -2333,8 +2338,11 @@ type AnyFn = unsafe extern "system" fn() -> isize;
 | `LIBRARY` e `HOST` | Os dous arquivos do ConPTY empaquetado. Fan falta os dous: sen `OpenConsole.exe` ao lado, `conpty.dll` arrancaría o `conhost.exe` de Windows, sen avisar. |
 | `GLYPH_WIDTH_WCSWIDTH` | O *flag* `PSEUDOCONSOLE_GLYPH_WIDTH_WCSWIDTH`: o ConPTY mide os caracteres coma o núcleo do terminal. Só o entende o empaquetado ([ADR 0004](../adr/0004-conpty-empaquetado.md)). |
 | `READ_SIZE` | O tamaño de cada lectura da tubaxe de saída, e do búfer da propia tubaxe: 64 KiB ([ADR 0005](../adr/0005-fios-e-fotogramas.md)). |
-| `CLOSE_TIMEOUT_MS` | Canto espera o fío escritor, despois de pechar a pseudoconsola, a que remate a sesión ou, polo menos, outro dos programas que tiña: 10 s. Windows pídelles aos programas dunha consola que rematen dun en dun, e dálle 5 s a cada un antes de rematalo el: mentres unha sesión remata, remata un programa polo menos cada 5 s. Unha sesión na que non remata ningún durante o dobre está bloqueada, e o fío escritor remata os programas do seu *job*. |
-| `EXIT_TIMEOUT_MS` | Canto espera o fío lector, despois de pecharse a saída, a que remate o programa, para saber o seu código de saída: 1 s máis ca o anterior. Se a sesión se pechou e o programa segue vivo, o fío escritor remátao cando pasa ese tempo sen que remate ningún outro. |
+| `CLOSE_TIMEOUT_MS` | Canto agarda o fío escritor, despois de pechar a pseudoconsola, a que remate outro dos programas que tiña a sesión, desde o último que rematou ou, se aínda non rematou ningún, desde que empezou a agardar: 10 s. Windows pídelles aos programas dunha consola que rematen dun en dun, e dálle 5 s a cada un antes de rematalo el: mentres unha sesión remata, remata un programa polo menos cada 5 s. Unha sesión na que non remata ningún durante o dobre está bloqueada, e o fío escritor remata os programas do seu *job* ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md) e [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)). Ata a 2.8, o fío escritor agardaba 10 s a que rematase a sesión ou, polo menos, outro dos programas, pero só miraba os programas ao final de cada espera: os 10 s contaban desde o peche, ou desde a última vez que mirara, e non desde o último que rematou. |
+| `CLOSE_TIMEOUT` | Desde o M2. O mesmo tempo, coma un `Duration`, para sumarllo a un momento (`Instant`): a hora límite de [`wait_for_end`](#a-espera-do-fin-wait_for_end). `as u64` converte o `u32` no `u64` que recibe `Duration::from_millis`, sen perder nada. |
+| `MAXIMUM_WAIT_OBJECTS` | Desde o M2. Os obxectos que agarda como moito `WaitForMultipleObjects`: 64 ([Tecnoloxías › O fin dun proceso e dos seus fíos](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos)). Defínese eiquí, coma os bits do rato en [`event.rs`](#cratesmeiga-winsrceventrs), porque en `windows-sys` está na *feature* `Win32_System_SystemServices`, que traería milleiros de declaracións por ela, coma di o seu comentario. Alí é un `u32`; eiquí, un `usize`, porque conta os elementos dunha lista. |
+| `WATCHED` | Desde o M2. Cantos dos programas que tiña a sesión ao pechala agarda o fío escritor un a un: 62, porque dous dos 64 obxectos da espera son a saída e o programa. |
+| `EXIT_TIMEOUT_MS` | Canto espera o fío lector, despois de pecharse a saída, a que remate o programa, para saber o seu código de saída: 1 s máis ca `CLOSE_TIMEOUT_MS`. Se a sesión se pechou e o programa segue vivo, o fío escritor remátao cando pasan os 10 s de `CLOSE_TIMEOUT_MS` sen que remate ningún outro. |
 | `KILLED_EXIT_CODE` | O código de saída dos programas que remata o fío escritor: 1, o mesmo que usa `std::process::Child::kill`. |
 | `CreateFn`, `CloseFn` e `ResizeFn` | As firmas das funcións que crean e pechan unha pseudoconsola e, desde a subfase 1.9, a da que lle cambia o tamaño, que recibe o tamaño novo nun `COORD` e devolve un `HRESULT`, coma a que a crea. As do ConPTY empaquetado (`ConptyCreatePseudoConsole`, `ConptyClosePseudoConsole` e `ConptyResizePseudoConsole`) son iguais ás de `kernel32`. `extern "system"` é a convención de chamada das APIs de Windows. |
 | `AnyFn` | Unha función calquera, como a devolve `GetProcAddress`, antes de convertela na súa firma real. |
@@ -2519,16 +2527,19 @@ pub fn spawn<O: Output>(
             .name(format!("conpty writer {process_id}"))
             .spawn(move || write_input(&shared, input_write))
     };
-    if let Err(error) = writer {
-        // End the programs before their pseudoconsole closes, which must
-        // not happen while a program connects to it, and close the
-        // output first, as above.
-        shared.terminate();
-        drop(output_read);
-        let console = shared.lock().console.take();
-        drop(console);
-        return Err(Error::new("CreateThread", error));
-    }
+    let writer = match writer {
+        Ok(writer) => writer,
+        Err(error) => {
+            // End the programs before their pseudoconsole closes, which must
+            // not happen while a program connects to it, and close the
+            // output first, as above.
+            shared.terminate();
+            drop(output_read);
+            let console = shared.lock().console.take();
+            drop(console);
+            return Err(Error::new("CreateThread", error));
+        }
+    };
     let input = Input { shared };
     let reader = {
         let shared = Arc::clone(&input.shared);
@@ -2541,6 +2552,7 @@ pub fn spawn<O: Output>(
             input,
             process_id,
             reader,
+            writer: Some(writer),
         }),
         Err(error) => {
             // Nobody reads the output: end the programs, tell the writer
@@ -2549,6 +2561,7 @@ pub fn spawn<O: Output>(
             input.shared.terminate();
             input.shared.close_output();
             input.close();
+            keep_closing(writer);
             Err(Error::new("CreateThread", error))
         }
     }
@@ -2563,9 +2576,9 @@ Lanza o programa e crea a súa sesión, nesta orde:
 4. Lanza o programa na pseudoconsola e no *job*, desde a 2.5 co seu cartafol e o seu contorno, que lle pasa nun `Program` ([`start`](#start-e-attributes)). Se falla, pecha a pseudoconsola, pero antes a tubaxe de saída: antes de Windows 11 24H2, `ClosePseudoConsole` espera ata que remata o ConPTY, e o ConPTY podería estar esperando a escribir unha saída que xa ninguén lería.
 5. Garda no `Shared` os eventos, o proceso, o *job* e a pseudoconsola, que queda alí ata que a colle o fío escritor.
 6. Crea os dous fíos, co identificador do proceso no nome (`conpty writer 1234`), que se ve nos depuradores e nos perfís; desde a subfase 2.2, `tools/check-tabs.ps1` atopa así o fío lector de cada sesión, para mirar a súa prioridade. Entre os dous crea a entrada da sesión ([`Input`](#input)), e o fío lector recibe outra referencia ao estado (`Arc::clone`), coa que fará a súa propia entrada.
-7. Xunta no [`Pty`](#pty) a entrada, o identificador do proceso e o `JoinHandle` do fío lector, que garda desde a subfase 2.2 para cambiarlle a prioridade ([`set_reader_priority`](#a-prioridade-do-fío-lector-priority-e-set_reader_priority)). Por iso o `Pty` créase ao final, cando o fío lector xa existe. Ata a 2.1 creábase entre os dous fíos, e o `JoinHandle` do lector descartábase (`Ok(_)`).
+7. Xunta no [`Pty`](#pty) a entrada, o identificador do proceso e o `JoinHandle` do fío lector, que garda desde a subfase 2.2 para cambiarlle a prioridade ([`set_reader_priority`](#a-prioridade-do-fío-lector-priority-e-set_reader_priority)), e, desde o M2, o do fío escritor (`writer: Some(writer)`), que pasa á lista das sesións pechadas cando se pecha a sesión ([`keep_closing`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions)). Por iso o `Pty` créase ao final, cando o fío lector xa existe. Ata a 2.1 creábase entre os dous fíos, e o `JoinHandle` do lector descartábase (`Ok(_)`). E ata a 2.8, `if let Err(error) = writer` só miraba o erro: o `JoinHandle` do escritor destruíase ao final de `spawn`, e o fío quedaba ceibe, sen que ninguén puidese agardar por el. Desde o M2, `let writer = match writer { … }` cólleo do `Ok`, e o brazo do `Err` fai o mesmo ca antes.
 
-O fío escritor créase primeiro, porque é o que pecha a sesión. Se non se pode crear, `spawn` fai o que faría el, nunha orde que nunca bloquea: remata os programas do *job*, pecha a tubaxe de saída e, por último, a pseudoconsola. Pechala antes, mentres o programa aínda se pode estar a conectar a ela, podería deixar o ConPTY e o programa esperando ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Se o que non se pode crear é o lector, `spawn` remata os programas, avisa ao escritor de que non espere pola saída, que xa ninguén le, e pecha a sesión con [`Input::close`](#input), coma o `Drop` dun `Pty`: o escritor pecha a pseudoconsola como se a pechase meiga, e a súa espera remata axiña, porque xa ten o aviso de que se pechou a saída, e os programas xa se están a rematar. Ata a subfase 2.1, o `Pty` xa existía nese momento, e era o seu `Drop`, ao devolver o erro, o que pechaba a sesión; desde a 2.2 aínda non existe, porque necesita o fío lector, e `spawn` pecha a sesión ela mesma. En ningún dos dous casos se chama a `output`, que se destrúe coa función do fío que non se creou.
+O fío escritor créase primeiro, porque é o que pecha a sesión. Se non se pode crear, `spawn` fai o que faría el, nunha orde que nunca bloquea: remata os programas do *job*, pecha a tubaxe de saída e, por último, a pseudoconsola. Pechala antes, mentres o programa aínda se pode estar a conectar a ela, podería deixar o ConPTY e o programa esperando ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Se o que non se pode crear é o lector, `spawn` remata os programas, avisa ao escritor de que non espere pola saída, que xa ninguén le, e pecha a sesión con [`Input::close`](#input), coma o `Drop` dun `Pty`: o escritor pecha a pseudoconsola como se a pechase meiga, e a súa espera remata axiña, porque xa ten o aviso de que se pechou a saída, e os programas xa se están a rematar. Desde o M2, despois garda o escritor na lista das sesións pechadas, tamén coma o `Drop` ([`keep_closing`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions)): un proceso que agarde polas sesións pechadas antes de saír agarda tamén por esta. Ata a subfase 2.1, o `Pty` xa existía nese momento, e era o seu `Drop`, ao devolver o erro, o que pechaba a sesión; desde a 2.2 aínda non existe, porque necesita o fío lector, e `spawn` pecha a sesión ela mesma. En ningún dos dous casos se chama a `output`, que se destrúe coa función do fío que non se creou.
 
 Windows busca o programa como fai sempre `CreateProcessW` ([Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos)), e a liña de comandos leva os argumentos con comiñas, como os espera o programa: `spawn` non os toca. Se non o atopa, `spawn` devolve o erro de `CreateProcessW`, de tipo `NotFound`, que [`os_error`](#cratesmeiga-winsrcerrorrs) deixa ver. Ata a subfase 2.4, meiga sabía así que tiña que probar con outra shell: se non atopaba `pwsh`, lanzaba Windows PowerShell. Desde a 2.5, as shells dos perfís xa se atoparon antes, coas súas rutas completas ([`profiles.rs`](#cratesmeiga-winsrcprofilesrs)), e se un programa non arranca, a súa tab mostra no terminal que programa, en que cartafol e por que ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Un cartafol que non existe tamén é un erro de `CreateProcessW`, que `spawn` non comproba antes: o 267, `ERROR_DIRECTORY`, que nun Windows en inglés dá `CreateProcessW failed: The directory name is invalid. (os error 267)`, coma comproba unha das [probas de integración](#cratesmeiga-wintestsconptyrs).
 
@@ -2598,6 +2611,9 @@ pub struct Pty {
     /// The reader thread, whose priority can change. Dropping it does not
     /// wait for the thread: it goes on until the output ends.
     reader: JoinHandle<()>,
+    /// The writer thread, until the `Pty` is dropped: then it goes to
+    /// [`CLOSING`].
+    writer: Option<JoinHandle<()>>,
 }
 
 impl Pty {
@@ -2623,19 +2639,70 @@ impl Pty {
 impl Drop for Pty {
     fn drop(&mut self) {
         self.input.close();
+        if let Some(writer) = self.writer.take() {
+            keep_closing(writer);
+        }
     }
 }
 ```
 
-O `Pty` é a sesión desde o lado de meiga: o que devolve `spawn`. Garda tres cousas: a entrada da sesión, [`Input`](#input), que leva dentro o estado que comparte cos fíos, coa pseudoconsola, que pecha o fío escritor; o identificador do proceso (`process_id`); e, desde a subfase 2.2, o fío lector (`reader`). Do fío escritor non garda nada. Pechar a sesión é destruílo.
+O `Pty` é a sesión desde o lado de meiga: o que devolve `spawn`. Garda catro cousas: a entrada da sesión, [`Input`](#input), que leva dentro o estado que comparte cos fíos, coa pseudoconsola, que pecha o fío escritor; o identificador do proceso (`process_id`); desde a subfase 2.2, o fío lector (`reader`); e, desde o M2, o fío escritor (`writer`), ata que se pecha a sesión. Ata a 2.8, do fío escritor non gardaba nada. Pechar a sesión é destruílo. O seu comentario, que o extracto omite, di desde o M2 que, antes de que saia o proceso, [`wait_for_closed_sessions`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions) agarda polos escritores das sesións que se pecharon.
 
 - **`write`** envía bytes ao programa, como se se teclearan: é o [`write`](#input) da súa entrada, que nunca espera. Ata a subfase 1.5, o código de `write` estaba eiquí.
 - **`input`**, desde a 1.6, dá unha copia da entrada, para quen ten que escribirlle ao programa sen ser o dono da sesión, neste fío ou noutro. En meiga, a vista do terminal garda unha, coa que responde as poucas preguntas que atopa ela, ao rematar unha actualización sincronizada ([ADR 0013](../adr/0013-da-saida-a-pantalla.md), [Código › meiga](meiga.md#cratesmeigasrcviewrs)), desde a subfase 1.7 envía as teclas e os eventos de foco, e desde a 1.9 cambia o tamaño da pseudoconsola.
 - **`resize`**, desde a subfase 1.9, cambia o tamaño da pseudoconsola: é o [`resize`](#input) da súa entrada, coma `write`. O programa usa o da copia da vista; as [probas de integración](#cratesmeiga-wintestsconptyrs), o do `Pty`.
 - **`set_reader_priority`**, desde a subfase 2.2, cambia a prioridade do fío lector: explícase [máis abaixo](#a-prioridade-do-fío-lector-priority-e-set_reader_priority).
-- **`reader`**, desde a subfase 2.2, é o `JoinHandle<()>` que devolveu `thread::Builder::spawn` ao crear o fío lector: `()` porque a función do fío, `read_output`, non devolve nada. Un `JoinHandle` serve para esperar polo fío (`join`), pero o `Pty` non espera nunca: só usa o *handle* de Windows do fío, que o `JoinHandle` mantén aberto, para cambiarlle a prioridade. Destruílo tampouco espera, coma di o seu comentario: solta o fío, que segue ata que se pecha a saída, e pecha o *handle*. Ata a 2.1, `spawn` destruíao no momento, e o fío lector quedaba solto desde o principio, coma o escritor, cuxo `JoinHandle` se destrúe aínda ao final de `spawn`.
+- **`reader`**, desde a subfase 2.2, é o `JoinHandle<()>` que devolveu `thread::Builder::spawn` ao crear o fío lector: `()` porque a función do fío, `read_output`, non devolve nada. Un `JoinHandle` serve para esperar polo fío (`join`), pero o `Pty` non espera nunca: só usa o *handle* de Windows do fío, que o `JoinHandle` mantén aberto, para cambiarlle a prioridade. Destruílo tampouco espera, coma di o seu comentario: solta o fío, que segue ata que se pecha a saída, e pecha o *handle*. Ata a 2.1, `spawn` destruíao no momento, e o fío lector quedaba solto desde o principio, coma o escritor ata a 2.8, cuxo `JoinHandle` se destruía ao final de `spawn`.
+- **`writer`**, desde o M2, é o `JoinHandle<()>` do fío escritor, nun `Option`: `Some` mentres a sesión está aberta, e `None` desde que o `Drop` o colle para pasalo á lista das sesións pechadas, [`CLOSING`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions), coma di o seu comentario. Un `Drop` só recibe `&mut self`, e non pode mover un campo fóra do valor: `Option::take` dá o `JoinHandle` e deixa `None` no seu sitio. O `Pty` non o usa para nada máis: non espera polo fío, nin usa o seu *handle*. Pero, mentres a sesión está aberta, o *handle* do fío segue aberto, e ata a 2.8 pechábase ao arrancar o fío ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 4).
 - **A entrada non mantén aberta a sesión.** As copias da entrada poden estar en calquera parte, tamén no fío lector, que ten a súa ata que remata a sesión. Se a sesión se pechase ao destruírse a última copia, non se pecharía nunca: o fío lector non solta a súa ata o final. Por iso o peche está no `Drop` do `Pty`, que é un só. Despois, as copias que queden xa non envían nada, nin cambian o tamaño.
-- **`Drop`** pecha a sesión coa súa entrada, [`Input::close`](#input), que a marca como pechada e esperta o fío escritor, que fai o resto. Non espera por nada ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)), tampouco polo fío lector: despois do `Drop`, Rust destrúe os campos na orde na que se declaran, e o último, o `JoinHandle`, só solta o fío. Ata a subfase 2.1, o `Drop` marcaba e espertaba el mesmo, a través de `self.input.shared`; desde a 2.2, iso está en `Input::close`, porque tamén o necesita [`spawn`](#conptyspawn) cando non pode crear o fío lector. `close` é privada, pero vese desde todo o módulo.
+- **`Drop`** pecha a sesión coa súa entrada, [`Input::close`](#input), que a marca como pechada e esperta o fío escritor, que fai o resto. Desde o M2, despois pasa o `JoinHandle` do escritor á lista das sesións pechadas, con [`keep_closing`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions); `if let Some(writer)` cólleo se aínda está, e sempre está, porque só o colle o `Drop`. Non espera por nada ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)), nin polo fío escritor nin polo lector: despois do `Drop`, Rust destrúe os campos na orde na que se declaran, e o `JoinHandle` do lector só solta o fío; o do escritor xa non está. Quen queira agardar polo escritor faino despois, con `wait_for_closed_sessions`, coma meiga antes de saír. Ata a subfase 2.1, o `Drop` marcaba e espertaba el mesmo, a través de `self.input.shared`; desde a 2.2, iso está en `Input::close`, porque tamén o necesita [`spawn`](#conptyspawn) cando non pode crear o fío lector. `close` é privada, pero vese desde todo o módulo.
+
+### As sesións pechadas: `CLOSING`, `keep_closing` e `wait_for_closed_sessions`
+
+```rust
+/// The writer threads of the sessions that were closed, which end once
+/// their sessions have ended: [`wait_for_closed_sessions`] waits for them.
+/// The ones that have ended leave the list each time that another one comes.
+static CLOSING: Mutex<Vec<JoinHandle<()>>> = Mutex::new(Vec::new());
+
+/// Keeps the writer thread of a session that was closed.
+fn keep_closing(writer: JoinHandle<()>) {
+    let mut closing = CLOSING.lock().unwrap_or_else(PoisonError::into_inner);
+    closing.retain(|writer| !writer.is_finished());
+    closing.push(writer);
+}
+
+/// Waits until the sessions that were closed have ended: until the writer of
+/// each one has seen ConPTY close the output and the program end or, if the
+/// session got stuck, has ended the programs of its job. If a session ended
+/// on its own, its programs that are not in its console, such as a window
+/// that its shell opened, go on. Call it before the process exits, once no
+/// thread closes more sessions: when a process exits, its threads end with
+/// it, and a session that got stuck would stay so for ever, with its
+/// programs and its ConPTY (ADR 0026).
+///
+/// It waits as long as the sessions take: a session ends at once, or when
+/// its programs handle `CTRL_CLOSE_EVENT`, or [`CLOSE_TIMEOUT_MS`] after the
+/// last of them ended, if it gets stuck.
+pub fn wait_for_closed_sessions() {
+    let writers = mem::take(&mut *CLOSING.lock().unwrap_or_else(PoisonError::into_inner));
+    for writer in writers {
+        // A writer that panicked has nothing left to wait for: the panic
+        // message has already told why.
+        let _ = writer.join();
+    }
+}
+```
+
+Desde o M2. A lista dos fíos escritores das sesións que se pecharon, e a función que agarda por eles antes de que saia o proceso ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisións 1, 2 e 4). Cando sae un proceso, Windows remata no momento os seus outros fíos, sen deixalos acabar ([Tecnoloxías › O fin dun proceso e dos seus fíos](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos)): o escritor dunha sesión pechada morrería no medio da súa espera, e unha sesión bloqueada quedaría así para sempre, co seu ConPTY e os seus programas. Ata a 2.8 pasaba ao pechar meiga, e ninguén podía agardar polos escritores: `spawn` soltaba os seus `JoinHandle`.
+
+- **`CLOSING`** é unha lista para todo o proceso (`static`), cos escritores das sesións de calquera `Conpty`. Vai nun `Mutex`, porque as sesións pódense pechar desde calquera fío. `Mutex::new` e `Vec::new` son `const fn`, así que o `static` ten o seu valor desde que arranca o programa, sen inicializalo despois. Cóllese aínda que estea envelenado (`PoisonError::into_inner`), coma o estado dunha sesión ([`Shared::lock`](#shared-state-e-pseudoconsole)): un *panic* noutro fío mentres a tiña non debe deixar sen agardar as sesións da lista.
+- **`keep_closing`** garda o escritor dunha sesión que se pecha: chámana o `Drop` do [`Pty`](#pty) e [`spawn`](#conptyspawn), cando non pode crear o fío lector. Antes, quita da lista os escritores que xa remataron: `retain` deixa só os elementos para os que o *closure* devolve `true`, e `is_finished` di, sen agardar, se xa voltou a función do fío. Destruír o `JoinHandle` dun fío que rematou só pecha o seu *handle*. Así, a lista non medra co uso, aínda que se abran e se pechen tabs todo o día: garda os escritores que seguían traballando cando chegou o último, e o último. Un escritor que remata segue nela, co seu *handle*, ata que se pecha outra sesión ou alguén agarda polas sesións pechadas (decisión 4). Dentro do *closure*, `writer` é cada elemento da lista, e tapa o parámetro co mesmo nome, que despois vai á lista con `push`.
+- **`wait_for_closed_sessions`**, pública, agarda polos escritores da lista. Un escritor remata cando remata a súa sesión, ao pecharse a saída e rematar o programa, ou cando a remata el, porque se bloqueou ([`wait_for_end`](#a-espera-do-fin-wait_for_end)). Coma di o comentario, se a sesión rematou soa, os seus programas que non están na súa consola, coma unha xanela que abriu a súa shell, seguen: o escritor non agarda por eles, e o *job* non remata nada ao pecharse. `mem::take` cólleos todos e deixa unha lista baleira no seu sitio, co `Mutex` collido só nesa instrución: o `MutexGuard` que devolve `lock` é temporal, e destrúese ao final dela. Despois agarda por cada un con `join`, que volta no momento se o fío xa rematou: os escritores traballan á vez, así que agarda o que tarde a sesión máis lenta, e non a suma de todas. `join` dá un erro se o fío rematou cun *panic*, e `let _ =` ignórao: coma di o comentario, a mensaxe do *panic* xa dixo por que, e xa non hai nada que agardar.
+- **Cando.** Coma di o seu comentario, antes de que saia o proceso, cando xa ningún fío pecha máis sesións: unha sesión que se pecha despois de `take` queda na lista para a seguinte chamada, e esta xa non agarda por ela. meiga chámaa en [`main`](meiga.md#cratesmeigasrcmainrs), cando volta `run`, coa xanela e as tabs xa destruídas; o [exemplo](#cratesmeiga-winexamplesconptyrs), no seu fío lector, antes de saír co código do programa; e unha das [probas de integración](#cratesmeiga-wintestsconptyrs), no programa axudante que sae.
+- **Canto agarda.** O que tarden as sesións, sen límite (decisión 2), coma di o comentario: unha sesión que se pecha normalmente remata no momento; un programa que atende `CTRL_CLOSE_EVENT` pode levar ata 5 s, e Windows pídello aos programas dun en dun; e unha sesión bloqueada remata 10 s despois do último dos seus programas que rematou. Só non acabaría se o propio escritor quedase bloqueado: en `WriteFile`, se o ConPTY deixase de ler a entrada, ou no peche do ConPTY de Windows anterior a Windows 11 24H2, se Windows non puidese crear o fío do peche ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), consecuencias). Ese peche, que agarda a que remate o ConPTY, xa non o bloquea, porque vai nun fío propio ([`close_console`](#o-fío-escritor-write_input-close_console-e-write_all), decisión 6).
+- **Só os escritores.** Non agarda polos fíos lectores: un lector remata cando se pecha a saída, e cun ConPTY que non a pechase nunca, coma o dun programa que saíu do *job* e se bloqueou ao conectarse, agardaría para sempre. O escritor é quen asegura que a sesión remata (decisión 1). Polo mesmo, tampouco agarda polos fíos `conpty close`, que pechan as pseudoconsolas do ConPTY de Windows: cada un remata cando remata o seu ConPTY.
+- **Unha lista ao lado das sesións.** Pechar unha sesión é soltar o seu `Pty`, e un `Drop` non pode devolver nada; ademais, cada sitio que pecha sesións tería que gardar o seu escritor. A lista vale para calquera programa que use as sesións, coma o exemplo e as probas (ADR 0026, alternativas).
 
 ### A prioridade do fío lector: `Priority` e `set_reader_priority`
 
@@ -2738,11 +2805,11 @@ Desde a subfase 1.9, **`resize`** cambia o tamaño da pseudoconsola ([Tecnoloxí
 
 - **O que fai o ConPTY.** Reparte o seu búfer ao ancho novo (*reflow*) e avisa ao programa, que pode mostrarse de novo para o tamaño novo. Ao terminal non lle escribe nada; pero, a seguinte vez que o programa pregunta onde está o cursor da consola, o ConPTY pregúntalle antes ao terminal onde está o seu (`ESC [ 6 n`), e espera a resposta ata 500 ms. En meiga, respóndea o terminal desde o fío lector, coma as outras preguntas ([`Output`](#output)).
 - **Non espera polo ConPTY.** A función do ConPTY só escribe o tamaño novo na súa tubaxe de sinais, e volta: o ConPTY aplícao cando le a mensaxe. Por iso se pode chamar desde o fío da interface, e mesmo co *lock* do terminal collido: meiga cambia primeiro o tamaño do terminal e despois o da pseudoconsola, sen soltar ese *lock*, para que ningunha saída do programa da sesión chegue entre os dous ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), [Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
-- **Co `Mutex` do estado.** A pseudoconsola está no estado da sesión ata que o fío escritor a colle para pechala, co mesmo `Mutex` ([`write_input`](#o-fío-escritor-write_input-e-write_all)). `resize` chama a función mentres ten ese `Mutex`, así que a pseudoconsola segue aberta durante a chamada. Como a función non espera, o `Mutex` está collido pouco tempo, e quen escribe desde outro fío non queda esperando polo ConPTY. `as_ref` dá unha referencia á pseudoconsola, sen sacala do estado.
+- **Co `Mutex` do estado.** A pseudoconsola está no estado da sesión ata que o fío escritor a colle para pechala, co mesmo `Mutex` ([`write_input`](#o-fío-escritor-write_input-close_console-e-write_all)). `resize` chama a función mentres ten ese `Mutex`, así que a pseudoconsola segue aberta durante a chamada. Como a función non espera, o `Mutex` está collido pouco tempo, e quen escribe desde outro fío non queda esperando polo ConPTY. `as_ref` dá unha referencia á pseudoconsola, sen sacala do estado.
 - **Cando non fai nada.** Se a sesión se está a pechar (`closing`), ou se xa rematou e o fío escritor colleu a pseudoconsola para pechala, `resize` non fai nada, coma `write`, e devolve `Ok`: xa non hai a quen avisar. `filter` dá `None` se a sesión se está a pechar, e entón o *let-else* volta sen erro.
 - **Os erros.** Primeiro, [`coord`](#os-axudantes-coord-null_terminated-environment_block-invalid_input-event-job-e-pipe) comproba que o tamaño cabe nun `COORD`, co nome `ResizePseudoConsole` para a mensaxe. Despois, un `HRESULT` negativo é un erro, coma ao crear a pseudoconsola ([`Error::hresult`](#cratesmeiga-winsrcerrorrs)). meiga non fai nada co erro: o programa da sesión queda co tamaño de antes, e o seu texto pode verse mal ata o seguinte cambio.
 
-Desde a subfase 2.2, **`close`** pecha a sesión sen esperar: marca `closing` e esperta o fío escritor, que pecha a pseudoconsola ([`write_input`](#o-fío-escritor-write_input-e-write_all)). Era o código do `Drop` do [`Pty`](#pty), e pasou eiquí porque tamén o necesita [`spawn`](#conptyspawn), cando non pode crear o fío lector e aínda non ten un `Pty` que destruír.
+Desde a subfase 2.2, **`close`** pecha a sesión sen esperar: marca `closing` e esperta o fío escritor, que pecha a pseudoconsola ([`write_input`](#o-fío-escritor-write_input-close_console-e-write_all)). Era o código do `Drop` do [`Pty`](#pty), e pasou eiquí porque tamén o necesita [`spawn`](#conptyspawn), cando non pode crear o fío lector e aínda non ten un `Pty` que destruír.
 
 - **Privada.** Non leva `pub`: só a chaman o `Drop` do `Pty` e `spawn`. Quen ten unha copia da entrada pode escribir e cambiar o tamaño, pero non pechar a sesión, que é cousa do dono do `Pty` (ver [`Pty`](#pty)).
 - **O *lock*, só para marcar.** `self.shared.lock().closing = true;` colle o `Mutex`, cambia `closing` e sóltao na mesma instrución: o `MutexGuard` que devolve `lock` é un valor temporal, que se destrúe ao rematar a instrución. Así, `wake` chámase co `Mutex` xa solto, coma en `write`, e o fío escritor, ao espertar, non o atopa ocupado.
@@ -2770,32 +2837,6 @@ impl Shared {
 
     fn close_output(&self) {
         unsafe { SetEvent(self.output_closed.as_raw_handle()) };
-    }
-
-    fn wait_for_end(&self) {
-        let handles = [
-            self.output_closed.as_raw_handle(),
-            self.process.as_raw_handle(),
-        ];
-        // Only these count: a program that starts later could hide that
-        // others end, or, starting others, keep the session waiting.
-        let programs = self.programs();
-        let mut ended = 0;
-        loop {
-            let result =
-                unsafe { WaitForMultipleObjects(2, handles.as_ptr(), TRUE, CLOSE_TIMEOUT_MS) };
-            // Waiting for all, any result in this range means that both are
-            // signalled.
-            if (WAIT_OBJECT_0..WAIT_OBJECT_0 + 2).contains(&result) {
-                return;
-            }
-            let now = programs.iter().filter(|program| has_ended(program)).count();
-            if result != WAIT_TIMEOUT || now <= ended {
-                break;
-            }
-            ended = now;
-        }
-        self.terminate();
     }
 
     fn programs(&self) -> Vec<OwnedHandle> {
@@ -2848,6 +2889,7 @@ struct PseudoConsole {
     handle: HPCON,
     close: CloseFn,
     resize: ResizeFn,
+    may_wait: bool,
 }
 
 impl Drop for PseudoConsole {
@@ -2864,15 +2906,91 @@ impl Drop for PseudoConsole {
   - `state`, o estado, nun `Mutex`.
 - `lock` colle o `Mutex` aínda que estea envelenado (`PoisonError::into_inner`): cada cambio do estado é unha soa asignación, un intercambio, un engadido ou un `take`, e un *panic* non o pode deixar a medias.
 - `wake` e `close_output` sinalan os dous eventos.
-- **`wait_for_end`** chámao o fío escritor despois de pechar a pseudoconsola. Espera a que se peche a saída e remate o programa: `WaitForMultipleObjects` con `TRUE` espera os dous. Mentres tanto, os programas que tiña a sesión ao pecharse teñen que ir rematando, porque Windows lles pide que rematen dun en dun e dálle 5 s a cada un ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). Por iso apúntaos ao empezar (`programs`), espera en voltas de 10 s e, despois de cada unha, conta cantos deles remataron (`ended`). Se rematou algún máis, a sesión segue rematando, e espera outra volta. Se non, ou se a espera falla, a sesión está bloqueada: normalmente, porque un programa se estaba a conectar á consola cando se pechou, e espera polo ConPTY, mentres o ConPTY espera por el. Pode ser o programa da sesión ou un que arrancou este, como a shell detrás de `cmd /c` ou un programa lanzado con `start /b`. Entón remata todos os programas do *job*, e o ConPTY remata con eles ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)).
-- Só contan os programas apuntados ao empezar. Os que arrancan despois, como un programa de limpeza que lanza outro ao pecharse, poderían agochar que rematan os demais, se se contasen os programas vivos; e un programa que arranca outros sen parar, como un editor que lanza `git`, faría que sempre rematase algún, se se contasen todos os que rematan.
-- O número de voltas ten un límite: en cada unha ten que rematar polo menos un dos programas apuntados.
-- **`programs`** pídelle ao *job* a lista dos seus procesos (`JobObjectBasicProcessIdList`) e ábreos para esperar por eles. A lista é unha estrutura de tamaño variábel: dous contadores, os procesos que ten o *job* e os que caben na lista, e despois os identificadores. A memoria é un `Vec<usize>`, aliñado coma a estrutura, e `header` son as palabras que ocupan os dous contadores (`offset_of!` dá onde empezan os identificadores). Se non caben todos, volta probar cun búfer maior: o *job* pode ter algún programa máis entre dous intentos. Se nunca caben, ou Windows non dá a lista, devolve unha lista baleira, e `wait_for_end` remata o *job* na primeira volta sen rematar a sesión.
+- **`wait_for_end`**, a espera do fin da sesión, que chama o fío escritor despois de pechar a pseudoconsola, explícase á parte, [despois](#a-espera-do-fin-wait_for_end): o M2 reescribiuna.
+- **`programs`** pídelle ao *job* a lista dos seus procesos (`JobObjectBasicProcessIdList`) e ábreos para esperar por eles. A lista é unha estrutura de tamaño variábel: dous contadores, os procesos que ten o *job* e os que caben na lista, e despois os identificadores. A memoria é un `Vec<usize>`, aliñado coma a estrutura, e `header` son as palabras que ocupan os dous contadores (`offset_of!` dá onde empezan os identificadores). Se non caben todos, volta probar cun búfer maior: o *job* pode ter algún programa máis entre dous intentos. Se nunca caben, ou Windows non dá a lista, devolve unha lista baleira, e `wait_for_end` remata o *job* se pasan 10 s sen que remate a sesión: sen programas apuntados, ningún lle dá máis tempo.
 - **`terminate`** remata todos os procesos do *job* co código 1 (`TerminateJobObject`). O ConPTY non está no *job*: arráncao meiga, antes ca o programa.
 - **`State`**: a entrada que o fío escritor aínda non colleu; `closing`, se se pechou a sesión; `finished`, se o fío escritor xa pechou a pseudoconsola; e a pseudoconsola, ata que a colle o fío escritor para pechala. Mentres está eiquí, desde a subfase 1.9, [`Input::resize`](#input) pode cambiarlle o tamaño, co `Mutex` collido. `#[derive(Default)]` dá o estado inicial: sen entrada, os dous a `false` e sen pseudoconsola. `spawn` pon a pseudoconsola ao crealo, e o resto vén do `Default` (`..State::default()`).
 - **`PseudoConsole`** garda o `HPCON` e as funcións do mesmo ConPTY que o creou: a que o pecha e, desde a subfase 1.9, a que lle cambia o tamaño. Péchase ao destruílo (`Drop`): así péchase unha vez e sempre, tamén cando algo falla.
+- **`may_wait`**, desde o M2, di se pechala pode agardar a que remate o ConPTY: o seu comentario, que o extracto omite, di que o fai o peche de Windows antes de Windows 11 24H2. Pono `create`, o método privado de `Conpty` que crea as pseudoconsolas para [`spawn`](#conptyspawn): `true` co ConPTY de Windows (`matches!(self.source, Source::System)`) e `false` co empaquetado, que volta sempre no momento. Decide en que fío se pecha: [`close_console`](#o-fío-escritor-write_input-close_console-e-write_all) ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 6). meiga non mira a versión de Windows: co de Windows desde 24H2 tamén é `true`, e o seu peche só leva un fío curto.
 
-### O fío escritor: `write_input` e `write_all`
+### A espera do fin: `wait_for_end`
+
+```rust
+fn wait_for_end(&self) {
+    // Only these count: a program that starts later could hide that
+    // others end, or, starting others, keep the session waiting.
+    let programs = self.programs();
+    let (watched, others) = programs.split_at(programs.len().min(WATCHED));
+    // The writer waits for these at the same time as for the output and
+    // the program, so it knows when each one ends (ADR 0026). The others,
+    // if a session had so many, are counted when the time runs out.
+    let mut watched: Vec<HANDLE> = watched.iter().map(AsRawHandle::as_raw_handle).collect();
+    let mut others_ended = 0;
+    let output_closed = self.output_closed.as_raw_handle();
+    let process = self.process.as_raw_handle();
+    let (mut closed, mut ended) = (false, false);
+    let mut deadline = Instant::now() + CLOSE_TIMEOUT;
+    let mut handles = Vec::with_capacity(WATCHED + 2);
+    loop {
+        // The ones that are signalled leave the list: they would stay
+        // so, and the wait would return them again and again.
+        handles.clear();
+        handles.extend((!closed).then_some(output_closed));
+        handles.extend((!ended).then_some(process));
+        handles.extend_from_slice(&watched);
+        let left = deadline.saturating_duration_since(Instant::now());
+        // Rounded up, so that the time has run out when it returns.
+        let left = u32::try_from(left.as_micros().div_ceil(1000)).unwrap_or(CLOSE_TIMEOUT_MS);
+        let result = unsafe {
+            WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), FALSE, left)
+        };
+        if let Some(&handle) = handles.get(result.wrapping_sub(WAIT_OBJECT_0) as usize) {
+            if handle == output_closed {
+                closed = true;
+            } else if handle == process {
+                ended = true;
+            } else {
+                watched.retain(|&program| program != handle);
+                deadline = Instant::now() + CLOSE_TIMEOUT;
+            }
+            if closed && ended {
+                return;
+            }
+            continue;
+        }
+        if result != WAIT_TIMEOUT {
+            // The wait failed, and nothing can be waited for any more.
+            break;
+        }
+        let now = others.iter().filter(|program| has_ended(program)).count();
+        if now <= others_ended {
+            break;
+        }
+        others_ended = now;
+        deadline = Instant::now() + CLOSE_TIMEOUT;
+    }
+    self.terminate();
+}
+```
+
+Chámaa o fío escritor despois de pechar a pseudoconsola ([`write_input`](#o-fío-escritor-write_input-close_console-e-write_all)), tanto se a pechou meiga coma se rematou o programa. Agarda a que remate a sesión: a que o ConPTY peche a saída e a que remate o programa. Mentres tanto, os programas que tiña a sesión ao pecharse teñen que ir rematando, porque Windows lles pide que rematen dun en dun e dálle 5 s a cada un ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). Se pasan 10 s sen que remate ningún, contados desde o último que rematou ou, se aínda non rematou ningún, desde que empezou a agardar, a sesión está bloqueada, e a función remata todos os programas do *job*. Desde o M2, agarda nunha soa chamada a `WaitForMultipleObjects` a saída, o programa e os programas que tiña a sesión, e así ve rematar cada un no momento ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 3, [Tecnoloxías › O fin dun proceso e dos seus fíos](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos)). Paso a paso:
+
+1. **Os programas.** Apunta os que ten o *job* ao empezar (`programs`), e divídeos en dous con `split_at`: os primeiros 62 (`WATCHED`), ou todos se son menos, que agarda á vez ca a saída e o programa; e o resto (`others`), se a sesión tiña máis. `min` evita pedirlle a `split_at` un punto despois do final, que sería un *panic*. Dos primeiros garda só os *handles* de Windows (`as_raw_handle`), nun `Vec<HANDLE>` do que irán saíndo os que rematen, co mesmo nome, `watched`, que tapa o anterior; os `OwnedHandle` seguen en `programs`, que os pecha ao final da función.
+2. **O estado da espera.** `closed` e `ended` din se xa se pechou a saída e se xa rematou o programa; `others_ended`, cantos dos outros remataran a última vez que se contaron; e `deadline`, a hora límite: 10 s despois de empezar (`CLOSE_TIMEOUT`). A lista dos obxectos da espera, `handles`, resérvase unha vez, cun sitio para cada un dos que pode ter: os 62 programas, a saída e o programa.
+3. **A lista de cada volta.** Faise de novo en cada volta: a saída, se aínda non se pechou, o programa, se aínda non rematou, e os programas apuntados que aínda non remataron. `extend` cun `Option` só engade o seu valor se é `Some`, e `(!closed).then_some(output_closed)` dá `Some` mentres a saída non se pechou. Os que xa se sinalaron quedan fóra, coma di o comentario: un proceso que rematou, e o evento de reinicio manual da saída, quedan sinalados para sempre, e a espera voltaría con eles unha vez e outra. Son como moito 64, os que acepta `WaitForMultipleObjects`, coma di o comentario `// SAFETY:`, que o extracto omite; e polo menos un, porque, cando faltan a saída e o programa, a función xa voltou. `clear` baleira a lista sen liberar a súa memoria.
+4. **O tempo que queda** ata a hora límite. `saturating_duration_since` dá 0 se xa pasou, e non un *panic*. `as_micros().div_ceil(1000)` pásao a milisegundos, cara arriba: coma di o comentario, así, cando a espera volta porque pasou o tempo, a hora límite xa pasou; cara abaixo, voltaría un pouco antes, e mesmo agardaría 0 ms cando faltase menos dun. `u32::try_from` non falla, porque nunca faltan máis de 10 000 ms; se fallase, agardaría 10 s (`unwrap_or`).
+5. **A espera.** Con `FALSE`, `WaitForMultipleObjects` volta en canto se sinala calquera dos obxectos, coa súa posición na lista sumada a `WAIT_OBJECT_0` ou, se se sinalaron varios, coa do primeiro deles; con `WAIT_TIMEOUT`, se pasa o tempo; e con `WAIT_FAILED`, se falla ([Tecnoloxías › O fin dun proceso e dos seus fíos](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos)). `handles.len() as u32` di cantos son, sen perder nada, porque son como moito 64. `handles.get` dá o obxecto da posición: `WAIT_TIMEOUT` e `WAIT_FAILED` quedan fóra da lista, e dan `None`. `wrapping_sub` resta sen ningún *panic* de desbordamento, sexa cal sexa o resultado: `WAIT_OBJECT_0` é 0, pero o código non depende diso.
+6. **Un obxecto sinalado.** Se é a saída, apunta `closed`; se é o programa, `ended`; e se é un dos programas apuntados, quítao da lista (`retain`) e dálle á sesión outros 10 s desde ese momento (`deadline`). Se xa se pechou a saída e rematou o programa, a sesión rematou, e a función volta. Se non, outra volta (`continue`). O programa da sesión adoita estar tamén entre os apuntados, cun *handle* propio: cando remata, a espera volta primeiro co do `Shared`, que vai antes na lista, e na volta seguinte co outro, que lle dá á sesión outros 10 s, coma calquera dos seus programas.
+7. **Se a espera falla**, cun resultado que non é un obxecto da lista nin `WAIT_TIMEOUT`, xa non se pode agardar por nada, coma di o comentario: sae do bucle e remata os programas, coma ata a 2.8.
+8. **Cando pasan 10 s** sen que remate ningún dos programas que agarda, conta cantos dos outros remataron (`has_ended`), coma facía ata a 2.8 con todos. Se rematou algún máis ca a última vez, a sesión segue rematando: outros 10 s. Se non, ou se a sesión non tiña máis de 62 programas, está bloqueada: sae do bucle (`break`) e remata todos os programas do *job* (`terminate`), e o ConPTY remata con eles ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)).
+
+- **Por que se bloquea unha sesión.** Normalmente, porque un programa se estaba a conectar á consola cando se pechou, e espera polo ConPTY, mentres o ConPTY espera por el. Pode ser o programa da sesión ou un que arrancou este, como a shell detrás de `cmd /c` ou un programa lanzado con `start /b`, ou un que arranca un programa ao pecharse a súa consola, coma unha shell que arranca o `git` do seu *prompt* ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), contexto).
+- **Só contan os programas apuntados ao empezar.** Os que arrancan despois, como un programa de limpeza que lanza outro ao pecharse, poderían agochar que rematan os demais, se se contasen os programas vivos; e un programa que arranca outros sen parar, como un editor que lanza `git`, faría que sempre rematase algún, se se contasen todos os que rematan.
+- **O número de voltas ten un límite:** en cada unha, ou sae da lista a saída, o programa ou un dos programas apuntados, ou, cando pasan 10 s, remata polo menos un dos outros. Se non, a función remata os programas.
+- **Ata a 2.8**, agardaba os dous obxectos á vez (`WaitForMultipleObjects` con `TRUE`, que volta cando están sinalados todos) en voltas de 10 s, e despois de cada unha contaba cantos dos programas apuntados remataran: se rematara algún máis, outra volta. Os 10 s contaban desde o peche, ou desde a volta anterior, e non desde o último programa que rematou: unha sesión bloqueada remataba 10 ou 20 s despois de pecharse, segundo rematase ou non algún dos seus programas nos primeiros 10 s. Desde o M2, remata 10 s despois do último dos seus programas, tamén cando se pecha unha tab con meiga aberto ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), contexto e decisión 3).
+- **Máis de 62 programas.** Os que pasan de 62 non caben na espera: só se miran cando pasan 10 s sen que remate ningún dos outros, coma ata a 2.8 (ADR 0026, consecuencias).
+
+### O fío escritor: `write_input`, `close_console` e `write_all`
 
 ```rust
 fn write_input(shared: &Shared, pipe: OwnedHandle) {
@@ -2905,7 +3023,9 @@ fn write_input(shared: &Shared, pipe: OwnedHandle) {
         state.console.take()
     };
     drop(pipe);
-    drop(console);
+    if let Some(console) = console {
+        close_console(console);
+    }
     shared.wait_for_end();
 }
 ```
@@ -2914,8 +3034,32 @@ fn write_input(shared: &Shared, pipe: OwnedHandle) {
 - `WAIT_OBJECT_0` é o primeiro da lista, o evento. Calquera outro resultado (o proceso rematou, ou a espera fallou) remata o bucle: xa non hai a quen enviar a entrada.
 - Co evento, intercambia (`mem::swap`) a entrada do estado cun vector baleiro, `pending`: colle toda a entrada sen copiala, e solta o `Mutex` antes de escribir, así que `Pty::write` nunca espera polo `WriteFile`. Despois de escribir, `pending.clear()` baléirao sen liberar a súa memoria, e no seguinte intercambio volta ao estado: os dous vectores reutilízanse.
 - Se a sesión se pechou, remata sen escribir o que quedase: ninguén o vai ver.
-- Ao saír do bucle, marca `finished`, para que `write` non garde nada máis, e colle a pseudoconsola (`Option::take` deixa `None` no seu sitio), todo co mesmo `Mutex`. Desde a subfase 1.9, ese `Mutex` protexe tamén a pseudoconsola de [`Input::resize`](#input), que só a usa mentres o ten: unha vez collida, ninguén lle cambia o tamaño, e o fío escritor pódea pechar sen o `Mutex`. Despois pecha a tubaxe de entrada e a pseudoconsola. Co ConPTY empaquetado, e co de Windows desde Windows 11 24H2, `ClosePseudoConsole` volta no momento. Antes de 24H2, o de Windows espera ata que remata o ConPTY: por iso se chama neste fío, e non no da interface. Non espera para sempre, porque o fío lector segue lendo a saída.
-- Por último, `wait_for_end` comproba que a sesión remata, tanto se a pechou meiga coma se rematou o programa. Se rematou o programa, pero un dos que arrancou se estaba a conectar á consola, a sesión tamén pode quedar bloqueada.
+- Ao saír do bucle, marca `finished`, para que `write` non garde nada máis, e colle a pseudoconsola (`Option::take` deixa `None` no seu sitio), todo co mesmo `Mutex`. Desde a subfase 1.9, ese `Mutex` protexe tamén a pseudoconsola de [`Input::resize`](#input), que só a usa mentres o ten: unha vez collida, ninguén lle cambia o tamaño, e o fío escritor pódea pechar sen o `Mutex`. Despois pecha a tubaxe de entrada e, desde o M2, pásalle a pseudoconsola a `close_console`, que se explica debaixo: péchaa sen agardar a que remate o ConPTY. `if let Some(console)` só a pecha se está no estado, e sempre está cando chega eiquí, porque só a colle o escritor. Ata a 2.8, o escritor pechábaa el mesmo, con `drop(console)`, coma fai hoxe co ConPTY empaquetado: co de Windows anterior a Windows 11 24H2, nunha sesión bloqueada, quedaba nese peche para sempre, e nunca chegaba a `wait_for_end`, que é o que remata os programas.
+- Por último, `wait_for_end` comproba que a sesión remata, tanto se a pechou meiga coma se rematou o programa. Se rematou o programa, pero un dos que arrancou se estaba a conectar á consola, a sesión tamén pode quedar bloqueada. Co ConPTY de Windows, a espera empeza mentres o fío que pecha a pseudoconsola aínda pode estar a pechala: nunha sesión bloqueada, o escritor remata os programas do *job*, entón remata o ConPTY e, con el, o peche do outro fío. Despois, a función remata, e o fío con ela: é o que agarda, desde o M2, [`wait_for_closed_sessions`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions), cando se pechou a sesión.
+
+```rust
+fn close_console(console: PseudoConsole) {
+    if !console.may_wait {
+        drop(console);
+        return;
+    }
+    // If the thread does not start, the closure is dropped here, and the
+    // pseudoconsole with it: it closes on this thread, as when it does not
+    // wait, and before 24H2 a session that is stuck keeps the writer there
+    // for ever.
+    let _ = thread::Builder::new()
+        .name("conpty close".to_owned())
+        .spawn(move || drop(console));
+}
+```
+
+Desde o M2. Pecha unha pseudoconsola, o que lles pide aos seus programas que rematen, sen que o escritor agarde a que remate o ConPTY ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 6, decidido contigo).
+
+- **Por que.** Coma di o seu comentario, que o extracto omite, o ConPTY empaquetado, e o de Windows desde Windows 11 24H2, voltan no momento; antes de 24H2, `ClosePseudoConsole` de Windows agarda a que remate o ConPTY, e por iso, ao pechar unha sesión, nunca se chama no fío da xanela ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). Só o fai [`Conpty::spawn`](#conptyspawn) cando falla, no fío que o chamou, que en meiga é o da xanela: entón a sesión xa non ten ningún programa, e a súa saída está pechada, así que nada fai agardar o ConPTY. E o ConPTY non remata mentres agarda por el un programa que se estaba a conectar cando se pechou: é unha sesión bloqueada, e quen remata os seus programas é o escritor, despois de pechar. Se o escritor pechase el mesmo, agardaría para sempre, nunca remataría os programas, e meiga, que agarda por el ao saír ([`wait_for_closed_sessions`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions)), nunca sairía.
+- **Nun fío propio.** Cunha pseudoconsola que pode agardar ([`may_wait`](#shared-state-e-pseudoconsole), a do ConPTY de Windows), crea un fío novo, `conpty close`, que só a destrúe: o seu `Drop` chama á función que a pecha. `move` leva a pseudoconsola ao *closure* do fío, e `drop(console)`, dentro, péchaa. O `JoinHandle` que devolve `spawn` descártase con `let _ =`, e con el só se pecha o *handle* do fío, que segue: ninguén agarda por ese fío, nin o escritor nin `wait_for_closed_sessions`. Remata cando volta o peche: co de Windows desde 24H2, nun intre; antes, cando remata o ConPTY, que nunha sesión bloqueada é despois de que o escritor remate os programas do seu *job*. Mentres tanto, está bloqueado, e un fío bloqueado non gasta CPU. Se un programa que saíu do *job* mantivese vivo ese ConPTY, o fío quedaría así ata que saia meiga, coma o lector (ADR 0026, consecuencias).
+- **Co ConPTY empaquetado**, `may_wait` é `false`, e o escritor pecha a pseudoconsola el mesmo, coma ata a 2.8, sen ningún fío máis: o seu peche volta no momento. É o ConPTY que usa meiga sempre que está no seu cartafol.
+- **Se o fío non se pode crear,** `spawn` devolve un erro, e destrúe no fío que chama o *closure* que non chegou a correr, coa pseudoconsola dentro: coma di o comentario, péchase no escritor, coma unha que non agarda. O erro ignórase, porque a pseudoconsola se pecha igual. Pero, co ConPTY de Windows anterior a 24H2, o escritor agarda nese peche a que remate o ConPTY, coma ata a 2.8, e nunha sesión bloqueada agardaría para sempre, e meiga non sairía: só se Windows non pode crear un fío ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), consecuencias).
+- **Descartado** (ADR 0026, alternativas): pechar sempre nun fío, que co ConPTY empaquetado só gastaría un fío por peche; mirar a versión de Windows, e pechar nun fío só antes de 24H2, que é máis código para aforrar un fío curto só cando falta o empaquetado; que meiga agardase tamén polo fío do peche antes de saír, que non sairía nunca se un programa que saíu do *job* mantén vivo o ConPTY; e un peche con límite de tempo, que Windows non ten, nin o `conpty.dll` empaquetado.
 
 ```rust
 fn write_all(pipe: &OwnedHandle, mut bytes: &[u8]) -> bool {
@@ -3015,10 +3159,10 @@ fn open_to_wait(id: usize) -> Option<OwnedHandle> {
 }
 ```
 
-Os dous axudan a `wait_for_end` a contar os programas que remataron:
+Os dous axudan a `wait_for_end` cos programas que tiña a sesión ao pechala:
 
-- `has_ended` espera polo proceso 0 ms: só mira se xa rematou, sen bloquear o fío.
-- `open_to_wait` abre un proceso polo seu identificador, pedindo só o dereito `SYNCHRONIZE`, o de esperar por el, e sen que o herden os procesos novos (`FALSE`). Se o proceso xa non existe, devolve `None`, e non conta. Mentres o *handle* estea aberto, Windows non reutiliza o identificador, así que o proceso polo que se espera é sempre o mesmo.
+- `has_ended` espera polo proceso 0 ms: só mira se xa rematou, sen bloquear o fío. Desde o M2, só o usa para os programas que pasan de 62: polos outros agarda `WaitForMultipleObjects`.
+- `open_to_wait` abre un proceso polo seu identificador, pedindo só o dereito `SYNCHRONIZE`, o de esperar por el, que é o que necesitan `WaitForSingleObject` e `WaitForMultipleObjects`, e sen que o herden os procesos novos (`FALSE`). Se o proceso xa non existe, devolve `None`, e non conta. Mentres o *handle* estea aberto, Windows non reutiliza o identificador, así que o proceso polo que se espera é sempre o mesmo.
 - A lista do *job* dá os identificadores como `usize`, pero os dos procesos son de 32 bits: `u32::try_from` descarta un que non caiba, que Windows nunca dá.
 
 ### `Command`
@@ -3300,6 +3444,9 @@ fn job() -> Result<OwnedHandle, Error> {
 | `sizes_must_fit_in_a_coord` | 80 × 25 dá o mesmo `COORD`; 32 767 columnas valen; 32 768 columnas, ou 0 filas, non. Desde a subfase 1.9, o erro leva o nome da función que recibe `coord`: con `ResizePseudoConsole`, a súa mensaxe empeza por `ResizePseudoConsole`. |
 | `command_lines_and_folders_cannot_have_null_characters` | Ata a subfase 2.4, `command_lines_cannot_have_null_characters`. `cmd` convértese en `[99, 109, 100, 0]`, rematado en 0; e, desde a 2.5, un cartafol cun carácter nulo é un erro, coa mensaxe `CreateProcessW failed: the folder has a null character`. Ata a 2.4, o erro era o dunha liña de comandos cun carácter nulo. |
 | `an_environment_block_ends_with_two_null_characters` | Desde a 2.5. Valen un bloque baleiro, `[0, 0]`, e un con `A=1` e os seus dous nulos; non valen un que remata nun só nulo, un nulo só nin un bloque sen nada. |
+| `a_pseudoconsole_that_may_wait_closes_on_a_thread_of_its_own` | Desde o M2. [`close_console`](#o-fío-escritor-write_input-close_console-e-write_all) volta en menos de 2 s cunha pseudoconsola que pode agardar, aínda que o seu peche segue agardando, e o peche remata despois noutro fío, en canto a proba o deixa. Unha que non pode agardar péchase no fío que chama. |
+
+A proba de `close_console` non usa ningún ConPTY. As súas pseudoconsolas levan os *handles* 1 e 2, que non son de ningunha, e unha función de peche falsa, `slow_close`, que fai coma o `ClosePseudoConsole` de Windows anterior a Windows 11 24H2 nunha sesión bloqueada: agarda ata que a proba a deixa voltar, ou 5 s como moito, e despois apunta que pseudoconsola pechou e en que fío. A proba déixaa voltar cun `Mutex<bool>` e un `Condvar`, `RELEASED`: `wait_timeout_while` dorme ata que o valor é `true` e o `Condvar` avisa, ou ata que pasa o tempo. O que pechou vai en `CLOSED`, e `closer_of` busca nel o fío que pechou un *handle*. `no_resize` só está para encher o campo `resize`. Despois de deixala voltar, a proba mira cada 10 ms, durante 5 s como moito, se o peche do *handle* 1 xa rematou, e en que fío. Os dous `static` son do módulo das probas, e só os usa esta proba. Os *handles* falsos só valen con esta función de peche: o `Drop` dunha `PseudoConsole` chama sempre á súa. Fallan esta proba unha copia de `close_console` que pecha sempre no escritor, que agarda os 5 s de `slow_close`, e outra que pecha sempre nun fío.
 
 O resto do módulo necesita programas de verdade: compróbano as [probas de integración](#cratesmeiga-wintestsconptyrs).
 
@@ -3885,7 +4032,7 @@ O resto do módulo necesita o Windows de verdade, co seu rexistro e os seus arqu
 
 ## `crates/meiga-win/tests/conpty.rs`
 
-Probas de integración: Cargo compila cada arquivo de `tests/` como un programa á parte, que usa o crate como calquera outro, só pola súa API pública. Estas lanzan `cmd` nos dous ConPTY e, desde a subfase 2.5, tamén nun cartafol e cun contorno.
+Probas de integración: Cargo compila cada arquivo de `tests/` como un programa á parte, que usa o crate como calquera outro, só pola súa API pública. Estas lanzan `cmd` nos dous ConPTY e, desde a subfase 2.5, tamén nun cartafol e cun contorno. Desde o mantemento M2, lanzan tamén o propio programa das probas, coma axudante: nunha sesión, para pechala mentres os seus programas tardan en rematar ou se bloquean, e coma outro proceso, que pecha sesións e sae.
 
 ```rust
 fn bundled() -> Conpty {
@@ -3904,9 +4051,9 @@ fn bundled() -> Conpty {
 - `Answering`, desde a 1.6, é coma `Channel`, pero co primeiro bloque que mostra o programa escribe unha liña coa entrada que recibe, desde o fío lector, como fai un terminal ao responder unha pregunta. `Option::take` dálle a liña a primeira vez, e deixa `None` para as seguintes.
 - `Priorities`, desde a subfase 2.2, é outro `Output`: con cada bloque, envíalle á proba a prioridade do fío lector e o bloque. Explícase coa súa proba, despois da táboa.
 - `Transcript` garda o que mostrou a sesión. `wait_for` espera ata que a saída contén un texto, e `wait_for_end`, ata o fin da sesión, e devolve o código de saída. Cada espera ten un límite de 60 s: se se superase, a proba fallaría mostrando a saída que levaba, en vez de quedar colgada.
-- `spawn` lanza unha sesión cunha pseudoconsola de 80 × 25 e un `Channel`, e devolve o `Pty` e o seu `Transcript`. Desde a subfase 2.5, recibe a liña de comandos e pásalla a `spawn_command` cun [`Command::new`](#command), no cartafol e co contorno do programa da proba, coma antes; e `spawn_command` lanza calquera `Command`.
+- `spawn` lanza unha sesión cunha pseudoconsola de 80 × 25 e un `Channel`, e devolve o `Pty` e o seu `Transcript`. Desde a subfase 2.5, recibe a liña de comandos e pásalla a `spawn_command` cun [`Command::new`](#command), no cartafol e co contorno do programa da proba, coma antes; e `spawn_command` lanza calquera `Command`. Desde o M2, `spawn_helper` lanza con el os programas axudantes (máis abaixo).
 - O arquivo empeza por `#![allow(clippy::unwrap_used, clippy::expect_used)]`: [`clippy.toml`](workspace.md#clippytoml) permite `unwrap` e `expect` nas funcións de proba, pero non nas auxiliares, como `bundled`.
-- **As importacións.** Desde a subfase 2.2, o arquivo importa tamén `Priority`, de `meiga_win::conpty`, e catro nomes de `windows_sys::Win32::System::Threading`, cos que `Priorities` le a prioridade do fío lector: `GetCurrentThread`, `GetThreadPriority`, `THREAD_PRIORITY_BELOW_NORMAL` e `THREAD_PRIORITY_NORMAL`. `windows-sys` é unha dependencia do propio crate, e as probas de integración poden usar as dependencias do seu paquete, tamén as normais; a *feature* que trae eses nomes, `Win32_System_Threading`, xa estaba activada ([`Cargo.toml`](#cratesmeiga-wincargotoml)). Desde a 2.5, importa ademais `Command`, de `meiga_win::conpty`; o módulo `meiga_win::profiles`, para o cartafol do sistema e o contorno da proba do cartafol; e `std::io`, para ler o código dun erro de Windows.
+- **As importacións.** Desde a subfase 2.2, o arquivo importa tamén `Priority`, de `meiga_win::conpty`, e catro nomes de `windows_sys::Win32::System::Threading`, cos que `Priorities` le a prioridade do fío lector: `GetCurrentThread`, `GetThreadPriority`, `THREAD_PRIORITY_BELOW_NORMAL` e `THREAD_PRIORITY_NORMAL`. `windows-sys` é unha dependencia do propio crate, e as probas de integración poden usar as dependencias do seu paquete, tamén as normais; a *feature* que trae eses nomes, `Win32_System_Threading`, xa estaba activada ([`Cargo.toml`](#cratesmeiga-wincargotoml)). Desde a 2.5, importa ademais `Command`, de `meiga_win::conpty`; o módulo `meiga_win::profiles`, para o cartafol do sistema e o contorno da proba do cartafol; e `std::io`, para ler o código dun erro de Windows. Desde o M2, para os axudantes e o *job* dunha proba, importa tamén os módulos `env`, `mem`, `ptr` e `process` de `std`, este último con `Child` e `Stdio`; `BufRead`, `BufReader` e `Write`, de `std::io`; `AsRawHandle`, `FromRawHandle` e `OwnedHandle`; e `CommandExt`, que dá `raw_arg`. Os `Command` de `std` escríbense `process::Command`, porque `Command` xa é o de `meiga_win::conpty`. E de `windows-sys`, `TRUE`, `SetConsoleCtrlHandler` e `CTRL_CLOSE_EVENT`, as funcións, as estruturas e as constantes dos *jobs* que usa `Job`, e `BOOL`, o tipo que devolve un *handler*. As súas *features* xa estaban activadas.
 
 | Proba | Que comproba |
 |---|---|
@@ -3922,6 +4069,8 @@ fn bundled() -> Conpty {
 | `dropping_a_session_closes_it_without_waiting` | Destruír o `Pty` despois do *prompt* leva menos de 100 ms, e `cmd` remata co código `0xC000013A`: porque se pechou a súa consola, non porque o rematase meiga. |
 | `a_session_dropped_while_its_program_starts_ends_too` | Destruír o `Pty` xusto despois de `spawn`, mentres `cmd` se está a conectar á consola, tamén remata a sesión: co código `0xC000013A`; `1`, se o tivo que rematar o fío escritor; ou `0xC0000142`, se a consola se pechou antes de que se conectase. |
 | `sessions_dropped_while_the_shell_of_a_launcher_starts_end_too` | O mesmo cando o que se está a conectar é o `cmd /k` que arranca `cmd /c`. Como ese momento é moi curto, 20 fíos lanzan unha sesión cada un e destrúena 10, 12, 14… ata 48 ms despois. Todas teñen que rematar, cos mesmos códigos. Rematando só o programa da sesión, como facía a primeira versión, algunhas quedan bloqueadas, e a proba falla aos 60 s. |
+| `a_session_whose_programs_keep_ending_is_not_ended_by_the_writer` | Desde o M2. Unha sesión co axudante `slow`, que arranca outros dous na súa consola: os tres tardan 4 s en atender `CTRL_CLOSE_EVENT`, e Windows pídello dun en dun, así que a sesión tarda uns 12 s en rematar, máis ca os 10 s que agarda o fío escritor por un programa, pero remata un cada 4 s. Destruír o `Pty` remata a sesión polo menos 11 s despois, co código `0xC000013A`, o dunha consola pechada: non a rematou o fío escritor. |
+| `the_sessions_that_were_closed_end_before_the_process_exits` | Desde o M2. O axudante `exiter`, outro proceso, nun *job* da proba, abre dúas sesións, unha que se bloquea ao pecharse e un `cmd /k`, pécháas, agarda por elas con `wait_for_closed_sessions`, di canto agardou e sae co código 0. No *job* xa non queda ningún programa, e agardou entre 10 e 17 s: a sesión bloqueada remata 10 s despois do seu último programa, e non aos 20 s, coma ata a 2.8. |
 
 As dúas probas do cartafol e do contorno, desde a subfase 2.5:
 
@@ -4054,7 +4203,324 @@ fn the_priority_of_the_reader_changes_while_the_session_runs() {
 - **As tres marcas** comproban as dúas prioridades e a volta á normal: `priority-1` chega coa prioridade normal, a coa que empeza o fío lector; `priority-2`, por debaixo do normal, despois de `set_reader_priority(Priority::BelowNormal)`; e `priority-3`, coa normal outra vez. A prioridade cambia mentres a sesión corre, e o fío lector corre con ela cando lle dá a saída ao seu `Output`. Na primeira versión, as marcas eran tres palabras, `uno`, `dous` e `tres`, que podían estar no cartafol da proba: se o *prompt* trouxese unha delas, a proba lería a prioridade coa que o fío lector deu o *prompt*, a de antes do cambio. Atopouno a revisión da documentación.
 - **Co fío lector rematado.** Despois, a proba destrúe a sesión e lanza outra, `cmd /c exit 4`, que remata soa co código 4. Como di o seu comentario, o último paso do fío lector é dicir que a sesión rematou (`ended`), así que, cando `wait_for_end` volta, o fío está a rematar ou xa rematou; e nun fío que xa rematou, `SetThreadPriority` non fai nada. Nos dous casos, `set_reader_priority` ten que devolver `Ok` (ver [`set_reader_priority`](#a-prioridade-do-fío-lector-priority-e-set_reader_priority)). A primeira sesión pechouse destruíndo o seu `Pty`, e con el o `JoinHandle` do fío lector: para chamar a `set_reader_priority` cun fío lector xa rematado, fai falta un `Pty` vivo cuxa sesión rematou soa.
 
-Cargo corre as probas en paralelo, cada unha coa súa sesión. A última leva uns 10 s, e ás veces 20: con tantas sesións arrancando á vez, case sempre se bloquea algunha, e o fío escritor remata os seus programas cando pasan 10 s sen que remate ningún. Por iso cada espera das probas chega a 60 s.
+As dúas probas do peche das sesións, desde o M2 ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)):
+
+```rust
+#[test]
+fn a_session_whose_programs_keep_ending_is_not_ended_by_the_writer() {
+    // Windows asks the three programs to end one at a time, and each takes
+    // 4 s: the session takes 12 s to end, longer than the 10 s that the
+    // writer waits for a program to end, but one ends every 4 s.
+    let (pty, mut transcript) = spawn_helper(&bundled(), "slow");
+    for index in 0..3 {
+        transcript.wait_for(&format!("slow-ready-{index}"));
+    }
+    let closing = Instant::now();
+    drop(pty);
+    let exit_code = transcript.wait_for_end();
+    let elapsed = closing.elapsed();
+    // The writer did not end it: its console did, as it asked.
+    assert_eq!(exit_code, Some(CONSOLE_CLOSED), "after {elapsed:?}");
+    assert!(elapsed >= Duration::from_secs(11), "{elapsed:?}");
+}
+
+#[test]
+fn the_sessions_that_were_closed_end_before_the_process_exits() {
+    // Another process closes a session that gets stuck and another one,
+    // waits for them, and exits. The job of the test counts its programs,
+    // and those of its sessions, which are in it too: it ends the ones left
+    // only when it is dropped, after the test has counted them.
+    let job = Job::new();
+    let mut exiter = process::Command::new(env::current_exe().unwrap())
+        .args(HELPER_ARGUMENTS)
+        .env(HELPER, "exiter")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    job.add(&exiter);
+    writeln!(exiter.stdin.take().unwrap(), "go").unwrap();
+    let lines = lines_of(BufReader::new(exiter.stdout.take().unwrap()));
+    let deadline = Instant::now() + TIMEOUT;
+    let mut output = Vec::new();
+    let waited = loop {
+        let line = lines
+            .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+            .unwrap_or_else(|error| panic!("{error}; the helper wrote {output:?}"));
+        // The test runner writes the name of the test before it, on the same
+        // line.
+        if let Some(ms) = line
+            .rsplit_once("waited ")
+            .and_then(|(_, line)| line.strip_suffix(" ms"))
+        {
+            break Duration::from_millis(ms.parse().unwrap());
+        }
+        output.push(line);
+    };
+    let status = loop {
+        if let Some(status) = exiter.try_wait().unwrap() {
+            break status;
+        }
+        assert!(Instant::now() < deadline, "the helper did not exit");
+        thread::sleep(Duration::from_millis(10));
+    };
+    assert!(status.success(), "{status}");
+    // Its consoles end a moment after their programs.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while job.running() > 0 && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(job.running(), 0, "programs left after it waited {waited:?}");
+    // The stuck session ended 10 s after its last program, once it started
+    // the one that got stuck. The writer used to see that only when it
+    // looked again, after 20 s.
+    assert!(
+        (Duration::from_secs(10)..Duration::from_secs(17)).contains(&waited),
+        "{waited:?}"
+    );
+}
+```
+
+- **Unha sesión que segue rematando.** A primeira lanza nunha sesión do ConPTY empaquetado o axudante `slow` (máis abaixo), que arranca outros dous na súa consola, e agarda a que os tres escriban que están listos: `slow-ready-0`, `slow-ready-1` e `slow-ready-2`. Despois destrúe o `Pty`, e agarda polo fin da sesión. Coma di o seu comentario, Windows pídelles aos tres que rematen dun en dun, e cada un tarda 4 s: o último remata uns 12 s despois do peche, máis ca os 10 s que agarda o fío escritor por un programa, pero sempre remata un antes de que pasen. O código de saída, `0xC000013A`, di que ao primeiro axudante, o programa da sesión, rematouno a súa consola, coma lle pediu, e non o fío escritor, que daría 1 (`KILLED`). E a sesión durou polo menos 11 s: o fío escritor tivo que agardar máis de 10 s. Se os 10 s contasen desde o peche, e non desde o último programa que rematou, o fío escritor remataría a sesión aos 10 s, co código 1, e a proba fallaría. Coa espera de ata a 2.8, pasaría: aos 10 s xa remataran dous programas, e o fío escritor agardaba outros 10 s. A que non pasaría é a seguinte.
+- **Un proceso que sae.** A segunda necesita un proceso que saia, e non pode ser o das probas: lanza outra vez o programa das probas (`env::current_exe`) coma o axudante `exiter`, coa súa entrada e a súa saída en tubaxes (`Stdio::piped`). Méteo nun *job* da proba (`Job`, máis abaixo), e despois dille `go`: o `exiter` agarda por iso antes de abrir ningunha sesión, coma di o seu comentario, para que o que arranque, os seus ConPTY e os programas das súas sesións, estea tamén no *job*. `take` saca a entrada do `Child`, e esta destrúese ao final da instrución, que a pecha. Coma di o comentario da proba, o *job* conta os programas do `exiter` e os das súas sesións, que tamén están nel, e só remata os que queden cando se destrúe, ao final da proba, despois de contalos.
+- **O que agardou.** `lines_of` le as liñas da saída do `exiter` noutro fío, e o bucle recibe cada unha cun límite: o mesmo para todas, 60 s desde o principio (`TIMEOUT`). Cando unha remata en `waited` e un número de milisegundos, cólleo: coma di o comentario, o *runner* das probas escribe antes, na mesma liña, o nome da proba, e por iso busca o último `waited ` (`rsplit_once`) e quita ` ms` do final (`strip_suffix`). As outras liñas gárdaas, para mostralas se falla: se o `exiter` sae sen escribila, a súa saída péchase, e `recv_timeout` dá un erro no momento.
+- **Que saia ben.** Despois agarda a que o `exiter` saia, mirando cada 10 ms (`try_wait`), co mesmo límite, e comproba que saíu co código 0: a súa proba, `helper`, pasou.
+- **Que non deixe nada.** Coma di o comentario, as consolas rematan un momento despois dos seus programas: a proba agarda ata 5 s a que no *job* non quede ningún programa (`running`), e comproba que non queda ningún. Se o `exiter` saíse sen agardar polas súas sesións, o escritor da bloqueada morrería con el, e o seu ConPTY e o programa bloqueado quedarían no *job*.
+- **Canto agardou.** Por último, entre 10 e 17 s. Coma di o comentario, a sesión bloqueada remata 10 s despois do seu último programa, o axudante `closer`, que remata medio segundo despois do peche, en canto arranca o programa que se bloquea. Ata a 2.8, o fío escritor só o vía cando voltaba mirar, aos 20 s, e a proba fallaría. Sen agardar pola sesión bloqueada, o `exiter` agardaría moito menos de 10 s.
+
+Os programas axudantes son o mesmo programa das probas, que se lanza outra vez cunha variábel de contorno co seu papel:
+
+```rust
+/// The variable that makes this test program run one of the programs of
+/// [`helper`], instead of the tests.
+const HELPER: &str = "MEIGA_TEST_HELPER";
+
+/// The arguments of the test runner that run only [`helper`], with what it
+/// writes in sight.
+const HELPER_ARGUMENTS: [&str; 5] = [
+    "--exact",
+    "helper",
+    "--ignored",
+    "--nocapture",
+    "--test-threads=1",
+];
+
+/// The variable that tells a slow helper which one it is: the first one
+/// starts the other two.
+const SLOW: &str = "MEIGA_TEST_SLOW";
+
+/// How long a slow helper takes to handle `CTRL_CLOSE_EVENT`: less than the
+/// 5 s that Windows gives each program.
+const SLOW_CLOSE: Duration = Duration::from_secs(4);
+
+/// The programs that some tests run, from this same test program, with
+/// [`HELPER`] set to their role. The test runner runs it only with
+/// `--ignored`, and then, without [`HELPER`], it does nothing.
+#[test]
+#[ignore = "a program that other tests run"]
+fn helper() {
+    match env::var(HELPER).as_deref() {
+        Ok("closer") => closer(),
+        Ok("slow") => slow(),
+        Ok("exiter") => exiter(),
+        _ => {}
+    }
+}
+
+/// Runs `role` of [`helper`] in a session.
+fn spawn_helper(conpty: &Conpty, role: &str) -> (Pty, Transcript) {
+    let mut environment = profiles::environment();
+    environment.set(HELPER, role);
+    let block = environment.block();
+    let exe = env::current_exe().unwrap();
+    let line = format!("\"{}\" {}", exe.display(), HELPER_ARGUMENTS.join(" "));
+    let command = Command {
+        line: &line,
+        folder: None,
+        environment: Some(&block),
+    };
+    spawn_command(conpty, &command)
+}
+```
+
+- **`helper`** é unha proba (`#[test]`) ignorada (`#[ignore = …]`, co motivo que mostra Cargo): `cargo test` non a corre, e cóntaa á parte, `1 ignored`. Coma di o seu comentario, é a entrada dos axudantes: segundo o valor de `MEIGA_TEST_HELPER` (`HELPER`), corre `closer`, `slow` ou `exiter`. Sen a variábel, ou con outro valor, non fai nada: así pasa se alguén corre as probas ignoradas, con `--ignored`. `env::var` dá un `Result<String, …>`, e `as_deref`, un `Result<&str, …>`, que o `match` compara cos textos.
+- **`HELPER_ARGUMENTS`** son os argumentos do *runner* das probas que corren só `helper`: `--exact helper`, a proba que se chama exactamente `helper`, e non as que o levan no nome; `--ignored`, as ignoradas, porque `helper` o é; `--nocapture`, para que o que escribe chegue á súa saída no momento, «á vista», coma di o comentario: sen el, o *runner* gardaríao, e só o mostraría se a proba fallase; e `--test-threads=1`, un só fío para as probas.
+- **`SLOW`**, `MEIGA_TEST_SLOW`, dille a cada axudante `slow` cal é: sen ela, é o primeiro, que arranca os outros dous, co `1` e co `2`. **`SLOW_CLOSE`** é o que tarda cada un en atender `CTRL_CLOSE_EVENT`, 4 s: coma di o comentario, menos dos 5 s que lle dá Windows a cada programa antes de rematalo el.
+- **`spawn_helper`** lanza un axudante nunha sesión, co seu papel, e devolve o `Pty` e o `Transcript`, coma `spawn`. O contorno é o do programa das probas ([`environment`](#environment)) con `MEIGA_TEST_HELPER`, nun bloque; e a liña de comandos, o propio programa das probas (`env::current_exe`), entre comiñas, porque a súa ruta pode ter espazos, cos argumentos de `HELPER_ARGUMENTS` xuntos con espazos.
+
+`closer` e `slow`, os axudantes que corren nunha sesión, atenden o peche da súa consola cun *handler*:
+
+```rust
+/// A program that, when its console closes, starts another one in it, as
+/// the shell of a tab can start one when the tab closes, such as the git of
+/// its prompt. The session gets stuck: the new program connects to the
+/// console while ConPTY closes it (ADR 0011 and ADR 0026).
+fn closer() {
+    // SAFETY: the handler is a function, which lives as long as the
+    // process.
+    unsafe { SetConsoleCtrlHandler(Some(start_on_close), TRUE) };
+    println!("closer-ready");
+    loop {
+        thread::park();
+    }
+}
+
+unsafe extern "system" fn start_on_close(event: u32) -> BOOL {
+    if event == CTRL_CLOSE_EVENT {
+        let _ = process::Command::new("cmd")
+            .raw_arg("/d /c ping -n 30 127.0.0.1 >nul")
+            .spawn();
+        // So that it starts before this program ends.
+        thread::sleep(Duration::from_millis(500));
+    }
+    TRUE
+}
+
+/// A program that takes [`SLOW_CLOSE`] to handle `CTRL_CLOSE_EVENT`. The
+/// first one starts two more in its console, and waits for them: they end
+/// first, as Windows asks the newest programs first.
+fn slow() {
+    // SAFETY: as in `closer`.
+    unsafe { SetConsoleCtrlHandler(Some(wait_on_close), TRUE) };
+    let index = env::var(SLOW).unwrap_or_else(|_| "0".to_owned());
+    let mut others = Vec::new();
+    if index == "0" {
+        for index in 1..=2 {
+            let other = process::Command::new(env::current_exe().unwrap())
+                .args(HELPER_ARGUMENTS)
+                .env(SLOW, index.to_string())
+                .spawn()
+                .unwrap();
+            others.push(other);
+        }
+    }
+    println!("slow-ready-{index}");
+    for mut other in others {
+        let _ = other.wait();
+    }
+    loop {
+        thread::park();
+    }
+}
+
+unsafe extern "system" fn wait_on_close(event: u32) -> BOOL {
+    if event == CTRL_CLOSE_EVENT {
+        thread::sleep(SLOW_CLOSE);
+    }
+    TRUE
+}
+```
+
+- **Os *handlers*.** `SetConsoleCtrlHandler(Some(start_on_close), TRUE)` engade unha función á lista das que chama Windows, nun fío novo do programa, cando a súa consola lle envía un evento de control: Ctrl+C, Ctrl+Break ou, cando se pecha, `CTRL_CLOSE_EVENT` ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)). A función ten a firma que espera Windows, `unsafe extern "system" fn(u32) -> BOOL`, e o comentario `// SAFETY:` di por que a chamada é segura: a función vive tanto coma o proceso. Devolve `TRUE`, atendido: despois dun `CTRL_CLOSE_EVENT`, Windows remata o programa en canto volta a función, ou aos 5 s se non volta.
+- **`closer`** instala `start_on_close`, escribe `closer-ready`, que agarda o `exiter`, e queda parado para sempre (`thread::park`, nun bucle, porque pode voltar sen motivo). Cando se pecha a súa consola, `start_on_close` arranca nela `cmd /d /c ping -n 30 127.0.0.1 >nul`, un `cmd` que faría `ping` 30 veces, sen mostrar nada; `raw_arg` pásalle os argumentos tal cal, sen as comiñas que engadiría `arg`, e `let _ =` ignora o erro se non o pode arrancar. Despois agarda medio segundo, para que o `cmd` arranque antes de que remate o `closer`. Ese `cmd` conéctase á consola mentres o ConPTY a pecha, e a sesión bloquéase, coma a dunha tab cuxa shell arranca un programa ao pecharse, coma o `git` do seu *prompt*: é o que di o comentario de `closer` ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md) e [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)). O fío escritor remata o `cmd` 10 s despois de que remate o `closer`.
+- **`slow`** instala `wait_on_close`, que tarda `SLOW_CLOSE` en atender `CTRL_CLOSE_EVENT`. O primeiro, sen `MEIGA_TEST_SLOW`, arranca outros dous, co mesmo programa, os mesmos argumentos e `MEIGA_TEST_SLOW` a `1` e a `2`: herdan a súa consola, o seu *job* e o seu contorno, con `MEIGA_TEST_HELPER=slow`. Cada un escribe `slow-ready-` e o seu número, e queda parado, coma o `closer`. O primeiro, antes, agarda polos outros dous (`wait`): coma di o comentario, Windows pídelles que rematen primeiro aos programas máis novos, así que rematan antes ca el.
+
+O `exiter`, que pecha dúas sesións e sae, e `lines_of`, coa que a proba le a súa saída:
+
+```rust
+/// A process that closes a session that gets stuck, and then one that ends
+/// at once, waits for them, tells how long it waited, and exits.
+fn exiter() {
+    // The test says go once this process is in its job.
+    let mut go = String::new();
+    io::stdin().read_line(&mut go).unwrap();
+    let conpty = bundled();
+    let (stuck, mut transcript) = spawn_helper(&conpty, "closer");
+    transcript.wait_for("closer-ready");
+    let (quick, mut transcript) = spawn(&conpty, "cmd /k");
+    transcript.wait_for(">");
+    let closing = Instant::now();
+    // The writer of the quick one comes after the one of the stuck one,
+    // which has to stay while it runs.
+    drop(stuck);
+    drop(quick);
+    meiga_win::conpty::wait_for_closed_sessions();
+    println!("waited {} ms", closing.elapsed().as_millis());
+}
+
+/// The lines that `reader` reads, on another thread.
+fn lines_of(reader: impl BufRead + Send + 'static) -> Receiver<String> {
+    let (sender, lines) = mpsc::channel();
+    thread::spawn(move || {
+        for line in reader.lines() {
+            let Ok(line) = line else { break };
+            if sender.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    lines
+}
+```
+
+- **`exiter`** le unha liña da súa entrada, o `go` da proba, e busca o ConPTY empaquetado coma as probas (`bundled`). Lanza o `closer` nunha sesión e agarda a que escriba `closer-ready`, co seu *handler* xa instalado, e `cmd /k` noutra, e agarda polo seu *prompt*. Entón destrúe as dúas sesións, primeiro a que se bloquea, agarda por elas con `wait_for_closed_sessions`, e escribe canto agardou, en milisegundos. Cando volta `helper`, o *runner* das probas sae co código 0.
+- **A orde.** Coma di o comentario, o escritor da sesión rápida entra na lista despois do da bloqueada, que ten que quedar nela mentres traballa: cada vez que entra un, [`keep_closing`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions) quita os que xa remataron, e un `keep_closing` que quitase os que traballan deixaría fóra o da sesión bloqueada.
+- **`lines_of`** le as liñas de `reader` noutro fío, e dáas por unha canle: así, a proba pode agardar por cada unha cun límite (`recv_timeout`), en vez de quedar bloqueada lendo a tubaxe. O fío remata cando se pecha a tubaxe ou falla unha lectura (`let … else`), ou cando xa ninguén escoita a canle. `impl BufRead + Send + 'static` acepta calquera lector con búfer que se poida mover a outro fío, coma o `BufReader` da saída do `exiter`.
+
+E `Job`, o *job* da segunda proba:
+
+```rust
+/// A job for the programs of a test, which ends those still running when it
+/// is dropped, also if the test fails.
+struct Job(OwnedHandle);
+
+impl Job {
+    fn new() -> Self {
+        // SAFETY: no security attributes and no name. It returns null if it
+        // fails.
+        let handle = unsafe { CreateJobObjectW(ptr::null(), ptr::null()) };
+        assert!(!handle.is_null(), "{}", io::Error::last_os_error());
+        // SAFETY: CreateJobObjectW has just created it, and nothing else owns
+        // it.
+        let job = Self(unsafe { OwnedHandle::from_raw_handle(handle) });
+        let mut limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        // SAFETY: the job is valid, and the information is the structure of
+        // its class, with its size.
+        let set = unsafe {
+            SetInformationJobObject(
+                job.0.as_raw_handle(),
+                JobObjectExtendedLimitInformation,
+                ptr::from_ref(&limits).cast(),
+                mem::size_of_val(&limits) as u32,
+            )
+        };
+        assert_ne!(set, 0, "{}", io::Error::last_os_error());
+        job
+    }
+
+    fn add(&self, child: &Child) {
+        // SAFETY: both handles are valid while `self` and `child` exist.
+        let added =
+            unsafe { AssignProcessToJobObject(self.0.as_raw_handle(), child.as_raw_handle()) };
+        assert_ne!(added, 0, "{}", io::Error::last_os_error());
+    }
+
+    /// How many programs of the job are running.
+    fn running(&self) -> u32 {
+        let mut information = JOBOBJECT_BASIC_ACCOUNTING_INFORMATION::default();
+        // SAFETY: the job is valid, and the information is the structure of
+        // its class, with its size.
+        let queried = unsafe {
+            QueryInformationJobObject(
+                self.0.as_raw_handle(),
+                JobObjectBasicAccountingInformation,
+                ptr::from_mut(&mut information).cast(),
+                mem::size_of_val(&information) as u32,
+                ptr::null_mut(),
+            )
+        };
+        assert_ne!(queried, 0, "{}", io::Error::last_os_error());
+        information.ActiveProcesses
+    }
+}
+```
+
+- **`new`** crea un *job* sen nome, coma [`job`](#os-axudantes-coord-null_terminated-environment_block-invalid_input-event-job-e-pipe) en `conpty.rs`, pero co límite `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, outro límite estendido: cando se pecha o seu último *handle*, Windows remata os procesos que queden nel. Coma di o comentario de `Job`, o `OwnedHandle` pécháo cando se destrúe o `Job`, tamén se a proba falla, porque o *panic* destrúe as variábeis da proba ao saír dela: unha proba que falla non deixa programas. Os erros son *panics* (`assert!`), coa mensaxe de Windows (`io::Error::last_os_error`).
+- **`add`** mete un proceso no *job* (`AssignProcessToJobObject`), co *handle* do seu `Child`, que dá `AsRawHandle`. Os procesos que arranque despois entran no *job* con el.
+- **`running`** di cantos procesos do *job* están a correr: `ActiveProcesses`, da información de contabilidade básica (`JobObjectBasicAccountingInformation`). Coma di o comentario da proba, conta o `exiter` e os programas das súas sesións, que tamén están nel, ademais de no *job* da súa sesión.
+
+Cargo corre as probas en paralelo, cada unha coa súa sesión, e os axudantes son outros procesos. `sessions_dropped_while_the_shell_of_a_launcher_starts_end_too` leva uns 10 s: con tantas sesións arrancando á vez, case sempre se bloquea algunha, e o fío escritor remata os seus programas cando pasan 10 s sen que remate ningún dos que tiña ao pechala, contados desde o último que rematou. Ata a 2.8, levaba uns 10 s ou uns 20, segundo cando mirase o fío escritor ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), contexto); o comentario de `TIMEOUT`, que dicía que unha sesión bloqueada remata aos 10 ou aos 20 s, di desde o M2 que remata 10 s despois do último dos seus programas. As dúas probas do M2 levan máis: uns 12 s a dos tres axudantes lentos, e algo máis de 10 s a do proceso que sae. Por iso cada espera das probas chega a 60 s.
 
 ## `crates/meiga-win/tests/profiles.rs`
 
@@ -4167,8 +4633,9 @@ Con `--record`, ao final engade unha liña coa gravación: `Recorded 6 blocks, 5
 - Desde a subfase 1.6, `Printer` recibe tamén a entrada da sesión en `received`, pero non a usa (`_input`): o exemplo mostra o que envía o ConPTY tal cal, e non é un terminal. As preguntas, como o `␛[c` do principio, móstranse e quedan sen resposta.
 - `visible` mostra cada carácter de control (de 0 a 31) co seu símbolo de Unicode, que está na mesma posición a partir de `U+2400`: ␛ é ESC, ␍ é CR, ␊ é LF e ␇ é BEL. DEL móstrase como ␡. `utf8_chunks` separa os anacos de UTF-8 válido dos bytes que non o son, que se mostran como `\xNN`: así se ve un carácter partido entre dous bloques.
 - `ended` mostra o código de saída, en decimal e en hexadecimal, e remata o exemplo con ese código (`process::exit`), desde o fío lector. En PowerShell, `$LASTEXITCODE` móstrao como un número con signo: `0xC000013A` é `-1073741510`. Antes, remata a gravación con `finish`: `process::exit` non destrúe nada, así que o que quedase no búfer da gravación perderíase.
+- Desde o mantemento M2, antes de `process::exit`, `ended` agarda polas sesións pechadas, con [`conpty::wait_for_closed_sessions`](#as-sesións-pechadas-closing-keep_closing-e-wait_for_closed_sessions), coma meiga antes de saír, e coma di desde o M2 o comentario do módulo: se a sesión se pechou con Ctrl+Z e Intro, o seu fío escritor pode estar aínda a rematala, e `process::exit` remataríao no medio, coma calquera saída do proceso ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 5). Faino no fío lector, cando avisa do fin: coma di o comentario, a saída xa se pechou, e o fío escritor non agarda por este fío, así que non se agardan un ao outro. Se o programa rematou só, a lista está baleira, porque o `Pty` segue vivo, e o exemplo sae no momento. Para nomear a función co seu módulo, `use meiga_win::conpty::{self, …}` importa tamén o módulo (`self`).
 - `options` le as opcións mentres os argumentos empezan por `--` (`next_if`, dun iterador `Peekable`, que mira o seguinte sen consumilo se non cumpre a condición). O resto é a liña de comandos, cos argumentos xuntos con espazos. Unha opción que non existe mostra o uso e remata co código 2.
 - Desde a subfase 2.5, o exemplo pásalle a liña de comandos a `spawn` nun [`Command::new`](#command), que importa de `meiga_win::conpty`: o programa empeza no cartafol e co contorno do exemplo, coma antes.
-- O fío principal le as liñas da consola e envíaas co `\r` de Intro. Ctrl+Z e Intro, o fin da entrada en Windows, pechan a sesión (`drop(pty)`). Despois, o fío principal espera (`thread::park`, nun bucle, porque pode voltar sen motivo) a que o fío lector remate o exemplo.
+- O fío principal le as liñas da consola e envíaas co `\r` de Intro. Ctrl+Z e Intro, o fin da entrada en Windows, pechan a sesión (`drop(pty)`). Despois, o fío principal espera (`thread::park`, nun bucle, porque pode voltar sen motivo) a que o fío lector remate o exemplo, desde o M2 despois de agardar polo fío escritor.
 - Se a entrada estándar xa está pechada ao arrancar, por exemplo con `< nul`, o exemplo pecha a sesión no primeiro instante, mentres o programa aínda se conecta á consola: é o caso no que o fío escritor remata o programa, cando pasan 10 s sen que remate ningún, ou no que o programa remata só co código `0xC0000142`.
 - `bundled` busca o ConPTY coma as probas, desde `target\debug\examples\`. Se non o atopa, o exemplo remata co código 2 e unha mensaxe que pide executar `fetch-conpty.ps1` ou usar `--system`.
