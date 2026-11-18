@@ -1036,11 +1036,9 @@ impl Tabs {
                     }
                 }
             }
-            // The middle button is the wheel: while it is down on a tab, the
-            // tabs stay where they are.
             Event::Wheel {
                 delta, horizontal, ..
-            } if !self.bar.is_pressed() => self.bar.wheel(&self.tabs, delta, horizontal),
+            } => self.bar.wheel(&self.tabs, delta, horizontal),
             _ => {}
         }
         response.redraw |= self.bar.has_damage();

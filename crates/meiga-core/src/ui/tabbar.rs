@@ -647,6 +647,13 @@ mod tests {
         assert_eq!(layout.profiles(), Rect::new(771, 4, 795, 32));
         assert_eq!(layout.close(6), Some(Rect::new(711, 6, 735, 30)));
         assert_eq!(layout.title(6), Rect::new(642, 4, 711, 32));
+        // Down to 100 pixels: seven of them fit in 764 pixels, and not in
+        // 763.
+        layout.resize(764, 7);
+        assert_eq!(layout.tab_width(), 100);
+        assert!(!layout.overflows());
+        layout.resize(763, 7);
+        assert!(layout.overflows());
     }
 
     #[test]
@@ -732,6 +739,11 @@ mod tests {
         assert!(!layout.overflows());
         assert_eq!(layout.scroll(), 0);
         assert!(!layout.reveal(7));
+        // A strip narrower than a tab shows its left side: 150 - 64 - 48 =
+        // 38.
+        layout.resize(150, 8);
+        assert!(layout.reveal(1));
+        assert_eq!(layout.scroll(), 100);
     }
 
     #[test]

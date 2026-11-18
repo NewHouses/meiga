@@ -379,7 +379,7 @@ impl TabBar {
             (Button::Left, Target::New) => Press::New,
             (Button::Left, Target::Profiles) => Press::Profiles,
             (Button::Left, Target::Scroll(side)) => {
-                if !self.scroll(tabs, |layout| layout.step(side)) {
+                if !self.scroll(tabs, side, |layout| layout.step(side)) {
                     return None;
                 }
                 // The first frame says when they scroll again.
@@ -454,7 +454,7 @@ impl TabBar {
         if now < due {
             return Some(due);
         }
-        self.scroll(tabs, |layout| layout.step(side));
+        self.scroll(tabs, side, |layout| layout.step(side));
         self.repeat = now.checked_add(REPEAT);
         self.repeat.filter(|_| self.layout.can_scroll(side))
     }
@@ -463,8 +463,13 @@ impl TabBar {
     /// `horizontal`, to the right, if it is positive, with the pointer on
     /// the bar. While the tabs do not fit, they scroll a tab for each step:
     /// towards the first one forward or to the left, and towards the last
-    /// one backward or to the right.
+    /// one backward or to the right. While a button is down on the bar, it
+    /// does nothing: the middle button is the wheel, and while it is down on
+    /// a tab, the tabs stay where they are.
     pub fn wheel<T>(&mut self, tabs: &model::Window<T>, delta: i16, horizontal: bool) {
+        if self.pressed.is_some() {
+            return;
+        }
         if !self.layout.overflows() {
             self.wheel = 0;
             return;
@@ -476,18 +481,27 @@ impl TabBar {
         };
         let turn = self.wheel + towards_last * i64::from(self.layout.tab_width());
         self.wheel = turn % WHEEL_STEP;
-        self.scroll(tabs, |layout| layout.scroll_by(turn / WHEEL_STEP));
+        let pixels = turn / WHEEL_STEP;
+        if pixels != 0 {
+            let side = if pixels < 0 { Side::Left } else { Side::Right };
+            self.scroll(tabs, side, |layout| layout.scroll_by(pixels));
+        }
     }
 
-    /// Scrolls the tabs as `scroll` says, which returns whether they
-    /// scrolled, as this does. The user scrolls them: the tabs that kept
-    /// their width get it first, and the tab that is shown no longer has to
-    /// be in view.
+    /// Scrolls the tabs towards `side` as `scroll` says, which returns
+    /// whether they scrolled, as this does. Nothing changes if the strip, as
+    /// it is drawn, cannot scroll towards `side`. Otherwise the user scrolls
+    /// it: the tabs that kept their width get it first, and the tab that is
+    /// shown no longer has to be in view.
     fn scroll<T>(
         &mut self,
         tabs: &model::Window<T>,
+        side: Side,
         scroll: impl FnOnce(&mut Layout) -> bool,
     ) -> bool {
+        if !self.layout.can_scroll(side) {
+            return false;
+        }
         self.thaw(tabs);
         self.reveal = false;
         let scrolled = scroll(&mut self.layout);
@@ -736,7 +750,9 @@ impl TabBar {
             Part::Close(index) => id(index).map(Target::Close),
             Part::New => Some(Target::New),
             Part::Profiles => Some(Target::Profiles),
-            Part::Scroll(side) => Some(Target::Scroll(side)),
+            // A button that cannot scroll the tabs is not highlighted, and a
+            // press on it does nothing.
+            Part::Scroll(side) => self.layout.can_scroll(side).then_some(Target::Scroll(side)),
             Part::Empty => None,
         }
     }
@@ -784,7 +800,14 @@ impl TabBar {
         }
     }
 
+    /// The button that scrolls the tabs towards `side` changes, if they can
+    /// scroll so: one that cannot looks the same whatever the pointer and
+    /// the buttons do, and changes only with the layout, which draws all the
+    /// bar again.
     fn damage_scroll(&mut self, side: Side) {
+        if !self.layout.can_scroll(side) {
+            return;
+        }
         if let Some(button) = self.layout.scroll_button(side) {
             self.damage(button);
         }
@@ -1181,8 +1204,10 @@ mod tests {
         let (mut bar, tabs) = many(10);
         let now = Instant::now();
         let after = |milliseconds| now + Duration::from_millis(milliseconds);
-        // Towards the first tab, they cannot scroll: the press does nothing.
+        // Towards the first tab, they cannot scroll: the pointer on the
+        // button highlights nothing, and the press does nothing.
         bar.moved(&tabs, Point::new(10, 20));
+        assert_eq!(bar.hover, None);
         assert_eq!(bar.down(&tabs, Button::Left), None);
         assert!(!bar.is_pressed());
         // Towards the last one, until the first tab that the strip hides,
@@ -1211,9 +1236,12 @@ mod tests {
         assert_eq!(bar.layout.scroll(), 212);
         assert_eq!(bar.tick(&tabs, after(600)), None);
         assert_eq!(bar.layout.scroll(), 312);
-        // The button goes up: nothing else.
+        // The button goes up: nothing else, and nothing is drawn, since the
+        // button that cannot scroll looks the same.
+        damage(&mut bar);
         assert_eq!(bar.up(&tabs, Button::Left), None);
         assert!(!bar.is_pressed());
+        assert!(!bar.has_damage());
         assert_eq!(bar.tick(&tabs, after(700)), None);
 
         // Towards the first one, until the tab on the left of the first one
@@ -1227,6 +1255,63 @@ mod tests {
         assert!(!bar.is_pressed());
         assert_eq!(bar.tick(&tabs, after(2000)), None);
         assert_eq!(bar.layout.scroll(), 300);
+    }
+
+    #[test]
+    fn what_cannot_scroll_the_strip_changes_nothing() {
+        // Ten tabs, scrolled to the end, and the sixth closed with the mouse,
+        // with its close button from (288, 6) to (312, 30): the others keep
+        // their width, and the strip its scroll, past the end of the row.
+        let (mut bar, mut tabs) = many(10);
+        bar.moved(&tabs, Point::new(300, 20));
+        bar.wheel(&tabs, -4 * 120, false);
+        assert_eq!(bar.layout.scroll(), 312);
+        close_with_mouse(&mut bar, &mut tabs, 5);
+        assert!(bar.frozen);
+        // The pointer on the button that scrolls the strip to the right,
+        // which cannot, draws nothing, and the left button there does
+        // nothing.
+        bar.moved(&tabs, Point::new(742, 20));
+        damage(&mut bar);
+        bar.moved(&tabs, Point::new(720, 20));
+        assert_eq!(bar.hover, None);
+        assert!(!bar.has_damage());
+        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert!(!bar.is_pressed());
+        // Nor the wheel towards the last tab.
+        bar.wheel(&tabs, -120, false);
+        assert!(bar.frozen);
+        assert!(!bar.has_damage());
+        // Nor, towards the first one, while the middle button is down on a
+        // tab: the middle button is the wheel.
+        bar.moved(&tabs, Point::new(250, 20));
+        assert_eq!(bar.down(&tabs, Button::Middle), None);
+        bar.wheel(&tabs, 120, false);
+        assert_eq!(bar.layout.scroll(), 312);
+        assert!(bar.frozen);
+        bar.moved(&tabs, Point::new(742, 20));
+        assert_eq!(bar.up(&tabs, Button::Middle), None);
+        // No one scrolled the strip: once the pointer leaves the bar, the
+        // tabs get their width, and the strip shows the tab that is shown,
+        // the first one.
+        bar.left(&tabs);
+        bar.settle(&tabs);
+        assert_eq!(bar.layout.scroll(), 0);
+
+        // A button that the strip, as it is drawn, can scroll lets the tabs
+        // get their width first, also if then they fit, and it scrolls
+        // nothing: eight tabs, and the close button of the third, from
+        // (300, 6) to (324, 30), closes it.
+        let (mut bar, mut tabs) = many(8);
+        bar.moved(&tabs, Point::new(310, 20));
+        close_with_mouse(&mut bar, &mut tabs, 2);
+        assert!(bar.layout.can_scroll(Side::Right));
+        bar.moved(&tabs, Point::new(720, 20));
+        assert_eq!(bar.hover, Some(Target::Scroll(Side::Right)));
+        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert!(!bar.frozen);
+        assert!(!bar.layout.overflows());
+        assert_eq!(bar.layout.tab_width(), 105);
     }
 
     #[test]
