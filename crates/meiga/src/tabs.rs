@@ -643,15 +643,15 @@ impl Tabs {
             TabAction::DuplicateActive => self.duplicate(window, active),
             TabAction::Next => self.tabs.activate_next(),
             TabAction::Previous => self.tabs.activate_previous(),
-            TabAction::Nth(index) => match self.tabs.tabs().get(index) {
-                Some(tab) => self.tabs.activate(tab.id()).ok().flatten(),
-                None => None,
-            },
-            TabAction::Last => match self.tabs.tabs().last() {
-                Some(tab) => self.tabs.activate(tab.id()).ok().flatten(),
-                None => None,
-            },
-            TabAction::Activate(id) => self.tabs.activate(id).ok().flatten(),
+            TabAction::Nth(index) => {
+                let id = self.tabs.tabs().get(index).map(|tab| tab.id());
+                id.and_then(|id| self.select(id))
+            }
+            TabAction::Last => {
+                let id = self.tabs.tabs().last().map(|tab| tab.id());
+                id.and_then(|id| self.select(id))
+            }
+            TabAction::Activate(id) => self.select(id),
             TabAction::Close => return self.close(window, active, now),
             TabAction::CloseTab(id) => return self.close(window, id, now),
             TabAction::CloseOthers(id) => {
@@ -678,6 +678,22 @@ impl Tabs {
             }
             None => self.bar.has_damage(),
         }
+    }
+
+    /// Activates the tab `id`, which a shortcut or a click on it chose.
+    /// Returns the change of the active tab. If it is the tab that is shown
+    /// already, the wheel or the buttons that scroll the strip may have left
+    /// it out of view, even in part: then the strip scrolls at once so that
+    /// it is all in view, as when another tab is shown, and the whole bar is
+    /// drawn again (ADR 0025, decision 5). While the tabs keep their width,
+    /// once the mouse closed some, it waits until the pointer leaves the bar.
+    fn select(&mut self, id: TabId) -> Option<Switch> {
+        let switch = self.tabs.activate(id).ok()?;
+        if switch.is_none() {
+            self.bar.shown();
+            self.bar.settle(&self.tabs);
+        }
+        switch
     }
 
     /// Opens a tab at the end, which runs what `launch` says, and activates

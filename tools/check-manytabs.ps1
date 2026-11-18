@@ -54,8 +54,10 @@ the window draws in its frame log. It checks that:
   once, so the close button of the new last one comes under the pointer;
 - showing a tab with the keyboard, also round the bar, scrolls the strip so
   that it is in view; the wheel can then move the tab that is shown out of
-  view, where it stays; Shift+F10 scrolls the strip until it is in view
-  again, and opens its menu below it;
+  view, where it stays until the tab is chosen again: Ctrl+1 and Ctrl+9, and
+  a click on the part of it that is in view, scroll the strip until it is all
+  in view, and Ctrl+9 on the tab all in view draws nothing; Shift+F10 also
+  scrolls the strip until the tab is in view, and opens its menu below it;
 - while a tab is hidden, its program writes, which draws only the title of
   its tab, once, and rings the bell, which draws it once more; showing the
   tab clears both, and a bell while it is shown draws nothing; the end of
@@ -1061,8 +1063,9 @@ function Step-Bar([string]$Side) {
 }
 
 # Scrolls the strip as little as it can so that the tab at $Index is all in
-# view, as meiga does before a frame once a tab is shown, or before it opens
-# the menu of a tab with the keyboard. Returns whether it scrolled.
+# view, as meiga does before a frame once a tab is shown, and at once when the
+# tab that is shown is chosen again or before it opens the menu of a tab with
+# the keyboard. Returns whether it scrolled.
 function Show-BarTab([int]$Index) {
     if (-not $barOverflow -or $Index -ge $tabs.Count) { return $false }
     $left = $Index * $barTabWidth
@@ -1269,6 +1272,31 @@ function Assert-NothingDrawn([scriptblock]$Action, [string]$What) {
     if ($frames.Count -gt 0) {
         Show-Lines $frames
         throw "$What drew $($frames.Count) frames instead of none."
+    }
+}
+
+# Does $Action, which chooses again the tab that is shown, while the strip
+# leaves it out of view, at least in part: the strip scrolls at once so that
+# the tab is all in view, as when another tab is shown. Checks that the
+# window draws the whole bar, and nothing out of it: the tab that is shown is
+# the same.
+function Assert-Reveal([scriptblock]$Action, [string]$What) {
+    if (-not (Show-BarTab $active)) {
+        throw 'The check expects the tab that is shown out of view, at least in part.'
+    }
+    Wait-Quiet 400
+    $from = Get-Mark
+    & $Action
+    Wait-For { @(Get-BarFrames $from).Count -gt 0 } {
+        Show-Lines (Get-Frames $from)
+        "$What did not draw the whole bar: the strip did not scroll so that the tab is all in view."
+    }
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    $bar = New-Rect 0 0 $barWidth $barHeight
+    if (@($frames | Where-Object { Test-Full $_ }).Count -gt 0 -or @(Get-Areas $frames | Where-Object { -not (Test-Inside $_ $bar) }).Count -gt 0) {
+        Show-Lines $frames
+        throw "$What drew out of the bar: it did not leave the tab shown."
     }
 }
 
@@ -1589,14 +1617,28 @@ try {
     # 11. The keyboard shows a tab, and the strip scrolls so that it is in
     # view: Ctrl+1 the first one, and Ctrl+Shift+Tab, round the bar, the last
     # one. The wheel can move the tab that is shown out of view, and the strip
-    # stays there; Shift+F10 scrolls it until that tab is in view, and opens
-    # its menu below it.
+    # stays there until that tab is chosen again (ADR 0025, decision 5): Ctrl+1
+    # and Ctrl+9 bring the first and the last tab into view again, though
+    # Ctrl+9 draws nothing while the last tab is all in view; Shift+F10 scrolls
+    # the strip too, and opens the menu of the tab below it; and a click on the
+    # part of the tab that is in view, on the right of the strip this time,
+    # brings all of it into view. After each of them, a click on another tab,
+    # or the wheel and a click, find the strip where it has to be.
+    $at = Get-Middle (Get-Strip)
     Show-Tab 'Ctrl+1' 0
     Assert-Hover (Get-Middle (Get-TitleRect 0)) (Get-TabArea 0) 'the title of the first tab, once Ctrl+1 showed it,'
+    Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (-$WHEEL_DELTA) $at) 'The wheel backward'
+    Add-Wheel (-$WHEEL_DELTA) $false
+    Assert-Reveal { Send-Chord 'Ctrl+1' } 'Ctrl+1, on the first tab, which is shown,'
+    Assert-Scroll (Get-OtherTab) 'once Ctrl+1 brought the first tab into view'
+    Show-Tab 'Ctrl+Shift+Tab' 0
     $last = $tabs.Count - 1
     Show-Tab 'Ctrl+Shift+Tab' $last
     Assert-Hover (Get-Middle (Get-TitleRect $last)) (Get-TabArea $last) 'the title of the last tab, once Ctrl+Shift+Tab showed it from the first one,'
-    $at = Get-Middle (Get-Strip)
+    Assert-NothingDrawn { Send-Chord 'Ctrl+9' } 'Ctrl+9, on the last tab, which is shown and all in view,'
+    Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (2 * $WHEEL_DELTA) $at) 'The wheel forward'
+    Add-Wheel (2 * $WHEEL_DELTA) $false
+    Assert-Reveal { Send-Chord 'Ctrl+9' } 'Ctrl+9, on the last tab, which is shown,'
     $messages = Get-Wheel $WM_MOUSEWHEEL (2 * $WHEEL_DELTA) $at
     Add-Wheel (2 * $WHEEL_DELTA) $false
     $target = Get-OtherTab
@@ -1632,7 +1674,17 @@ try {
     Send-Chord 'Escape'
     Wait-For { @(Get-Areas (Get-Frames $from) | Where-Object { Test-Inside $menu $_ }).Count -gt 0 } { 'Esc did not close the menu.' }
     Assert-Scroll (Get-OtherTab) 'once Shift+F10 scrolled the strip'
-    Write-Host 'OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays; Shift+F10 scrolls the strip until it is in view again, and opens its menu below it.'
+    # The tab that the click showed, on the right of the strip, where only
+    # part of it is in view, with its title.
+    Send-ToBar (Get-Wheel $WM_MOUSEWHEEL (5 * $WHEEL_DELTA) $at) 'The wheel forward'
+    Add-Wheel (5 * $WHEEL_DELTA) $false
+    $label = Get-LabelArea $active
+    if ((Test-AllInView $active) -or $label.Right -le $label.Left) {
+        throw 'The check expects the tab that is shown partly in view, with part of its title, once the wheel scrolls the strip forward.'
+    }
+    Assert-Reveal { Send-Mouse (Get-Click (Get-Middle $label)) } 'A click on the title of the tab that is shown, partly in view,'
+    Assert-Scroll (Get-OtherTab) 'once a click on the tab that is shown brought it all into view'
+    Write-Host 'OK: showing a tab with the keyboard, also round the bar, scrolls the strip so that it is in view; the wheel can then move the tab that is shown out of view, where it stays until the tab is chosen again: Ctrl+1 and Ctrl+9, and a click on the part of it that is in view, scroll the strip until it is all in view, and Ctrl+9 on the tab all in view draws nothing; Shift+F10 also scrolls the strip until the tab is in view, and opens its menu below it.'
 
     # 12. Probe, the first tab, while it is hidden: its program writes, rings
     # the bell, and ends with exit code 3.

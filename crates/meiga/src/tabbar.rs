@@ -305,7 +305,8 @@ impl TabBar {
         }
     }
 
-    /// Another tab is shown: it has to be in view.
+    /// Another tab is shown, or the one that is shown is chosen again: it
+    /// has to be in view.
     pub const fn shown(&mut self) {
         self.reveal = true;
     }
