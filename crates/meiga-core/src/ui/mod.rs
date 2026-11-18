@@ -4,6 +4,7 @@
 
 pub mod menu;
 pub mod tabbar;
+pub mod titlebar;
 
 /// The dots per inch at a scale of 100 %, where the sizes of the parts are
 /// in pixels.

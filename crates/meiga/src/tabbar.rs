@@ -198,7 +198,7 @@ impl TabBar {
             fonts: fonts.clone(),
             font,
             dpi,
-            layout: Layout::new(dpi, width, tabs),
+            layout: Layout::new(dpi, width, tabs, 0),
             pointer: None,
             hover: None,
             pressed: None,
@@ -271,7 +271,12 @@ impl TabBar {
         self.frozen = false;
         self.reveal = true;
         self.wheel = 0;
-        self.layout = Layout::new(dpi, self.layout.width(), tabs.tab_count());
+        self.layout = Layout::new(
+            dpi,
+            self.layout.width(),
+            tabs.tab_count(),
+            self.layout.band(),
+        );
         self.relayout(tabs);
     }
 
@@ -755,7 +760,7 @@ impl TabBar {
             // A button that cannot scroll the tabs is not highlighted, and a
             // press on it does nothing.
             Part::Scroll(side) => self.layout.can_scroll(side).then_some(Target::Scroll(side)),
-            Part::Empty => None,
+            Part::Caption(_) | Part::Empty => None,
         }
     }
 
@@ -910,15 +915,17 @@ mod tests {
         }
     }
 
-    /// The tabs of `programs`, the first one active, in a window of 800
-    /// pixels at 100 %, and their bar.
+    /// The tabs of `programs`, the first one active, in a window of 983
+    /// pixels at 100 %, maximized, and their bar: 736 pixels for the tabs,
+    /// as the 800 of the bar of 2.8, which had no buttons of the window nor
+    /// room to drag it.
     fn bar(programs: &[&str]) -> (TabBar, model::Window<String>) {
         let mut tabs = model::Window::new(programs[0].to_owned());
         for program in &programs[1..] {
             tabs.open((*program).to_owned());
         }
         let fonts = FontSystem::new().unwrap();
-        let bar = TabBar::new(&fonts, 96, 800, tabs.tab_count()).unwrap();
+        let bar = TabBar::new(&fonts, 96, 983, tabs.tab_count()).unwrap();
         (bar, tabs)
     }
 
@@ -926,7 +933,7 @@ mod tests {
         bar(&["pwsh", "cmd", "wsl"])
     }
 
-    /// `count` tabs, the first one active, in a window of 800 pixels at
+    /// `count` tabs, the first one active, in a window of 983 pixels at
     /// 100 %. From 8 on, they do not fit even at their narrowest, 100
     /// pixels: the strip, from 28 to 716, is between the buttons that scroll
     /// it, from 4 to 28 and from 716 to 740.
@@ -957,7 +964,7 @@ mod tests {
     }
 
     /// The whole bar, as its damage says when it is drawn again.
-    const WHOLE: Rect = Rect::new(0, 0, 800, 32);
+    const WHOLE: Rect = Rect::new(0, 0, 983, 32);
 
     #[test]
     fn the_pointer_draws_again_only_what_it_highlights() {
@@ -1138,20 +1145,20 @@ mod tests {
             })
         ));
         bar.tabs_changed(&tabs);
-        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 800, 32)]);
+        assert_eq!(damage(&mut bar), [WHOLE]);
         // The pointer is on the tab that took the place of the closed one.
         assert_eq!(bar.hover, Some(Target::Tab(id(&tabs, 1))));
         bar.label_changed(1);
         bar.label_changed(1);
         assert_eq!(damage(&mut bar), [Rect::new(252, 4, 456, 32)]);
         // The same width is no change; another one is.
-        bar.resize(800, &tabs);
+        bar.resize(983, &tabs);
         assert!(!bar.has_damage());
-        bar.resize(600, &tabs);
-        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 600, 32)]);
+        bar.resize(783, &tabs);
+        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 783, 32)]);
         bar.set_dpi(144, &tabs);
         assert_eq!(bar.height(), 48);
-        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 600, 48)]);
+        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 783, 48)]);
     }
 
     #[test]
@@ -1484,7 +1491,7 @@ mod tests {
         tabs.open(Marked("wsl", Some(Indicator::Activity)));
         tabs.open(Marked("ssh", Some(Indicator::Bell)));
         let fonts = FontSystem::new().unwrap();
-        let mut bar = TabBar::new(&fonts, 96, 800, tabs.tab_count()).unwrap();
+        let mut bar = TabBar::new(&fonts, 96, 983, tabs.tab_count()).unwrap();
         // A cell is a few pixels.
         let cell = bar.font_mut().cell().width as i32;
         let pixels = draw(&mut bar, &tabs);
@@ -1520,15 +1527,15 @@ mod tests {
     /// Draws the whole bar of `tabs` on a canvas of its size, and returns
     /// its pixels.
     fn draw<T: Label>(bar: &mut TabBar, tabs: &model::Window<T>) -> Vec<u32> {
-        let size = Size::new(800, bar.height());
+        let size = Size::new(983, bar.height());
         let mut pixels = vec![0; size.area() as usize];
-        let mut canvas = Canvas::new(&mut pixels, size, 800).unwrap();
+        let mut canvas = Canvas::new(&mut pixels, size, 983).unwrap();
         bar.draw(&mut canvas, tabs, &Palette::MEIGA);
         pixels
     }
 
     fn at(pixels: &[u32], x: usize, y: usize) -> u32 {
-        pixels[y * 800 + x]
+        pixels[y * 983 + x]
     }
 
     #[test]
