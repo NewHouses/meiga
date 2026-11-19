@@ -205,8 +205,10 @@ impl Keyboard {
 }
 
 /// Whether Windows handles a key with Alt: Alt+F4 closes the window, and
-/// Alt+Space opens its menu, as in Windows Terminal. Alt alone, F10 and the
-/// other keys with Alt go to the program.
+/// Alt+Space opens its menu, as in Windows Terminal. For Alt+Space, Windows
+/// asks the window for its menu (`WM_SYSCOMMAND`), and with the title bar of
+/// meiga the window opens it itself. Alt alone, F10 and the other keys with
+/// Alt go to the program.
 fn for_windows(key: u16, controls: ControlKeys) -> bool {
     controls.alt() && !controls.ctrl() && matches!(key, VK_F4 | VK_SPACE)
 }

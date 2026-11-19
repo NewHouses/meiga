@@ -72,6 +72,14 @@ impl TitleBar {
             _ => Hit::Client,
         }
     }
+
+    /// Where the menu of the window opens from the keyboard, with
+    /// Alt+Space: its top left corner goes below the bar, at the left side
+    /// of the window, where the terminal starts, as the menus of meiga open
+    /// below what opens them.
+    pub fn menu_corner(&self) -> Point {
+        Point::new(0, i32::try_from(self.layout.height()).unwrap_or(i32::MAX))
+    }
 }
 
 /// The smallest size of the area of the window that meiga draws, at `dpi`,
@@ -145,6 +153,14 @@ mod tests {
         assert_eq!(hit(0, 0), Hit::TopLeft);
         assert_eq!(hit(960, 0), Hit::Close);
         assert_eq!(hit(100, 20), Hit::Client);
+    }
+
+    #[test]
+    fn the_keyboard_opens_the_menu_of_the_window_below_the_bar() {
+        assert_eq!(bar(8, false).menu_corner(), Point::new(0, 40));
+        assert_eq!(bar(0, false).menu_corner(), Point::new(0, 32));
+        let wide = TitleBar::new(Layout::new(144, 1475, 1, 11), false);
+        assert_eq!(wide.menu_corner(), Point::new(0, 59));
     }
 
     #[test]

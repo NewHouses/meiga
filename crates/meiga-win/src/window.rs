@@ -13,8 +13,9 @@ use windows_sys::Win32::Foundation::{
     WAIT_FAILED, WAIT_OBJECT_0, WPARAM,
 };
 use windows_sys::Win32::Graphics::Gdi::{
-    BeginPaint, EndPaint, GetMonitorInfoW, InvalidateRect, MONITOR_DEFAULTTONEAREST, MONITORINFO,
-    MonitorFromWindow, PAINTSTRUCT, ScreenToClient, UpdateWindow, ValidateRect,
+    BeginPaint, ClientToScreen, EndPaint, GetMonitorInfoW, InvalidateRect,
+    MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromWindow, PAINTSTRUCT, ScreenToClient,
+    UpdateWindow, ValidateRect,
 };
 use windows_sys::Win32::System::LibraryLoader::{
     GetModuleHandleW, GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW,
@@ -37,7 +38,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     MB_ICONERROR, MB_ICONWARNING, MB_OK, MB_OKCANCEL, MF_BYCOMMAND, MF_ENABLED, MF_GRAYED,
     MINMAXINFO, MSG, MWMO_INPUTAVAILABLE, MessageBoxW, MsgWaitForMultipleObjectsEx, PM_REMOVE,
     PeekMessageW, PostMessageW, PostQuitMessage, QS_ALLINPUT, RegisterClassExW, SC_CLOSE,
-    SC_MAXIMIZE, SC_MINIMIZE, SC_MOVE, SC_RESTORE, SC_SIZE, SM_CARETBLINKINGENABLED,
+    SC_KEYMENU, SC_MAXIMIZE, SC_MINIMIZE, SC_MOVE, SC_RESTORE, SC_SIZE, SM_CARETBLINKINGENABLED,
     SM_CXDOUBLECLK, SM_CXPADDEDBORDER, SM_CYDOUBLECLK, SM_CYSIZEFRAME, SM_REMOTESESSION,
     SPI_GETCARETTIMEOUT, SPI_GETCARETWIDTH, SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES,
     SW_SHOWDEFAULT, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
@@ -687,6 +688,16 @@ impl Window {
         Point::new(point.x, point.y)
     }
 
+    /// The point from the top-left corner of the screen at `at`, a point of
+    /// the client area.
+    fn screen_point(&self, at: Point) -> Point {
+        let mut point = POINT { x: at.x, y: at.y };
+        // SAFETY: the window is of this thread, and `point` is a valid
+        // POINT for ClientToScreen to change. If it fails, the point stays.
+        unsafe { ClientToScreen(self.handle, &mut point) };
+        Point::new(point.x, point.y)
+    }
+
     /// Asks Windows for a command of the menu of the window, such as
     /// `SC_MINIMIZE`, once the handler returns.
     fn command(&self, command: u32) {
@@ -797,7 +808,9 @@ impl Window {
     /// button, and does the command that the user chooses.
     ///
     /// The menu runs a message loop of Windows, whose messages reach the
-    /// window procedure, and the handler, until it closes.
+    /// window procedure, and the handler, until it closes; once it closes,
+    /// unlike the menu that Windows opens with Alt+Space, the next key
+    /// reaches the window.
     fn system_menu(&self, at: Point) {
         // SAFETY: the window is of this thread. FALSE: the menu of the
         // window, and not a copy of the default one.
@@ -839,6 +852,25 @@ impl Window {
         if command > 0 {
             self.command(command as u32);
         }
+    }
+
+    /// Opens the menu of the window from the keyboard, with Alt+Space: the
+    /// window opens it itself, as Windows Terminal does, but below the title
+    /// bar of meiga, at the left side of the window, where the terminal
+    /// starts, and not at the top left corner of the window (ADR 0027).
+    /// Windows would open it in its menu mode, which goes on after Esc closes
+    /// the menu, and takes the next key. Returns whether it opened it:
+    /// without the title bar of meiga, or minimized, the window leaves it to
+    /// Windows.
+    fn keyboard_menu(&self) -> bool {
+        if !self.custom || self.is_minimized() {
+            return false;
+        }
+        let Some(bar) = self.title_bar.get() else {
+            return false;
+        };
+        self.system_menu(self.screen_point(bar.menu_corner()));
+        true
     }
 
     /// WM_PAINT: the handler paints the area that Windows asks for.
@@ -1450,6 +1482,15 @@ unsafe extern "system" fn window_proc(
         }
         WM_ENTERMENULOOP => this.enter_modal_loop(),
         WM_EXITMENULOOP => this.leave_modal_loop(),
+        // Alt+Space, which the keyboard leaves to Windows, opens the menu of
+        // the window: with the title bar of meiga, the window opens its own.
+        WM_SYSCOMMAND if is_alt_space(wparam, lparam) => {
+            if !this.keyboard_menu() {
+                // SAFETY: the arguments are the ones that Windows passed to
+                // this window procedure.
+                return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+            }
+        }
         // Over the client area, the pointer that the handler chose.
         WM_SETCURSOR if (lparam & 0xffff) as u32 == HTCLIENT => {
             // SAFETY: the cursor is a system one, loaded in Window::create.
@@ -1548,6 +1589,13 @@ unsafe extern "system" fn window_proc(
     0
 }
 
+/// Whether a `WM_SYSCOMMAND` is the one of Alt+Space, which opens the menu
+/// of the window from the keyboard: `SC_KEYMENU`, with the space. The four
+/// low bits of `wparam` are for Windows.
+fn is_alt_space(wparam: WPARAM, lparam: LPARAM) -> bool {
+    (wparam & 0xfff0) as u32 == SC_KEYMENU && lparam == LPARAM::from(b' ')
+}
+
 /// The due time of a waitable timer `delay` from now: negative, because it
 /// is relative, in units of 100 ns, and at least one.
 fn due_time(delay: Duration) -> i64 {
@@ -1567,7 +1615,7 @@ fn timer_millis(delay: Duration) -> u32 {
 #[cfg(test)]
 mod tests {
     use meiga_core::ui::tabbar::{CaptionButton, Layout};
-    use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, HDC};
+    use windows_sys::Win32::Graphics::Gdi::HDC;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         HTBOTTOM, HTLEFT, SendMessageW, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP,
     };
@@ -1785,6 +1833,18 @@ mod tests {
                 i32::try_from(min.height + band).unwrap()
             )
         );
+    }
+
+    #[test]
+    fn only_alt_and_the_space_open_the_menu_of_the_window_of_meiga() {
+        let menu = SC_KEYMENU as WPARAM;
+        assert!(is_alt_space(menu, LPARAM::from(b' ')));
+        // The four low bits are for Windows.
+        assert!(is_alt_space(menu | 0xf, LPARAM::from(b' ')));
+        // Alt alone, and Alt with a letter, are for a menu bar.
+        assert!(!is_alt_space(menu, 0));
+        assert!(!is_alt_space(menu, LPARAM::from(b'f')));
+        assert!(!is_alt_space(SC_CLOSE as WPARAM, LPARAM::from(b' ')));
     }
 
     #[test]

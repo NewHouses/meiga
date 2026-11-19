@@ -19,10 +19,14 @@ that:
   the window restored, maximized, as small as it can be, with the tabs
   scrolling in the strip, and while a menu of meiga is open;
 - the pointer on the buttons of the window draws only them;
-- the right button on the bar opens the menu of the window, with the commands
-  that the state of the window allows, and Close in bold, as Windows has it,
-  and nothing is drawn while it is open; Esc closes it, and Down and Enter
-  choose its commands;
+- the right button on the bar opens the menu of the window when it goes up,
+  at the pointer, with the commands that the state of the window allows, and
+  Close in bold, as Windows has it, and nothing is drawn while it is open;
+  Esc closes it, and Down and Enter choose its commands;
+- Alt+Space opens the menu of the window below the bar, from the left side of
+  the window, with nothing highlighted; once Esc closes it, the window is not
+  left in the menu mode of Windows, and the next key reaches the program of
+  the tab;
 - the buttons maximize, restore, minimize and close the window, and a double
   click on the bar maximizes and restores it; maximized, the client area is
   the work area of the monitor; minimized, nothing is drawn;
@@ -33,9 +37,10 @@ that:
 - the button to close it ends meiga.exe with exit code 0, and the programs of
   its tabs.
 
-The check posts the messages of the mouse and of the keys to the window. It
-moves the pointer of the system out of the window, where it can, and puts it
-back at the end.
+The check posts the messages of the mouse and of the keys to the window. For
+Alt+Space, it shares its input with the thread of the window, to give it the
+state of the keys, and leaves it with no key down. It moves the pointer of
+the system out of the window, where it can, and puts it back at the end.
 
 If a check fails, the script ends meiga.exe and the programs of its tabs, and
 keeps its folder, with the frame log.
@@ -95,6 +100,26 @@ public struct APPBARDATA
     public uint Edge;
     public RECT Rect;
     public IntPtr Param;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MSG
+{
+    public IntPtr Window;
+    public uint Message;
+    public UIntPtr WParam;
+    public IntPtr LParam;
+    public uint Time;
+    public POINT Point;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GUITHREADINFO
+{
+    public int Size;
+    public uint Flags;
+    public IntPtr Active, Focus, Capture, MenuOwner, MoveSize, Caret;
+    public RECT CaretRect;
 }
 
 [DllImport("user32.dll")]
@@ -186,6 +211,25 @@ public static extern uint GetMenuState(IntPtr menu, uint item, uint flags);
 [DllImport("user32.dll")]
 public static extern uint MapVirtualKeyW(uint code, uint type);
 
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool PeekMessageW(out MSG message, IntPtr window, uint first, uint last, uint remove);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool AttachThreadInput(uint thread, uint to, [MarshalAs(UnmanagedType.Bool)] bool attach);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetKeyboardState(byte[] state);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetGUIThreadInfo(uint thread, ref GUITHREADINFO info);
+
+[DllImport("kernel32.dll")]
+public static extern uint GetCurrentThreadId();
+
 [DllImport("kernel32.dll", SetLastError = true)]
 static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint thread);
 
@@ -218,8 +262,11 @@ static extern uint GetLongPathNameW(string path, System.Text.StringBuilder longP
 // Posts the messages, three numbers for each one (the message, its wParam and
 // its lParam), to the window, with its thread suspended: the thread gets them
 // one after the other, before anything that Windows posts while it handles
-// them, such as WM_MOUSELEAVE when the pointer of the system is elsewhere.
-public static void PostAll(IntPtr window, uint thread, long[] messages)
+// them, such as WM_MOUSELEAVE when the pointer of the system is elsewhere. If
+// `state` is not null, the thread of the window gets it as its key state,
+// which this thread shares then (AttachThreadInput): the key state changes
+// as the thread reads its input, so it is set while the thread is suspended.
+public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] state)
 {
     // THREAD_SUSPEND_RESUME and THREAD_GET_CONTEXT.
     IntPtr handle = OpenThread(0x0002 | 0x0008, false, thread);
@@ -236,6 +283,7 @@ public static void PostAll(IntPtr window, uint thread, long[] messages)
             // thread is really suspended.
             Marshal.WriteInt32(context, 0x30, 0x00100001);
             if (!GetThreadContext(handle, context)) throw new System.ComponentModel.Win32Exception();
+            if (state != null && !SetKeyboardState(state)) throw new System.ComponentModel.Win32Exception();
             for (int i = 0; i + 2 < messages.Length; i += 3)
             {
                 if (!PostMessageW(window, (uint)messages[i], new UIntPtr((ulong)messages[i + 1]), new IntPtr(messages[i + 2])))
@@ -277,6 +325,16 @@ public static IntPtr MenuOf(uint thread)
         uint process;
         if (GetWindowThreadProcessId(after, out process) == thread && IsWindowVisible(after)) return after;
     }
+}
+
+// The menu modes of Windows that the thread is in: GUI_INMENUMODE,
+// GUI_SYSTEMMENUMODE and GUI_POPUPMENUMODE of its flags, or zero.
+public static uint MenuModesOf(uint thread)
+{
+    GUITHREADINFO info = new GUITHREADINFO();
+    info.Size = Marshal.SizeOf(typeof(GUITHREADINFO));
+    if (!GetGUIThreadInfo(thread, ref info)) throw new System.ComponentModel.Win32Exception();
+    return info.Flags & (0x0004 | 0x0008 | 0x0010);
 }
 
 // The menu that a menu window shows (MN_GETHMENU), or zero.
@@ -352,6 +410,8 @@ $WM_NCRBUTTONDOWN = 0x00A4
 $WM_NCRBUTTONUP = 0x00A5
 $WM_KEYDOWN = 0x0100
 $WM_KEYUP = 0x0101
+$WM_SYSKEYDOWN = 0x0104
+$WM_SYSKEYUP = 0x0105
 $WM_SYSCOMMAND = 0x0112
 $WM_MOUSEMOVE = 0x0200
 $WM_LBUTTONDOWN = 0x0201
@@ -363,9 +423,13 @@ $MK_MBUTTON = 0x0010
 
 # The keys.
 $VK_RETURN = 0x0D
+$VK_MENU = 0x12
 $VK_ESCAPE = 0x1B
+$VK_SPACE = 0x20
 $VK_DOWN = 0x28
+$VK_X = 0x58
 $VK_APPS = 0x5D
+$VK_LMENU = 0xA4
 
 # What WM_NCHITTEST gives, and how the check names it.
 $HTCLIENT = 1
@@ -839,9 +903,17 @@ $MF_BYPOSITION = 0x0400
 
 # Posts $Messages to the window at once: see PostAll. If meiga has ended, it
 # says so, instead of the error of its thread, which is not there any more.
-function Send-Posted([long[]]$Messages) {
+# With $Down, the keys of $Down are down while the window reads the messages,
+# and no other one: the input has to be shared with the thread of the window
+# (see Join-Input).
+function Send-Posted([long[]]$Messages, [int[]]$Down) {
+    $state = $null
+    if ($PSBoundParameters.ContainsKey('Down')) {
+        $state = [byte[]]::new(256)
+        foreach ($key in $Down) { $state[$key] = 0x80 }
+    }
     try {
-        $api::PostAll($window, $thread, $Messages)
+        $api::PostAll($window, $thread, $Messages, $state)
     }
     catch {
         if ($process.WaitForExit(2000)) {
@@ -849,6 +921,38 @@ function Send-Posted([long[]]$Messages) {
         }
         throw
     }
+}
+
+# Shares the input of this thread with the one of the window, whose key state
+# Send-Posted sets with -Down: SetKeyboardState sets the key state of the
+# thread that calls it. This thread needs a message queue, which PeekMessageW
+# creates.
+function Join-Input {
+    $message = [Meiga.Tools.TitleBarCheck+MSG]::new()
+    $null = $api::PeekMessageW([ref]$message, [IntPtr]::Zero, 0, 0, 0)
+    if (-not $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $true)) {
+        throw "AttachThreadInput failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    $script:attached = $true
+}
+
+# Stops sharing the input with the thread of the window, with no key down.
+function Split-Input {
+    if ($script:attached) {
+        $null = $api::SetKeyboardState([byte[]]::new(256))
+        $null = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $false)
+        $script:attached = $false
+    }
+}
+
+# The message of $Code going down or up while Alt is down, as Windows sends
+# it: a system key, with Alt in its lParam (bit 29). Going up, the key was
+# down (bit 30), and goes up (bit 31).
+function Get-AltKey([int]$Code, [bool]$Down) {
+    $scan = [long]$api::MapVirtualKeyW($Code, 0)
+    [long]$bits = 1 -bor ($scan -shl 16) -bor 0x20000000L
+    if ($Down) { return $WM_SYSKEYDOWN, $Code, $bits }
+    $WM_SYSKEYUP, $Code, ($bits -bor 0xC0000000L)
 }
 
 # The messages of $Code going down and up, as Windows sends them, with the
@@ -1002,12 +1106,46 @@ function Get-WindowMenu {
 }
 
 # Opens the menu of the window with the right button on the room to drag it,
-# as Windows sends it, and returns the menu once it is on the screen.
+# as Windows sends it, and returns the menu once it is on the screen: as with
+# the title bar of Windows, the menu opens when the button goes up, at the
+# pointer.
 function Open-WindowMenu {
-    $param = Get-ScreenParam (Get-OnScreen (Get-DragPoint))
-    Send-Posted @($WM_NCRBUTTONDOWN, $HTCAPTION, $param, $WM_NCRBUTTONUP, $HTCAPTION, $param)
+    $at = Get-OnScreen (Get-DragPoint)
+    $param = Get-ScreenParam $at
+    Send-Posted @($WM_NCRBUTTONDOWN, $HTCAPTION, $param)
+    Start-Sleep -Milliseconds 200
+    if ((Get-WindowMenu) -ne [IntPtr]::Zero) {
+        throw 'The right button on the bar opened the menu of the window when it went down, and not when it went up.'
+    }
+    Send-Posted @($WM_NCRBUTTONUP, $HTCAPTION, $param)
     Wait-For { (Get-WindowMenu) -ne [IntPtr]::Zero } { 'The right button on the bar did not open the menu of the window.' }
+    Assert-MenuAt $at 'The right button on the bar'
     Get-WindowMenu
+}
+
+# Checks that the menu window that the thread shows opened at $Point of the
+# screen, its top left corner there, as TrackPopupMenu puts it; where it does
+# not fit that way on the work area of its monitor, Windows moves it, and then
+# one of its corners has to be there. Otherwise throws what $What says.
+function Assert-MenuAt($Point, [string]$What) {
+    $menuWindow = $api::MenuOf($thread)
+    $rect = [Meiga.Tools.TitleBarCheck+RECT]::new()
+    if ($menuWindow -eq [IntPtr]::Zero -or -not $api::GetWindowRect($menuWindow, [ref]$rect)) {
+        throw "$What opened the menu of the window, and the check could not read where it is."
+    }
+    $info = [Meiga.Tools.TitleBarCheck+MONITORINFO]::new()
+    $info.Size = 40
+    # MONITOR_DEFAULTTONEAREST.
+    if (-not $api::GetMonitorInfoW($api::MonitorFromPoint($Point, 2), [ref]$info)) {
+        throw "Could not read the monitor of the menu of the window."
+    }
+    $fits = $Point.X + ($rect.Right - $rect.Left) -le $info.Work.Right -and
+        $Point.Y + ($rect.Bottom - $rect.Top) -le $info.Work.Bottom
+    $atCorner = $rect.Left -eq $Point.X -and $rect.Top -eq $Point.Y
+    $anyCorner = ($rect.Left -eq $Point.X -or $rect.Right -eq $Point.X) -and ($rect.Top -eq $Point.Y -or $rect.Bottom -eq $Point.Y)
+    if (($fits -and -not $atCorner) -or (-not $fits -and -not $anyCorner)) {
+        throw "$What opened the menu of the window at $(Show-Rect $rect) on the screen, and not from ($($Point.X), $($Point.Y))."
+    }
 }
 
 # The position of the item of $Command in $Menu, or -1.
@@ -1215,6 +1353,7 @@ $dpi = 96
 $pointer = $null
 $restored = $null
 $windowMenu = [IntPtr]::Zero
+$attached = $false
 $passed = $false
 try {
     $process = [Diagnostics.Process]::Start($info)
@@ -1315,8 +1454,8 @@ try {
     Write-Host 'OK: the pointer on each button of the window draws only that button.'
 
     # 4. The right button on the free part of the bar opens the menu of the
-    # window, and nothing is drawn while it is open; Esc closes it; Down and
-    # Enter choose Maximize.
+    # window when it goes up, at the pointer, and nothing is drawn while it
+    # is open; Esc closes it; Down and Enter choose Maximize.
     Assert-NothingDrawn { $script:windowMenu = Open-WindowMenu } 'The right button on the bar, which opened the menu of the window,'
     Assert-WindowMenu $windowMenu $false 'With the window restored'
     Assert-NothingDrawn { Close-WindowMenu } 'Esc, which closed the menu of the window,'
@@ -1325,7 +1464,7 @@ try {
     $from = Get-Mark
     Send-Key $VK_RETURN
     Wait-Maximized $from 'Enter on Maximize, in the menu of the window,'
-    Write-Host 'OK: the right button on the free part of the bar opens the menu of the window, with the commands of a restored window enabled and Close in bold, and nothing is drawn while it is open; Esc closes it, and draws nothing; Down and Enter on Maximize maximize the window, with one full frame, and its client area is the work area of its monitor.'
+    Write-Host 'OK: the right button on the free part of the bar opens the menu of the window when it goes up, at the pointer, with the commands of a restored window enabled and Close in bold, and nothing is drawn while it is open; Esc closes it, and draws nothing; Down and Enter on Maximize maximize the window, with one full frame, and its client area is the work area of its monitor.'
 
     # 5. Maximized, the menu of the window has other commands enabled: Down
     # and Enter choose Restore.
@@ -1337,7 +1476,68 @@ try {
     Wait-Restored $from 'Enter on Restore, in the menu of the window,'
     Write-Host 'OK: maximized, the menu of the window has the commands of a maximized window enabled and Close in bold, and Down and Enter on Restore restore the window where it was, with one full frame, and with the band above the tabs.'
 
-    # 6. The button to maximize the window maximizes it: then there is no
+    # 6. Alt+Space opens the menu of the window below the bar, from the left
+    # side of the window, where the terminal starts, with nothing
+    # highlighted, and nothing is drawn while it is open, also when Space and
+    # Alt go up. Esc closes it, and the window is not left in the menu mode
+    # of Windows, which would take the next key: it reaches the program of
+    # the tab. meiga reads Alt in the state of the keys, which the check sets
+    # for the thread of the window while it shares its input.
+    $menuCorner = Get-OnScreen (New-Point 0 $barHeight)
+    $altScan = [long]$api::MapVirtualKeyW($VK_MENU, 0)
+    Join-Input
+    try {
+        Assert-NothingDrawn {
+            Send-Posted @(
+                Get-AltKey $VK_MENU $true
+                Get-AltKey $VK_SPACE $true
+            ) -Down $VK_MENU, $VK_LMENU, $VK_SPACE
+            Wait-For { (Get-WindowMenu) -ne [IntPtr]::Zero } { 'Alt+Space did not open the menu of the window.' }
+        } 'Alt+Space, which opened the menu of the window,'
+        $windowMenu = Get-WindowMenu
+        Assert-MenuAt $menuCorner 'Alt+Space'
+        Assert-WindowMenu $windowMenu $false 'Opened with Alt+Space'
+        $highlight = Get-Highlight $windowMenu
+        if ($highlight -ge 0) {
+            throw "Alt+Space opened the menu of the window with the item at the position $highlight highlighted, and not with none."
+        }
+        # As Windows sends them: Space goes up as a system key, with Alt down,
+        # and Alt, after another key, as a key.
+        Assert-NothingDrawn {
+            Send-Posted @(
+                Get-AltKey $VK_SPACE $false
+                $WM_KEYUP, $VK_MENU, (1 -bor ($altScan -shl 16) -bor 0xC0000000L)
+            ) -Down @()
+        } 'Space and Alt, which went up while the menu of the window was open,'
+        if ($api::MenuOf($thread) -eq [IntPtr]::Zero) {
+            throw 'Space and Alt, which went up, closed the menu of the window that Alt+Space opened.'
+        }
+        Assert-NothingDrawn { Close-WindowMenu } 'Esc, which closed the menu of the window that Alt+Space opened,'
+    }
+    finally {
+        Split-Input
+    }
+    $modes = $api::MenuModesOf($thread)
+    if ($modes -ne 0) {
+        throw "Once Esc closed the menu of the window that Alt+Space opened, the thread of the window is still in the menu mode of Windows (flags 0x$($modes.ToString('X')))."
+    }
+    $from = Get-Mark
+    Send-Key $VK_X
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Once Esc closed the menu of the window that Alt+Space opened, X drew nothing: it did not reach the program of the tab, which writes it.' }
+    Wait-Quiet 400
+    $terminal = New-Rect 0 $barHeight $barWidth (Get-Client).Bottom
+    $frames = @(Get-Frames $from)
+    $areas = @(Get-Areas $frames)
+    if (@($areas | Where-Object { -not (Test-Inside $_ $terminal) }).Count -gt 0) {
+        Show-Lines $frames
+        throw "X, which the program of the tab writes, drew outside the terminal, $(Show-Rect $terminal): $(@($areas | ForEach-Object { Show-Rect $_ }) -join ', ')."
+    }
+    # Esc empties the line of cmd.
+    Send-Key $VK_ESCAPE
+    Wait-Quiet 400
+    Write-Host 'OK: Alt+Space opens the menu of the window below the bar, from the left side of the window, with the commands of a restored window enabled, Close in bold and nothing highlighted, and nothing is drawn while it is open, also when Space and Alt go up; Esc closes it, and the window is not left in the menu mode of Windows: the next key reaches the program of the tab, and draws only in the terminal.'
+
+    # 7. The button to maximize the window maximizes it: then there is no
     # band, and the top row of the bar is what is below it.
     $from = Get-Mark
     Send-Caption 1
@@ -1356,13 +1556,13 @@ try {
     ) 'On the maximized window'
     Write-Host 'OK: the button to maximize the window maximizes it, with one full frame; then there is no band, and the top row of the bar is the caption on the free parts of the bar, the client area on the tab and on the buttons of the bar, and the buttons of the window on them.'
 
-    # 7. The same button restores the window.
+    # 8. The same button restores the window.
     $from = Get-Mark
     Send-Caption 1
     Wait-Restored $from 'The button to restore the window'
     Write-Host 'OK: the same button restores the window where it was, with one full frame.'
 
-    # 8. A double click on the free part of the bar maximizes the window, and
+    # 9. A double click on the free part of the bar maximizes the window, and
     # another one restores it.
     $from = Get-Mark
     Send-Posted @($WM_NCLBUTTONDBLCLK, $HTCAPTION, (Get-ScreenParam (Get-OnScreen (Get-DragPoint))))
@@ -1372,7 +1572,7 @@ try {
     Wait-Restored $from 'A double click on the bar of the maximized window'
     Write-Host 'OK: a double click on the free part of the bar maximizes the window, and another one restores it, each with one full frame.'
 
-    # 9. While a menu of meiga is open, a click on the free part of the bar
+    # 10. While a menu of meiga is open, a click on the free part of the bar
     # only closes it: there, the bar is the client area, but for the band and
     # the buttons of the window.
     Wait-Quiet 400
@@ -1398,7 +1598,7 @@ try {
     ) 'Once Esc closed the menu of the tab'
     Write-Host 'OK: while the menu of a tab is open, the free parts of the bar are the client area, so that a click on them only closes the menu, but for the band, and the buttons of the window are those buttons; once Esc closes it, the free parts of the bar are the caption again.'
 
-    # 10. The window cannot be narrower than the bar with one tab between the
+    # 11. The window cannot be narrower than the bar with one tab between the
     # buttons that scroll the strip, nor shorter than the bar. Then, with two
     # tabs, which do not fit, what each part of the bar is.
     Wait-Quiet 400
@@ -1467,7 +1667,7 @@ try {
     Move-Pointer
     Write-Host "OK: the window cannot be narrower than the bar with one tab between the buttons that scroll the strip, nor shorter than the bar: its client area is then $narrowest x $barHeight pixels; with two tabs, which do not fit, the buttons that scroll the strip, the tab in it, and the buttons + and of the profiles are the client area, and the gaps and the room to drag the window are the caption."
 
-    # 11. Losing and getting the focus draws only the buttons of the window.
+    # 12. Losing and getting the focus draws only the buttons of the window.
     Wait-Quiet 400
     $from = Get-Mark
     Send-Posted @($WM_KILLFOCUS, 0, 0, $WM_SETFOCUS, 0, 0)
@@ -1483,7 +1683,7 @@ try {
     }
     Write-Host 'OK: losing and getting the focus draws only the buttons of the window.'
 
-    # 12. The button to minimize the window minimizes it, and nothing is drawn
+    # 13. The button to minimize the window minimizes it, and nothing is drawn
     # while it is minimized; restored, it is painted whole.
     Send-Caption 2
     Wait-For { $api::IsIconic($window) } { 'The button to minimize the window did not minimize it.' }
@@ -1501,7 +1701,7 @@ try {
     Move-Pointer
     Write-Host 'OK: the button to minimize the window minimizes it, and nothing is drawn while it is minimized, also when it loses and gets the focus; restored, it is where it was, and it is painted whole.'
 
-    # 13. The button to close the window ends meiga, and the programs of its
+    # 14. The button to close the window ends meiga, and the programs of its
     # tabs.
     $shells = @(Get-Shells)
     $tabConsoles = @(Get-Consoles)
@@ -1520,6 +1720,9 @@ try {
     $passed = $true
 }
 finally {
+    # If a check failed while the input was shared with the thread of the
+    # window, with no key down.
+    Split-Input
     if ($process) {
         if (-not $process.HasExited) {
             # With the programs of its tabs, and their consoles.
