@@ -118,6 +118,9 @@ public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wPar
 [StructLayout(LayoutKind.Sequential)]
 public struct RECT { public int Left, Top, Right, Bottom; }
 
+[StructLayout(LayoutKind.Sequential)]
+public struct POINT { public int X, Y; }
+
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 struct PROCESSENTRY32W
 {
@@ -135,6 +138,21 @@ public static extern bool GetClientRect(IntPtr window, out RECT rect);
 
 [DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool ClientToScreen(IntPtr window, ref POINT point);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
 
 [DllImport("user32.dll")]
 public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
@@ -571,20 +589,32 @@ function Get-Areas($Lines) {
 }
 
 # The first of two tabs, as meiga lays out its bar (see
-# crates/meiga-core/src/ui/tabbar.rs): from a gap on the left and the top of
-# the bar to its bottom, and as wide as two tabs fit beside the buttons +
-# and of the profiles, up to 240 pixels at a scale of 100 %.
+# crates/meiga-core/src/ui/tabbar.rs): from a gap on the left, and a gap
+# below the band where the window is resized, to the bottom of the bar, and
+# as wide as two tabs fit beside the buttons + and of the profiles, the room
+# to drag the window and its buttons, up to 240 pixels at a scale of 100 %.
+# The band is as high as the frame that Windows gives a window to resize it
+# (see crates/meiga-win/src/window.rs), while the window has the title bar of
+# meiga, whose client area goes up to the top of the window, and is not
+# maximized; and none otherwise.
 function Get-FirstTab {
     $client = [Meiga.Tools.TabsCheck+RECT]::new()
-    if (-not $api::GetClientRect($window, [ref]$client)) {
+    $rect = [Meiga.Tools.TabsCheck+RECT]::new()
+    $corner = [Meiga.Tools.TabsCheck+POINT]::new()
+    if (-not $api::GetClientRect($window, [ref]$client) -or -not $api::GetWindowRect($window, [ref]$rect) -or
+        -not $api::ClientToScreen($window, [ref]$corner)) {
         throw "Could not read the size of the window of $exe."
     }
     $dpi = $api::GetDpiForWindow($window)
     $scale = { param([int]$Pixels) [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96)) }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $band = if ($api::IsZoomed($window) -or $corner.Y -ne $rect.Top) { 0 }
+    else { $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi) }
     $gap = & $scale 4
-    $room = [Math]::Max(0, $client.Right - 3 * $gap - (& $scale 28) - (& $scale 24))
+    $fixed = 3 * $gap + (& $scale 28) + (& $scale 24) + (& $scale 45) + 3 * (& $scale 46)
+    $room = [Math]::Max(0, $client.Right - $fixed)
     $width = [int][Math]::Min((& $scale 240), [Math]::Floor($room / 2))
-    New-Rect $gap $gap ($gap + $width) (& $scale 32)
+    New-Rect $gap ($band + $gap) ($gap + $width) ($band + (& $scale 32))
 }
 
 # The reports of the script of the first tab.

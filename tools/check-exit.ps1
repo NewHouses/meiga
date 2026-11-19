@@ -172,6 +172,17 @@ public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool GetCursorPos(out POINT point);
 
 [DllImport("user32.dll")]
@@ -514,9 +525,9 @@ $chordKeys = @{
 $extendedKeys = @(0x21..0x28) + @(0x2D, 0x2E)
 
 # The script of the tabs of Probe and Later. It writes a line with its
-# number, its folder and the size of its console, and then the keys that its
-# program gets, until the check tells it how to end: with an exit code, after
-# some text or none. With -Closer, in the first tab of the last run, it only
+# number, its folder, the size of its console and the size in pixels of the
+# text area of the terminal, and then the keys that its program gets, until
+# the check tells it how to end: with an exit code, after some text or none. With -Closer, in the first tab of the last run, it only
 # waits until its console closes, and then starts another program in it.
 $program = @'
 param([Parameter(Mandatory)][string]$Work, [switch]$Closer)
@@ -527,6 +538,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -Namespace MeigaCheck -Name Input -MemberDefinition @"
 [DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int handle);
 [DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
+[DllImport("kernel32.dll")] public static extern bool FlushConsoleInputBuffer(System.IntPtr handle);
 [DllImport("kernel32.dll")] public static extern uint WaitForMultipleObjects(uint count, System.IntPtr[] handles, bool all, uint milliseconds);
 "@
 if ($Closer) {
@@ -595,9 +607,27 @@ $stop = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::Man
 # And this one once it has written some text for this script to write, which
 # goes on then.
 $write = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "meiga-check-exit-write-$PID")
-# The folder of the program, and the size of its console: the grid of the
-# terminal.
-[IO.File]::WriteAllText((Join-Path $Work "info-$PID.txt"), "$([Environment]::CurrentDirectory)`n$([Console]::WindowWidth) $([Console]::WindowHeight)`n")
+# The size in pixels of the text area of the terminal, which tells the size
+# of its cells: the script asks for it (CSI 14 t), and then for the
+# attributes of the terminal (DA1), whose answer always comes, from meiga or
+# from the console of Windows, which answers it itself, and swallows the
+# first question. The answers come as keys, which the script reads until the
+# one of DA1; then it drops the keys that go up, which would reach the file
+# of the keys.
+[Console]::Out.Write("$([char]27)[14t$([char]27)[c")
+[Console]::Out.Flush()
+$answer = [Text.StringBuilder]::new()
+$deadline = [DateTime]::UtcNow.AddSeconds(10)
+while ($answer.ToString() -notmatch '\x1b\[\?[0-9;]*c' -and [DateTime]::UtcNow -lt $deadline) {
+    if ([Console]::KeyAvailable) { $null = $answer.Append([Console]::ReadKey($true).KeyChar) }
+    else { [Threading.Thread]::Sleep(5) }
+}
+$null = [MeigaCheck.Input]::FlushConsoleInputBuffer($in)
+$pixels = if ($answer.ToString() -match '\x1b\[4;(\d+);(\d+)t') { "$($Matches[1]) $($Matches[2])" } else { '' }
+# The folder of the program, the size of its console, the grid of the
+# terminal, and the height and the width of its text area, if the terminal
+# told them.
+[IO.File]::WriteAllText((Join-Path $Work "info-$PID.txt"), "$([Environment]::CurrentDirectory)`n$([Console]::WindowWidth) $([Console]::WindowHeight)`n$pixels`n")
 # Up to 64 INPUT_RECORD of 20 bytes: the type of the event in the first two
 # and, for a key, whether it goes down from byte 4, and its virtual-key code
 # from byte 10.
@@ -1001,12 +1031,14 @@ function Wait-Gone([int]$Id, [string]$What) {
     }
 }
 
-# The folder where the script of the tab of $Id runs, and the size of its
-# console, which it wrote when it started.
+# The folder where the script of the tab of $Id runs, the size of its
+# console, and the height and the width of the text area of the terminal,
+# 0 if it did not tell them, which it wrote when it started.
 function Get-Info([int]$Id) {
-    $folder, $size = [IO.File]::ReadAllLines((Join-Path $work "info-$Id.txt"))
-    $columns, $rows = [int[]]($size -split ' ')
-    [pscustomobject]@{ Folder = $folder; Columns = $columns; Rows = $rows }
+    $lines = [IO.File]::ReadAllLines((Join-Path $work "info-$Id.txt"))
+    $columns, $rows = [int[]]($lines[1] -split ' ')
+    $height, $width = if ($lines.Count -gt 2 -and $lines[2]) { [int[]]($lines[2] -split ' ') } else { 0, 0 }
+    [pscustomobject]@{ Folder = $lines[0]; Columns = $columns; Rows = $rows; Height = $height; Width = $width }
 }
 
 # Checks that the program of the tab of $Id runs in $Folder.
@@ -1033,47 +1065,86 @@ function Get-Scaled([int]$Pixels) {
     [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
 }
 
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.ExitCheck+RECT]::new()
+    $corner = [Meiga.Tools.ExitCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+
 # The size of the grid, which the script of the tab of $Id wrote, and of its
-# cells: the grid fills the client area of the window below the tab bar, 32
-# pixels high at a scale of 100 %, but for the strip of the scroll bar, 12
-# pixels, and less than a cell.
+# cells, below the tab bar: the band where the window is resized, and a row
+# 32 pixels high at a scale of 100 %. The script asked the terminal for the
+# size in pixels of its text area, which meiga gives: the grid times the
+# cells. The console of Windows swallows that question: then the cells come
+# from the client area of the window, which the grid fills below the bar,
+# but for the strip of the scroll bar, 12 pixels at a scale of 100 %, and
+# less than a cell. With more pixels to spare than rows, a cell comes out
+# higher than it is, so then the check clicks a pixel below the top of each
+# row, which is still in it.
 function Measure-Cells([int]$Id) {
     $info = Get-Info $Id
-    $client = Get-Client
-    $strip = Get-Scaled 12
-    $script:barHeight = Get-Scaled 32
+    $script:barHeight = (Get-Band) + (Get-Scaled 32)
     $script:grid = [pscustomobject]@{ Columns = $info.Columns; Rows = $info.Rows }
+    $script:exact = $info.Height -gt 0
+    if ($exact) {
+        $script:cell = [pscustomobject]@{
+            Width = [int]($info.Width / $info.Columns)
+            Height = [int]($info.Height / $info.Rows)
+        }
+        return
+    }
+    Write-Warning 'The terminal did not tell the size of its text area in pixels: the console of the tabs is the one of Windows, which swallows the question. The check works out the size of the cells from the window, and clicks near the top of each row.'
+    $client = Get-Client
     $script:cell = [pscustomobject]@{
-        Width = [int][Math]::Floor(($client.Right - $strip) / $info.Columns)
+        Width = [int][Math]::Floor(($client.Right - (Get-Scaled 12)) / $info.Columns)
         Height = [int][Math]::Floor(($client.Bottom - $barHeight) / $info.Rows)
     }
 }
 
-# The pixel in the middle of a cell of the terminal.
+# A pixel of a cell of the terminal: in its middle, or near the top of its
+# row if the size of the cells is not exact.
 function Get-X([int]$Column) { $Column * $cell.Width + [Math]::Floor($cell.Width / 2) }
-function Get-Y([int]$Row) { $barHeight + $Row * $cell.Height + [Math]::Floor($cell.Height / 2) }
+function Get-Y([int]$Row) {
+    $barHeight + $Row * $cell.Height + $(if ($exact) { [Math]::Floor($cell.Height / 2) } else { 1 })
+}
 
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs): the bar, its tabs, and its buttons +
-# and of the profiles.
+# crates/meiga-core/src/ui/tabbar.rs): the bar, with the band where the
+# window is resized above the row of tabs, its tabs a gap below the band,
+# and its buttons + and of the profiles; on the right of the bar go the
+# buttons of the window, and the room to drag it.
 function Get-Bar([int]$Count) {
     $client = Get-Client
-    $height = Get-Scaled 32
+    $band = Get-Band
+    $height = $band + (Get-Scaled 32)
     $gap = Get-Scaled 4
+    $top = $band + $gap
     $padding = Get-Scaled 8
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (Get-Scaled 45) + 3 * (Get-Scaled 46)
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $tabs = @(foreach ($index in 0..($Count - 1)) {
             $left = $gap + $index * $width
-            [pscustomobject]@{ Rect = New-Rect $left $gap ($left + $width) $height; TitleLeft = $left + $padding }
+            [pscustomobject]@{ Rect = New-Rect $left $top ($left + $width) $height; TitleLeft = $left + $padding }
         })
     $newLeft = $gap + $Count * $width + $gap
     [pscustomobject]@{
         Rect = New-Rect 0 0 $client.Right $height
         Tabs = $tabs
-        New = New-Rect $newLeft $gap ($newLeft + $newSide) ($gap + $newSide)
-        Profiles = New-Rect ($newLeft + $newSide) $gap ($newLeft + $newSide + $profilesSide) ($gap + $newSide)
+        New = New-Rect $newLeft $top ($newLeft + $newSide) ($top + $newSide)
+        Profiles = New-Rect ($newLeft + $newSide) $top ($newLeft + $newSide + $profilesSide) ($top + $newSide)
     }
 }
 
@@ -1400,6 +1471,7 @@ $layout = [IntPtr]::Zero
 $dpi = 96
 $grid = $null
 $cell = $null
+$exact = $false
 $barHeight = 0
 $pointer = $null
 $attached = $false

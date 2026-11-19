@@ -7,11 +7,13 @@ the close buttons, the clicks on the tabs, and what each change draws.
 Starts meiga.exe with its frame log (--trace-frames) and, in its first tab, a
 PowerShell script that does one step at a time, when this check tells it to,
 and reports it in a file. The check posts mouse messages to the bar, at the
-places of its layout, which it computes as meiga does: a bar 32 pixels high
-at a scale of 100 %, tabs of up to 240, and so on (ADR 0020). It checks that:
+places of its layout, which it computes as meiga does: a row of tabs 32
+pixels high at a scale of 100 %, below the band where the window is
+resized, tabs of up to 240, the buttons of the window on its right, and so
+on (ADR 0020 and 0027). It checks that:
 
 - the terminal is below the bar: a row that changes is presented in its
-  place there;
+  place there, as high as a cell, and the rows fill the rest of the window;
 - while a program gives titles as fast as it can, in the tab that is shown
   or in a hidden one, the window takes them at most once per frame
   interval: its thread wakes up at most 1000 times per second (it counts its
@@ -156,6 +158,17 @@ public static extern bool GetClientRect(IntPtr window, out RECT rect);
 
 [DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
@@ -647,9 +660,29 @@ function Move-Pointer {
     }
 }
 
+# The band above the row of tabs at $Dpi, where the pointer resizes the
+# window, as meiga computes it (see crates/meiga-win/src/window.rs): as high
+# as the frame that Windows gives a window to resize it, while the window
+# has the title bar of meiga and is not maximized, and none otherwise. With
+# the title bar of meiga, the client area goes up to the top of the window.
+function Get-Band([uint32]$Dpi) {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.TabBarCheck+RECT]::new()
+    $corner = [Meiga.Tools.TabBarCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $Dpi) + $api::GetSystemMetricsForDpi(33, $Dpi)
+}
+
 # The layout of the bar with $Count tabs, as meiga computes it (see
 # crates/meiga-core/src/ui/tabbar.rs): its sizes at the scale of the window,
-# rounded and at least one pixel.
+# rounded and at least one pixel. The band where the window is resized goes
+# above the row of tabs, and the tabs and the button + start a gap below it.
+# On the right of the bar go the three buttons of the window, and the room
+# to drag it.
 function Get-Bar([int]$Count) {
     $client = [Meiga.Tools.TabBarCheck+RECT]::new()
     if (-not $api::GetClientRect($window, [ref]$client)) {
@@ -657,23 +690,28 @@ function Get-Bar([int]$Count) {
     }
     $dpi = $api::GetDpiForWindow($window)
     $scale = { param([int]$Pixels) [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96)) }
-    $height = & $scale 32
+    $band = Get-Band $dpi
+    $row = & $scale 32
+    $height = $band + $row
     $gap = & $scale 4
+    $top = $band + $gap
     $padding = & $scale 8
     $closeSide = & $scale 24
     $newSide = & $scale 28
     $profilesSide = & $scale 24
-    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (& $scale 45) + 3 * (& $scale 46)
+    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
-        $close = New-Rect ($right - $gap - $closeSide) ($gap + [Math]::Floor(($height - $gap - $closeSide) / 2)) ($right - $gap) 0
+        $close = New-Rect ($right - $gap - $closeSide) ($top + [Math]::Floor(($row - $gap - $closeSide) / 2)) ($right - $gap) 0
         $close.Bottom = $close.Top + $closeSide
         [pscustomobject]@{
-            Rect = New-Rect $left $gap $right $height
-            # Its whole column, and the separator on its right.
-            Area = New-Rect $left 0 ($right + 1) $height
-            Title = New-Rect ($left + $padding) $gap $close.Left $height
+            Rect = New-Rect $left $top $right $height
+            # Its whole column of the row of tabs, and the separator on its
+            # right.
+            Area = New-Rect $left $band ($right + 1) $height
+            Title = New-Rect ($left + $padding) $top $close.Left $height
             Close = $close
         }
     }
@@ -681,8 +719,9 @@ function Get-Bar([int]$Count) {
     [pscustomobject]@{
         Rect = New-Rect 0 0 $client.Right $height
         Height = $height
+        Band = $band
         Tabs = @($tabs)
-        New = New-Rect $newLeft $gap ($newLeft + $newSide) ($gap + $newSide)
+        New = New-Rect $newLeft $top ($newLeft + $newSide) ($top + $newSide)
         Client = $client
     }
 }
@@ -792,16 +831,27 @@ try {
     Move-Pointer
     Wait-Quiet 400
     $bar = Get-Bar 1
-    Write-Host "The bar is $($bar.Height) pixels high, and its tabs $($bar.Tabs[0].Rect.Right - $bar.Tabs[0].Rect.Left) wide."
+    Write-Host "The bar is $($bar.Height) pixels high, $($bar.Band) of them above the tabs, and its tabs $($bar.Tabs[0].Rect.Right - $bar.Tabs[0].Rect.Left) wide."
 
-    # 2. The terminal is below the bar: its rows fill the rest of the window,
-    # less than a row to spare, and a row that changes is presented there.
-    $cellHeight = [Math]::Floor(($bar.Client.Bottom - $bar.Height) / [int]$ready[2])
-    $row = New-Rect 0 ($bar.Height + 4 * $cellHeight) $bar.Rect.Right ($bar.Height + 5 * $cellHeight)
+    # 2. The terminal is below the bar: a row that changes is presented in
+    # its place there. The text is in the fifth row, so what is drawn is as
+    # high as a cell, four cells below the bar; and the rows of the screen
+    # fill the rest of the window, with less than a row to spare. Dividing
+    # the room by the rows would not do: with as many pixels to spare as
+    # rows, it gives a cell a pixel higher.
+    $rows = [int]$ready[2]
+    $room = $bar.Client.Bottom - $bar.Height
     $start = @(Get-Log).Count
     $null = Invoke-Step 'write in the fifth row'
-    $frames = Assert-Inside $start $row 'Text in the fifth row'
-    Write-Host "OK: the terminal is below the bar: the fifth row, which changes, is presented $($row.Top) pixels below the top of the window ($($frames.Count) frames)."
+    $frames = Assert-Inside $start (New-Rect 0 $bar.Height $bar.Rect.Right $bar.Client.Bottom) 'Text in the fifth row'
+    $areas = @(Get-Areas $frames)
+    $top = ($areas | Measure-Object -Property Top -Minimum).Minimum
+    $cellHeight = ($areas | Measure-Object -Property Bottom -Maximum).Maximum - $top
+    if ($cellHeight -lt 1 -or $top -ne $bar.Height + 4 * $cellHeight -or $rows * $cellHeight -gt $room -or ($rows + 1) * $cellHeight -le $room) {
+        Show-Lines $frames
+        throw "Text in the fifth row: the window drew it from $top to $($top + $cellHeight) pixels below the top, which is not the fifth of $rows rows that fill the $room pixels below the bar, $($bar.Height) pixels high."
+    }
+    Write-Host "OK: the terminal is below the bar: the fifth row, which changes, is presented $top pixels below the top of the window ($($frames.Count) frames)."
 
     # 3. Titles as fast as the program can give them, in the tab that is
     # shown: the last one goes to the window. Then that one again and again.

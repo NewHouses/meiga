@@ -205,6 +205,17 @@ public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool GetCursorPos(out POINT point);
 
 [DllImport("user32.dll")]
@@ -1160,23 +1171,45 @@ function Get-Scaled([int]$Pixels) {
     [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
 }
 
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.ProfilesCheck+RECT]::new()
+    $corner = [Meiga.Tools.ProfilesCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs): its height, the first tab, the button
-# + after the last tab, the one of the profiles joined to it, and both of
-# them, which the menu of the profiles opens below.
+# crates/meiga-core/src/ui/tabbar.rs): its height, with the band where the
+# window is resized above the row of tabs, the first tab, the button + after
+# the last tab, the one of the profiles joined to it, and both of them,
+# which the menu of the profiles opens below. On the right of the bar go the
+# buttons of the window, and the room to drag it.
 function Get-Bar([int]$Count) {
     $client = Get-Client
-    $height = Get-Scaled 32
+    $band = Get-Band
+    $height = $band + (Get-Scaled 32)
     $gap = Get-Scaled 4
+    $top = $band + $gap
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (Get-Scaled 45) + 3 * (Get-Scaled 46)
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $left = $gap + $Count * $width + $gap
-    $new = New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
+    $new = New-Rect $left $top ($left + $newSide) ($top + $newSide)
     $profiles = New-Rect $new.Right $new.Top ($new.Right + $profilesSide) $new.Bottom
     [pscustomobject]@{
         Height = $height
-        FirstTab = New-Rect $gap $gap ($gap + $width) $height
+        FirstTab = New-Rect $gap $top ($gap + $width) $height
         New = $new
         Profiles = $profiles
         Buttons = Get-Union @($new, $profiles)
