@@ -38,8 +38,8 @@ Windows also sends the window mouse moves of its own, at the place of the
 pointer: for example, when the window takes the mouse while a button is
 down. So the messages of each click, drag or key go at once, while the
 thread of the window is suspended, and, if the pointer is over the
-terminal, the check moves it to the title bar of the window, and puts it
-back at the end.
+window, the check moves it out, above the window, and puts it back at the
+end.
 
 The check uses the clipboard: if it had text, the check puts it back at the
 end, but anything else, such as an image, is lost. Do not use the mouse nor
@@ -648,8 +648,8 @@ function Close-Dialog([int]$Button, [long[]]$Messages = @()) {
     Wait-For { (Get-Dialog) -eq [IntPtr]::Zero } { 'The message box did not close.' }
 }
 
-# If the pointer is over the terminal, moves it to the title bar of the
-# window: the moves that Windows makes at its place would reach the program.
+# If the pointer is over the window, moves it out, above the window: the
+# moves that Windows makes at its place would reach the program.
 function Move-Pointer {
     $point = [Meiga.Tools.MouseCheck+POINT]::new()
     if (-not $api::GetCursorPos([ref]$point)) { return }

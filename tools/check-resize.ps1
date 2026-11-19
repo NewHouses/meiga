@@ -34,8 +34,8 @@ At the end, it checks that meiga.exe ends with exit code 0 when its window
 closes.
 
 As in check-mouse.ps1, the messages of each action go at once, while the
-thread of the window is suspended, and the pointer goes to the title bar of
-the window if it is over the terminal. The check uses the clipboard: if it
+thread of the window is suspended, and the pointer goes out of the window,
+above it, if it is over the window. The check uses the clipboard: if it
 had text, the check puts it back at the end, but anything else, such as an
 image, is lost. Do not use the mouse nor the keyboard while it runs. It
 needs PowerShell 7 (pwsh) in the PATH, for the script in the terminal, and
@@ -698,8 +698,8 @@ function Compare-Screen([string]$What) {
     }
 }
 
-# If the pointer is over the terminal, moves it to the title bar of the
-# window: the moves that Windows makes at its place would reach meiga.
+# If the pointer is over the window, moves it out, above the window: the
+# moves that Windows makes at its place would reach meiga.
 function Move-Pointer {
     $point = [Meiga.Tools.ResizeCheck+POINT]::new()
     if (-not $api::GetCursorPos([ref]$point)) { return }
