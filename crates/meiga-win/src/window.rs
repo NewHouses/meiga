@@ -522,7 +522,8 @@ impl Window {
         unsafe { InvalidateRect(self.handle, rect, 0) };
     }
 
-    /// Changes the text of the title bar, which the taskbar also shows.
+    /// Changes the text of the window, which the taskbar and Alt+Tab show,
+    /// and the title bar of Windows, if the window has it.
     pub fn set_title(&self, title: &str) {
         let title = wide(title);
         // SAFETY: the window is of this thread, and the string is
@@ -1725,7 +1726,6 @@ mod tests {
         let resized = Event::Resized {
             size: window.client_size().unwrap(),
             minimized: false,
-            maximized: false,
         };
         let events = &recorder.0;
         assert_eq!(events.first(), Some(&Event::DpiChanged { dpi: 144 }));

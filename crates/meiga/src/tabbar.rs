@@ -30,9 +30,13 @@
 //! or restore, and close, as in Windows 11. They act as the other buttons,
 //! when the left button goes up on the same one where it went down, and the
 //! pointer highlights them: the close button, in red. Without the focus,
-//! their glyphs are dimmer. Windows drags the window from the rest of the
-//! bar, and resizes it from the band above the tabs, while the window is
-//! not maximized: those clicks never reach the bar.
+//! their glyphs are dimmer. The rest of the bar is the caption of the
+//! window: dragging it moves the window, and a double click maximizes or
+//! restores it, as Windows does with its own; the right button opens the
+//! menu of the window, where it goes up; and the band above the tabs, while
+//! the window is not maximized, resizes it. Those clicks never reach the
+//! bar. While a menu of meiga is open, the rest of the bar is client area,
+//! and a click on it only closes the menu.
 //!
 //! The bar only draws what changed: a title, the highlight of a tab or of a
 //! button, and all of it when its layout changes or it scrolls.
@@ -334,10 +338,14 @@ impl TabBar {
         self.relayout(tabs);
     }
 
-    /// The window frames the bar as `frame` says now. With another band, or
-    /// with or without the buttons of the window, the parts of the bar
-    /// move, and the tabs keep their width and their scroll; once the window
-    /// is maximized or restored, only the button that does it changes.
+    /// The window frames the bar as `frame` says now. Another band moves the
+    /// parts of the bar down or up, and the tabs keep their width and their
+    /// scroll; with or without the buttons of the window, the parts stay,
+    /// since the bar always keeps the room of those buttons. Either way, all
+    /// of the bar is drawn again. With the same band, once the window is
+    /// maximized or restored, only the button that does it changes, if the
+    /// bar has the buttons; but a maximized window has no band, so with the
+    /// title bar of meiga the band changes too.
     pub fn set_frame<T>(&mut self, frame: Frame, tabs: &model::Window<T>) {
         let old = mem::replace(&mut self.frame, frame);
         if old.band != frame.band || old.buttons != frame.buttons {

@@ -10,11 +10,11 @@ use meiga_core::mouse::{Button, Modifiers};
 use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::HDC;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    SIZE_MAXIMIZED, SIZE_MINIMIZED, WM_APP, WM_CAPTURECHANGED, WM_KILLFOCUS, WM_LBUTTONDOWN,
-    WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL,
-    WM_NCLBUTTONDBLCLK, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_NCMBUTTONDBLCLK, WM_NCMBUTTONDOWN,
-    WM_NCMBUTTONUP, WM_NCMOUSEMOVE, WM_NCRBUTTONDBLCLK, WM_NCRBUTTONDOWN, WM_NCRBUTTONUP,
-    WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
+    SIZE_MINIMIZED, WM_APP, WM_CAPTURECHANGED, WM_KILLFOCUS, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_NCLBUTTONDBLCLK,
+    WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_NCMBUTTONDBLCLK, WM_NCMBUTTONDOWN, WM_NCMBUTTONUP,
+    WM_NCMOUSEMOVE, WM_NCRBUTTONDBLCLK, WM_NCRBUTTONDOWN, WM_NCRBUTTONUP, WM_RBUTTONDOWN,
+    WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
 };
 
 use crate::window::Window;
@@ -60,13 +60,9 @@ pub trait Handler {
 /// the top-left corner of its client area.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Event {
-    /// The client area changed size, or the window was minimized, maximized
-    /// or restored. A minimized window has size 0 × 0.
-    Resized {
-        size: Size,
-        minimized: bool,
-        maximized: bool,
-    },
+    /// The client area changed size, or the window was minimized or
+    /// restored. A minimized window has size 0 × 0.
+    Resized { size: Size, minimized: bool },
     /// The window moved to a monitor with another scale, or the scale of
     /// its monitor changed: it has `dpi` dots per inch now. Its new size, if
     /// it changes, comes right after, with [`Event::Resized`].
@@ -155,7 +151,6 @@ pub(crate) fn decode(
         WM_SIZE => Event::Resized {
             size: Size::new(u32::from(low_word(lparam)), u32::from(high_word(lparam))),
             minimized: wparam == SIZE_MINIMIZED as WPARAM,
-            maximized: wparam == SIZE_MAXIMIZED as WPARAM,
         },
         WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN => Event::MouseDown {
             button: match message {
@@ -302,7 +297,6 @@ mod tests {
             Some(Event::Resized {
                 size: Size::new(1920, 1080),
                 minimized: false,
-                maximized: false,
             })
         );
         assert_eq!(
@@ -310,15 +304,6 @@ mod tests {
             Some(Event::Resized {
                 size: Size::new(0, 0),
                 minimized: true,
-                maximized: false,
-            })
-        );
-        assert_eq!(
-            decode(WM_SIZE, SIZE_MAXIMIZED as WPARAM, xy(1920, 1032)),
-            Some(Event::Resized {
-                size: Size::new(1920, 1032),
-                minimized: false,
-                maximized: true,
             })
         );
     }

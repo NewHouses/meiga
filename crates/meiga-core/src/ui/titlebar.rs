@@ -1,13 +1,15 @@
 //! The bar of tabs as the title bar of the window (ADR 0027): what each
-//! point of it is for Windows, which drags the window, resizes it from its
-//! top edge, or presses its buttons, and how small the window can be.
+//! point of it is for Windows, which drags the window from it, resizes the
+//! window from its top edge, and knows where its buttons are; how small the
+//! window can be; and where Alt+Space opens the menu of the window.
 //!
 //! Windows asks a window what is at a point with `WM_NCHITTEST`, and does
 //! what that part does by itself: the title bar drags the window and, with a
 //! double click, maximizes or restores it; the top edge resizes it; and the
 //! button to maximize opens the snap layouts of Windows 11 under the
-//! pointer. meiga answers for its bar with a [`Hit`], and draws the bar and
-//! its buttons itself.
+//! pointer. meiga answers for its bar with a [`Hit`]; it draws the bar and
+//! its buttons itself, and the clicks on them go to the bar, and not to
+//! Windows.
 
 use super::tabbar::{CaptionButton, Layout, Part};
 use crate::geometry::{Point, Size};
@@ -16,7 +18,8 @@ use crate::geometry::{Point, Size};
 /// `WM_NCHITTEST` for it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Hit {
-    /// A part of meiga: the tabs, their buttons, the terminal.
+    /// A part of meiga: the tabs, the buttons of the bar and the terminal;
+    /// and, while a menu of meiga is open, also the free parts of the bar.
     Client,
     /// The title bar: it drags the window, and maximizes or restores it with
     /// a double click.

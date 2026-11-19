@@ -154,8 +154,9 @@ impl Chord {
             }
         }
         let key = key.ok_or(ChordError::NoKey)?;
-        // Windows closes the window with Alt+F4, and opens its menu with
-        // Alt+Space: meiga never gets them (ADR 0014).
+        // Windows closes the window with Alt+F4 and, with Alt+Space, asks
+        // the window for its menu, which meiga opens below the bar: they
+        // never reach meiga as keys (ADR 0014 and ADR 0027).
         if modifiers & (Self::ALT | Self::CTRL) == Self::ALT && matches!(key, VK_F4 | VK_SPACE) {
             return Err(ChordError::ForWindows);
         }

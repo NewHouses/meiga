@@ -167,24 +167,14 @@ impl App {
         }
         let size = window.client_size()?;
         let minimized = window.is_minimized();
-        let maximized = window.is_maximized();
-        self.event(
-            window,
-            Event::Resized {
-                size,
-                minimized,
-                maximized,
-            },
-        )
+        self.event(window, Event::Resized { size, minimized })
     }
 }
 
 impl Handler for App {
     fn event(&mut self, window: &Window, event: Event) -> Result<(), HandlerError> {
         match event {
-            Event::Resized {
-                size, minimized, ..
-            } => {
+            Event::Resized { size, minimized } => {
                 // A minimized window keeps its grid, and closes the menu.
                 let mut moved = false;
                 if let Content::Terminal(tabs) = &mut self.content {
