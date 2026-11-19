@@ -59,6 +59,7 @@ use meiga_core::model::{self, Close, Closed, Switch, TabId};
 use meiga_core::profile::Launch;
 use meiga_core::term::Terminal;
 use meiga_core::ui::menu::{Anchor, Entry};
+use meiga_core::ui::titlebar::TitleBar;
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::conpty::{Priority, Pty};
 use meiga_win::event::{Event, HandlerError};
@@ -71,7 +72,7 @@ use crate::mouse::Response;
 use crate::scrollbar::ScrollBar;
 use crate::session::{self, Exit, Shared, lock};
 use crate::shells::Shells;
-use crate::tabbar::{Indicator, Label, TabBar};
+use crate::tabbar::{Frame, Indicator, Label, TabBar};
 use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TabTerminal, TerminalView};
 
 /// What a shortcut, a click on the tab bar, or an item of a menu asks for
@@ -133,6 +134,14 @@ pub enum TabAction {
     Restart(TabId),
     /// The same with the tab that is shown: Enter, without a program.
     RestartActive,
+    /// Minimize the window: its button on the tab bar (ADR 0027).
+    Minimize,
+    /// Maximize the window or, if it is maximized, restore it: its button
+    /// on the tab bar.
+    ToggleMaximize,
+    /// Close the window, and with it all the tabs: its button on the tab
+    /// bar.
+    CloseWindow,
 }
 
 /// A tab: the terminal of its session, the session, and what the bar shows
@@ -387,7 +396,7 @@ impl Tabs {
         let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
         let cell = font.cell();
         let client = window.client_size()?;
-        let bar = TabBar::new(&fonts, dpi, client.width, 1)?;
+        let bar = TabBar::new(&fonts, dpi, client.width, 1, frame(window, dpi))?;
         let area = below_bar(client, bar.height());
         let grid = view::grid_size(area, cell, ScrollBar::width_at(dpi));
         let waker = window.waker();
@@ -401,7 +410,7 @@ impl Tabs {
         let view = TerminalView::new(terminal, fonts, font, dpi, area, shortcuts);
         // The clicks select text until the program asks for the mouse.
         window.set_pointer(Pointer::Text);
-        Ok(Self {
+        let tabs = Self {
             tabs,
             view,
             bar,
@@ -411,23 +420,48 @@ impl Tabs {
             client,
             retitled_at: None,
             answers: Vec::new(),
-        })
+        };
+        tabs.title_bar(window);
+        Ok(tabs)
     }
 
     pub const fn view(&self) -> &TerminalView {
         &self.view
     }
 
+    /// Tells `window`, if it has the title bar of meiga, where each part of
+    /// the bar is, and whether a menu is open: Windows asks the window what
+    /// is under the pointer, and drags or resizes the window by itself.
+    /// Each event of the window may move the parts of the bar, so it does
+    /// it after each one.
+    pub fn title_bar(&self, window: &Window) {
+        if window.has_title_bar() {
+            window.set_title_bar(TitleBar::new(self.bar.layout(), self.menu.is_open()));
+        }
+    }
+
     /// The client area of the window has `client` pixels now: the bar has
     /// its width, and the terminal the rest. If it changed, the menu
-    /// closes.
-    pub fn resized(&mut self, window: &Window, client: Size) {
-        if client != self.client {
+    /// closes. The window may have been maximized or restored, and the bar
+    /// got or lost the band above its tabs: then the terminal is at another
+    /// place, and the next frame draws the whole window again. Returns
+    /// whether that happened while the client area kept its size, when no
+    /// new size asks for that frame.
+    pub fn resized(&mut self, window: &Window, client: Size) -> bool {
+        let same = client == self.client;
+        if !same {
             self.close_menu(window);
         }
         self.client = client;
+        let height = self.bar.height();
+        self.bar.set_frame(frame(window, window.dpi()), &self.tabs);
         self.bar.resize(client.width, &self.tabs);
         self.view.resized(below_bar(client, self.bar.height()));
+        let moved = self.bar.height() != height;
+        if moved {
+            self.view.redraw();
+        }
+        same && moved
     }
 
     /// The window moved to a monitor with `dpi`: the bar and the view are
@@ -436,6 +470,8 @@ impl Tabs {
     pub fn dpi_changed(&mut self, window: &Window, dpi: u32) {
         self.close_menu(window);
         self.bar.set_dpi(dpi, &self.tabs);
+        // And the band above the tabs, as thick as the frame at `dpi`.
+        self.bar.set_frame(frame(window, dpi), &self.tabs);
         self.view.dpi_changed(dpi);
         // The bar can have another height: until the new size comes, the
         // terminal has the rest of the same window.
@@ -443,11 +479,12 @@ impl Tabs {
     }
 
     /// The window gained or lost the focus, at `now`. Without it, the menu
-    /// closes.
+    /// closes, and the buttons of the window on the bar look dimmer.
     pub fn focus(&mut self, window: &Window, focused: bool, now: Instant) {
         if !focused {
             self.close_menu(window);
         }
+        self.bar.set_focused(focused);
         self.view.focus(focused, now);
     }
 
@@ -670,6 +707,20 @@ impl Tabs {
             TabAction::ActiveMenu => return self.open_menu(window, active, None),
             TabAction::Restart(id) => return self.restart(window, id, now),
             TabAction::RestartActive => return self.restart(window, active, now),
+            // Windows does them: the window gets the events of the change
+            // afterwards. The press drew the button.
+            TabAction::Minimize => {
+                window.minimize();
+                return self.bar.has_damage();
+            }
+            TabAction::ToggleMaximize => {
+                window.toggle_maximize();
+                return self.bar.has_damage();
+            }
+            TabAction::CloseWindow => {
+                window.close();
+                return self.bar.has_damage();
+            }
         };
         match switch {
             Some(switch) => {
@@ -1188,6 +1239,17 @@ impl Scene for Tabs {
 /// bar `bar` pixels high.
 fn below_bar(client: Size, bar: u32) -> Size {
     Size::new(client.width, client.height.saturating_sub(bar))
+}
+
+/// What the bar needs to know of the frame of `window` at `dpi`: whether
+/// the bar has the buttons of the window, the band above the tabs where
+/// Windows resizes the window, and whether it is maximized.
+fn frame(window: &Window, dpi: u32) -> Frame {
+    Frame {
+        buttons: window.has_title_bar(),
+        band: window.resize_band(dpi),
+        maximized: window.is_maximized(),
+    }
 }
 
 /// `event`, with its point `by` pixels higher.

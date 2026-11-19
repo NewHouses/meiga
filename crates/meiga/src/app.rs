@@ -186,15 +186,21 @@ impl Handler for App {
                 size, minimized, ..
             } => {
                 // A minimized window keeps its grid, and closes the menu.
+                let mut moved = false;
                 if let Content::Terminal(tabs) = &mut self.content {
                     if minimized {
                         tabs.close_menu(window);
                     } else {
-                        tabs.resized(window, size);
+                        moved = tabs.resized(window, size);
                     }
                 }
                 self.frames
                     .resized(window, size, minimized, &mut self.content)?;
+                if moved {
+                    // The bar changed height in a window of the same size,
+                    // whose new size would draw the terminal at its place.
+                    self.frames.changed(window, &mut self.content)?;
+                }
                 if self.is_bench() {
                     self.frames.schedule(window)?;
                 }
@@ -267,6 +273,11 @@ impl Handler for App {
                     self.respond(window, response)?;
                 }
             }
+        }
+        // Each event may move the parts of the tab bar, or open or close a
+        // menu: Windows asks the window what is under the pointer.
+        if let Content::Terminal(tabs) = &self.content {
+            tabs.title_bar(window);
         }
         Ok(())
     }
