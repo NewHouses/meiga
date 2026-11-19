@@ -20,8 +20,9 @@ that:
   scrolling in the strip, and while a menu of meiga is open;
 - the pointer on the buttons of the window draws only them;
 - the right button on the bar opens the menu of the window, with the commands
-  that the state of the window allows, and nothing is drawn while it is open;
-  Esc closes it, and Down and Enter choose its commands;
+  that the state of the window allows, and Close in bold, as Windows has it,
+  and nothing is drawn while it is open; Esc closes it, and Down and Enter
+  choose its commands;
 - the buttons maximize, restore, minimize and close the window, and a double
   click on the bar maximizes and restores it; maximized, the client area is
   the work area of the monitor; minimized, nothing is drawn;
@@ -1019,8 +1020,9 @@ function Get-ItemPosition([IntPtr]$Menu, [int]$Command) {
 }
 
 # Checks that the menu of the window has the commands that the window
-# allows, maximized or not, enabled, the others disabled, and none of them as
-# the default one, in bold; otherwise throws what $When says.
+# allows, maximized or not, enabled, the others disabled, and Close as the
+# default one, in bold, as in the menu that Windows opens with Alt+Space;
+# otherwise throws what $When says.
 function Assert-WindowMenu([IntPtr]$Menu, [bool]$Maximized, [string]$When) {
     $enabled = @{
         Restore = $Maximized
@@ -1041,8 +1043,9 @@ function Assert-WindowMenu([IntPtr]$Menu, [bool]$Maximized, [string]$When) {
         if ($able -ne $enabled[$command]) {
             "$command is $(if ($able) { 'enabled' } else { 'disabled' })"
         }
-        if (($state -band $MF_DEFAULT) -ne 0) {
-            "$command is the default item"
+        $default = ($state -band $MF_DEFAULT) -ne 0
+        if ($default -ne ($command -eq 'Close')) {
+            "$command is $(if (-not $default) { 'not ' })the default item"
         }
     }
     if (@($wrong).Count -gt 0) {
@@ -1292,6 +1295,8 @@ try {
         New-Hit $tabX 0 $HTTOP
         New-Hit $tabX ($band - 1) $HTTOP
         New-Hit $drag.X 0 $HTTOP
+        New-Hit $drag.X ($band - 1) $HTTOP
+        New-Hit $drag.X $band $HTCAPTION
         New-Hit $drag.X $drag.Y $HTCAPTION
         New-Hit ([int][Math]::Floor($gap / 2)) $midY $HTCAPTION
         New-Hit $tabX $band $HTCLIENT
@@ -1320,7 +1325,7 @@ try {
     $from = Get-Mark
     Send-Key $VK_RETURN
     Wait-Maximized $from 'Enter on Maximize, in the menu of the window,'
-    Write-Host 'OK: the right button on the free part of the bar opens the menu of the window, with the commands of a restored window enabled, and nothing is drawn while it is open; Esc closes it, and draws nothing; Down and Enter on Maximize maximize the window, with one full frame, and its client area is the work area of its monitor.'
+    Write-Host 'OK: the right button on the free part of the bar opens the menu of the window, with the commands of a restored window enabled and Close in bold, and nothing is drawn while it is open; Esc closes it, and draws nothing; Down and Enter on Maximize maximize the window, with one full frame, and its client area is the work area of its monitor.'
 
     # 5. Maximized, the menu of the window has other commands enabled: Down
     # and Enter choose Restore.
@@ -1330,7 +1335,7 @@ try {
     $from = Get-Mark
     Send-Key $VK_RETURN
     Wait-Restored $from 'Enter on Restore, in the menu of the window,'
-    Write-Host 'OK: maximized, the menu of the window has the commands of a maximized window enabled, and Down and Enter on Restore restore the window where it was, with one full frame, and with the band above the tabs.'
+    Write-Host 'OK: maximized, the menu of the window has the commands of a maximized window enabled and Close in bold, and Down and Enter on Restore restore the window where it was, with one full frame, and with the band above the tabs.'
 
     # 6. The button to maximize the window maximizes it: then there is no
     # band, and the top row of the bar is what is below it.

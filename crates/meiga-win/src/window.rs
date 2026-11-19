@@ -819,8 +819,9 @@ impl Window {
             // as it. It returns the state before, or -1 without the item.
             unsafe { EnableMenuItem(menu, command, MF_BYCOMMAND | state) };
         }
-        // SAFETY: as above. u32::MAX: no item is the default one, in bold.
-        unsafe { SetMenuDefaultItem(menu, u32::MAX, 0) };
+        // SAFETY: as above. Close is the default item, in bold, as in the
+        // menu that Windows opens with Alt+Space.
+        unsafe { SetMenuDefaultItem(menu, SC_CLOSE, 0) };
         // SAFETY: the menu and the window are of this thread, and there is no
         // rectangle. TPM_RETURNCMD: it returns the command that the user
         // chose, or 0, instead of sending it.
