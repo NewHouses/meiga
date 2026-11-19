@@ -527,8 +527,9 @@ $extendedKeys = @(0x21..0x28) + @(0x2D, 0x2E)
 # The script of the tabs of Probe and Later. It writes a line with its
 # number, its folder, the size of its console and the size in pixels of the
 # text area of the terminal, and then the keys that its program gets, until
-# the check tells it how to end: with an exit code, after some text or none. With -Closer, in the first tab of the last run, it only
-# waits until its console closes, and then starts another program in it.
+# the check tells it how to end: with an exit code, after some text or none.
+# With -Closer, in the first tab of the last run, it only waits until its
+# console closes, and then starts another program in it.
 $program = @'
 param([Parameter(Mandatory)][string]$Work, [switch]$Closer)
 $ErrorActionPreference = 'Stop'

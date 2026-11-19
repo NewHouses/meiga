@@ -690,12 +690,6 @@ function Test-Inside($Inner, $Outer) {
     $Inner.Right -le $Outer.Right -and $Inner.Bottom -le $Outer.Bottom
 }
 
-# Whether $One and $Other have some pixel in common.
-function Test-Overlap($One, $Other) {
-    $One.Left -lt $Other.Right -and $Other.Left -lt $One.Right -and
-    $One.Top -lt $Other.Bottom -and $Other.Top -lt $One.Bottom
-}
-
 # Whether $One and $Other are the same rectangle.
 function Test-Same($One, $Other) {
     $One.Left -eq $Other.Left -and $One.Top -eq $Other.Top -and
@@ -955,8 +949,9 @@ function Get-AltKey([int]$Code, [bool]$Down) {
     $WM_SYSKEYUP, $Code, ($bits -bor 0xC0000000L)
 }
 
-# The messages of $Code going down and up, as Windows sends them, with the
-# scan code of the key: each message, its wParam and its lParam.
+# The messages of $Code going down and up, as Windows sends them for a key
+# that is not extended, with its scan code: each message, its wParam and its
+# lParam.
 function Get-Press([int]$Code) {
     $scan = [long]$api::MapVirtualKeyW($Code, 0)
     [long]$bits = 1 -bor ($scan -shl 16)
@@ -1159,7 +1154,7 @@ function Get-ItemPosition([IntPtr]$Menu, [int]$Command) {
 
 # Checks that the menu of the window has the commands that the window
 # allows, maximized or not, enabled, the others disabled, and Close as the
-# default one, in bold, as in the menu that Windows opens with Alt+Space;
+# default one, in bold, as in the menu that Windows opens itself;
 # otherwise throws what $When says.
 function Assert-WindowMenu([IntPtr]$Menu, [bool]$Maximized, [string]$When) {
     $enabled = @{
@@ -1400,7 +1395,7 @@ try {
         $rect.Right - $origin.X - $client.Right -ne $side -or $rect.Bottom - $origin.Y - $client.Bottom -ne $low) {
         throw "The frame of the window is $sides pixels wide, instead of left $side, top 0, right $side and bottom $low."
     }
-    Write-Host "OK: the bar goes up to the top of the window, where a band of $band pixels resizes it, and Windows keeps its frame on the other sides, $side pixels wide."
+    Write-Host "OK: the bar goes up to the top of the window, and Windows keeps its frame on the other sides: $side pixels on the left and on the right, and $low at the bottom."
 
     # 2. What each part of the restored window is for Windows: its frame, the
     # band and its corner, the free parts of the bar, its buttons and the
@@ -1707,7 +1702,7 @@ try {
     $tabConsoles = @(Get-Consoles)
     Send-Caption 0
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-        throw "$exe was still running $TimeoutSeconds s after its window closed."
+        throw "$exe was still running $TimeoutSeconds s after a click on the button to close its window."
     }
     if ($process.ExitCode -ne 0) {
         throw "$exe ended with exit code $($process.ExitCode) instead of 0."
