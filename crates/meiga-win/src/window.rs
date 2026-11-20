@@ -14,7 +14,7 @@ use windows_sys::Win32::Foundation::{
 };
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, ClientToScreen, EndPaint, GetMonitorInfoW, InvalidateRect,
-    MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromWindow, PAINTSTRUCT, ScreenToClient,
+    MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromRect, PAINTSTRUCT, ScreenToClient,
     UpdateWindow, ValidateRect,
 };
 use windows_sys::Win32::System::LibraryLoader::{
@@ -1041,7 +1041,13 @@ fn app_bar_message() -> Option<AppBarFn> {
 /// the whole monitor on the edges with a taskbar that hides itself: leaves
 /// a few pixels of `client` free there, so that the pointer can show the
 /// taskbar, as in Windows Terminal.
-fn leave_room_for_hidden_taskbars(window: HWND, client: &mut RECT) {
+///
+/// The monitor is the one of `client`, the client area that the window is
+/// going to have: Windows sends WM_NCCALCSIZE before it moves the window,
+/// which, as it is restored from minimized, is still at (-32000, -32000),
+/// and, as Win+Shift+Arrow takes it to another monitor, still on the one
+/// that it leaves.
+fn leave_room_for_hidden_taskbars(client: &mut RECT) {
     let Some(app_bar_message) = app_bar_message() else {
         return;
     };
@@ -1052,9 +1058,9 @@ fn leave_room_for_hidden_taskbars(window: HWND, client: &mut RECT) {
     if unsafe { app_bar_message(ABM_GETSTATE, &mut query) } & ABS_AUTOHIDE == 0 {
         return;
     }
-    // SAFETY: MonitorFromWindow accepts any handle, and always gives a
-    // monitor with MONITOR_DEFAULTTONEAREST.
-    let monitor = unsafe { MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) };
+    // SAFETY: `client` is a valid RECT for MonitorFromRect to read, which
+    // always gives a monitor with MONITOR_DEFAULTTONEAREST.
+    let monitor = unsafe { MonitorFromRect(&*client, MONITOR_DEFAULTTONEAREST) };
     let mut info = MONITORINFO {
         cbSize: size_of::<MONITORINFO>() as u32,
         ..Default::default()
@@ -1435,7 +1441,7 @@ unsafe extern "system" fn window_proc(
             // SAFETY: IsZoomed accepts any handle.
             if unsafe { IsZoomed(window) } != 0 {
                 client.top += frame(window_dpi(window)) as i32;
-                leave_room_for_hidden_taskbars(window, &mut client);
+                leave_room_for_hidden_taskbars(&mut client);
             }
             // SAFETY: as above.
             unsafe { *rect = client };
