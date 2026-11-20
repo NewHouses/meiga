@@ -157,6 +157,13 @@ public static extern bool GetClientRect(IntPtr window, out RECT rect);
 public static extern bool GetWindowRect(IntPtr window, out RECT rect);
 
 [DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll", SetLastError = true)]
@@ -697,24 +704,47 @@ function Get-Scaled([int]$Pixels) {
     [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
 }
 
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.MenuCheck+RECT]::new()
+    $corner = [Meiga.Tools.MenuCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs).
+# crates/meiga-core/src/ui/tabbar.rs): the band where the window is resized
+# above the row of tabs, the tabs a gap below it, and on the right of the
+# bar the buttons of the window and the room to drag it.
 function Get-Bar([int]$Count) {
     $client = Get-Client
-    $height = Get-Scaled 32
+    $band = Get-Band
+    $row = Get-Scaled 32
+    $height = $band + $row
     $gap = Get-Scaled 4
+    $top = $band + $gap
     $padding = Get-Scaled 8
     $closeSide = Get-Scaled 24
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (Get-Scaled 45) + 3 * (Get-Scaled 46)
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
         $close = New-Rect ($right - $gap - $closeSide) 0 ($right - $gap) 0
         [pscustomobject]@{
-            Rect = New-Rect $left $gap $right $height
-            Title = New-Rect ($left + $padding) $gap $close.Left $height
+            Rect = New-Rect $left $top $right $height
+            Title = New-Rect ($left + $padding) $top $close.Left $height
         }
     }
     [pscustomobject]@{

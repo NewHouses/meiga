@@ -65,7 +65,12 @@ fn run(options: &Options) -> Result<(), Box<dyn Error>> {
             })?),
             None => None,
         };
-    let window = Window::create(&WindowOptions { title: TITLE })?;
+    // The tabs go in the title bar, which meiga draws (ADR 0027). The
+    // benchmarks have no tab bar, and keep the frame of Windows.
+    let window = Window::create(&WindowOptions {
+        title: TITLE,
+        title_bar: options.bench.is_none(),
+    })?;
     let mut app = App::new(&window, options, trace)?;
     window.run(&mut app)
 }

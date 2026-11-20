@@ -11,8 +11,9 @@ own, whose config.toml has two profiles, Light, which runs cmd with a hidden
 cursor, and Probe, the default one, which runs a PowerShell script that
 writes the text that the check gives it, and ends when the check tells it
 to; and hides the shells that meiga finds. The window gets a client area of
-800 x 400 pixels at a scale of 100 %, so that 7 tabs fit in the bar and 8 do
-not.
+983 x 400 pixels at a scale of 100 %, so that 7 tabs fit in the bar, beside
+its buttons, the room to drag the window and the buttons of the window, and
+8 do not.
 
 The check computes the layout of the bar as meiga does (see
 crates/meiga-core/src/ui/tabbar.rs), and follows the tab that is shown by
@@ -160,6 +161,13 @@ public static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y
 
 [DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
@@ -931,11 +939,14 @@ function Send-Chord([string]$Chord) {
 }
 
 # The bar, as meiga lays it out (see crates/meiga-core/src/ui/tabbar.rs): its
-# sizes, once the window is known; the width of its tabs, whether they do not
-# fit, and how far the strip scrolls them; what is left of the steps of the
-# wheel (see crates/meiga/src/tabbar.rs); and its tabs, by the number of
-# their programs, with the one that is shown.
+# sizes, once the window is known, with the band above its row of tabs, where
+# the window is resized; the width of its tabs, whether they do not fit, and
+# how far the strip scrolls them; what is left of the steps of the wheel (see
+# crates/meiga/src/tabbar.rs); and its tabs, by the number of their programs,
+# with the one that is shown.
 $barWidth = 0
+$band = 0
+$rowHeight = 0
 $barHeight = 0
 $gap = 0
 $padding = 0
@@ -943,6 +954,8 @@ $closeSide = 0
 $newSide = 0
 $profilesSide = 0
 $scrollSide = 0
+$dragSide = 0
+$captionSide = 0
 $maxTab = 0
 $minTab = 0
 $barTabWidth = 0
@@ -952,9 +965,27 @@ $barRest = 0
 $tabs = [Collections.Generic.List[int]]::new()
 $active = 0
 
-# The width of the bar without the buttons that open a tab and three gaps.
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the frame
+# that Windows gives a window to resize it, while the window has the title bar
+# of meiga and is not maximized, and none otherwise. With the title bar of
+# meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.ManyTabsCheck+RECT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ((Get-OnScreen ([pscustomobject]@{ X = 0; Y = 0 })).Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+
+# The width of the bar without what is not for the tabs: three gaps, the
+# buttons that open a tab, the narrowest room to drag the window, and the
+# three buttons of the window.
 function Get-Room {
-    [Math]::Max(0, $barWidth - 3 * $gap - $newSide - $profilesSide)
+    [Math]::Max(0, $barWidth - 3 * $gap - $newSide - $profilesSide - $dragSide - 3 * $captionSide)
 }
 
 # The width of the strip while the tabs do not fit.
@@ -987,16 +1018,18 @@ function Get-Start {
     if ($barOverflow) { (Get-Strip).Left - $barScroll } else { $gap }
 }
 
+# The tab at $Index, from a gap below the band to the bottom of the bar.
 function Get-TabRect([int]$Index) {
     $left = (Get-Start) + $Index * $barTabWidth
-    New-Rect $left $gap ($left + $barTabWidth) $barHeight
+    New-Rect $left ($band + $gap) ($left + $barTabWidth) $barHeight
 }
 
 # What the pointer draws when it comes onto the tab at $Index, or leaves it:
-# its column of the bar, with the separator on its right, in the strip.
+# its column of the row of tabs, with the separator on its right, in the
+# strip.
 function Get-TabArea([int]$Index) {
     $tab = Get-TabRect $Index
-    Get-Intersection (New-Rect $tab.Left 0 ($tab.Right + 1) $barHeight) (Get-Strip)
+    Get-Intersection (New-Rect $tab.Left $band ($tab.Right + 1) $barHeight) (Get-Strip)
 }
 
 # The close button of the tab at $Index, or $null if it is too narrow.
@@ -1005,7 +1038,7 @@ function Get-CloseRect([int]$Index) {
     $right = $tab.Right - $gap
     $left = $right - $closeSide
     if ($left -lt $tab.Left + $gap) { return $null }
-    $top = $tab.Top + [Math]::Floor(($barHeight - $gap - $closeSide) / 2)
+    $top = $tab.Top + [Math]::Floor(($rowHeight - $gap - $closeSide) / 2)
     New-Rect $left $top $right ($top + $closeSide)
 }
 
@@ -1025,7 +1058,8 @@ function Get-LabelArea([int]$Index) {
 
 function Get-NewRect {
     $left = if ($barOverflow) { (Get-Strip).Right + $scrollSide + $gap } else { (Get-TabRect $tabs.Count).Left + $gap }
-    New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
+    $top = $band + $gap
+    New-Rect $left $top ($left + $newSide) ($top + $newSide)
 }
 
 function Get-ProfilesRect {
@@ -1037,7 +1071,14 @@ function Get-ProfilesRect {
 function Get-ScrollRect([string]$Side) {
     $strip = Get-Strip
     $left = if ($Side -eq 'Left') { $strip.Left - $scrollSide } else { $strip.Right }
-    New-Rect $left $gap ($left + $scrollSide) ($gap + $newSide)
+    $top = $band + $gap
+    New-Rect $left $top ($left + $scrollSide) ($top + $newSide)
+}
+
+# The three buttons of the window together, on the right of the bar, as high
+# as all of it, also over the band.
+function Get-CaptionsRect {
+    New-Rect ($barWidth - 3 * $captionSide) 0 $barWidth $barHeight
 }
 
 # Scrolls the strip to $Target, or as far as it can. Returns whether it
@@ -1123,7 +1164,11 @@ function Get-StepsTo([int]$Index) {
 # The tab whose close button is at $Point, as meiga finds it, or -1.
 function Get-CloseAt($Point) {
     $across = { param($Rect) $Point.X -ge $Rect.Left -and $Point.X -lt $Rect.Right }
-    if ($Point.Y -lt 0 -or $Point.Y -ge $barHeight -or (& $across (Get-NewRect)) -or (& $across (Get-ProfilesRect))) { return -1 }
+    if ($Point.X -lt 0 -or $Point.X -ge $barWidth -or $Point.Y -lt 0 -or $Point.Y -ge $barHeight) { return -1 }
+    # The buttons of the window take all the height of the bar, and the band
+    # is above the tabs and the other buttons.
+    if ((& $across (Get-CaptionsRect)) -or $Point.Y -lt $band) { return -1 }
+    if ((& $across (Get-NewRect)) -or (& $across (Get-ProfilesRect))) { return -1 }
     if ($barOverflow -and ((& $across (Get-ScrollRect 'Left')) -or (& $across (Get-ScrollRect 'Right')))) { return -1 }
     $fromStart = $Point.X - (Get-Start)
     if (-not (& $across (Get-Strip)) -or $fromStart -lt 0) { return -1 }
@@ -1343,14 +1388,18 @@ try {
     $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
     $layout = $api::GetKeyboardLayout($thread)
     $dpi = $api::GetDpiForWindow($window)
-    $barWidth = Get-Scaled 800
-    $barHeight = Get-Scaled 32
+    $barWidth = Get-Scaled 983
+    $band = Get-Band
+    $rowHeight = Get-Scaled 32
+    $barHeight = $band + $rowHeight
     $gap = Get-Scaled 4
     $padding = Get-Scaled 8
     $closeSide = Get-Scaled 24
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
     $scrollSide = Get-Scaled 24
+    $dragSide = Get-Scaled 45
+    $captionSide = Get-Scaled 46
     $maxTab = Get-Scaled 240
     $minTab = Get-Scaled 100
     $fits = { param($Count) [Math]::Floor((Get-Room) / $Count) -ge $minTab }
@@ -1372,7 +1421,7 @@ try {
     Join-Input
     Move-Pointer
     Wait-Settled @($first) 'The first tab'
-    Write-Host "The bar is $barHeight pixels high, and its tabs from $minTab to $maxTab wide: 7 of them fit in the window, $barWidth pixels wide, and 8 do not."
+    Write-Host "The bar is $barHeight pixels high, $band of them above the tabs, and its tabs from $minTab to $maxTab wide: 7 of them fit in the window, $barWidth pixels wide, and 8 do not."
 
     # 1. Six tabs of Light more: the seven tabs fit, alike.
     for ($count = 1; $count -lt 7; $count++) { Open-Light }

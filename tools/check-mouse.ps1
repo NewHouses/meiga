@@ -38,8 +38,8 @@ Windows also sends the window mouse moves of its own, at the place of the
 pointer: for example, when the window takes the mouse while a button is
 down. So the messages of each click, drag or key go at once, while the
 thread of the window is suspended, and, if the pointer is over the
-terminal, the check moves it to the title bar of the window, and puts it
-back at the end.
+window, the check moves it out, above the window, and puts it back at the
+end.
 
 The check uses the clipboard: if it had text, the check puts it back at the
 end, but anything else, such as an image, is lost. Do not use the mouse nor
@@ -128,6 +128,17 @@ public static extern bool GetClientRect(IntPtr window, out RECT rect);
 
 [DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
@@ -251,9 +262,10 @@ $modifierKeys = @{
 }
 
 # The script that runs in the terminal, in one of the three phases. It
-# writes to the log the size of the terminal and what it reads, and sets the
-# title of the window when it is ready: the title goes after what it wrote
-# before, so, when the window shows it, meiga has read the rest.
+# writes to the log the size of the terminal, with the size in pixels of its
+# text area, and what it reads, and sets the title of the window when it is
+# ready: the title goes after what it wrote before, so, when the window
+# shows it, meiga has read the rest.
 $program = @'
 param(
     [Parameter(Mandatory)][string]$Log,
@@ -265,6 +277,7 @@ Add-Type -Namespace MeigaCheck -Name Console -MemberDefinition @"
 [DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int handle);
 [DllImport("kernel32.dll")] public static extern bool SetConsoleMode(System.IntPtr handle, uint mode);
 [DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
+[DllImport("kernel32.dll")] public static extern bool FlushConsoleInputBuffer(System.IntPtr handle);
 "@
 function Write-Log([string]$Line) { [IO.File]::AppendAllText($Log, "$Line`n") }
 function Set-Title([string]$Title) { [Console]::Write("`e]0;$Title`a") }
@@ -278,7 +291,22 @@ function Read-Records {
     $null = [MeigaCheck.Console]::ReadConsoleInputW($in, $records, 64, [ref]$read)
     for ($at = 0; $at -lt 20 * $read; $at += 20) { $at }
 }
-Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)"
+# The size in pixels of the text area of the terminal, which tells the size
+# of its cells: the script asks for it (CSI 14 t), and then for the
+# attributes of the terminal (DA1), whose answer always comes, from meiga or
+# from the console of Windows, which answers it itself, and swallows the
+# first question. The answers come as keys, which the script reads until the
+# one of DA1; then it drops the keys that go up.
+[Console]::Write("`e[14t`e[c")
+$answer = [Text.StringBuilder]::new()
+$deadline = [DateTime]::UtcNow.AddSeconds(10)
+while ($answer.ToString() -notmatch '\x1b\[\?[0-9;]*c' -and [DateTime]::UtcNow -lt $deadline) {
+    if ([Console]::KeyAvailable) { $null = $answer.Append([Console]::ReadKey($true).KeyChar) }
+    else { [Threading.Thread]::Sleep(5) }
+}
+$null = [MeigaCheck.Console]::FlushConsoleInputBuffer($in)
+$pixels = if ($answer.ToString() -match '\x1b\[4;(\d+);(\d+)t') { " $($Matches[1]) $($Matches[2])" } else { '' }
+Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)$pixels"
 switch ($Phase) {
     'Text' {
         # Ctrl+C is a key, as in PSReadLine.
@@ -412,20 +440,50 @@ function Show-Text([string]$Text) {
     $Text -replace "`e", '\e' -replace "`r", '\r' -replace "`n", '\n'
 }
 
-# The size of the grid, which the script wrote first, and of its cells: the
-# grid fills the client area of the window below the tab bar, 32 pixels high
-# at a scale of 100 %, but for the strip of the scroll bar, 12 pixels, and
-# less than a cell.
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band([uint32]$Dpi) {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.MouseCheck+RECT]::new()
+    $corner = [Meiga.Tools.MouseCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $Dpi) + $api::GetSystemMetricsForDpi(33, $Dpi)
+}
+
+# The size of the grid, which the script wrote first, and of its cells,
+# below the tab bar: the band where the window is resized, and a row 32
+# pixels high at a scale of 100 %. The script asked the terminal for the
+# size in pixels of its text area, which meiga gives: the grid times the
+# cells. The console of Windows swallows that question: then the cells come
+# from the client area of the window, which the grid fills below the bar,
+# but for the strip of the scroll bar, 12 pixels at a scale of 100 %, and
+# less than a cell; with more pixels to spare than rows or columns, a cell
+# comes out bigger than it is.
 function Measure-Cells {
     $size = @(Get-Lines)[0] -split ' '
+    $dpi = $api::GetDpiForWindow($window)
+    $script:bar = (Get-Band $dpi) + [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
+    $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
+    if ($size.Count -ge 5) {
+        $script:cell = [pscustomobject]@{
+            Width = [int]([int]$size[4] / $grid.Columns)
+            Height = [int]([int]$size[3] / $grid.Rows)
+        }
+        return
+    }
+    Write-Warning 'The terminal did not tell the size of its text area in pixels: the console of the tab is the one of Windows, which swallows the question. The check works out the size of the cells from the window, which can come out bigger than it is. tools\package.ps1 copies the ConPTY of meiga next to meiga.exe.'
     $rect = [Meiga.Tools.MouseCheck+RECT]::new()
     if (-not $api::GetClientRect($window, [ref]$rect)) {
         throw "Could not read the size of the window of $exe."
     }
-    $dpi = $api::GetDpiForWindow($window)
     $strip = [Math]::Max(1, [Math]::Floor((12 * $dpi + 48) / 96))
-    $script:bar = [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
-    $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
     $script:cell = [pscustomobject]@{
         Width = [Math]::Floor(($rect.Right - $strip) / $grid.Columns)
         Height = [Math]::Floor(($rect.Bottom - $bar) / $grid.Rows)
@@ -590,8 +648,8 @@ function Close-Dialog([int]$Button, [long[]]$Messages = @()) {
     Wait-For { (Get-Dialog) -eq [IntPtr]::Zero } { 'The message box did not close.' }
 }
 
-# If the pointer is over the terminal, moves it to the title bar of the
-# window: the moves that Windows makes at its place would reach the program.
+# If the pointer is over the window, moves it out, above the window: the
+# moves that Windows makes at its place would reach the program.
 function Move-Pointer {
     $point = [Meiga.Tools.MouseCheck+POINT]::new()
     if (-not $api::GetCursorPos([ref]$point)) { return }

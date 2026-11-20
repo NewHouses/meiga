@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: mantemento M2, despois da subfase 2.8. No M2, `check-exit.ps1` comproba tamén o peche ao saír: cando se pecha a xanela e a sesión dunha tab non remata, porque o seu programa arranca outro mentres se pecha a consola, meiga agarda por ela ata que a remata o seu escritor, cando pasan 10 s sen que remate ningún dos seus programas, e despois sae sen deixar nada das súas tabs; e `check-profiles.ps1` e `check-tabs.ps1` agardan a que se calmen as shells das tabs, e os programas que arrancaron elas, antes de pechalas, e `check-profiles.ps1` dálle a meiga para saír o tempo das shells do usuario; os outros scripts non cambiaron. Na 2.8 chegou `check-manytabs.ps1`, que comproba que meiga mantén manexábeis 30 tabs: o ancho mínimo das tabs, e a franxa onde van despois, que desprazan a roda e os seus botóns, cun clic e mantidos; que cada tab se mostra cun clic; que as tabs que pecha o rato deixan as outras no seu sitio mentres o punteiro segue na barra, e que o teclado e a última tab as recolocan no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e os indicadores dunha tab oculta, a actividade, a campá e o fin, que só debuxan o seu título; `check-tabs.ps1` conta co indicador da actividade: a saída dunha tab oculta debuxa só a súa tab na barra, unha vez; e `check-exit.ps1`, co do fin: o fin dunha tab oculta co código 4 debuxa só a súa tab; os outros scripts non cambiaron. Na 2.7 chegou `check-exit.ps1`, que comproba o que fai meiga cando remata o programa dunha tab: o código 0 pecha a tab, oculta ou á vista, e a última pecha a xanela; outro fin deixa a tab, que di como rematou o programa, ou por que non arrancou, e o que se pode facer entón; sen programa, Intro reinicia o programa na mesma tab, Ctrl+D pecha a tab, e as outras teclas non fan nada; *Restart tab* reinicia o programa dunha tab oculta sen mostrala; e os fins que chegan coa caixa de mensaxe aberta pechan as súas tabs cando se pecha ela; `check-menu.ps1` conta co elemento novo do menú, *Restart tab*; os outros scripts non cambiaron. Na 2.6 chegou `check-shortcuts.ps1`, que comproba os atallos de teclado de meiga: a caixa de mensaxe cos erros da táboa `[shortcuts]` do `config.toml`; as teclas que lle chegan ao programa, tamén con AltGr e mentres repite unha que baixou para el, e as que colle meiga, tamén mentres repiten; e os atallos que mostran, abren, duplican e pechan as tabs e abren os perfís, cos que o arquivo engade, cambia e libera; os outros scripts non cambiaron. Na 2.5 chegou `check-profiles.ps1`, que comproba os perfís e a configuración de meiga: a caixa de mensaxe cos erros do `config.toml`, o perfil e o contorno da primeira tab, o menú dos perfís, co teclado e co rato, cada perfil que atopa meiga, o botón + e *Duplicate tab*; e as comprobacións con xanela lanzan meiga cun `APPDATA` baleiro, para que o `config.toml` de quen as executa non cambie o que comproban, e `check-tabbar.ps1` e `check-menu.ps1` deixan sitio na barra para o botón dos perfís. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
+> Estado: subfase 2.9. Na 2.9 chegou [`check-titlebar.ps1`](#toolscheck-titlebarps1), que comproba a barra de título de meiga, a barra de tabs, que chega ata o bordo de arriba da xanela: a banda enriba das tabs que redimensiona a xanela, e o marco de Windows nos outros lados; o que é para Windows cada parte da xanela; os botóns de minimizar, maximizar e pechar, e o menú da xanela; o dobre clic, o tamaño mínimo e o foco. As comprobacións que calculan a barra, `check-tabbar.ps1`, `check-menu.ps1`, `check-profiles.ps1`, `check-tabs.ps1`, `check-exit.ps1` e `check-manytabs.ps1`, contan coa banda e cos botóns da xanela, e `check-manytabs.ps1` usa unha xanela máis ancha, de 983 × 400 píxeles a escala 100 %, para que sigan cabendo 7 tabs e non 8; `check-exit.ps1`, `check-mouse.ps1` e `check-resize.ps1` pregúntanlle ao terminal o tamaño en píxeles da súa zona de texto, porque a área cliente xa non di as celas, e coa consola de Windows, que se traga a pregunta, as dúas primeiras calculan as celas coa xanela e avisan, e `check-resize.ps1` para no momento; e o punto ao que `Move-Pointer` aparta o punteiro, 8 píxeles por riba da área cliente, está agora fóra da xanela, por riba dela; os outros scripts non cambiaron. No mantemento M2, `check-exit.ps1` comproba tamén o peche ao saír: cando se pecha a xanela e a sesión dunha tab non remata, porque o seu programa arranca outro mentres se pecha a consola, meiga agarda por ela ata que a remata o seu escritor, cando pasan 10 s sen que remate ningún dos seus programas, e despois sae sen deixar nada das súas tabs; e `check-profiles.ps1` e `check-tabs.ps1` agardan a que se calmen as shells das tabs, e os programas que arrancaron elas, antes de pechalas, e `check-profiles.ps1` dálle a meiga para saír o tempo das shells do usuario; os outros scripts non cambiaron. Na 2.8 chegou `check-manytabs.ps1`, que comproba que meiga mantén manexábeis 30 tabs: o ancho mínimo das tabs, e a franxa onde van despois, que desprazan a roda e os seus botóns, cun clic e mantidos; que cada tab se mostra cun clic; que as tabs que pecha o rato deixan as outras no seu sitio mentres o punteiro segue na barra, e que o teclado e a última tab as recolocan no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e os indicadores dunha tab oculta, a actividade, a campá e o fin, que só debuxan o seu título; `check-tabs.ps1` conta co indicador da actividade: a saída dunha tab oculta debuxa só a súa tab na barra, unha vez; e `check-exit.ps1`, co do fin: o fin dunha tab oculta co código 4 debuxa só a súa tab; os outros scripts non cambiaron. Na 2.7 chegou `check-exit.ps1`, que comproba o que fai meiga cando remata o programa dunha tab: o código 0 pecha a tab, oculta ou á vista, e a última pecha a xanela; outro fin deixa a tab, que di como rematou o programa, ou por que non arrancou, e o que se pode facer entón; sen programa, Intro reinicia o programa na mesma tab, Ctrl+D pecha a tab, e as outras teclas non fan nada; *Restart tab* reinicia o programa dunha tab oculta sen mostrala; e os fins que chegan coa caixa de mensaxe aberta pechan as súas tabs cando se pecha ela; `check-menu.ps1` conta co elemento novo do menú, *Restart tab*; os outros scripts non cambiaron. Na 2.6 chegou `check-shortcuts.ps1`, que comproba os atallos de teclado de meiga: a caixa de mensaxe cos erros da táboa `[shortcuts]` do `config.toml`; as teclas que lle chegan ao programa, tamén con AltGr e mentres repite unha que baixou para el, e as que colle meiga, tamén mentres repiten; e os atallos que mostran, abren, duplican e pechan as tabs e abren os perfís, cos que o arquivo engade, cambia e libera; os outros scripts non cambiaron. Na 2.5 chegou `check-profiles.ps1`, que comproba os perfís e a configuración de meiga: a caixa de mensaxe cos erros do `config.toml`, o perfil e o contorno da primeira tab, o menú dos perfís, co teclado e co rato, cada perfil que atopa meiga, o botón + e *Duplicate tab*; e as comprobacións con xanela lanzan meiga cun `APPDATA` baleiro, para que o `config.toml` de quen as executa non cambie o que comproban, e `check-tabbar.ps1` e `check-menu.ps1` deixan sitio na barra para o botón dos perfís. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -21,6 +21,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`check-shortcuts.ps1`](#toolscheck-shortcutsps1) | Comprobar os atallos de teclado de `meiga.exe`: que os erros da táboa `[shortcuts]` do `config.toml` saen na caixa de mensaxe, coa súa liña e a súa columna; que Ctrl+T, Ctrl+W, AltGr e as combinacións que libera o arquivo chegan ao programa; que os atallos mostran, abren, duplican e pechan as tabs e abren os perfís, tamén os que engade ou cambia o arquivo; que unha tab ou un perfil que non existe non fai nada, e a súa tecla non chega ao programa; que, mentres se mantén a tecla, Ctrl+Maiús+T abre unha soa tab, e Ctrl+RePáx segue mostrando a anterior; e que AvPáx, se baixou para o programa, segue sendo del ata que sobe, aínda que se prema Ctrl. |
 | [`check-exit.ps1`](#toolscheck-exitps1) | Comprobar o que fai `meiga.exe` cando remata o programa dunha tab: que o código 0 pecha a tab, e a última a xanela, tamén despois dunha caixa de mensaxe e co programa da súa liña de comandos; que calquera outro fin deixa a tab, coa liña do fin nunha fila propia e o que se pode facer debaixo, e o mesmo cun programa que non arranca; que, sen programa, Intro reinicia o programa na mesma tab, no mesmo cartafol, e Ctrl+D pecha a tab, sen que as súas teclas lle cheguen a outro programa, e as outras teclas non fan nada; que *Restart tab*, desactivado mentres corre o programa, reinicia o dunha tab oculta sen mostrala; e que, cando se pecha a xanela, agarda pola sesión dunha tab que non remata ata que a remata o seu escritor, e sae sen deixar nada das súas tabs. |
 | [`check-manytabs.ps1`](#toolscheck-manytabsps1) | Comprobar que `meiga.exe` mantén manexábeis 30 tabs: que se encollen ata un ancho mínimo, e despois van nunha franxa que desprazan a roda e os seus botóns, unha tab cada vez, tamén mentres se mantén o botón; que cada tab se mostra cun clic; que o × e o botón do medio pechan unha tab tras outra sen mover o rato, e o teclado e a última tab recolocan as outras no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e que unha tab oculta di que o seu programa escribiu, tocou a campá ou rematou, debuxando só o seu título. |
+| [`check-titlebar.ps1`](#toolscheck-titlebarps1) | Comprobar a barra de título de `meiga.exe`: que a barra de tabs chega ata o bordo de arriba da xanela, cunha banda que a redimensiona, e Windows mantén o seu marco nos outros lados; que Windows sabe que é cada parte da xanela, restaurada, maximizada, co tamaño mínimo e cun menú de meiga aberto; que o punteiro nos botóns da xanela só debuxa o botón; que o botón dereito na barra abre o menú da xanela; que os botóns e o dobre clic maximizan, restauran, minimizan e pechan a xanela; que a xanela non pode ser máis pequena ca a barra cunha tab; e que perder e coller o foco só debuxa os botóns da xanela. |
 | [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
 | [`check-docs.ps1`](#toolscheck-docsps1) | Comprobar as ligazóns internas da documentación. |
 | [`check-powershell.ps1`](#toolscheck-powershellps1) | Comprobar que todos os scripts piden PowerShell 7 dun xeito claro cando se abren con Windows PowerShell 5.1. |
@@ -671,7 +672,7 @@ O **contexto de escala** da xanela di como escala (ver [Tecnoloxías › Manifes
     Write-Host "OK: the program in the terminal sets the title of the window ('$shown')."
 ```
 
-**O título** é a forma máis simple de ver desde fóra que a saída dun programa chega á xanela, e para chegar pasa por todo o camiño da subfase 1.6: cmd cambia o título da consola, o ConPTY escríbeo na súa saída, o fío lector de meiga pásallo ao terminal e avisa á xanela, e a xanela colle o título e pono na barra de título ([Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage) e [› O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)). Se falla calquera paso, o título non cambia.
+**O título** é a forma máis simple de ver desde fóra que a saída dun programa chega á xanela, e para chegar pasa por todo o camiño da subfase 1.6: cmd cambia o título da consola, o ConPTY escríbeo na súa saída, o fío lector de meiga pásallo ao terminal e avisa á xanela, e a xanela colle o título e dállo a Windows ([Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage) e [› O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)). Se falla calquera paso, o título non cambia. Ata a 2.8, Windows mostrábao tamén na barra de título da xanela; desde a 2.9, a xanela ten a barra de título de meiga, que non o debuxa, e Windows móstrao na barra de tarefas e en Alt+Tab ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1). A comprobación le o título que ten Windows, así que mira o mesmo.
 
 - O script mira o título cada 0,1 s ata que é o de cmd. `Refresh()` fai falta en cada volta: sen el, .NET devolvería sempre o título que leu a primeira vez.
 - **Como administrador**, cmd pon diante do título que lle dan `Administrator: `, na lingua de Windows, e un espazo. Por iso vale tamén un título que remate nun espazo e `meiga-check`. Os *runners* da CI corren como administrador, e alí a liña do resultado é `OK: the program in the terminal sets the title of the window ('Administrator:  meiga-check').` O prefixo pono cmd, non o ConPTY: o título que escribe un programa cunha secuencia OSC chega tal cal, como o de [`check-present.ps1`](#toolscheck-presentps1).
@@ -708,7 +709,7 @@ O **contexto de escala** da xanela di como escala (ver [Tecnoloxías › Manifes
     }
 ```
 
-- `CloseMainWindow` envía `WM_CLOSE` á xanela, a mesma mensaxe que o botón X da barra de título, e `WaitForExit` agarda a que remate o proceso.
+- `CloseMainWindow` envía `WM_CLOSE` á xanela, a mesma mensaxe que o botón de pechar da xanela, e `WaitForExit` agarda a que remate o proceso. Ata a 2.8, ese botón era o da barra de título de Windows; desde a 2.9, debúxao meiga na súa, e tamén publica `WM_CLOSE` ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4).
 - O código de saída ten que ser 0, tamén co programa do terminal aínda aberto, coma neste caso. Unha caixa de erro pechada así daría 1 (ver [Código › meiga](meiga.md#cratesmeigasrcmainrs)).
 
 ```powershell
@@ -798,7 +799,7 @@ As funcións de Windows que usa, declaradas en C# como en `check-window.ps1`:
 |---|---|
 | `ShowWindowAsync` | Minimiza e restaura a xanela. |
 | `SetWindowPos` | Cambia o tamaño da xanela. |
-| `GetClientRect` | Le o tamaño da zona de debuxo da xanela, sen o marco nin a barra de título. |
+| `GetClientRect` | Le o tamaño da zona de debuxo da xanela, a área cliente, sen o marco. Ata a 2.8, tamén sen a barra de título de Windows; desde a 2.9, chega ata o bordo de arriba da xanela, onde vai a barra de título de meiga. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell (ver máis abaixo). |
 
 - `RECT` é a estrutura de Windows cos catro bordos dun rectángulo. `[StructLayout(LayoutKind.Sequential)]` garda os campos na orde en que se declaran, que é a que espera Windows.
@@ -957,7 +958,7 @@ Os pasos, en orde:
 | 9 | A comprobación fai a xanela máis pequena e despois máis grande. | Un `compose` co tamaño novo e algún `paint`. |
 | 10 | A comprobación pecha a xanela, como o botón X. | O código de saída 0. |
 
-- **Paso 1.** O primeiro `paint` é o da xanela recén aberta, antes de que o script escriba nada. Nunha xanela moito máis pequena ca o mínimo, unha fila sería unha parte grande dela, e o paso 2 non demostraría nada.
+- **Paso 1.** O primeiro `paint` é o da xanela recén aberta, antes de que o script escriba nada. Nunha xanela moito máis pequena ca o mínimo, unha fila sería unha parte grande dela, e o paso 2 non demostraría nada. Desde a 2.9, a área cliente chega ata o bordo de arriba da xanela, onde ata a 2.8 ía a barra de título de Windows ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1), así que, co mesmo tamaño da xanela, o primeiro `paint` é máis alto.
 - **Paso 2.** Así se comproba que as zonas están todas na fila:
 
   ```powershell
@@ -991,7 +992,7 @@ Os pasos, en orde:
 
   **Por que importa.** Mentres unha actualización sincronizada está aberta, `vte` garda todo o que escribe o programa, tamén as súas preguntas, ata que o programa a remata ou meiga a remata á súa hora límite, 150 ms despois de abrila ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Na primeira versión da subfase 1.6, meiga só a remataba antes dun fotograma, e unha xanela minimizada non debuxa ningún fotograma: un programa que preguntase algo dentro dunha actualización agardaba a resposta ata que se restauraba a xanela. Agora o fío lector avisa á xanela cando o programa abre unha, tamén coa xanela minimizada, e a xanela programa o temporizador dos fotogramas para a súa hora límite e remátaa entón, sen debuxar nada ([Código › meiga](meiga.md#cratesmeigasrcframesrs)). Unha copia de meiga que non faga nada coa xanela minimizada falla eiquí.
 
-  **Por que o título.** Sae do terminal polo mesmo camiño ca unha resposta, cando remata a actualización ([Código › meiga](meiga.md#cratesmeigasrcviewrs)), e chega á xanela: velo na barra de título demostra que a actualización rematou, sen ter que ler ningunha resposta no script do terminal.
+  **Por que o título.** Sae do terminal polo mesmo camiño ca unha resposta, cando remata a actualización ([Código › meiga](meiga.md#cratesmeigasrcviewrs)), e chega á xanela, que llo dá a Windows: velo no título da xanela demostra que a actualización rematou, sen ter que ler ningunha resposta no script do terminal. Desde a 2.9, o título xa non se debuxa na barra de título, que é a de meiga, pero Windows segue téndoo, para a barra de tarefas e Alt+Tab ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1).
 - **Paso 8.** O `paint` mostra xa as filas do paso 6, porque, ao restaurar a xanela, o *framebuffer* se compón co que hai entón na pantalla do terminal. A comprobación non mira os píxeles: só comproba que se pintou a xanela enteira.
 - **Paso 9.** `SetWindowPos` cambia o tamaño da xanela co marco; por iso o tamaño que se compara co do `compose` é o da zona de debuxo, que dá `GetClientRect`. As opcións: sen movela (`SWP_NOMOVE`), sen cambiar a orde das xanelas (`SWP_NOZORDER`), sen activala (`SWP_NOACTIVATE`) e sen esperar (`SWP_ASYNCWINDOWPOS`). Desde a subfase 1.9, a grella do terminal cambia tamén co tamaño da xanela, no seguinte fotograma ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)); ata a 1.8 non cambiaba, e ao medrar o que sobraba eran marxes, da cor do fondo ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). A xanela compónse e píntase enteira igual.
 
@@ -1259,6 +1260,12 @@ Desde a subfase 1.8. Comproba o rato de `meiga.exe` ([ADR 0015](../adr/0015-o-ra
 
 Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script do terminal con `pwsh`.
 
+**O ConPTY.** Desde a 2.9, o script do terminal pregúntalle ao terminal o tamaño en píxeles da súa zona de texto, e con el calcula a comprobación as celas (ver *As celas*, máis abaixo). meiga respóndelle co ConPTY que vai con el, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, coma na CI. Sen el, meiga usa a consola de Windows, que se traga a pregunta: a comprobación calcula entón as celas coa xanela, coma ata a 2.8, e avisa cada vez que abre meiga, tres veces:
+
+```text
+WARNING: The terminal did not tell the size of its text area in pixels: the console of the tab is the one of Windows, which swallows the question. The check works out the size of the cells from the window, which can come out bigger than it is. tools\package.ps1 copies the ConPTY of meiga next to meiga.exe.
+```
+
 **Coidado:** mentres corre, non uses o rato nin o teclado: mesturaríanse coas mensaxes da comprobación. E a comprobación usa o portapapeis: se tiña texto, ao rematar volta deixalo nel, pero calquera outra cousa, coma unha imaxe, pérdese.
 
 Saída esperada, cos tamaños que dependen da pantalla:
@@ -1337,6 +1344,17 @@ public static extern uint GetWindowThreadProcessId(IntPtr window, out uint proce
 …
 [DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
 …
 '@
 }
@@ -1353,6 +1371,7 @@ Para que serve cada unha:
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
 | `GetClientRect`, `ClientToScreen` e `ScreenToClient` | O tamaño da área cliente da xanela, e un punto dela na pantalla, ou ao revés. |
 | `GetDpiForWindow` | A escala da xanela, para a franxa da barra de desprazamento e o alto da barra de tabs. |
+| `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi` | Desde a 2.9, a banda enriba das tabs: onde está a xanela, se está maximizada, e o grosor do marco de Windows á súa escala (ver `Get-Band`). |
 | `GetCursorPos` e `SetCursorPos` | Len e moven o punteiro. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
 | `FindWindowW` e `GetWindow` | Atopan a caixa de mensaxe de meiga, e a xanela dona dela. |
@@ -1450,9 +1469,10 @@ As constantes de Windows, cos seus nomes:
 
 ```powershell
 # The script that runs in the terminal, in one of the three phases. It
-# writes to the log the size of the terminal and what it reads, and sets the
-# title of the window when it is ready: the title goes after what it wrote
-# before, so, when the window shows it, meiga has read the rest.
+# writes to the log the size of the terminal, with the size in pixels of its
+# text area, and what it reads, and sets the title of the window when it is
+# ready: the title goes after what it wrote before, so, when the window
+# shows it, meiga has read the rest.
 $program = @'
 param(
     [Parameter(Mandatory)][string]$Log,
@@ -1464,6 +1484,7 @@ Add-Type -Namespace MeigaCheck -Name Console -MemberDefinition @"
 [DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int handle);
 [DllImport("kernel32.dll")] public static extern bool SetConsoleMode(System.IntPtr handle, uint mode);
 [DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
+[DllImport("kernel32.dll")] public static extern bool FlushConsoleInputBuffer(System.IntPtr handle);
 "@
 function Write-Log([string]$Line) { [IO.File]::AppendAllText($Log, "$Line`n") }
 function Set-Title([string]$Title) { [Console]::Write("`e]0;$Title`a") }
@@ -1477,14 +1498,30 @@ function Read-Records {
     $null = [MeigaCheck.Console]::ReadConsoleInputW($in, $records, 64, [ref]$read)
     for ($at = 0; $at -lt 20 * $read; $at += 20) { $at }
 }
-Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)"
+# The size in pixels of the text area of the terminal, which tells the size
+# of its cells: the script asks for it (CSI 14 t), and then for the
+# attributes of the terminal (DA1), whose answer always comes, from meiga or
+# from the console of Windows, which answers it itself, and swallows the
+# first question. The answers come as keys, which the script reads until the
+# one of DA1; then it drops the keys that go up.
+[Console]::Write("`e[14t`e[c")
+$answer = [Text.StringBuilder]::new()
+$deadline = [DateTime]::UtcNow.AddSeconds(10)
+while ($answer.ToString() -notmatch '\x1b\[\?[0-9;]*c' -and [DateTime]::UtcNow -lt $deadline) {
+    if ([Console]::KeyAvailable) { $null = $answer.Append([Console]::ReadKey($true).KeyChar) }
+    else { [Threading.Thread]::Sleep(5) }
+}
+$null = [MeigaCheck.Console]::FlushConsoleInputBuffer($in)
+$pixels = if ($answer.ToString() -match '\x1b\[4;(\d+);(\d+)t') { " $($Matches[1]) $($Matches[2])" } else { '' }
+Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)$pixels"
 switch ($Phase) {
 ```
 
 **O script do terminal.** Un só script fai de tres programas, segundo o parámetro `-Phase`: `Text`, `Events` ou `Terminal`. Coma en `check-keyboard.ps1`, escribe no rexistro (`-Log`) unha liña por cada cousa que le, con `AppendAllText`, e a comprobación pode lelo mentres tanto.
 
 - **O título fai de aviso.** Cando está listo, e despois de cada cambio que lle pide a comprobación, o script pon un título coa secuencia *OSC 0*, `ESC ] 0 ; título BEL`. meiga le a saída en orde, así que, cando a xanela mostra o título, xa leu todo o que o script escribiu antes: o texto, os modos que pediu ou o que copia. A comprobación agarda cada título con `Wait-Title`.
-- **A primeira liña** do rexistro é o tamaño do terminal, `size <columnas> <filas>`: con ela calcula a comprobación as celas (`Measure-Cells`).
+- **A primeira liña** do rexistro é o tamaño do terminal, `size <columnas> <filas>` e, desde a 2.9, o da súa zona de texto en píxeles, `<alto> <ancho>`, se o terminal o di: con ela calcula a comprobación as celas (`Measure-Cells`).
+- **O tamaño en píxeles,** desde a 2.9. Ata a 2.8, a comprobación calculaba as celas só coa área cliente da xanela, menos a barra de tabs (ver *As celas*). Desde a 2.9, a área cliente chega ao bordo de arriba da xanela, e a barra leva enriba a banda que redimensiona a xanela, co alto que lle dá Windows ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 1 e 2): a área cliente xa non di as celas. O script pregúntalle ao terminal o tamaño da súa zona de texto, `CSI 14 t`, e meiga responde `CSI 4 ; alto ; ancho t`, a grella polas celas ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Despois pregunta polos atributos do terminal, *DA1* (`CSI c`), cuxa resposta, `CSI ? … c`, chega sempre: de meiga, ou da consola de Windows, que a responde ela mesma, e que se traga a primeira pregunta. As respostas chegan coma teclas, que o script le con `ReadKey` ata a de *DA1*, como moito 10 s; despois, `FlushConsoleInputBuffer` descarta o que quede na entrada, coma as teclas que soben, que, se non, lería despois coma teclas do usuario. Se a resposta trae o tamaño, a liña leva os dous números; se non, só a grella.
 - `OutputEncoding` en UTF-8, sen marca de bytes, coma en [`terminal-sample.ps1`](#toolsterminal-sampleps1), para que os caracteres que non son ASCII cheguen ben a meiga.
 - **A entrada da consola.** Os eventos do rato, e os caracteres tal como os envía un terminal, non se len con `ReadKey`: o script le a entrada da consola directamente, con `ReadConsoleInputW`. `GetStdHandle(-10)` dá a entrada estándar (`STD_INPUT_HANDLE`). Cada evento é un `INPUT_RECORD` de 20 bytes: o tipo nos dous primeiros, e o evento desde o byte 4. Van a unha lista de bytes, e o script le cada campo na súa posición, con `BitConverter`, en vez de declarar as estruturas en C#. `Read-Records` le ata 64 eventos e devolve a posición de cada un.
 - O `Add-Type` do script vai entre `@"` e `"@`: unha liña que empezase por `'@` remataría `$program`.
@@ -1660,20 +1697,58 @@ function Show-Text([string]$Text) {
 - `Show-Text` fai visíbeis nas mensaxes de erro os caracteres de control: ESC, CR e LF, coma `\e`, `\r` e `\n`.
 
 ```powershell
-# The size of the grid, which the script wrote first, and of its cells: the
-# grid fills the client area of the window below the tab bar, 32 pixels high
-# at a scale of 100 %, but for the strip of the scroll bar, 12 pixels, and
-# less than a cell.
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band([uint32]$Dpi) {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.MouseCheck+RECT]::new()
+    $corner = [Meiga.Tools.MouseCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $Dpi) + $api::GetSystemMetricsForDpi(33, $Dpi)
+}
+```
+
+**A banda: `Get-Band`.** Desde a 2.9, a barra de tabs é a barra de título da xanela, e, coa xanela restaurada, leva enriba das tabs unha banda que redimensiona a xanela desde o seu bordo de arriba ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 1 e 2). `Get-Band` calcúlaa coma meiga (`Window::resize_band`, en [Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs)), á escala `$Dpi`:
+
+- **O seu alto** é o grosor do marco que Windows lle dá a unha xanela para redimensionala, o dos seus lados: `SM_CXPADDEDBORDER` (92) máis `SM_CYSIZEFRAME` (33), que `GetSystemMetricsForDpi` dá á escala da xanela. Coas métricas habituais, 8 píxeles ao 100 % e 11 ao 150 %.
+- **Sen banda,** 0, coa xanela maximizada, que di `IsZoomed`, ou sen a barra de título de meiga: se Windows non lle deixase poñela, ou nos modos `--bench`, a xanela tería a barra de título de Windows, e a barra de tabs, debaixo, sen banda, coma ata a 2.8. A comprobación ve a barra de título de meiga en que a área cliente empeza no bordo de arriba da xanela: `ClientToScreen` pasa á pantalla o punto (0, 0) da área cliente, e o seu alto ten que ser o do bordo de arriba de `GetWindowRect`, a xanela enteira. Coa barra de Windows, empezaría debaixo dela; e maximizada, meiga baixa a área cliente o grosor do marco, que Windows deixa fóra do monitor.
+- Se Windows non di onde está a xanela, falla.
+
+```powershell
+# The size of the grid, which the script wrote first, and of its cells,
+# below the tab bar: the band where the window is resized, and a row 32
+# pixels high at a scale of 100 %. The script asked the terminal for the
+# size in pixels of its text area, which meiga gives: the grid times the
+# cells. The console of Windows swallows that question: then the cells come
+# from the client area of the window, which the grid fills below the bar,
+# but for the strip of the scroll bar, 12 pixels at a scale of 100 %, and
+# less than a cell; with more pixels to spare than rows or columns, a cell
+# comes out bigger than it is.
 function Measure-Cells {
     $size = @(Get-Lines)[0] -split ' '
+    $dpi = $api::GetDpiForWindow($window)
+    $script:bar = (Get-Band $dpi) + [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
+    $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
+    if ($size.Count -ge 5) {
+        $script:cell = [pscustomobject]@{
+            Width = [int]([int]$size[4] / $grid.Columns)
+            Height = [int]([int]$size[3] / $grid.Rows)
+        }
+        return
+    }
+    Write-Warning 'The terminal did not tell the size of its text area in pixels: the console of the tab is the one of Windows, which swallows the question. The check works out the size of the cells from the window, which can come out bigger than it is. tools\package.ps1 copies the ConPTY of meiga next to meiga.exe.'
     $rect = [Meiga.Tools.MouseCheck+RECT]::new()
     if (-not $api::GetClientRect($window, [ref]$rect)) {
         throw "Could not read the size of the window of $exe."
     }
-    $dpi = $api::GetDpiForWindow($window)
     $strip = [Math]::Max(1, [Math]::Floor((12 * $dpi + 48) / 96))
-    $script:bar = [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
-    $script:grid = [pscustomobject]@{ Columns = [int]$size[1]; Rows = [int]$size[2] }
     $script:cell = [pscustomobject]@{
         Width = [Math]::Floor(($rect.Right - $strip) / $grid.Columns)
         Height = [Math]::Floor(($rect.Bottom - $bar) / $grid.Rows)
@@ -1694,9 +1769,10 @@ function Get-Y([int]$Row) { $bar + $Row * $cell.Height + [Math]::Floor($cell.Hei
 
 **As celas.** A comprobación preme en celas, e as mensaxes do rato levan píxeles.
 
-- `Measure-Cells` le o tamaño da grella na primeira liña do rexistro, e o da área cliente con `GetClientRect`. A grella enche a área cliente debaixo da barra de tabs, salvo a franxa da barra de desprazamento, á dereita, e menos dunha cela, así que o ancho dunha cela é o da área cliente sen a franxa entre as columnas, sen decimais, e o alto, o da área cliente sen a barra de tabs entre as filas. `$script:` garda as variábeis no script, e non só dentro da función.
+- `Measure-Cells` le o tamaño da grella na primeira liña do rexistro e, desde a 2.9, o da zona de texto en píxeles, que o script lle preguntou ao terminal. Se o ten, a primeira liña ten cinco palabras, e cada cela é exacta: o alto da zona de texto entre as filas, e o ancho entre as columnas, porque meiga responde coa grella polas celas. `[int]` redondea a división, que é exacta. `$script:` garda as variábeis no script, e non só dentro da función.
+- **Sen o tamaño en píxeles,** a consola da tab é a de Windows, que se traga a pregunta. Entón a comprobación avisa, con `Write-Warning`, e calcula as celas coa área cliente, coma ata a 2.8: a grella enche a área cliente debaixo da barra de tabs, salvo a franxa da barra de desprazamento, á dereita, e menos dunha cela, así que o ancho dunha cela é o da área cliente sen a franxa entre as columnas, sen decimais, e o alto, o da área cliente sen a barra de tabs entre as filas. Pero, se sobran máis píxeles ca filas ou columnas, a división dá unha cela máis grande do que é, e os clics poden caer noutra cela.
 - **A franxa**, desde a subfase 1.9 ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 10), mide 12 píxeles ao 100 %, e escálase coma en meiga, redondeando e polo menos a un ([Tecnoloxías › A barra de desprazamento e o zoom](../tecnoloxias.md#52-a-barra-de-desprazamento-e-o-zoom)). `GetDpiForWindow` dá a escala da xanela en puntos por polgada (DPI), 96 ao 100 %, e `(12 × DPI + 48) / 96`, sen decimais, é `12 × DPI / 96` redondeado: 12 ao 100 % e 18 ao 150 %. Ata a 1.8, a grella enchía a área cliente enteira, salvo menos dunha cela.
-- **A barra de tabs**, desde a subfase 2.3, vai sempre enriba do terminal, tamén cunha soa tab, e mide 32 píxeles de alto ao 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 1). Escálase coma a franxa, `(32 × DPI + 48) / 96`: 32 ao 100 % e 48 ao 150 %. Vai en `$script:bar`, porque a necesita `Get-Y`, e `$dpi` le a escala unha soa vez para as dúas medidas. Ata a 2.2, a grella empezaba arriba de todo.
+- **A barra de tabs**, desde a subfase 2.3, vai sempre enriba do terminal, tamén cunha soa tab, cunha fila de 32 píxeles de alto ao 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 1). Escálase coma a franxa, `(32 × DPI + 48) / 96`: 32 ao 100 % e 48 ao 150 %. Desde a 2.9, a barra é tamén a banda de enriba, `Get-Band`. Vai en `$script:bar`, porque a necesita `Get-Y`, e `$dpi` le a escala unha soa vez para todas as medidas. Ata a 2.2, a grella empezaba arriba de todo; e ata a 2.8, a barra era só a fila, debaixo da barra de título de Windows.
 - `Get-X` e `Get-Y` dan un píxel dunha cela, na área cliente, contando as columnas e as filas desde 0: no medio, ou xunto a un dos seus bordos. As filas empezan debaixo da barra de tabs, así que `Get-Y` súmalle o seu alto: por riba do seu bordo de abaixo, os eventos serían da barra, e non do terminal ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7). Un arrastre empeza xunto ao bordo esquerdo dunha cela e remata xunto ao dereito doutra, porque a selección colle unha cela cando se pasa da súa metade ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 1): así entran as dúas.
 
 ```powershell
@@ -1886,8 +1962,8 @@ function Close-Dialog([int]$Button, [long[]]$Messages = @()) {
 - **`-Messages`:** as mensaxes que se publican na xanela de meiga mentres a caixa está aberta, antes de premer o botón. A xanela recíbeas, porque o bucle de mensaxes da caixa reparte tamén as súas, pero os seus eventos non chegan a meiga, que agarda a resposta da caixa ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), decisión 13). Así se simula unha tecla ou un botón que sobe mentres a caixa está aberta: as súas mensaxes pérdense, coma as de verdade.
 
 ```powershell
-# If the pointer is over the terminal, moves it to the title bar of the
-# window: the moves that Windows makes at its place would reach the program.
+# If the pointer is over the window, moves it out, above the window: the
+# moves that Windows makes at its place would reach the program.
 function Move-Pointer {
     $point = [Meiga.Tools.MouseCheck+POINT]::new()
     if (-not $api::GetCursorPos([ref]$point)) { return }
@@ -1910,11 +1986,12 @@ function Move-Pointer {
 }
 ```
 
-**O punteiro.** `PostAll` evita que os movementos que fai Windows no sitio do punteiro caian no medio dunha acción, pero non que cheguen despois: se o punteiro está por riba do terminal, chegarían ao programa, que na fase `Events` pide todos os movementos. `Move-Pointer` mira se o punteiro está na área cliente e, se está, móveo á barra de título, ao medio e 8 píxeles por riba da área cliente: alí, os movementos de Windows non son do terminal.
+**O punteiro.** `PostAll` evita que os movementos que fai Windows no sitio do punteiro caian no medio dunha acción, pero non que cheguen despois: se o punteiro está por riba do terminal, chegarían ao programa, que na fase `Events` pide todos os movementos. `Move-Pointer` mira se o punteiro está na área cliente e, se está, móveo ao medio do seu ancho, 8 píxeles por riba da área cliente. Desde a 2.9, a área cliente de meiga chega ata o bordo de arriba da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1), así que ese punto queda fóra da xanela, por riba dela, e os movementos de Windows non son de meiga; ata a 2.8, caía na barra de título de Windows, que tampouco era do terminal. O código é o mesmo: cambiou a xanela, e con ela o seu comentario.
 
-- `ScreenToClient` pasa o punto do punteiro á área cliente: está dentro se cae entre 0 e o ancho e o alto que dá `GetClientRect`.
+- `ScreenToClient` pasa o punto do punteiro á área cliente: está dentro se cae entre 0 e o ancho e o alto que dá `GetClientRect`. Desde a 2.9, a área cliente é case toda a xanela: fóra quedan só o marco de Windows, nos lados e abaixo.
 - A primeira vez que o move, garda onde estaba (`$script:pointer`), e ao rematar devólveo alí.
 - `[ref]` pásalle á función a variábel, e non unha copia, para que a encha ou a cambie.
+- **Por riba da pantalla.** Se a xanela empezase no bordo de arriba dunha pantalla sen outra enriba, o punto quedaría fóra de todas, e Windows deixaría o punteiro na fila de arriba, que é da xanela: a banda, que é da barra de tabs. A comprobación non o mira: non move a xanela nin a maximiza, e conta con que Windows, que lle dá o sitio (`CW_USEDEFAULT`), non a pon alí. Comprobouse cunha sonda, con 40 xanelas: Windows colócaas en escaleira, e a primeira de cada volta xa vai un chanzo por debaixo do bordo de arriba da pantalla, e o chanzo é máis ca eses 8 píxeles.
 
 ```powershell
 # Starts meiga.exe with the script of $Phase in its terminal, and waits until
@@ -2291,7 +2368,7 @@ Desde a subfase 1.9. Comproba o tamaño, o historial e o zoom de `meiga.exe` ([A
 .\tools\check-resize.ps1 -TimeoutSeconds 30               # nunha máquina moi lenta
 ```
 
-Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script do terminal con `pwsh`.
+Necesita PowerShell 7 no `PATH`, coma `check-present.ps1`: meiga lanza o script do terminal con `pwsh`. E, desde a 2.9, o ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, coma na CI: o script do terminal pregúntalle ao terminal o tamaño en píxeles da súa zona de texto, e con el calcula a comprobación as celas, coma [`check-mouse.ps1`](#toolscheck-mouseps1). Sen o ConPTY de meiga, meiga usa a consola de Windows, que se traga a pregunta, e a comprobación para no momento, ao medir as celas, cun erro que o di: as celas non se poden calcular exactas coa área cliente, e, con esa consola, o historial empeza tamén cunha fila en branco, que os pasos do historial non esperan.
 
 **Coidado:** coma con `check-mouse.ps1`, mentres corre non uses o rato nin o teclado, que se mesturarían coas mensaxes da comprobación; e o portapapeis volta ter ao final o texto que tiña, pero calquera outra cousa, coma unha imaxe, pérdese. Ademais, a xanela de meiga cambia de tamaño varias veces, e nun paso a comprobación move o punteiro por riba dela.
 
@@ -2344,17 +2421,24 @@ public static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y
 
 [DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
 …
 '@
 }
 $api = [Meiga.Tools.ResizeCheck]
 ```
 
-Son as de `check-mouse.ps1`, coas súas dúas funcións propias: `PostAll`, que publica as mensaxes dunha acción co fío da xanela suspendido, e `ClearClipboard`, que baleira o portapapeis. Están tamén as da caixa de mensaxe, `FindWindowW` e `GetWindow`; non está a da xanela de primeiro plano, `GetForegroundWindow`, que esta comprobación non usa; e hai tres máis:
+Son as de `check-mouse.ps1`, coas súas dúas funcións propias: `PostAll`, que publica as mensaxes dunha acción co fío da xanela suspendido, e `ClearClipboard`, que baleira o portapapeis. Están tamén as da caixa de mensaxe, `FindWindowW` e `GetWindow`, e, desde a 2.9, as da banda enriba das tabs, `IsZoomed` e `GetSystemMetricsForDpi` (ver `Get-Band` en `check-mouse.ps1`); non está a da xanela de primeiro plano, `GetForegroundWindow`, que esta comprobación non usa; e hai tres máis:
 
 | Función | Para que |
 |---|---|
-| `GetWindowRect` | O tamaño da xanela, co seu marco. |
+| `GetWindowRect` | O tamaño da xanela, co seu marco; e, desde a 2.9, onde empeza, para a banda. |
 | `SetWindowPos` | Cambia o tamaño da xanela. |
 | `GetDpiForWindow` | A escala da xanela, en puntos por polgada (DPI): 96 ao 100 %. |
 
@@ -2395,9 +2479,10 @@ As constantes son as de `check-mouse.ps1` que usa, e catro novas:
 
 ```powershell
 # The script that runs in the terminal. It writes to the log the size of
-# the terminal, the keys that it reads, and, when the size changes and after
-# some keys, the rows of the console and where its cursor is. Its lines end
-# with |, so the rows that do not end with it go on in the next one.
+# the terminal, with the size in pixels of its text area, the keys that it
+# reads, and, when the size changes and after some keys, the rows of the
+# console and where its cursor is. Its lines end with |, so the rows that do
+# not end with it go on in the next one.
 $program = @'
 param([Parameter(Mandatory)][string]$Log)
 $ErrorActionPreference = 'Stop'
@@ -2412,11 +2497,27 @@ Add-Type -Namespace MeigaCheck -Name Console -MemberDefinition @"
 [DllImport("kernel32.dll")] public static extern bool SetConsoleMode(System.IntPtr handle, uint mode);
 [DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
 [DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern bool ReadConsoleOutputCharacterW(System.IntPtr handle, [System.Runtime.InteropServices.Out] char[] text, uint length, int at, out uint read);
+[DllImport("kernel32.dll")] public static extern bool FlushConsoleInputBuffer(System.IntPtr handle);
 "@
 function Write-Log([string]$Line) { [IO.File]::AppendAllText($Log, "$Line`n") }
 function Set-Title([string]$Title) { [Console]::Write("`e]0;$Title`a") }
 $in = [MeigaCheck.Console]::GetStdHandle(-10)
 $out = [MeigaCheck.Console]::GetStdHandle(-11)
+# The size in pixels of the text area of the terminal, which tells the size
+# of its cells: the script asks for it (CSI 14 t), and then for the
+# attributes of the terminal (DA1), whose answer always comes, from meiga or
+# from the console of Windows, which answers it itself, and swallows the
+# first question. The answers come as keys, which the script reads until the
+# one of DA1; then it drops the keys that go up, which would reach the log.
+[Console]::Write("`e[14t`e[c")
+$answer = [Text.StringBuilder]::new()
+$deadline = [DateTime]::UtcNow.AddSeconds(10)
+while ($answer.ToString() -notmatch '\x1b\[\?[0-9;]*c' -and [DateTime]::UtcNow -lt $deadline) {
+    if ([Console]::KeyAvailable) { $null = $answer.Append([Console]::ReadKey($true).KeyChar) }
+    else { [Threading.Thread]::Sleep(5) }
+}
+$null = [MeigaCheck.Console]::FlushConsoleInputBuffer($in)
+$pixels = if ($answer.ToString() -match '\x1b\[4;(\d+);(\d+)t') { " $($Matches[1]) $($Matches[2])" } else { '' }
 # The keys and the changes of size, without the mouse, which stays for
 # meiga: ENABLE_WINDOW_INPUT and ENABLE_EXTENDED_FLAGS.
 $null = [MeigaCheck.Console]::SetConsoleMode($in, 0x88)
@@ -2432,6 +2533,7 @@ $screens = 0
 - **[`ReadConsoleOutputCharacterW`](https://learn.microsoft.com/windows/console/readconsoleoutputcharacter)** le caracteres do búfer da consola, tantos coma di `length`, desde unha posición, nunha lista de `char`, e di cantos leu. A posición é un `COORD`, dous números de 16 bits, a columna e a fila, que caben nun `int`: a columna na metade baixa, e a fila na alta.
 - **`CharSet.Unicode`.** Sen el, .NET usa o predeterminado, Ansi, e converte a lista de `char` nunha de bytes, un por carácter. Pero a función, a versión W, escribe dous bytes por carácter: pasaba do final da lista, e pwsh pechábase de súpeto. Con `CharSet.Unicode`, a lista vai tal cal, con dous bytes por carácter.
 - `GetStdHandle(-11)` dá a saída estándar (`STD_OUTPUT_HANDLE`): o búfer da consola.
+- **O tamaño en píxeles,** desde a 2.9, coma en `check-mouse.ps1` (ver *O script do terminal*): o script pregunta polo tamaño da zona de texto, `CSI 14 t`, e despois polos atributos do terminal, *DA1*, cuxa resposta chega sempre; le as respostas coma teclas, ata a de *DA1*, e `FlushConsoleInputBuffer` descarta o resto, coma as teclas que soben, que, se non, irían ao rexistro coma teclas. `$pixels` leva o alto e o ancho, se a resposta os trae, para a primeira liña do rexistro. Vai antes de `SetConsoleMode`: `ReadKey` le as respostas co modo que a consola ten ao principio.
 - **`SetConsoleMode` con `0x88`:** `ENABLE_WINDOW_INPUT` (`0x8`), co que o ConPTY lle dá ao script un evento `WINDOW_BUFFER_SIZE_EVENT` en cada cambio de tamaño ([Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor)); e `ENABLE_EXTENDED_FLAGS` (`0x80`), sen a edición rápida, coma en `check-mouse.ps1`. Sen `ENABLE_MOUSE_INPUT`, o ConPTY non lle pide o rato a meiga ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)): o rato queda para meiga, que selecciona e despraza o historial con el.
 - `$screens` conta as pantallas que escribe o script.
 
@@ -2463,7 +2565,7 @@ function Write-Screen {
 - Ao final, un título con cantas pantallas leva, `meiga-resize-<n>`. Vese na xanela, pero a comprobación só agarda o primeiro título, e conta as pantallas no rexistro. `$script:screens` é a variábel do script: sen o prefixo, a función crearía unha súa.
 
 ```powershell
-Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)"
+Write-Log "size $([Console]::WindowWidth) $([Console]::WindowHeight)$pixels"
 Set-Title 'meiga-resize-ready'
 while ($true) {
     $read = 0
@@ -2507,7 +2609,7 @@ while ($true) {
 '@
 ```
 
-**O bucle.** Antes del, o script escribe no rexistro o tamaño da grella ao arrancar, a primeira liña, e pon o título `meiga-resize-ready`: está listo. Despois le eventos, ata 64 de cada vez:
+**O bucle.** Antes del, o script escribe no rexistro o tamaño da grella ao arrancar, a primeira liña, desde a 2.9 co da zona de texto en píxeles, e pon o título `meiga-resize-ready`: está listo. Despois le eventos, ata 64 de cada vez:
 
 - Con cada `WINDOW_BUFFER_SIZE_EVENT` (o tipo 4), escribe a pantalla, que o ConPTY xa repartiu para o tamaño novo.
 - De cada tecla que baixa (`KEY_EVENT`, o tipo 1, co `bKeyDown` do byte 4), escribe `key` e o seu código de tecla virtual (`wVirtualKeyCode`, no byte 10), en decimal: `key 78` é a N. O texto pegado chega tamén coma teclas ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)).
@@ -2589,19 +2691,44 @@ function Wait-Screen([int]$Before, [string]$What, [int]$Columns = 0, [int]$Rows 
 - **`Wait-Screen`** agarda a que o script escriba unha pantalla despois das `$Before` que xa levaba e, se se lle dá un tamaño, a que a última sexa dese tamaño. Gárdaa en `$grid`, a grella que ten o programa, e devólvea. Se non chega, a mensaxe di o que pasou: que o programa non escribiu a súa pantalla, ou que a súa grella ten outro tamaño, `… the program has a grid of … x … cells, and it has to be … x ….`
 
 ```powershell
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band([uint32]$Dpi) {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.ResizeCheck+RECT]::new()
+    $corner = [Meiga.Tools.ResizeCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $Dpi) + $api::GetSystemMetricsForDpi(33, $Dpi)
+}
+
 # The size of the cells, from the first size of the grid that the script
-# wrote: the grid fills the client area of the window below the tab bar, 32
-# pixels high at a scale of 100 %, but for the strip of the scroll bar, 12
-# pixels, and less than a cell.
+# wrote, below the tab bar: the band where the window is resized, and a row
+# 32 pixels high at a scale of 100 %; on the right of the grid goes the
+# strip of the scroll bar, 12 pixels. The script asked the terminal for the
+# size in pixels of its text area, which meiga gives: the grid times the
+# cells. The console of Windows swallows that question, and the client area
+# does not tell the cells exactly: the grid fills it below the bar, but for
+# the strip and less than a cell, which can be most of one. Then the check
+# stops: with that console, the history also starts with a blank row, which
+# the steps of the history do not expect.
 function Measure-Cells {
     $size = @(Get-Lines)[0] -split ' '
-    $client = Get-Client
     $dpi = $api::GetDpiForWindow($window)
     $script:strip = [Math]::Max(1, [Math]::Floor((12 * $dpi + 48) / 96))
-    $script:bar = [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
+    $script:bar = (Get-Band $dpi) + [Math]::Max(1, [Math]::Floor((32 * $dpi + 48) / 96))
+    if ($size.Count -lt 5) {
+        throw 'The terminal did not tell the size of its text area in pixels: the console of the tab is the one of Windows, which swallows the question, and this check needs the ConPTY of meiga. tools\package.ps1 copies it next to meiga.exe.'
+    }
     $script:cell = [pscustomobject]@{
-        Width = [Math]::Floor(($client.Right - $strip) / [int]$size[1])
-        Height = [Math]::Floor(($client.Bottom - $bar) / [int]$size[2])
+        Width = [int]([int]$size[4] / [int]$size[1])
+        Height = [int]([int]$size[3] / [int]$size[2])
     }
 }
 
@@ -2638,9 +2765,11 @@ function Set-Grid([int]$Columns, [int]$Rows, [string]$What) {
 
 **As celas e o tamaño da xanela.**
 
-- `Measure-Cells` mide as celas coma en [`check-mouse.ps1`](#toolscheck-mouseps1), co tamaño da grella ao arrancar, que é a primeira liña do rexistro: o ancho é o da área cliente sen a franxa da barra de desprazamento entre as columnas, e o alto, o da área cliente sen a barra de tabs entre as filas, sen decimais. Garda tamén o ancho da franxa, en `$script:strip`, para o tamaño da xanela e para premer na barra de desprazamento; e, desde a subfase 2.3, o alto da barra de tabs, en `$script:bar`, para o tamaño da xanela e para premer nas celas, que empezan debaixo dela ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 1). As celas non cambian ata o zoom: a xanela cambia de tamaño, pero a fonte é a mesma.
+- **`Get-Band`**, desde a 2.9, é o de `check-mouse.ps1`, coa clase desta comprobación (ver *A banda: `Get-Band`*): o alto da banda que redimensiona a xanela, enriba das tabs, se a xanela ten a barra de título de meiga e non está maximizada, e 0 se non.
+- `Measure-Cells` mide as celas co tamaño da grella ao arrancar, que é a primeira liña do rexistro. Desde a 2.9, coma en [`check-mouse.ps1`](#toolscheck-mouseps1), con exactitude: a liña leva tamén o tamaño da zona de texto en píxeles, e o ancho dunha cela é o da zona de texto entre as columnas, e o alto, o da zona de texto entre as filas. Ata a 2.8, calculábaas coa área cliente: o ancho, o da área cliente sen a franxa da barra de desprazamento entre as columnas, e o alto, o da área cliente sen a barra de tabs entre as filas, sen decimais. Garda tamén o ancho da franxa, en `$script:strip`, para o tamaño da xanela e para premer na barra de desprazamento; e, desde a subfase 2.3, o alto da barra de tabs, en `$script:bar`, para o tamaño da xanela e para premer nas celas, que empezan debaixo dela ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 1): desde a 2.9, a banda máis a fila das tabs. As celas non cambian ata o zoom: a xanela cambia de tamaño, pero a fonte é a mesma.
+- **Sen o tamaño en píxeles,** a consola da tab é a de Windows, que se traga a pregunta, e a comprobación para no momento, cun erro que o di, e que pide o ConPTY de meiga. Ao contrario ca `check-mouse.ps1`, non calcula as celas coa área cliente: a grella énchea menos dunha cela, que pode ser case unha enteira, e os tamaños da xanela de cada grella dependen das celas exactas. E, con esa consola, o historial empeza cunha fila en branco, que os pasos do historial non esperan, coma en [`check-exit.ps1`](#toolscheck-exitps1).
 - `Get-Client` dá a área cliente. Empeza en 0, así que `Right` e `Bottom` son o seu ancho e o seu alto.
-- **`Resize-Window`** fai a xanela do tamaño dunha grella: de ancho, as columnas polo ancho dunha cela, máis a franxa; de alto, as filas polo alto dunha cela, máis a barra de tabs; e en cada un, media cela de máis, que sobra. A grella colle as celas enteiras que caben, e a media cela deixa o tamaño lonxe do límite entre unha grella e a seguinte. `SetWindowPos` pide o tamaño da xanela co seu marco: por iso súmase o marco, o que mide `GetWindowRect` de máis ca a área cliente. Despois, `Move-Pointer` aparta o punteiro, se a xanela medrou ata el.
+- **`Resize-Window`** fai a xanela do tamaño dunha grella: de ancho, as columnas polo ancho dunha cela, máis a franxa; de alto, as filas polo alto dunha cela, máis a barra de tabs, coa banda; e en cada un, media cela de máis, que sobra. A grella colle as celas enteiras que caben, e a media cela deixa o tamaño lonxe do límite entre unha grella e a seguinte. `SetWindowPos` pide o tamaño da xanela co seu marco: por iso súmase o marco, o que mide `GetWindowRect` de máis ca a área cliente; desde a 2.9, o marco de Windows dos lados e de abaixo, porque a área cliente chega ata o bordo de arriba. Despois, `Move-Pointer` aparta o punteiro, se a xanela medrou ata el.
 - **`Set-Grid`** cambia o tamaño con `Resize-Window`, e `Wait-Screen` agarda a pantalla do programa con ese tamaño: o programa recibiu a grella que enche a xanela. As pantallas cóntanse antes do cambio, porque o programa pode escribir a nova antes de que volte `SetWindowPos`. `Resize-Window` vai á parte para o paso da caixa de mensaxe, onde o programa non recibe a grella ata que se pecha a caixa.
 
 ```powershell
@@ -2807,7 +2936,7 @@ function Compare-Screen([string]$What) {
 - `Get-Expected` calcula, coas filas da consola, o texto que copia meiga cando se selecciona a pantalla enteira: cada fila e, despois, CR LF, salvo nas filas que continúan na seguinte, que non rematan en `|` e non están baleiras. Ao final, `alacritty_terminal` deixa fóra o fin da última fila, e meiga un máis ([Código › meiga-core › `term/selection.rs`](meiga-core.md#cratesmeiga-coresrctermselectionrs)): quítanse ata dous.
 - `Compare-Screen` selecciona a pantalla enteira de meiga, da primeira cela á última, e compara o texto co da última pantalla do script. Se non coinciden, busca a primeira liña distinta, e a mensaxe dá as dúas, `… Their line … is '…' in meiga and '…' in the console.`, ou `missing` na que ten menos liñas. Son liñas do texto, non filas: unha liña partida en varias filas é unha.
 
-**O punteiro, e abrir e pechar meiga.** `Move-Pointer`, `Start-Meiga`, `Connect-Keyboard` e `Stop-Meiga` son os de `check-mouse.ps1`, cunha soa fase: `Start-Meiga` agarda o título `meiga-resize-ready` e mide as celas. Coma alí, desde a 2.5, meiga arranca cun `APPDATA` baleiro, que a comprobación crea ao principio, xunto ao script do terminal, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*). Eiquí, os movementos que fai Windows no sitio do punteiro chegarían a meiga, e non ao programa, que non pide o rato; e `Resize-Window` chama a `Move-Pointer` despois de cada cambio de tamaño, porque a xanela pode medrar ata o punteiro.
+**O punteiro, e abrir e pechar meiga.** `Move-Pointer`, `Start-Meiga`, `Connect-Keyboard` e `Stop-Meiga` son os de `check-mouse.ps1`, cunha soa fase: `Start-Meiga` agarda o título `meiga-resize-ready` e mide as celas. Coma alí, desde a 2.5, meiga arranca cun `APPDATA` baleiro, que a comprobación crea ao principio, xunto ao script do terminal, coma en [`check-window.ps1`](#toolscheck-windowps1) (ver *O `APPDATA` baleiro*). Eiquí, os movementos que fai Windows no sitio do punteiro chegarían a meiga, e non ao programa, que non pide o rato; e `Resize-Window` chama a `Move-Pointer` despois de cada cambio de tamaño, porque a xanela pode medrar ata o punteiro. Coma en `check-mouse.ps1`, o punto onde o leva, 8 píxeles por riba da área cliente, está desde a 2.9 fóra da xanela, por riba dela, e ata a 2.8 estaba na barra de título de Windows.
 
 ```powershell
 # As per monitor (v2), as meiga, this thread sees the pixels of the window as
@@ -3040,11 +3169,11 @@ try {
 **A selección que despraza a vista soa** ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md), decisión 11).
 
 - A comprobación preme na terceira fila da vista, que está na pantalla, e, co botón abaixo, move o rato 3 celas por riba da área cliente, á altura da primeira columna. Por riba da grella, a vista desprázase soa, e a selección medra con ela, máis rápido canto máis lonxe está o punteiro. O punteiro queda alí medio segundo (`Start-Sleep`); despois, a comprobación baleira o portapapeis e publica a soltura: meiga copia a selección, que empeza na fila á que chegou a vista.
-- **O punteiro de verdade.** Cando baixa o botón, meiga captura o rato, e Windows envíalle entón un movemento no sitio do punteiro de verdade ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows), *A captura*). Nos outros pasos non importa: `PostAll` fai que chegue despois de toda a acción, co botón xa arriba. Eiquí, o botón segue abaixo medio segundo, e ese movemento chegaría no medio: o final da selección, e a velocidade da vista, irían ao sitio do punteiro, que pode estar en calquera parte. Na barra de título, onde o deixa `Move-Pointer`, a só 8 píxeles da área cliente, a vista moveríase máis amodo, e ata a 2.2, sen a barra de tabs polo medio, case non se movería; e sobre a grella, non se movería. Por iso a comprobación leva o punteiro de verdade ao mesmo punto ca o movemento publicado, con `SetCursorPos`: os movementos de Windows caen no mesmo sitio.
+- **O punteiro de verdade.** Cando baixa o botón, meiga captura o rato, e Windows envíalle entón un movemento no sitio do punteiro de verdade ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows), *A captura*). Nos outros pasos non importa: `PostAll` fai que chegue despois de toda a acción, co botón xa arriba. Eiquí, o botón segue abaixo medio segundo, e ese movemento chegaría no medio: o final da selección, e a velocidade da vista, irían ao sitio do punteiro, que pode estar en calquera parte. Onde o deixa `Move-Pointer`, a só 8 píxeles por riba da área cliente, a vista moveríase máis amodo, e ata a 2.2, sen a barra de tabs polo medio, case non se movería; e sobre a grella, non se movería. Ese punto estaba ata a 2.8 na barra de título de Windows, e desde a 2.9 está fóra da xanela, por riba dela, porque a área cliente chega ata o bordo de arriba ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1). Por iso a comprobación leva o punteiro de verdade ao mesmo punto ca o movemento publicado, con `SetCursorPos`: os movementos de Windows caen no mesmo sitio.
 - **Devolvelo.** `Move-Pointer` só garda o sitio do punteiro cando o move. Se aínda non o gardou, a comprobación gárdao agora en `$pointer`, e o `finally` devólveo alí ao rematar, coma en `check-mouse.ps1`. Este código vai no corpo do script, así que `$pointer` xa é a variábel do script, sen `$script:`.
 - `Set-Modifiers @()` solta Ctrl, que deixou abaixo Ctrl+V: a selección vai sen modificadoras.
 - **O resultado.** A primeira liña do texto copiado ten que estar polo menos seis liñas por riba da primeira da pantalla: unha liña curta ata `h076|`, ou unha máis antiga, que xa non é curta. A copia que non despraza a vista soa falla eiquí: a selección só chega á primeira fila da vista, `h082|`. Despois, a N leva a vista outra vez á pantalla, e quita a selección.
-- **A liña á que chega.** A vista avanza co temporizador dos fotogramas, a 2 filas por segundo máis o cadrado da distancia en píxeles ao 100 % entre 25, contada desde o bordo de arriba do terminal, que desde a 2.3 está debaixo da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7). Ata a 2.2, a 3 celas, eran unhas 130 filas por segundo: en medio segundo, a selección chegaba a unha liña curta arredor de `h020|`, que cambiaba dunha vez a outra, porque ese medio segundo, máis o que tarda meiga en tratar a soltura, nunca é exacto. Coa barra polo medio, a distancia medra o seu alto, e a velocidade pasa de 300 filas por segundo: a vista chega ao principio do historial, onde se detén, e a selección empeza case sempre na primeira liña da L, `01 bcdefghijklmnopqrstuvwxyz0123456789abcd|`.
+- **A liña á que chega.** A vista avanza co temporizador dos fotogramas, a 2 filas por segundo máis o cadrado da distancia en píxeles ao 100 % entre 25, contada desde o bordo de arriba do terminal, que desde a 2.3 está debaixo da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7). Ata a 2.2, a 3 celas, eran unhas 130 filas por segundo: en medio segundo, a selección chegaba a unha liña curta arredor de `h020|`, que cambiaba dunha vez a outra, porque ese medio segundo, máis o que tarda meiga en tratar a soltura, nunca é exacto. Coa barra polo medio, a distancia medra o seu alto, desde a 2.9 tamén o da banda de enriba, e a velocidade pasa de 300 filas por segundo: a vista chega ao principio do historial, onde se detén, e a selección empeza case sempre na primeira liña da L, `01 bcdefghijklmnopqrstuvwxyz0123456789abcd|`.
 
 ```powershell
     # 3. The zoom.
@@ -3193,6 +3322,7 @@ $api = [Meiga.Tools.TabsCheck]
 | `PostMessageW` | Publica na xanela as mensaxes das teclas. |
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
 | `GetClientRect` e `GetDpiForWindow` | O tamaño da área cliente e a escala da xanela, para calcular onde está a primeira tab na barra (`Get-FirstTab`). |
+| `GetWindowRect`, `ClientToScreen`, `IsZoomed` e `GetSystemMetricsForDpi` | Desde a 2.9, a banda enriba das tabs, para `Get-FirstTab`: onde empezan a xanela e a súa área cliente, se a xanela está maximizada, e o grosor do marco de Windows á súa escala. |
 | `GetForegroundWindow` | A xanela de primeiro plano. |
 | `SetWindowPos` | Cambia o tamaño da xanela. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
@@ -3201,7 +3331,7 @@ $api = [Meiga.Tools.TabsCheck]
 | `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len a prioridade dun fío de meiga polo seu nome. |
 | `CreateToolhelp32Snapshot`, `Process32FirstW`, `Process32NextW`, `OpenProcess`, `WaitForSingleObject`, `GetProcessTimes` e `CloseHandle` | Len os procesos que hai e o pai de cada un, e, de cada un, se segue vivo, cando empezou e o tempo de procesador que usou: a árbore dunha shell, para `Wait-Settled`. |
 
-- Son as de `check-mouse.ps1` que necesita, sen as do rato nin as da caixa de mensaxe; `SetWindowPos`, coma en `check-resize.ps1`; e catro novas: `GetThreadContext`, para agardar a que pare o fío da xanela, e `GetThreadDescription`, `GetThreadPriority` e `LocalFree`, para ler a prioridade dun fío. Desde a 2.8, tamén `GetClientRect` e `GetDpiForWindow`, coa estrutura `RECT`, coma en [`check-menu.ps1`](#toolscheck-menups1), para `Get-FirstTab`. E, desde o mantemento M2, as seis de [`check-profiles.ps1`](#toolscheck-profilesps1) que len a árbore dun proceso, de `OpenProcess` a `Process32NextW`, coa estrutura `PROCESSENTRY32W`, sen `public`, cada proceso que dan as dúas últimas.
+- Son as de `check-mouse.ps1` que necesita, sen as do rato nin as da caixa de mensaxe; `SetWindowPos`, coma en `check-resize.ps1`; e catro novas: `GetThreadContext`, para agardar a que pare o fío da xanela, e `GetThreadDescription`, `GetThreadPriority` e `LocalFree`, para ler a prioridade dun fío. Desde a 2.8, tamén `GetClientRect` e `GetDpiForWindow`, coa estrutura `RECT`, coma en [`check-menu.ps1`](#toolscheck-menups1), para `Get-FirstTab`; e, desde a 2.9, para a súa banda, `GetWindowRect`, `ClientToScreen`, `IsZoomed` e `GetSystemMetricsForDpi`, coa estrutura `POINT`, coma en `check-menu.ps1`. E, desde o mantemento M2, as seis de [`check-profiles.ps1`](#toolscheck-profilesps1) que len a árbore dun proceso, de `OpenProcess` a `Process32NextW`, coa estrutura `PROCESSENTRY32W`, sen `public`, cada proceso que dan as dúas últimas.
 - **Unha clase propia,** coma en `check-resize.ps1`: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían as funcións novas.
 - As catorce últimas, de `OpenThread` a `Process32NextW`, non levan `public`: só as usan `TypeKey`, `PriorityOf`, `TreeOf` e `TimesOf`, dentro da clase. Son catro das cinco funcións propias da clase, en C#; a quinta é `ClearClipboard`, a de `check-mouse.ps1`.
 - **`TreeOf` e `TimesOf`,** desde o mantemento M2, son as de `check-profiles.ps1`, letra por letra (ver alí): un proceso e os que están debaixo del, os programas que arrancou e os que arrancaron eses, nun texto que cambia cando un deles arranca ou remata, ou usa o procesador. Úsaas `Wait-Settled`.
@@ -3559,28 +3689,41 @@ function Get-Areas($Lines) {
 }
 
 # The first of two tabs, as meiga lays out its bar (see
-# crates/meiga-core/src/ui/tabbar.rs): from a gap on the left and the top of
-# the bar to its bottom, and as wide as two tabs fit beside the buttons +
-# and of the profiles, up to 240 pixels at a scale of 100 %.
+# crates/meiga-core/src/ui/tabbar.rs): from a gap on the left, and a gap
+# below the band where the window is resized, to the bottom of the bar, and
+# as wide as two tabs fit beside the buttons + and of the profiles, the room
+# to drag the window and its buttons, up to 240 pixels at a scale of 100 %.
+# The band is as high as the frame that Windows gives a window to resize it
+# (see crates/meiga-win/src/window.rs), while the window has the title bar of
+# meiga, whose client area goes up to the top of the window, and is not
+# maximized; and none otherwise.
 function Get-FirstTab {
     $client = [Meiga.Tools.TabsCheck+RECT]::new()
-    if (-not $api::GetClientRect($window, [ref]$client)) {
+    $rect = [Meiga.Tools.TabsCheck+RECT]::new()
+    $corner = [Meiga.Tools.TabsCheck+POINT]::new()
+    if (-not $api::GetClientRect($window, [ref]$client) -or -not $api::GetWindowRect($window, [ref]$rect) -or
+        -not $api::ClientToScreen($window, [ref]$corner)) {
         throw "Could not read the size of the window of $exe."
     }
     $dpi = $api::GetDpiForWindow($window)
     $scale = { param([int]$Pixels) [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96)) }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $band = if ($api::IsZoomed($window) -or $corner.Y -ne $rect.Top) { 0 }
+    else { $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi) }
     $gap = & $scale 4
-    $room = [Math]::Max(0, $client.Right - 3 * $gap - (& $scale 28) - (& $scale 24))
+    $fixed = 3 * $gap + (& $scale 28) + (& $scale 24) + (& $scale 45) + 3 * (& $scale 46)
+    $room = [Math]::Max(0, $client.Right - $fixed)
     $width = [int][Math]::Min((& $scale 240), [Math]::Floor($room / 2))
-    New-Rect $gap $gap ($gap + $width) (& $scale 32)
+    New-Rect $gap ($band + $gap) ($gap + $width) ($band + (& $scale 32))
 }
 ```
 
 **Onde debuxa a primeira tab,** desde a 2.8, para o paso 4.
 
 - `New-Rect`, `Show-Rect`, `Test-Inside` e `Get-Areas` son os de [`check-menu.ps1`](#toolscheck-menups1), letra por letra: un rectángulo coa esquerda e o alto incluídos e a dereita e o baixo excluídos, o seu texto para as mensaxes de erro, se un rectángulo está dentro doutro, e as zonas que presentaron uns fotogramas, do campo `areas` do rexistro ([`--trace-frames`](meiga.md#cratesmeigasrctracers)).
-- **`Get-FirstTab`** calcula o rectángulo da primeira de dúas tabs, coma meiga ([`ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)). Le o ancho da área cliente con `GetClientRect` e a escala da xanela con `GetDpiForWindow`. `$scale` pasa uns píxeles a 100 % aos da escala, arredondando ao máis próximo e polo menos 1, coma meiga. Á esquerda e enriba hai unha separación, `$gap`, 4 píxeles a 100 %; o sitio das tabs, `$room`, é o ancho da xanela menos tres separacións, o botón + de 28 píxeles e o dos perfís de 24; e cada unha das dúas tabs leva a metade, sen pasar de 240 píxeles. O rectángulo vai da separación da esquerda e de enriba ata o baixo da barra, 32 píxeles a 100 %.
-- **Só para dúas tabs que caben.** Desde a 2.8, cando as tabs non caben co seu ancho mínimo, 100 píxeles a 100 %, van nunha franxa con botóns de desprazamento ([`check-manytabs.ps1`](#toolscheck-manytabsps1)), e `Get-FirstTab` non a ten en conta: vale mentres caben dúas tabs, cunha xanela de polo menos 264 píxeles de ancho a 100 %. No paso 4, a xanela ten aínda o tamaño que lle dá Windows ao abrila, que adoita ser moito máis ancho.
+- **`Get-FirstTab`** calcula o rectángulo da primeira de dúas tabs, coma meiga ([`ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)). Le o ancho da área cliente con `GetClientRect` e a escala da xanela con `GetDpiForWindow`. `$scale` pasa uns píxeles a 100 % aos da escala, arredondando ao máis próximo e polo menos 1, coma meiga. Á esquerda e enriba hai unha separación, `$gap`, 4 píxeles a 100 %; o sitio das tabs, `$room`, é o ancho da xanela menos o que non é para elas, `$fixed`: tres separacións, o botón + de 28 píxeles e o dos perfís de 24 e, desde a 2.9, o sitio para arrastrar a xanela, de 45, e os tres botóns da xanela, de 46 cada un ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 3 e 5); e cada unha das dúas tabs leva a metade, sen pasar de 240 píxeles. O rectángulo vai da separación da esquerda e de enriba ata o baixo da barra, 32 píxeles a 100 % por debaixo da banda.
+- **A banda,** desde a 2.9: enriba da fila das tabs, a barra ten a banda que redimensiona a xanela (decisión 2), e a tab empeza unha separación por debaixo dela. `$band` calcúlaa coma `Get-Band` en [`check-mouse.ps1`](#toolscheck-mouseps1), eiquí dentro da función: o grosor do marco de Windows, `SM_CXPADDEDBORDER` (92) máis `SM_CYSIZEFRAME` (33) á escala da xanela, se a súa área cliente empeza no bordo de arriba da xanela, porque ten a barra de título de meiga, e non está maximizada; e 0 se non. Se Windows non di o tamaño da área cliente, onde está a xanela ou onde empeza a área cliente, falla.
+- **Só para dúas tabs que caben.** Desde a 2.8, cando as tabs non caben co seu ancho mínimo, 100 píxeles a 100 %, van nunha franxa con botóns de desprazamento ([`check-manytabs.ps1`](#toolscheck-manytabsps1)), e `Get-FirstTab` non a ten en conta: vale mentres caben dúas tabs, cunha xanela de polo menos 447 píxeles de ancho a 100 %; ata a 2.8, sen o sitio para arrastrar a xanela nin os seus botóns, 264. No paso 4, a xanela ten aínda o tamaño que lle dá Windows ao abrila, que adoita ser moito máis ancho.
 
 ```powershell
 # The reports of the script of the first tab.
@@ -4162,7 +4305,7 @@ A CI executa este script en cada PR, despois de `check-resize.ps1`, no paso *Che
 
 ## `tools/check-tabbar.ps1`
 
-Desde a subfase 2.3. Comproba co rato a barra de tabs de `meiga.exe` ([ADR 0020](../adr/0020-a-barra-de-tabs.md)). Os botóns: o + abre unha tab co perfil por defecto cando o botón esquerdo se solta enriba del, e móstraa cun fotograma completo; un clic nunha tab móstraa, e a xanela colle o seu título; o botón do medio pecha a tab que ten debaixo; un × que se preme e se solta fóra del non pecha nada; mentres o botón do medio está premido nunha tab, Ctrl+Tab mostra outra, e a barra segue co rato ata que o botón se solta, fóra da tab, sen pechar nada; e o × da última tab pecha a xanela. O que debuxa cada cambio: o punteiro sobre unha tab ou sobre o +, só esa tab ou o +; un título novo, só o seu rectángulo; pechar unha tab oculta, só a barra; e, en repouso, nada. E os títulos que cambian sen parar: mentres un programa os cambia tan rápido como pode, na tab que se mostra ou nunha oculta, o fío da xanela non esperta máis de 1 000 veces por segundo, porque a xanela os colle como moito unha vez por intervalo de fotograma; e tampouco cando o programa pon o mesmo título unha e outra vez, que non debuxa nada. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación e escribe nun arquivo o que fixo, coma en [`check-tabs.ps1`](#toolscheck-tabsps1). Publica na barra as mensaxes do rato co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1), nos sitios que calcula coma meiga; teclea Ctrl+Tab coma `check-tabs.ps1`; e sabe que tab se mostra pola prioridade dos fíos lectores, tamén coma `check-tabs.ps1`. Leva uns 25 s: oito, os dos títulos (os pasos 3 e 7), e boa parte do resto agardando a que se calme a tab nova (o paso 5) e a que meiga deixe de debuxar despois de cada acción.
+Desde a subfase 2.3. Comproba co rato a barra de tabs de `meiga.exe` ([ADR 0020](../adr/0020-a-barra-de-tabs.md)). Os botóns: o + abre unha tab co perfil por defecto cando o botón esquerdo se solta enriba del, e móstraa cun fotograma completo; un clic nunha tab móstraa, e a xanela colle o seu título; o botón do medio pecha a tab que ten debaixo; un × que se preme e se solta fóra del non pecha nada; mentres o botón do medio está premido nunha tab, Ctrl+Tab mostra outra, e a barra segue co rato ata que o botón se solta, fóra da tab, sen pechar nada; e o × da última tab pecha a xanela. O que debuxa cada cambio: o punteiro sobre unha tab ou sobre o +, só esa tab ou o +; un título novo, só o seu rectángulo; pechar unha tab oculta, só a barra; e, en repouso, nada. E os títulos que cambian sen parar: mentres un programa os cambia tan rápido como pode, na tab que se mostra ou nunha oculta, o fío da xanela non esperta máis de 1 000 veces por segundo, porque a xanela os colle como moito unha vez por intervalo de fotograma; e tampouco cando o programa pon o mesmo título unha e outra vez, que non debuxa nada. Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)) e, na súa primeira tab, un script de PowerShell que fai un paso cada vez que llo di a comprobación e escribe nun arquivo o que fixo, coma en [`check-tabs.ps1`](#toolscheck-tabsps1). Publica na barra as mensaxes do rato co fío da xanela suspendido, coma [`check-mouse.ps1`](#toolscheck-mouseps1), nos sitios que calcula coma meiga; teclea Ctrl+Tab coma `check-tabs.ps1`; e sabe que tab se mostra pola prioridade dos fíos lectores, tamén coma `check-tabs.ps1`. Desde a 2.9, a barra de tabs é a barra de título da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)): a comprobación calcula tamén a banda que redimensiona a xanela, enriba das tabs, e deixa á dereita da barra o sitio para arrastrar a xanela e os seus botóns; e mira que o terminal vai debaixo da barra enteira, coa banda, e que as súas filas, do alto dunha cela, enchen o resto da xanela. O que fan a banda, os botóns da xanela e as partes libres da barra compróbao [`check-titlebar.ps1`](#toolscheck-titlebarps1). Leva uns 25 s: oito, os dos títulos (os pasos 3 e 7), e boa parte do resto agardando a que se calme a tab nova (o paso 5) e a que meiga deixe de debuxar despois de cada acción.
 
 ```powershell
 .\tools\check-tabbar.ps1                                  # comproba target\release\meiga.exe
@@ -4179,7 +4322,7 @@ Necesita PowerShell 7 no `PATH`, coma `check-tabs.ps1`: meiga lanza o script da 
 Saída esperada, cos valores que dependen da pantalla, da máquina e do tempo:
 
 ```text
-The bar is … pixels high, and its tabs … wide.
+The bar is … pixels high, … of them above the tabs, and its tabs … wide.
 OK: the terminal is below the bar: the fifth row, which changes, is presented … pixels below the top of the window (… frames).
 OK: while the program of the tab that is shown gives … titles in two seconds, the window wakes up … times per second, takes the last one, and draws only the title of its tab (… frames); while it gives that title again … times, the window wakes up … times per second, and draws nothing.
 OK: the pointer on the button +, and its press, draw only the button; when the left button goes up on it, a tab opens with the default shell (pwsh.exe), shown with a full frame.
@@ -4193,8 +4336,8 @@ OK: while nothing changes, nothing is drawn (1 s).
 OK: the close button of the last tab closes the window, and it ends with exit code 0.
 ```
 
-- **A primeira liña** di o alto da barra e o ancho das tabs, en píxeles, que dependen da escala da pantalla: ao 100 %, coma no *runner* da CI, 32 e 240, e ao 150 %, 48 e 360 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2).
-- **Os píxeles** da segunda son o bordo de arriba da quinta fila do terminal: a barra e catro filas, que dependen da escala e da fonte.
+- **A primeira liña** di o alto da barra, o da banda enriba das tabs, que entra nel, e o ancho das tabs, en píxeles, que dependen da escala da pantalla e, a banda, do marco que Windows lle dá á xanela: ao 100 %, a escala do *runner* da CI, 40, 8 e 240, e ao 150 %, 59, 11 e 360, coas métricas habituais de Windows ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2, e [ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 2). Ata a 2.8, a barra non tiña banda, e a liña era `The bar is … pixels high, and its tabs … wide.`: 32 e 240 ao 100 %, e 48 e 360 ao 150 %.
+- **Os píxeles** da segunda son o bordo de arriba da quinta fila do terminal: a barra, coa súa banda, e catro filas, que dependen da escala e da fonte.
 - **Os títulos e os espertares** da terceira e da sexta: cantos títulos puxo o programa en dous segundos, e cantas veces por segundo espertou mentres tanto o fío da xanela; e despois, cantas veces puxo o mesmo título noutros dous, e cantas veces por segundo espertou entón o fío. Dependen da máquina e cambian dunha vez a outra: a comprobación só esixe que os espertares non pasen de 1 000.
 - **O programa** da cuarta é o do perfil por defecto, coma en `check-tabs.ps1`: `pwsh.exe`, ou `powershell.exe` se meiga non atopa PowerShell 7.
 - **Os fotogramas e os píxeles** cambian tamén dunha vez a outra: a comprobación non os conta, só mira onde caen (ver `Assert-Inside`, máis abaixo).
@@ -4207,7 +4350,7 @@ WARNING: There is no conpty.dll next to meiga.exe, so the console of Windows giv
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1; se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coas zonas que presentou cada unha. E garda o rexistro dos fotogramas e os informes do script da primeira tab, e di onde, cunha liña `Kept …` por arquivo. Pase o que pase, `meiga.exe` non queda aberto, e o punteiro volta a onde estaba.
 
-Esta comprobación non ve a roda nin os clics na barra baleira, que aínda non fan nada ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6), nin os títulos coa xanela minimizada (decisión 5); o botón dereito, que desde a subfase 2.4 abre o menú dunha tab, compróbao [`check-menu.ps1`](#toolscheck-menups1). As medidas exactas da barra, as tabs que se encollen ata quedar sen ×, e os títulos cortados con «…» próbanse en Rust, sen xanela ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs) e [› `text.rs`](meiga-core.md#cratesmeiga-coresrctextrs)). Tampouco mide a CPU nin os orzamentos da fase, coma os espertares con 5 tabs en repouso: os números dunha máquina compartida, coma o *runner*, non dirían nada ([Subfases › 2.3](../subfases/2.3-barra.md)). O límite dos espertares cun título que cambia sen parar si se pode comprobar alí, porque non é un orzamento afinado, senón a fronteira entre dous comportamentos moi distintos (ver *Por que un límite*, máis abaixo).
+Esta comprobación non ve os títulos coa xanela minimizada ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 5); nin a roda, que desde a 2.8 comproba [`check-manytabs.ps1`](#toolscheck-manytabsps1); nin os clics nas partes libres da barra, que ata a 2.8 non facían nada (decisión 6) e desde a 2.9 moven a xanela, nin a banda nin os botóns da xanela, que comproba [`check-titlebar.ps1`](#toolscheck-titlebarps1) ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)); o botón dereito nunha tab, que desde a subfase 2.4 abre o seu menú, compróbao [`check-menu.ps1`](#toolscheck-menups1). As medidas exactas da barra, as tabs que se encollen ata quedar sen ×, e os títulos cortados con «…» próbanse en Rust, sen xanela ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs) e [› `text.rs`](meiga-core.md#cratesmeiga-coresrctextrs)). Tampouco mide a CPU nin os orzamentos da fase, coma os espertares con 5 tabs en repouso: os números dunha máquina compartida, coma o *runner*, non dirían nada ([Subfases › 2.3](../subfases/2.3-barra.md)). O límite dos espertares cun título que cambia sen parar si se pode comprobar alí, porque non é un orzamento afinado, senón a fronteira entre dous comportamentos moi distintos (ver *Por que un límite*, máis abaixo).
 
 Explicación por partes. O comezo (a axuda, os parámetros, a versión de PowerShell e a ruta de `meiga.exe`) é igual ca en [`check-mouse.ps1`](#toolscheck-mouseps1). Despois vén o aviso do ConPTY:
 
@@ -4264,13 +4407,14 @@ if (-not ('Meiga.Perf.ProcessSnapshot' -as [type])) {
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración do Tab, na distribución da xanela. |
 | `GetGUIThreadInfo` | A xanela que ten o rato capturado no fío da xanela de meiga. |
 | `GetClientRect` e `GetDpiForWindow` | O tamaño da área cliente e a escala da xanela, para calcular a barra. |
+| `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi` | Desde a 2.9, a banda enriba das tabs: onde empeza a xanela, se está maximizada, e o grosor do marco de Windows á súa escala (ver `Get-Band`). |
 | `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Len e moven o punteiro, e pasan un punto da pantalla á área cliente, ou ao revés. |
 | `PostMessageW` | Publica na xanela as mensaxes do rato e das teclas. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
 | `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
 | `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len a prioridade dun fío de meiga polo seu nome. |
 
-- Son as de `check-tabs.ps1`, sen `GetForegroundWindow`, `SetWindowPos` nin as do portapapeis; as de `check-mouse.ps1` que necesita o rato; e unha nova, `GetGUIThreadInfo`. `MSG` é a mensaxe que enche `PeekMessageW`, coma en `check-mouse.ps1`; e `GUITHREADINFO`, o que sabe Windows da interface dun fío: entre outras cousas, a súa xanela activa, a que ten o foco e a que ten o rato capturado, `hwndCapture`.
+- Son as de `check-tabs.ps1`, sen `GetForegroundWindow`, `SetWindowPos` nin as do portapapeis; as de `check-mouse.ps1` que necesita o rato; e unha nova, `GetGUIThreadInfo`. Desde a 2.9, tamén as da banda, `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi`, coma en `check-mouse.ps1`. `MSG` é a mensaxe que enche `PeekMessageW`, coma en `check-mouse.ps1`; e `GUITHREADINFO`, o que sabe Windows da interface dun fío: entre outras cousas, a súa xanela activa, a que ten o foco e a que ten o rato capturado, `hwndCapture`.
 - As nove que non levan `public`, `GetGUIThreadInfo` e as oito de `kernel32.dll` desde `OpenThread`, só as usan as tres funcións propias da clase, en C#: **`PostAll`** e **`CaptureOf`**, explicadas a continuación, e **`PriorityOf`**, que le a prioridade dun fío polo seu nome, a de `check-tabs.ps1` (ver *A prioridade dun fío: `PriorityOf`*).
 - **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
 - **`ProcessSnapshot`** é a clase coa que as medicións len os contadores de Windows de todos os procesos e dos seus fíos ([Código › medición › `ProcessSnapshot.cs`](perf.md#toolsperfprocesssnapshotcs)). `Add-Type -Path` compila o arquivo, `tools\perf\ProcessSnapshot.cs`, unha vez por sesión, coma a clase de enriba; a comprobación usa del os cambios de contexto do fío da xanela (`Measure-Wakes`, máis abaixo).
@@ -4622,12 +4766,32 @@ function Wait-Settled([int]$Id, [string]$What) {
 - Se o proceso remata, falla; e se segue usando o procesador ata `TimeoutSeconds` + 10 s, tamén. Os 10 s de máis deixan tempo para un perfil que tarde.
 - `$program`, dentro da función, é unha variábel súa, co proceso: a do script, co código da primeira tab, queda como estaba.
 
-`Get-Title` é o de `check-tabs.ps1`: o título da xanela. `Move-Pointer` é o de `check-mouse.ps1`, coa clase desta comprobación: se o punteiro está na área cliente, móveo á barra de título da xanela, ao medio e 8 píxeles por riba da área cliente, e a primeira vez garda onde estaba, en `$pointer`, para devolvelo ao rematar. Eiquí, os movementos que fai Windows no sitio do punteiro chegarían á barra de tabs, e resaltarían o que tivese debaixo.
+`Get-Title` é o de `check-tabs.ps1`: o título da xanela. `Move-Pointer` é o de `check-mouse.ps1`, coa clase desta comprobación: se o punteiro está na área cliente, móveo ao medio do seu ancho, 8 píxeles por riba da área cliente, e a primeira vez garda onde estaba, en `$pointer`, para devolvelo ao rematar. Eiquí, os movementos que fai Windows no sitio do punteiro chegarían á barra de tabs, e resaltarían o que tivese debaixo. Desde a 2.9, ese punto está fóra da xanela, por riba dela, porque a área cliente chega ata o bordo de arriba da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1); ata a 2.8, estaba na barra de título de Windows. O código é o mesmo, co comentario que o di.
 
 ```powershell
+# The band above the row of tabs at $Dpi, where the pointer resizes the
+# window, as meiga computes it (see crates/meiga-win/src/window.rs): as high
+# as the frame that Windows gives a window to resize it, while the window
+# has the title bar of meiga and is not maximized, and none otherwise. With
+# the title bar of meiga, the client area goes up to the top of the window.
+function Get-Band([uint32]$Dpi) {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.TabBarCheck+RECT]::new()
+    $corner = [Meiga.Tools.TabBarCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $Dpi) + $api::GetSystemMetricsForDpi(33, $Dpi)
+}
+
 # The layout of the bar with $Count tabs, as meiga computes it (see
 # crates/meiga-core/src/ui/tabbar.rs): its sizes at the scale of the window,
-# rounded and at least one pixel.
+# rounded and at least one pixel. The band where the window is resized goes
+# above the row of tabs, and the tabs and the button + start a gap below it.
+# On the right of the bar go the three buttons of the window, and the room
+# to drag it.
 function Get-Bar([int]$Count) {
     $client = [Meiga.Tools.TabBarCheck+RECT]::new()
     if (-not $api::GetClientRect($window, [ref]$client)) {
@@ -4635,23 +4799,28 @@ function Get-Bar([int]$Count) {
     }
     $dpi = $api::GetDpiForWindow($window)
     $scale = { param([int]$Pixels) [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96)) }
-    $height = & $scale 32
+    $band = Get-Band $dpi
+    $row = & $scale 32
+    $height = $band + $row
     $gap = & $scale 4
+    $top = $band + $gap
     $padding = & $scale 8
     $closeSide = & $scale 24
     $newSide = & $scale 28
     $profilesSide = & $scale 24
-    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (& $scale 45) + 3 * (& $scale 46)
+    $width = [int][Math]::Min((& $scale 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
-        $close = New-Rect ($right - $gap - $closeSide) ($gap + [Math]::Floor(($height - $gap - $closeSide) / 2)) ($right - $gap) 0
+        $close = New-Rect ($right - $gap - $closeSide) ($top + [Math]::Floor(($row - $gap - $closeSide) / 2)) ($right - $gap) 0
         $close.Bottom = $close.Top + $closeSide
         [pscustomobject]@{
-            Rect = New-Rect $left $gap $right $height
-            # Its whole column, and the separator on its right.
-            Area = New-Rect $left 0 ($right + 1) $height
-            Title = New-Rect ($left + $padding) $gap $close.Left $height
+            Rect = New-Rect $left $top $right $height
+            # Its whole column of the row of tabs, and the separator on its
+            # right.
+            Area = New-Rect $left $band ($right + 1) $height
+            Title = New-Rect ($left + $padding) $top $close.Left $height
             Close = $close
         }
     }
@@ -4659,21 +4828,25 @@ function Get-Bar([int]$Count) {
     [pscustomobject]@{
         Rect = New-Rect 0 0 $client.Right $height
         Height = $height
+        Band = $band
         Tabs = @($tabs)
-        New = New-Rect $newLeft $gap ($newLeft + $newSide) ($gap + $newSide)
+        New = New-Rect $newLeft $top ($newLeft + $newSide) ($top + $newSide)
         Client = $client
     }
 }
 ```
 
+**A banda: `Get-Band`.** Desde a 2.9, é o de [`check-mouse.ps1`](#toolscheck-mouseps1), coa clase desta comprobación (ver alí *A banda: `Get-Band`*): o alto da banda que redimensiona a xanela, enriba das tabs, á escala `$Dpi`, o grosor do marco de Windows, `SM_CXPADDEDBORDER` máis `SM_CYSIZEFRAME`, se a xanela ten a barra de título de meiga, cuxa área cliente chega ata o bordo de arriba da xanela, e non está maximizada; e 0 se non ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 1 e 2).
+
 **A barra, coma a calcula meiga: `Get-Bar`.** meiga non di onde debuxa cada cousa: a comprobación calcúlao coas mesmas regras ca `Layout`, en `meiga-core` ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)), para `$Count` tabs, co ancho da área cliente e a escala da xanela ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2).
 
 - **A escala.** `$scale` escala unha medida en píxeles ao 100 %, `(píxeles × DPI + 48) / 96`, sen decimais e polo menos 1, coma a franxa da barra de desprazamento en `check-mouse.ps1`. É un bloque de código, e `& $scale 32` execútao co argumento 32. Dentro, `$dpi` é a variábel da función, que o bloque atopa porque se executa dentro dela: o ámbito dinámico de PowerShell, coma en `Wait-Copied` de [`check-resize.ps1`](#toolscheck-resizeps1).
-- **As medidas**, ao 100 %: a barra, 32 de alto; 4 de separación, `$gap`, por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita dos botóns; 8 desde o bordo esquerdo da tab ata o título, `$padding`; o ×, un cadrado de 24; o +, un de 28; e, desde a 2.5, o botón dos perfís, o ▾, xunto ao +, 24 de ancho, `$profilesSide` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
-- **O ancho das tabs**, `$width`: ata 240, todas iguais; e, se non caben, a parte que lles toca do ancho da área cliente sen as tres separacións nin os botóns, sen decimais (decisión 3). `[Math]::Max(0, …)` evita un ancho negativo nunha xanela máis estreita ca os botóns. Ata a 2.4 só restaba o +; desde a 2.5, tamén o ▾, coma meiga: sen el, cando as tabs non caben co seu ancho máximo, as que calcula a comprobación serían máis anchas ca as de meiga. A comprobación non usa o ▾: só deixa o seu sitio.
-- **Cada tab** é un obxecto con catro rectángulos: `Rect`, o que se debuxa, desde a separación de riba ata o bordo de abaixo da barra; `Area`, toda a súa columna e un píxel máis á dereita, o separador entre ela e a seguinte, que se debuxa na primeira columna da seguinte e cambia co aspecto das dúas: é o que debuxa meiga cando a tab gaña ou perde o resalte; `Title`, o sitio do título, desde a marxe esquerda da tab ata o ×; e `Close`, o ×, á dereita, cunha separación ao seu lado, e centrado no alto da tab debuxada. O bordo de abaixo do × vai despois, porque se calcula co de arriba.
-- **A barra** é outro obxecto: `Rect`, toda a barra; `Height`, o seu alto; `Tabs`, as tabs, sempre nunha lista, tamén cunha soa; `New`, o +, despois da última tab e dunha separación; e `Client`, a área cliente, para o paso 2.
-- Non contempla as tabs tan estreitas que quedan sen × (decisión 3): a comprobación ten como moito dúas.
+- **As medidas**, ao 100 %: a fila das tabs, `$row`, 32 de alto; 4 de separación, `$gap`, por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita dos botóns; 8 desde o bordo esquerdo da tab ata o título, `$padding`; o ×, un cadrado de 24; o +, un de 28; e, desde a 2.5, o botón dos perfís, o ▾, xunto ao +, 24 de ancho, `$profilesSide` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
+- **A banda,** desde a 2.9: `$band`, de `Get-Band`, vai enriba da fila das tabs, e a barra mide as dúas, `$height`. As tabs e o + empezan unha separación por debaixo dela, en `$top`. Ata a 2.8, a barra era só a fila, e as tabs empezaban unha separación por debaixo do bordo de arriba da área cliente.
+- **O ancho das tabs**, `$width`: ata 240, todas iguais; e, se non caben, a parte que lles toca do ancho da área cliente sen o que non é para elas, `$fixed`, sen decimais (decisión 3): as tres separacións, o + e o ▾ e, desde a 2.9, o sitio para arrastrar a xanela, 45 píxeles ao 100 %, e os tres botóns da xanela, de 46 cada un ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 3 e 5). `[Math]::Max(0, …)` evita un ancho negativo nunha xanela máis estreita ca os botóns. Ata a 2.4 só restaba o +; desde a 2.5, tamén o ▾, coma meiga: sen el, cando as tabs non caben co seu ancho máximo, as que calcula a comprobación serían máis anchas ca as de meiga. Por iso mesmo resta desde a 2.9 o sitio para arrastrar a xanela e os seus botóns. A comprobación non usa o ▾, nin os botóns da xanela: só deixa o seu sitio.
+- **Cada tab** é un obxecto con catro rectángulos: `Rect`, o que se debuxa, desde a separación de riba ata o bordo de abaixo da barra; `Area`, toda a súa columna da fila das tabs, desde a banda, e un píxel máis á dereita, o separador entre ela e a seguinte, que se debuxa na primeira columna da seguinte e cambia co aspecto das dúas: é o que debuxa meiga cando a tab gaña ou perde o resalte; `Title`, o sitio do título, desde a marxe esquerda da tab ata o ×; e `Close`, o ×, á dereita, cunha separación ao seu lado, e centrado no alto da tab debuxada, na fila. O bordo de abaixo do × vai despois, porque se calcula co de arriba.
+- **A barra** é outro obxecto: `Rect`, toda a barra, coa banda; `Height`, o seu alto; desde a 2.9, `Band`, o alto da banda, para a primeira liña da saída; `Tabs`, as tabs, sempre nunha lista, tamén cunha soa; `New`, o +, despois da última tab e dunha separación; e `Client`, a área cliente, para o paso 2.
+- Non contempla as tabs tan estreitas que quedan sen × ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3): a comprobación ten como moito dúas.
 
 ```powershell
 # The middle of a rectangle.
@@ -4802,7 +4975,7 @@ try {
 | Paso | Que fai a comprobación | Que ten que pasar |
 |---|---|---|
 | 1 | O script da primeira tab oculta o cursor e pon un título. A comprobación aparta o punteiro e calcula a barra cunha tab. | A xanela ten ese título, e o lector da tab, a prioridade normal. |
-| 2 | O script escribe na quinta fila. | Fotogramas só nesa fila, debaixo da barra. |
+| 2 | O script escribe na quinta fila. | Fotogramas só debaixo da barra, nunha franxa do alto dunha cela, catro celas por debaixo dela; e as filas da grella, dese alto, enchen o resto da xanela, menos dunha. |
 | 3 | O script, á vista, pon títulos durante dous segundos, e acaba co que tiña; despois, pon ese mesmo unha e outra vez, outros dous. | Cos títulos, o fío da xanela esperta como moito 1 000 veces por segundo, e os fotogramas só debuxan o título da tab; a xanela acaba co último. Co mesmo título, o fío tampouco esperta máis de 1 000 veces por segundo, e non hai ningún fotograma. |
 | 4 | O punteiro no +; o botón esquerdo baixa nel, e despois sobe. | O punteiro e o botón que baixa debuxan só o +, e non abren nada. Cando o botón sobe, ábrese unha tab co perfil por defecto, que se mostra cun primeiro fotograma completo. |
 | 5 | Nada. | A shell da tab nova deixa de usar o procesador, e meiga leva un segundo sen debuxar. |
@@ -4824,23 +4997,38 @@ try {
     Move-Pointer
     Wait-Quiet 400
     $bar = Get-Bar 1
-    Write-Host "The bar is $($bar.Height) pixels high, and its tabs $($bar.Tabs[0].Rect.Right - $bar.Tabs[0].Rect.Left) wide."
+    Write-Host "The bar is $($bar.Height) pixels high, $($bar.Band) of them above the tabs, and its tabs $($bar.Tabs[0].Rect.Right - $bar.Tabs[0].Rect.Left) wide."
 ```
 
-**1. A primeira tab, soa.** Coma en `check-tabs.ps1`: `$ready` son as palabras do informe, co número do proceso do script, `$first`, e as filas da grella; o título di que meiga xa leu o que escribiu o script, e a prioridade, que o seu lector é o da tab que se mostra. Despois, `Move-Pointer` aparta o punteiro, se estaba enriba da xanela, e `Wait-Quiet` agarda a que meiga debuxe o que tiña pendente, coma un resalte que puxese o punteiro na barra. `Get-Bar 1` calcula a barra cunha tab, e a primeira liña da saída di o seu alto e o ancho da tab.
+**1. A primeira tab, soa.** Coma en `check-tabs.ps1`: `$ready` son as palabras do informe, co número do proceso do script, `$first`, e as filas da grella; o título di que meiga xa leu o que escribiu o script, e a prioridade, que o seu lector é o da tab que se mostra. Despois, `Move-Pointer` aparta o punteiro, se estaba enriba da xanela, e `Wait-Quiet` agarda a que meiga debuxe o que tiña pendente, coma un resalte que puxese o punteiro na barra. `Get-Bar 1` calcula a barra cunha tab, e a primeira liña da saída di o seu alto, o da banda e o ancho da tab; desde a 2.9, coa banda.
 
 ```powershell
-    # 2. The terminal is below the bar: its rows fill the rest of the window,
-    # less than a row to spare, and a row that changes is presented there.
-    $cellHeight = [Math]::Floor(($bar.Client.Bottom - $bar.Height) / [int]$ready[2])
-    $row = New-Rect 0 ($bar.Height + 4 * $cellHeight) $bar.Rect.Right ($bar.Height + 5 * $cellHeight)
+    # 2. The terminal is below the bar: a row that changes is presented in
+    # its place there. The text is in the fifth row, so what is drawn is as
+    # high as a cell, four cells below the bar; and the rows of the screen
+    # fill the rest of the window, with less than a row to spare. Dividing
+    # the room by the rows would not do: with as many pixels to spare as
+    # rows, it gives a cell a pixel higher.
+    $rows = [int]$ready[2]
+    $room = $bar.Client.Bottom - $bar.Height
     $start = @(Get-Log).Count
     $null = Invoke-Step 'write in the fifth row'
-    $frames = Assert-Inside $start $row 'Text in the fifth row'
-    Write-Host "OK: the terminal is below the bar: the fifth row, which changes, is presented $($row.Top) pixels below the top of the window ($($frames.Count) frames)."
+    $frames = Assert-Inside $start (New-Rect 0 $bar.Height $bar.Rect.Right $bar.Client.Bottom) 'Text in the fifth row'
+    $areas = @(Get-Areas $frames)
+    $top = ($areas | Measure-Object -Property Top -Minimum).Minimum
+    $cellHeight = ($areas | Measure-Object -Property Bottom -Maximum).Maximum - $top
+    if ($cellHeight -lt 1 -or $top -ne $bar.Height + 4 * $cellHeight -or $rows * $cellHeight -gt $room -or ($rows + 1) * $cellHeight -le $room) {
+        Show-Lines $frames
+        throw "Text in the fifth row: the window drew it from $top to $($top + $cellHeight) pixels below the top, which is not the fifth of $rows rows that fill the $room pixels below the bar, $($bar.Height) pixels high."
+    }
+    Write-Host "OK: the terminal is below the bar: the fifth row, which changes, is presented $top pixels below the top of the window ($($frames.Count) frames)."
 ```
 
-**2. O terminal, debaixo da barra.** A grella enche a área cliente debaixo da barra, menos dunha fila ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 1): o alto dunha cela é o que queda debaixo da barra entre as filas, sen decimais, coma en `Measure-Cells` de `check-mouse.ps1`. A quinta fila, a 4 contando desde 0, empeza o alto da barra e catro celas por debaixo do bordo de arriba da área cliente. O script escribe nela, e os fotogramas, polo menos un, teñen que caer dentro dela, en calquera parte do seu ancho. meiga baixa o alto da barra as zonas que cambian no terminal antes de presentalas ([Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)): se non o fixese, a fila presentaríase máis arriba, e a comprobación fallaría.
+**2. O terminal, debaixo da barra.** A grella enche a área cliente debaixo da barra, menos dunha fila ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 1). O script escribe na quinta fila, a 4 contando desde 0, e a comprobación mira onde a presenta meiga:
+
+- **Debaixo da barra.** `Assert-Inside` agarda os fotogramas, polo menos un, e todas as súas zonas teñen que caer entre o bordo de abaixo da barra, coa banda, e o da área cliente, en calquera parte do seu ancho. meiga baixa o alto da barra as zonas que cambian no terminal antes de presentalas ([Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)): se non o fixese, a fila presentaríase máis arriba, e a comprobación fallaría.
+- **Do alto dunha cela.** As zonas que presentaron, `Get-Areas`, van dun bordo de arriba, `$top`, o máis alto, a un de abaixo, o máis baixo: o seu alto ten que ser o dunha cela, `$cellHeight`, e `$top`, o alto da barra e catro celas. E as `$rows` filas da grella, desas celas, teñen que encher os `$room` píxeles que quedan debaixo da barra, menos dunha fila: caben, e unha máis xa non. Se non, mostra as liñas e falla, e di onde debuxou e cantas filas e píxeles había.
+- **Por que dos fotogramas.** Ata a 2.8, a comprobación calculaba o alto dunha cela dividindo o sitio debaixo da barra entre as filas, sen decimais, coma `Measure-Cells` en `check-mouse.ps1`, e esixía os fotogramas na franxa da quinta fila que daba esa cela. Pero, se sobran tantos píxeles coma filas, ou máis, a división dá unha cela un píxel máis alta, e esa franxa cae máis abaixo ca a fila. Desde a 2.9, o alto da cela sae do que presenta meiga, e as filas que enchen a xanela compróbano.
 
 ```powershell
     # 3. Titles as fast as the program can give them, in the tab that is
@@ -5313,6 +5501,13 @@ public static extern bool GetClientRect(IntPtr window, out RECT rect);
 public static extern bool GetWindowRect(IntPtr window, out RECT rect);
 
 [DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
 public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll", SetLastError = true)]
@@ -5385,6 +5580,7 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `GetGUIThreadInfo` | A xanela que ten o rato capturado no fío da xanela de meiga. |
 | `GetClientRect` e `GetDpiForWindow` | O tamaño da área cliente e a escala da xanela, para calcular a barra e o menú. |
 | `GetWindowRect` e `SetWindowPos` | Len o tamaño da xanela, co seu marco, e cámbiano. |
+| `IsZoomed` e `GetSystemMetricsForDpi` | Desde a 2.9, para a banda enriba das tabs, con `GetWindowRect` e `ClientToScreen`: se a xanela está maximizada, e o grosor do marco de Windows á súa escala (ver `Get-Band`). |
 | `ShowWindowAsync` e `IsIconic` | Minimizan e restauran a xanela, e din se está minimizada. |
 | `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Len e moven o punteiro, e pasan un punto da pantalla á área cliente, ou ao revés. |
 | `PostMessageW` | Publica na xanela as mensaxes do rato e das teclas. |
@@ -5392,7 +5588,7 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
 | `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len a prioridade dun fío de meiga polo seu nome. |
 
-- Son as de `check-tabbar.ps1` e catro máis: `GetWindowRect` e `SetWindowPos`, coma en [`check-resize.ps1`](#toolscheck-resizeps1), para o paso 8; e `ShowWindowAsync`, coma en `check-present.ps1`, e `IsIconic`, para o paso 9. As estruturas, `RECT`, `POINT`, `MSG` e `GUITHREADINFO`, son as de `check-tabbar.ps1`.
+- Son as de `check-tabbar.ps1` e tres máis: `SetWindowPos`, coma en [`check-resize.ps1`](#toolscheck-resizeps1), para o paso 8, con `GetWindowRect`; e `ShowWindowAsync`, coma en `check-present.ps1`, e `IsIconic`, para o paso 9. Ata a 2.8 eran catro, con `GetWindowRect`, que desde a 2.9 ten tamén `check-tabbar.ps1`, coma `IsZoomed` e `GetSystemMetricsForDpi`, para a banda. As estruturas, `RECT`, `POINT`, `MSG` e `GUITHREADINFO`, son as de `check-tabbar.ps1`.
 - As nove que non levan `public`, `GetGUIThreadInfo` e as oito de `kernel32.dll` desde `OpenThread`, só as usan as tres funcións propias da clase, en C#, que son as de `check-tabbar.ps1`: `PostAll`, `CaptureOf` e `PriorityOf`.
 - **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
 - Non carga `ProcessSnapshot`, coa que `check-tabbar.ps1` conta os espertares da xanela: esta comprobación non os mide.
@@ -5981,7 +6177,7 @@ function Move-Pointer {
 }
 ```
 
-`Move-Pointer` é o de `check-tabbar.ps1`, coa clase desta comprobación: se o punteiro está na área cliente, móveo á barra de título da xanela, ao medio e 8 píxeles por riba da área cliente, e a primeira vez garda onde estaba, en `$pointer`, para devolvelo ao rematar. Eiquí, os movementos que fai Windows no sitio do punteiro chegarían á barra de tabs ou ao menú, e resaltarían o que tivesen debaixo.
+`Move-Pointer` é o de `check-tabbar.ps1`, coa clase desta comprobación: se o punteiro está na área cliente, móveo ao medio do seu ancho, 8 píxeles por riba da área cliente, e a primeira vez garda onde estaba, en `$pointer`, para devolvelo ao rematar. Eiquí, os movementos que fai Windows no sitio do punteiro chegarían á barra de tabs ou ao menú, e resaltarían o que tivesen debaixo. Desde a 2.9, ese punto está fóra da xanela, por riba dela, porque a área cliente chega ata o bordo de arriba da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1); ata a 2.8, estaba na barra de título de Windows.
 
 ```powershell
 # The client area of the window.
@@ -5999,24 +6195,47 @@ function Get-Scaled([int]$Pixels) {
     [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
 }
 
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.MenuCheck+RECT]::new()
+    $corner = [Meiga.Tools.MenuCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs).
+# crates/meiga-core/src/ui/tabbar.rs): the band where the window is resized
+# above the row of tabs, the tabs a gap below it, and on the right of the
+# bar the buttons of the window and the room to drag it.
 function Get-Bar([int]$Count) {
     $client = Get-Client
-    $height = Get-Scaled 32
+    $band = Get-Band
+    $row = Get-Scaled 32
+    $height = $band + $row
     $gap = Get-Scaled 4
+    $top = $band + $gap
     $padding = Get-Scaled 8
     $closeSide = Get-Scaled 24
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (Get-Scaled 45) + 3 * (Get-Scaled 46)
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $tabs = foreach ($index in 0..($Count - 1)) {
         $left = $gap + $index * $width
         $right = $left + $width
         $close = New-Rect ($right - $gap - $closeSide) 0 ($right - $gap) 0
         [pscustomobject]@{
-            Rect = New-Rect $left $gap $right $height
-            Title = New-Rect ($left + $padding) $gap $close.Left $height
+            Rect = New-Rect $left $top $right $height
+            Title = New-Rect ($left + $padding) $top $close.Left $height
         }
     }
     [pscustomobject]@{
@@ -6031,7 +6250,8 @@ function Get-Bar([int]$Count) {
 
 - `Get-Client` le a área cliente da xanela cada vez: no paso 8 cambia.
 - **`Get-Scaled`** escala unha medida en píxeles ao 100 % á escala da xanela, coma meiga: `(píxeles × DPI + 48) / 96`, sen decimais e polo menos 1. É o bloque `$scale` de `check-tabbar.ps1`, agora nunha función, porque a usan a barra e o menú, coma en meiga, onde desde a 2.4 a comparten as dúas ([Código › meiga-core › `ui/mod.rs`](meiga-core.md#cratesmeiga-coresrcuimodrs)). `$dpi` é a variábel do script, que se le ao principio.
-- **`Get-Bar`** é o de `check-tabbar.ps1` (ver *A barra, coma a calcula meiga: `Get-Bar`*), só co que necesita esta comprobación: de cada tab, o rectángulo que se debuxa, `Rect`, e o do seu título, `Title`, que vai ata o ×, do que só fai falta o lado esquerdo; e da barra, toda ela, `Rect`, o seu alto, `Height`, e as tabs. Coma alí, desde a 2.5 o ancho das tabs deixa sitio tamén para o botón dos perfís, `$profilesSide`, 24 píxeles ao 100 % ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
+- **`Get-Band`**, desde a 2.9, é o de `check-tabbar.ps1`, coa clase desta comprobación e co `$dpi` do script, en vez dun parámetro: o alto da banda que redimensiona a xanela, enriba das tabs, se a xanela ten a barra de título de meiga e non está maximizada, e 0 se non (ver *A banda: `Get-Band`*, en [`check-mouse.ps1`](#toolscheck-mouseps1)). A xanela cambia de tamaño no paso 8, e minimízase e restáurase no 9, pero nunca se maximiza: `Get-Bar` pregunta pola banda cada vez.
+- **`Get-Bar`** é o de `check-tabbar.ps1` (ver *A barra, coma a calcula meiga: `Get-Bar`*), só co que necesita esta comprobación: de cada tab, o rectángulo que se debuxa, `Rect`, e o do seu título, `Title`, que vai ata o ×, do que só fai falta o lado esquerdo; e da barra, toda ela, `Rect`, o seu alto, `Height`, coa banda, e as tabs. Coma alí, desde a 2.5 o ancho das tabs deixa sitio tamén para o botón dos perfís, `$profilesSide`, 24 píxeles ao 100 % ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6); e, desde a 2.9, para o sitio para arrastrar a xanela e os seus tres botóns, en `$fixed`, e as tabs empezan unha separación por debaixo da banda, en `$top` ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 2, 3 e 5).
 
 ```powershell
 # The sizes of the menu of a tab, as meiga computes them (see
@@ -7062,6 +7282,17 @@ public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool GetCursorPos(out POINT point);
 
 [DllImport("user32.dll")]
@@ -7186,6 +7417,7 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
 | `GetGUIThreadInfo` | A xanela que ten o rato capturado no fío da xanela de meiga. |
 | `GetClientRect` e `GetDpiForWindow` | O tamaño da área cliente e a escala da xanela, para calcular a barra e o menú. |
+| `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi` | Desde a 2.9, a banda enriba das tabs, con `ClientToScreen`: onde empezan a xanela e a súa área cliente, se a xanela está maximizada, e o grosor do marco de Windows á súa escala (ver `Get-Band`). |
 | `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Len e moven o punteiro, e pasan un punto da pantalla á área cliente, ou ao revés. |
 | `PostMessageW` | Publica na xanela as mensaxes do rato e das teclas, e a que a pecha; e na caixa de mensaxe, a do seu botón. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
@@ -7197,7 +7429,7 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
 | `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len a prioridade dun fío de meiga polo seu nome. |
 
-- **Son as de `check-tabbar.ps1` e vinte máis:** as dez das xanelas e da caixa, as tres do cartafol dun proceso, `GetFileAttributesW` e `GetLongPathNameW`; e, desde o mantemento M2, as cinco da árbore dun proceso: `CreateToolhelp32Snapshot`, `Process32FirstW`, `Process32NextW`, `WaitForSingleObject` e `GetProcessTimes`. Non están as catro que engadiu `check-menu.ps1` para cambiar o tamaño da xanela e minimizala: esta comprobación non o fai.
+- **Son as de `check-tabbar.ps1` e vinte máis:** as dez das xanelas e da caixa, as tres do cartafol dun proceso, `GetFileAttributesW` e `GetLongPathNameW`; e, desde o mantemento M2, as cinco da árbore dun proceso: `CreateToolhelp32Snapshot`, `Process32FirstW`, `Process32NextW`, `WaitForSingleObject` e `GetProcessTimes`. Desde a 2.9, as de `check-tabbar.ps1` inclúen tamén as tres da banda, `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi`. Non están as tres que engade `check-menu.ps1` para cambiar o tamaño da xanela e minimizala, `SetWindowPos`, `ShowWindowAsync` e `IsIconic`: esta comprobación non o fai. Ata a 2.8 eran catro, con `GetWindowRect`.
 - **As estruturas.** `RECT`, `POINT`, `MSG` e `GUITHREADINFO` son as de `check-tabbar.ps1`. `PROCESS_BASIC_INFORMATION`, sen `public`, é o que dá `NtQueryInformationProcess`, do que só se usa o enderezo do PEB (ver `FolderOf`). `PROCESSENTRY32W`, tamén sen `public`, desde o M2, é cada proceso que dan `Process32FirstW` e `Process32NextW`, do que só se usan o seu número e o do seu pai (ver `TreeOf`). E `EnumProc` é o tipo da función que as tres `Enum…` chaman con cada xanela: en C#, unha lambda, que, se devolve `false`, para a busca.
 - **As vintecinco que non levan `public`,** `GetGUIThreadInfo`, as seis desde `EnumWindows` e as dezaoito desde `OpenThread`, só as usan as funcións propias da clase, en C#.
 - **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
@@ -8229,23 +8461,45 @@ function Get-Scaled([int]$Pixels) {
     [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
 }
 
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.ProfilesCheck+RECT]::new()
+    $corner = [Meiga.Tools.ProfilesCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs): its height, the first tab, the button
-# + after the last tab, the one of the profiles joined to it, and both of
-# them, which the menu of the profiles opens below.
+# crates/meiga-core/src/ui/tabbar.rs): its height, with the band where the
+# window is resized above the row of tabs, the first tab, the button + after
+# the last tab, the one of the profiles joined to it, and both of them,
+# which the menu of the profiles opens below. On the right of the bar go the
+# buttons of the window, and the room to drag it.
 function Get-Bar([int]$Count) {
     $client = Get-Client
-    $height = Get-Scaled 32
+    $band = Get-Band
+    $height = $band + (Get-Scaled 32)
     $gap = Get-Scaled 4
+    $top = $band + $gap
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (Get-Scaled 45) + 3 * (Get-Scaled 46)
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $left = $gap + $Count * $width + $gap
-    $new = New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
+    $new = New-Rect $left $top ($left + $newSide) ($top + $newSide)
     $profiles = New-Rect $new.Right $new.Top ($new.Right + $profilesSide) $new.Bottom
     [pscustomobject]@{
         Height = $height
-        FirstTab = New-Rect $gap $gap ($gap + $width) $height
+        FirstTab = New-Rect $gap $top ($gap + $width) $height
         New = $new
         Profiles = $profiles
         Buttons = Get-Union @($new, $profiles)
@@ -8253,15 +8507,16 @@ function Get-Bar([int]$Count) {
 }
 ```
 
-**A barra, coma a calcula meiga: `Get-Bar`.** `Move-Pointer`, `Get-Client` e `Get-Scaled` son os de `check-menu.ps1` (ver *A barra, coma a calcula meiga*). `Get-Bar` é novo, e calcula só o que necesita esta comprobación, coas regras do *layout* da barra ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)):
+**A barra, coma a calcula meiga: `Get-Bar`.** `Move-Pointer`, `Get-Client` e `Get-Scaled` son os de `check-menu.ps1` (ver *A barra, coma a calcula meiga*): o punto onde `Move-Pointer` leva o punteiro, 8 píxeles por riba da área cliente, está desde a 2.9 fóra da xanela, por riba dela, porque a área cliente chega ata o bordo de arriba da xanela, e ata a 2.8 estaba na barra de título de Windows. Desde a 2.9, `Get-Band` tamén é o de `check-menu.ps1`, coa clase desta comprobación: o alto da banda que redimensiona a xanela, enriba das tabs, se a xanela ten a barra de título de meiga e non está maximizada, e 0 se non (ver *A banda: `Get-Band`*, en [`check-mouse.ps1`](#toolscheck-mouseps1)). `Get-Bar` é novo, e calcula só o que necesita esta comprobación, coas regras do *layout* da barra ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)):
 
-- **O ancho das tabs,** coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1): 240 píxeles ao 100 %, ou menos, se non caben, repartindo entre as tabs a área cliente sen tres espazos de 4, o + e o ▾.
-- **`FirstTab`,** a primeira tab, desde un espazo de 4 á esquerda e arriba ata o fondo da barra: ao 100 %, de (4, 4) a (244, 32), coma `tab(0)` en `Layout`. O título da tab vai dentro dela, e o paso 1 déixaa debuxar se o programa deu un.
-- **O +,** `New`, un cadrado de 28 ao 100 %, despois da última tab e dun espazo, e a 4 do bordo de arriba; e **o ▾,** `Profiles`, pegado á súa dereita, do mesmo alto e 24 de ancho ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
+- **O ancho das tabs,** coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1): 240 píxeles ao 100 %, ou menos, se non caben, repartindo entre as tabs a área cliente sen o que non é para elas, `$fixed`: tres espazos de 4, o + e o ▾ e, desde a 2.9, o sitio para arrastrar a xanela, de 45, e os seus tres botóns, de 46 cada un ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 3 e 5).
+- **A banda,** desde a 2.9, vai enriba da fila das tabs, e as tabs e o + empezan un espazo por debaixo dela, en `$top` (decisión 2).
+- **`FirstTab`,** a primeira tab, desde un espazo de 4 á esquerda e por debaixo da banda ata o fondo da barra: ao 100 %, coa banda de 8 píxeles, de (4, 12) a (244, 40), coma `tab(0)` en `Layout`. O título da tab vai dentro dela, e o paso 1 déixaa debuxar se o programa deu un.
+- **O +,** `New`, un cadrado de 28 ao 100 %, despois da última tab e dun espazo, e a 4 por debaixo da banda; e **o ▾,** `Profiles`, pegado á súa dereita, do mesmo alto e 24 de ancho ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6).
 - **`Buttons`,** os dous xuntos, con `Get-Union`: o menú dos perfís ábrese debaixo deles.
-- **`Height`,** o alto da barra, 32 ao 100 %: o terminal empeza debaixo.
+- **`Height`,** o alto da barra, coa banda, 40 ao 100 %: o terminal empeza debaixo. Ata a 2.8, sen banda, 32.
 
-Cunha tab, nunha xanela ancha, o + vai ao 100 % de (248, 4) a (276, 32), e o ▾, de (276, 4) a (300, 32); ao 150 %, de (372, 6) a (414, 48), e de (414, 6) a (450, 48).
+Cunha tab, nunha xanela ancha, coa barra de título de meiga e as métricas habituais de Windows, o + vai ao 100 % de (248, 12) a (276, 40), e o ▾, de (276, 12) a (300, 40); ao 150 %, coa banda de 11, de (372, 17) a (414, 59), e de (414, 17) a (450, 59). Ata a 2.8, sen a banda, cada un empezaba 8 píxeles máis arriba ao 100 %, e 11 ao 150 %.
 
 ```powershell
 # The sizes of a menu of $Items items, as meiga computes them (see
@@ -10086,7 +10341,7 @@ function Move-Pointer {
 }
 ```
 
-**O punteiro: `Move-Pointer`.** É o de `check-profiles.ps1` e `check-menu.ps1`, coa clase desta comprobación: se o punteiro está na área cliente, móveo á barra de título da xanela, ao medio e 8 píxeles por riba da área cliente, e a primeira vez garda onde estaba, en `$pointer`, para devolvelo ao rematar. O comentario di agora o que pasaría: os movementos que fai Windows no sitio do punteiro chegarían á barra de tabs, que resaltaría o que tivese debaixo, e debuxaría.
+**O punteiro: `Move-Pointer`.** É o de `check-profiles.ps1` e `check-menu.ps1`, coa clase desta comprobación: se o punteiro está na área cliente, móveo ao medio do seu ancho, 8 píxeles por riba da área cliente, e a primeira vez garda onde estaba, en `$pointer`, para devolvelo ao rematar. O comentario di agora o que pasaría: os movementos que fai Windows no sitio do punteiro chegarían á barra de tabs, que resaltaría o que tivese debaixo, e debuxaría. Desde a 2.9, ese punto está fóra da xanela, por riba dela, porque a área cliente de meiga chega ata o bordo de arriba da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1); ata a 2.8, estaba na barra de título de Windows, e a variábel do punto, `$title`, conserva o nome de entón. Se a xanela empezase no bordo de arriba dunha pantalla sen outra enriba, Windows deixaría o punteiro na banda, a fila de arriba da xanela (ver *Por riba da pantalla*, en [`check-mouse.ps1`](#toolscheck-mouseps1)). O código desta comprobación non cambiou na 2.9.
 
 ```powershell
 # Shares the input of this thread with the one of the window, whose key
@@ -10653,7 +10908,7 @@ A CI executa este script en cada PR, despois de `check-profiles.ps1`, no paso *C
 
 ## `tools/check-exit.ps1`
 
-Desde a subfase 2.7. Comproba o que fai `meiga.exe` cando remata o programa dunha tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md); [Arquitectura › O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio)). Os fins limpos: co código 0, a tab péchase, e con ela o seu menú, se está aberto, pero ningún outro: o dos perfís e o doutra tab seguen abertos. Se a tab está oculta, só se debuxa a barra, se non se pecha o seu menú; e, se é a que se mostra, móstrase a da súa esquerda, cun só fotograma completo. Os outros: a tab queda, tamén unha oculta cuxo programa escribiu antes de rematar, e o seu terminal di como rematou o programa, nunha fila propia, e debaixo o aviso, `You can now close this tab with Ctrl+D, or press Enter to restart.`; meiga segue. Se a tab está oculta, desde a 2.8 só se debuxa outra vez a súa tab na barra, que o di co indicador do fin ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)). Sen programa, as teclas que non son atallos non fan nada, nin quitan a selección, e Ctrl+Intro e AltGr+D tampouco; Intro reinicia o programa na mesma tab, coa mesma liña de comandos e no mesmo cartafol, e móstrao cun só fotograma completo, e o que escribiu o programa anterior vai ao historial; e Ctrl+D pecha a tab, e mostra a seguinte. Nin o programa novo nin o da tab seguinte reciben as teclas que baixaron para meiga. No menú da tab, *Restart tab* está desactivado mentres corre o programa; nunha tab oculta cuxo programa rematou, reinicia o programa sen mostrar a tab, co lector na prioridade de debaixo desde o principio. Un programa que non arranca, porque o cartafol do seu perfil non existe, di por que, co mesmo aviso; Intro téntao outra vez, e, cando o cartafol xa existe, arráncao nel. Os programas que rematan co código 0 mentres está aberta unha caixa de mensaxe pechan as súas tabs cando se pecha ela, a oculta e a que se mostra, e a última pecha a xanela: meiga sae co código 0, e as consolas rematan. E o mesmo co programa da liña de comandos de meiga. Desde o mantemento M2, comproba tamén o peche ao saír ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)): cando se pecha a xanela, e o programa da primeira tab, ao pecharse a súa consola, arranca outro nela, coma pode facer a shell dunha tab co git do seu *prompt*, a sesión desa tab non remata; meiga agarda por ela, tamén despois de rematar a da segunda tab, e 10 s despois de que remate o programa da primeira tab, a sesión remata os programas que quedan nela ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)); entón meiga sae co código 0, menos de 17 s despois de pecharse a xanela, e sen deixar nada das súas tabs. O código que comproba explícase en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs), [› `view.rs`](meiga.md#cratesmeigasrcviewrs) e [› `main.rs`](meiga.md#cratesmeigasrcmainrs), en [Código › meiga-core › `term/mod.rs`](meiga-core.md#cratesmeiga-coresrctermmodrs), e, desde o M2, en [Código › meiga-win › `conpty.rs`](meiga-win.md#cratesmeiga-winsrcconptyrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Probe, o perfil por defecto, e Later, que corren o mesmo script de PowerShell, Later nun cartafol que ao principio non existe; e as shells que atopa meiga, ocultas. O script de cada tab escribe nun arquivo propio o seu cartafol e o tamaño da súa consola, e noutro as teclas que recibe o seu programa; escribe o texto que lle dá a comprobación; e remata cando llo di ela, co código de saída que lle dá, despois dun texto ou sen el. A comprobación le as liñas do terminal cun triplo clic, que as copia ao portapapeis, coma [`check-mouse.ps1`](#toolscheck-mouseps1), e teclea coma [`check-shortcuts.ps1`](#toolscheck-shortcutsps1): publica as mensaxes co fío da xanela suspendido, co estado das teclas que necesitan, que comparte con el. As teclas que non poden facer nada que se vexa van cun movemento do punteiro a un botón da barra detrás delas: cando a xanela debuxa o botón, xa tratou as teclas. E sabe que tab se mostra polas prioridades dos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). A última meiga, a do peche, corre nun *job* da comprobación, que di o que deixa meiga ao saír, e que o remata se a comprobación falla.
+Desde a subfase 2.7. Comproba o que fai `meiga.exe` cando remata o programa dunha tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md); [Arquitectura › O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio)). Os fins limpos: co código 0, a tab péchase, e con ela o seu menú, se está aberto, pero ningún outro: o dos perfís e o doutra tab seguen abertos. Se a tab está oculta, só se debuxa a barra, se non se pecha o seu menú; e, se é a que se mostra, móstrase a da súa esquerda, cun só fotograma completo. Os outros: a tab queda, tamén unha oculta cuxo programa escribiu antes de rematar, e o seu terminal di como rematou o programa, nunha fila propia, e debaixo o aviso, `You can now close this tab with Ctrl+D, or press Enter to restart.`; meiga segue. Se a tab está oculta, desde a 2.8 só se debuxa outra vez a súa tab na barra, que o di co indicador do fin ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)). Sen programa, as teclas que non son atallos non fan nada, nin quitan a selección, e Ctrl+Intro e AltGr+D tampouco; Intro reinicia o programa na mesma tab, coa mesma liña de comandos e no mesmo cartafol, e móstrao cun só fotograma completo, e o que escribiu o programa anterior vai ao historial; e Ctrl+D pecha a tab, e mostra a seguinte. Nin o programa novo nin o da tab seguinte reciben as teclas que baixaron para meiga. No menú da tab, *Restart tab* está desactivado mentres corre o programa; nunha tab oculta cuxo programa rematou, reinicia o programa sen mostrar a tab, co lector na prioridade de debaixo desde o principio. Un programa que non arranca, porque o cartafol do seu perfil non existe, di por que, co mesmo aviso; Intro téntao outra vez, e, cando o cartafol xa existe, arráncao nel. Os programas que rematan co código 0 mentres está aberta unha caixa de mensaxe pechan as súas tabs cando se pecha ela, a oculta e a que se mostra, e a última pecha a xanela: meiga sae co código 0, e as consolas rematan. E o mesmo co programa da liña de comandos de meiga. Desde o mantemento M2, comproba tamén o peche ao saír ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)): cando se pecha a xanela, e o programa da primeira tab, ao pecharse a súa consola, arranca outro nela, coma pode facer a shell dunha tab co git do seu *prompt*, a sesión desa tab non remata; meiga agarda por ela, tamén despois de rematar a da segunda tab, e 10 s despois de que remate o programa da primeira tab, a sesión remata os programas que quedan nela ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)); entón meiga sae co código 0, menos de 17 s despois de pecharse a xanela, e sen deixar nada das súas tabs. O código que comproba explícase en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs), [› `view.rs`](meiga.md#cratesmeigasrcviewrs) e [› `main.rs`](meiga.md#cratesmeigasrcmainrs), en [Código › meiga-core › `term/mod.rs`](meiga-core.md#cratesmeiga-coresrctermmodrs), e, desde o M2, en [Código › meiga-win › `conpty.rs`](meiga-win.md#cratesmeiga-winsrcconptyrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Probe, o perfil por defecto, e Later, que corren o mesmo script de PowerShell, Later nun cartafol que ao principio non existe; e as shells que atopa meiga, ocultas. O script de cada tab escribe nun arquivo propio o seu cartafol e o tamaño da súa consola e, desde a 2.9, o da zona de texto do terminal, en píxeles, que lle pregunta, e noutro as teclas que recibe o seu programa; escribe o texto que lle dá a comprobación; e remata cando llo di ela, co código de saída que lle dá, despois dun texto ou sen el. A comprobación le as liñas do terminal cun triplo clic, que as copia ao portapapeis, coma [`check-mouse.ps1`](#toolscheck-mouseps1), e teclea coma [`check-shortcuts.ps1`](#toolscheck-shortcutsps1): publica as mensaxes co fío da xanela suspendido, co estado das teclas que necesitan, que comparte con el. As teclas que non poden facer nada que se vexa van cun movemento do punteiro a un botón da barra detrás delas: cando a xanela debuxa o botón, xa tratou as teclas. E sabe que tab se mostra polas prioridades dos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Onde están as tabs e os botóns da barra calcúlao coma meiga, desde a 2.9 coa banda de enriba das tabs e co sitio dos botóns da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)). A última meiga, a do peche, corre nun *job* da comprobación, que di o que deixa meiga ao saír, e que o remata se a comprobación falla.
 
 ```powershell
 .\tools\check-exit.ps1                                  # comproba target\release\meiga.exe
@@ -10662,6 +10917,12 @@ Desde a subfase 2.7. Comproba o que fai `meiga.exe` cando remata o programa dunh
 ```
 
 Necesita PowerShell 7 no `PATH`, coma `check-shortcuts.ps1`: as liñas de comandos de Probe e de Later empezan por `pwsh`, sen ruta, e Windows búscao no `PATH`. Non necesita o `Cargo.toml`: non mira a versión de meiga. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`, e o historial de cada tab empeza cunha fila en branco, que o paso 6 salta. Ata o mantemento M2, co de Windows fallaba nese paso. Non le o `config.toml` de quen a executa, porque meiga corre co `APPDATA` da comprobación, nin abre ningunha shell do usuario: as tabs corren o script da comprobación, cun pwsh que non carga o perfil de PowerShell (`-NoProfile`), e a meiga do paso 13, `cmd /c exit 0`; a do paso 14, desde o mantemento M2, corre o script con `-Closer`, que, ao pecharse a súa consola, arranca nela `cmd`, que corre `ping` contra a propia máquina, 127.0.0.1. As teclas van pola súa tecla virtual, coma en `check-shortcuts.ps1`, e o programa recibe as mesmas con calquera distribución do teclado.
+
+**O tamaño das celas.** Desde a 2.9, o script das tabs pregúntalle ao terminal o tamaño en píxeles da súa zona de texto, e con el calcula a comprobación as celas, onde preme para ler as liñas do terminal (ver *As medidas da xanela e das celas*, máis abaixo): desde que a barra de tabs é a barra de título, a área cliente xa non di as celas. meiga respóndelle co ConPTY que vai con el. Co de Windows, a consola das tabs trágase a pregunta: a comprobación calcula entón as celas coa xanela, coma ata a 2.8, preme preto do bordo de arriba de cada fila, e non no seu medio, e avisa, unha vez, antes da primeira liña:
+
+```text
+WARNING: The terminal did not tell the size of its text area in pixels: the console of the tabs is the one of Windows, which swallows the question. The check works out the size of the cells from the window, and clicks near the top of each row.
+```
 
 **Coidado:** mentres corre, non uses o rato nin o teclado, coma con `check-shortcuts.ps1`: o punteiro por riba da xanela resaltaría o que tivese debaixo, e eses fotogramas farían fallar os pasos que só poden debuxar a barra, ou nada; un clic noutra xanela pecharía o menú que estea aberto, o dunha tab ou o dos perfís; e as teclas que premeses mesturaríanse coas da comprobación, que comparte o estado das teclas co fío da xanela. Ao principio, se o punteiro está enriba da xanela, a comprobación apártao, e ao rematar devólveo a onde estaba. Usa o portapapeis, coma `check-mouse.ps1`: se tiña texto, ao rematar volta deixalo nel, pero calquera outra cousa, coma unha imaxe, pérdese. Non cambia o tamaño da xanela.
 
@@ -10684,7 +10945,7 @@ OK: when the program of its command line ends with exit code 0, meiga.exe ends w
 OK: when its window closes, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the session of the second tab has ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, … s after its window closed, and leaves nothing of its tabs.
 ```
 
-- A primeira liña di o tamaño da grella, en celas, e o de cada cela, en píxeles, coma en `check-mouse.ps1`: a comprobación necesítaos para saber onde premer. As liñas `OK:` son as mesmas en calquera máquina e pantalla, menos a última, desde o mantemento M2, que di cantos segundos despois de pecharse a xanela rematou meiga, cun decimal: algo máis de 10, os que agarda o escritor despois de que remate o programa da primeira tab, e sempre menos de 17.
+- A primeira liña di o tamaño da grella, en celas, e o de cada cela, en píxeles, coma en `check-mouse.ps1`: a comprobación necesítaos para saber onde premer. Desde a 2.9, as celas son as que di o terminal ou, co ConPTY de Windows, as que saen da xanela, despois do aviso. As liñas `OK:` son as mesmas en calquera máquina e pantalla, menos a última, desde o mantemento M2, que di cantos segundos despois de pecharse a xanela rematou meiga, cun decimal: algo máis de 10, os que agarda o escritor despois de que remate o programa da primeira tab, e sempre menos de 17.
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1: se é dunha liña do terminal, a mensaxe di o que ten a fila e o que tiña que ter; se é dunha tab, as prioridades dos lectores, co número do programa de cada tab; se é das teclas, as que recibiu o programa antes do Z; e, se é dos fotogramas, antes mostra as liñas do rexistro que o demostran. Se meiga rematou antes de tempo, dío, co seu código de saída. No paso 14, se meiga non agardou pola sesión que non remata, ou tardou de máis, a mensaxe di cantos segundos despois de pecharse a xanela rematou, e cantos despois do programa da primeira tab; e, se quedan procesos das súas tabs, cantos, co nome e o número de cada un. E garda o cartafol da comprobación, co `config.toml`, os rexistros dos fotogramas e os arquivos das tabs, e di onde, cunha liña `Kept …`. Pase o que pase, `meiga.exe` non queda aberto, nin, desde o mantemento M2, o que deixou no *job* do paso 14; o portapapeis volta ter o texto que tiña e o punteiro volta a onde estaba.
 
@@ -10879,6 +11140,17 @@ public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool GetCursorPos(out POINT point);
 
 [DllImport("user32.dll")]
@@ -10969,6 +11241,7 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `PeekMessageW`, `AttachThreadInput` e `SetKeyboardState` | Poñen abaixo os modificadores de cada combinación, ou ningunha tecla, coma en `check-shortcuts.ps1`. |
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
 | `GetClientRect` e `GetDpiForWindow` | O tamaño da área cliente e a escala da xanela, para calcular as celas e a barra coma meiga. |
+| `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi` | Desde a 2.9, a banda enriba das tabs, con `ClientToScreen`: onde empezan a xanela e a súa área cliente, se a xanela está maximizada, e o grosor do marco de Windows á súa escala (ver `Get-Band`). |
 | `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Apartan o punteiro da xanela, se está enriba dela, e devólveno ao rematar. |
 | `PostMessageW` | Publica na xanela as mensaxes das teclas e do rato, e, no paso 14, a que a pecha; e na caixa de mensaxe, a do seu botón *Cancel*. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
@@ -10980,7 +11253,7 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len as prioridades dos fíos de meiga polo seu nome. |
 | `CreateJobObjectW`, `SetInformationJobObject`, `AssignProcessToJobObject`, `QueryInformationJobObject` e `CloseHandle` | Crean o *job* do paso 14, meten nel meiga, len os procesos que quedan nel e péchano. |
 
-- **Son as de `check-shortcuts.ps1` con nove máis e sen catro.** Máis: `GetDpiForWindow`, porque esta comprobación calcula as celas e a barra; as tres do portapapeis, coma en [`check-mouse.ps1`](#toolscheck-mouseps1); `GetLongPathNameW`, coma en [`check-profiles.ps1`](#toolscheck-profilesps1); e, desde o mantemento M2, as catro do *job* do paso 14, que van ao final, despois de `LongPathOf`. Sen: `IsWindow`, `GetDlgCtrlID`, `EnumChildWindows` e `GetWindowTextW`: non le o título de ningunha xanela, nin busca o botón da caixa, que pecha cunha mensaxe, nin agarda a que a caixa se peche.
+- **Son as de `check-shortcuts.ps1` con doce máis e sen catro.** Máis: `GetDpiForWindow`, porque esta comprobación calcula as celas e a barra; as tres do portapapeis, coma en [`check-mouse.ps1`](#toolscheck-mouseps1); `GetLongPathNameW`, coma en [`check-profiles.ps1`](#toolscheck-profilesps1); desde o mantemento M2, as catro do *job* do paso 14, que van ao final, despois de `LongPathOf`; e, desde a 2.9, as tres da banda, `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi`, despois de `GetDpiForWindow`. Sen: `IsWindow`, `GetDlgCtrlID`, `EnumChildWindows` e `GetWindowTextW`: non le o título de ningunha xanela, nin busca o botón da caixa, que pecha cunha mensaxe, nin agarda a que a caixa se peche.
 - **As estruturas.** `RECT`, `POINT`, `MSG` e `EnumProc` son as de `check-shortcuts.ps1`.
 - **As vinte que non levan `public`,** as oito desde `EnumWindows`, as oito desde `OpenThread` e, desde o M2, as catro do *job*, só as usan as funcións propias da clase, en C#.
 - **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
@@ -11288,10 +11561,11 @@ $extendedKeys = @(0x21..0x28) + @(0x2D, 0x2E)
 
 ```powershell
 # The script of the tabs of Probe and Later. It writes a line with its
-# number, its folder and the size of its console, and then the keys that its
-# program gets, until the check tells it how to end: with an exit code, after
-# some text or none. With -Closer, in the first tab of the last run, it only
-# waits until its console closes, and then starts another program in it.
+# number, its folder, the size of its console and the size in pixels of the
+# text area of the terminal, and then the keys that its program gets, until
+# the check tells it how to end: with an exit code, after some text or none.
+# With -Closer, in the first tab of the last run, it only waits until its
+# console closes, and then starts another program in it.
 $program = @'
 param([Parameter(Mandatory)][string]$Work, [switch]$Closer)
 $ErrorActionPreference = 'Stop'
@@ -11301,6 +11575,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -Namespace MeigaCheck -Name Input -MemberDefinition @"
 [DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int handle);
 [DllImport("kernel32.dll")] public static extern bool ReadConsoleInputW(System.IntPtr handle, [System.Runtime.InteropServices.Out] byte[] records, uint count, out uint read);
+[DllImport("kernel32.dll")] public static extern bool FlushConsoleInputBuffer(System.IntPtr handle);
 [DllImport("kernel32.dll")] public static extern uint WaitForMultipleObjects(uint count, System.IntPtr[] handles, bool all, uint milliseconds);
 "@
 if ($Closer) {
@@ -11369,9 +11644,27 @@ $stop = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::Man
 # And this one once it has written some text for this script to write, which
 # goes on then.
 $write = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "meiga-check-exit-write-$PID")
-# The folder of the program, and the size of its console: the grid of the
-# terminal.
-[IO.File]::WriteAllText((Join-Path $Work "info-$PID.txt"), "$([Environment]::CurrentDirectory)`n$([Console]::WindowWidth) $([Console]::WindowHeight)`n")
+# The size in pixels of the text area of the terminal, which tells the size
+# of its cells: the script asks for it (CSI 14 t), and then for the
+# attributes of the terminal (DA1), whose answer always comes, from meiga or
+# from the console of Windows, which answers it itself, and swallows the
+# first question. The answers come as keys, which the script reads until the
+# one of DA1; then it drops the keys that go up, which would reach the file
+# of the keys.
+[Console]::Out.Write("$([char]27)[14t$([char]27)[c")
+[Console]::Out.Flush()
+$answer = [Text.StringBuilder]::new()
+$deadline = [DateTime]::UtcNow.AddSeconds(10)
+while ($answer.ToString() -notmatch '\x1b\[\?[0-9;]*c' -and [DateTime]::UtcNow -lt $deadline) {
+    if ([Console]::KeyAvailable) { $null = $answer.Append([Console]::ReadKey($true).KeyChar) }
+    else { [Threading.Thread]::Sleep(5) }
+}
+$null = [MeigaCheck.Input]::FlushConsoleInputBuffer($in)
+$pixels = if ($answer.ToString() -match '\x1b\[4;(\d+);(\d+)t') { "$($Matches[1]) $($Matches[2])" } else { '' }
+# The folder of the program, the size of its console, the grid of the
+# terminal, and the height and the width of its text area, if the terminal
+# told them.
+[IO.File]::WriteAllText((Join-Path $Work "info-$PID.txt"), "$([Environment]::CurrentDirectory)`n$([Console]::WindowWidth) $([Console]::WindowHeight)`n$pixels`n")
 # Up to 64 INPUT_RECORD of 20 bytes: the type of the event in the first two
 # and, for a key, whether it goes down from byte 4, and its virtual-key code
 # from byte 10.
@@ -11418,11 +11711,12 @@ while ($true) {
 **O script das tabs,** o que corren as tabs de Probe e de Later, co parámetro que lle pon a súa liña de comandos (ver *O `config.toml`*): `-Work`, o cartafol da comprobación; e, desde o mantemento M2, `-Closer`, que só leva o programa da primeira tab do paso 14. Le as teclas do seu programa e escríbeas nun arquivo propio, `keys-<proceso>.txt`, coma en `check-shortcuts.ps1` (ver alí). O resto é novo:
 
 - **A primeira liña,** `probe-<proceso>`, co número do seu proceso, despois de ocultar o cursor, para que non pestanexe: di de que programa é a pantalla, e non dun programa de antes na mesma tab. A comprobación búscaa na fila 0 da pantalla, e na do historial (pasos 4 e 6).
-- **O cartafol e o tamaño da consola,** en `info-<proceso>.txt`: o cartafol actual do proceso, o que lle deu meiga, e as columnas e as filas da xanela da súa consola, as da grella do terminal. `Assert-Folder` le o cartafol, e `Measure-Cells`, o tamaño. O script escríbeo antes de crear o arquivo das teclas: cando a comprobación ve ese, o outro xa está.
+- **O cartafol e o tamaño da consola,** en `info-<proceso>.txt`: o cartafol actual do proceso, o que lle deu meiga, e as columnas e as filas da xanela da súa consola, as da grella do terminal; e, desde a 2.9, nunha terceira liña, o alto e o ancho da zona de texto do terminal, en píxeles, se o terminal os di. `Assert-Folder` le o cartafol, e `Measure-Cells`, os tamaños. O script escríbeo antes de crear o arquivo das teclas: cando a comprobación ve ese, o outro xa está.
+- **O tamaño en píxeles,** desde a 2.9, coma en [`check-mouse.ps1`](#toolscheck-mouseps1) (ver *O script do terminal*): o script pregunta polo tamaño da zona de texto, `CSI 14 t`, e polos atributos do terminal, *DA1*, cuxa resposta chega sempre, de meiga ou da consola de Windows, que se traga a primeira pregunta; le as respostas coma teclas, ata a de *DA1*, como moito 10 s, e despois `FlushConsoleInputBuffer` descarta o que quede, coma as teclas que soben, que, se non, irían ao arquivo das teclas. `$pixels` leva o alto e o ancho, ou nada. Eiquí as preguntas van por `[Console]::Out`, o mesmo escritor ca o resto do script, e `Flush` envíaas no momento. Faino tamén o programa de `-Closer`, que despois só agarda.
 - **O evento `meiga-check-exit-<proceso>`,** un `EventWaitHandle` con nome, de reinicio manual, que pon a comprobación cando xa escribiu como ten que rematar o script (ver `Stop-Probe`). E **`meiga-check-exit-write-<proceso>`,** de reinicio automático, que pon cando xa escribiu un texto para o script (ver `Write-Probe`). O script agarda á vez a entrada da consola e os dous eventos, con `WaitForMultipleObjects`, sen tempo límite. Se chega a entrada, o 0, le as teclas, coma en `check-shortcuts.ps1`. Se é o primeiro evento, o 1, le `exit-<proceso>.txt`: na primeira liña, o código de saída, e na segunda, se a hai, o texto que escribe antes de saír, sen salto de liña. Se é o segundo, o 2, escribe o texto de `write-<proceso>.txt` tal como está, sen salto de liña detrás, e segue agardando: o evento xa se quitou só ao espertar o script, e outro texto poríao de novo. Calquera outra cousa, un erro da espera, sae co código 99, e unha lectura da entrada que falla, co 98: códigos que a comprobación non usa, e que a farían fallar.
 - **Por que un evento.** O programa ten que rematar cando o di a comprobación, e non antes: só así sabe ela como está a tab nese momento, á vista ou oculta, e que hai na súa pantalla. Do mesmo xeito, escribe cando ela o di, coa súa tab xa oculta (paso 9). O código e os textos van en arquivos, porque un evento non leva datos.
 - **O texto, sen salto de liña:** `bye` deixa o cursor detrás del, na fila 1, e meiga ten que poñer a liña do fin na fila seguinte (paso 4). Sen texto, o cursor está ao principio da fila de despois de `probe-<proceso>`, baleira, e na que non continúa a de riba: a liña do fin vai nesa fila (paso 8).
-- **O `Add-Type`** vai entre `@"` e `"@`, coma en `check-shortcuts.ps1`: unha liña que empezase por `'@` remataría `$program`. Declara tamén `WaitForMultipleObjects`.
+- **O `Add-Type`** vai entre `@"` e `"@`, coma en `check-shortcuts.ps1`: unha liña que empezase por `'@` remataría `$program`. Declara tamén `WaitForMultipleObjects` e, desde a 2.9, `FlushConsoleInputBuffer`.
 - **Con `-Closer`,** no paso 14: o script pon un manexador dos avisos da súa consola, `MeigaCheck.Closer`, e, despois de escribir os seus arquivos, non le as teclas: só agarda, sen límite (`Thread.Sleep` con `Timeout.Infinite`), ata que se pecha a súa consola. Entón Windows chama o manexador con `CTRL_CLOSE_EVENT` (2), e o manexador arranca outro programa na consola, coma pode facer a shell dunha tab co git do seu *prompt*: o programa novo conéctase á consola mentres o ConPTY a pecha, e a sesión non remata ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Escribe en `closer-<proceso>.txt` o número do programa novo ou, se non o puido arrancar, o erro. Despois agarda 500 ms: para que o programa novo arranque antes de que remate o script, e para que o script remate un pouco despois de pecharse a súa consola, coma unha shell que garda o seu historial; así, un escritor que contase os seus 10 s desde o peche, e non desde o último programa que rematou, remataría a sesión antes de 10 s despois do script (paso 14). E devolve `true`: o aviso xa está atendido, e Windows remata o script ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows), *Pechar*). Os outros avisos, coma Ctrl+C, devolven `false`, e van aos manexadores que había antes, coma os de PowerShell.
 - **En C#.** Windows chama o manexador nun fío propio, que non ten un *runspace* de PowerShell, onde un bloque de PowerShell non podería correr. Por iso a clase vai en C#, nun `Add-Type -TypeDefinition`, tamén entre `@"` e `"@`. `SetConsoleCtrlHandler` engade o manexador; se falla, un erro de Windows. O delegado vai nun campo estático, `handler`: se só o tivese Windows, o recolector de lixo de .NET podería liberalo mentres Windows aínda o pode chamar.
 - **O programa novo,** `cmd.exe /d /c ping -n 30 127.0.0.1 >nul`: con `UseShellExecute = false` e sen `CreateNoWindow`, herda a consola do script, a que se está a pechar. `/d` non corre os comandos de `AutoRun` do rexistro, e `/c` corre a orde e remata; `ping -n 30` contra a propia máquina leva uns 29 s, máis ca os 10 s do escritor, e `>nul` tira a súa saída. `using` libera o obxecto `Process`, e non o proceso.
@@ -11887,12 +12181,14 @@ function Wait-Gone([int]$Id, [string]$What) {
     }
 }
 
-# The folder where the script of the tab of $Id runs, and the size of its
-# console, which it wrote when it started.
+# The folder where the script of the tab of $Id runs, the size of its
+# console, and the height and the width of the text area of the terminal,
+# 0 if it did not tell them, which it wrote when it started.
 function Get-Info([int]$Id) {
-    $folder, $size = [IO.File]::ReadAllLines((Join-Path $work "info-$Id.txt"))
-    $columns, $rows = [int[]]($size -split ' ')
-    [pscustomobject]@{ Folder = $folder; Columns = $columns; Rows = $rows }
+    $lines = [IO.File]::ReadAllLines((Join-Path $work "info-$Id.txt"))
+    $columns, $rows = [int[]]($lines[1] -split ' ')
+    $height, $width = if ($lines.Count -gt 2 -and $lines[2]) { [int[]]($lines[2] -split ' ') } else { 0, 0 }
+    [pscustomobject]@{ Folder = $lines[0]; Columns = $columns; Rows = $rows; Height = $height; Width = $width }
 }
 
 # Checks that the program of the tab of $Id runs in $Folder.
@@ -11910,7 +12206,7 @@ function Assert-Folder([int]$Id, [string]$Folder, [string]$What) {
 - **`Stop-Probe`** escribe en `exit-<proceso>.txt` como ten que rematar o script da tab: o código de saída e, se hai, o texto, cada un na súa liña. Despois abre o evento do script polo seu nome, e pono (ver *O script das tabs*): o arquivo xa está escrito cando o script o le.
 - **`Write-Probe`** escribe en `write-<proceso>.txt` o texto que ten que escribir o script da tab, tal como vai, e pon o seu outro evento, do mesmo xeito. Úsaa o paso 9.
 - **`Wait-Gone`** agarda a que remate o programa (`Wait-Ended`) e despois o lector da súa sesión, cuxo último traballo é darlle ao terminal como rematou o programa, e publicar o espertar que llo di á xanela. Cando o fío xa non existe, `Get-Priority` non dá nada, e ese espertar xa está na cola da xanela: o que publique despois a comprobación, teclas ou clics, chega detrás del. Ao final borra os catro arquivos do script da tab: Windows pode darlle o mesmo número a un programa posterior, e o seu script, que crea o arquivo das teclas con `CreateNew`, fallaría.
-- **`Get-Info`** le o que escribiu o script dunha tab ao arrancar: o seu cartafol, e o tamaño da súa consola, en columnas e filas.
+- **`Get-Info`** le o que escribiu o script dunha tab ao arrancar: o seu cartafol, o tamaño da súa consola, en columnas e filas, e, desde a 2.9, o alto e o ancho da zona de texto do terminal, en píxeles, ou 0 e 0 se o terminal non os dixo e a terceira liña está baleira. Ata a 2.8, o arquivo só tiña as dúas primeiras liñas.
 - **`Assert-Folder`** comproba que o programa dunha tab corre nun cartafol, sen distinguir maiúsculas nin a barra do final, coma Windows. Se non, di onde corre.
 
 ```powershell
@@ -11929,56 +12225,98 @@ function Get-Scaled([int]$Pixels) {
     [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
 }
 
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the
+# frame that Windows gives a window to resize it, while the window has the
+# title bar of meiga and is not maximized, and none otherwise. With the
+# title bar of meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.ExitCheck+RECT]::new()
+    $corner = [Meiga.Tools.ExitCheck+POINT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect) -or -not $api::ClientToScreen($window, [ref]$corner)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ($corner.Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+
 # The size of the grid, which the script of the tab of $Id wrote, and of its
-# cells: the grid fills the client area of the window below the tab bar, 32
-# pixels high at a scale of 100 %, but for the strip of the scroll bar, 12
-# pixels, and less than a cell.
+# cells, below the tab bar: the band where the window is resized, and a row
+# 32 pixels high at a scale of 100 %. The script asked the terminal for the
+# size in pixels of its text area, which meiga gives: the grid times the
+# cells. The console of Windows swallows that question: then the cells come
+# from the client area of the window, which the grid fills below the bar,
+# but for the strip of the scroll bar, 12 pixels at a scale of 100 %, and
+# less than a cell. With more pixels to spare than rows, a cell comes out
+# higher than it is, so then the check clicks a pixel below the top of each
+# row, which is still in it.
 function Measure-Cells([int]$Id) {
     $info = Get-Info $Id
-    $client = Get-Client
-    $strip = Get-Scaled 12
-    $script:barHeight = Get-Scaled 32
+    $script:barHeight = (Get-Band) + (Get-Scaled 32)
     $script:grid = [pscustomobject]@{ Columns = $info.Columns; Rows = $info.Rows }
+    $script:exact = $info.Height -gt 0
+    if ($exact) {
+        $script:cell = [pscustomobject]@{
+            Width = [int]($info.Width / $info.Columns)
+            Height = [int]($info.Height / $info.Rows)
+        }
+        return
+    }
+    Write-Warning 'The terminal did not tell the size of its text area in pixels: the console of the tabs is the one of Windows, which swallows the question. The check works out the size of the cells from the window, and clicks near the top of each row.'
+    $client = Get-Client
     $script:cell = [pscustomobject]@{
-        Width = [int][Math]::Floor(($client.Right - $strip) / $info.Columns)
+        Width = [int][Math]::Floor(($client.Right - (Get-Scaled 12)) / $info.Columns)
         Height = [int][Math]::Floor(($client.Bottom - $barHeight) / $info.Rows)
     }
 }
 
-# The pixel in the middle of a cell of the terminal.
+# A pixel of a cell of the terminal: in its middle, or near the top of its
+# row if the size of the cells is not exact.
 function Get-X([int]$Column) { $Column * $cell.Width + [Math]::Floor($cell.Width / 2) }
-function Get-Y([int]$Row) { $barHeight + $Row * $cell.Height + [Math]::Floor($cell.Height / 2) }
+function Get-Y([int]$Row) {
+    $barHeight + $Row * $cell.Height + $(if ($exact) { [Math]::Floor($cell.Height / 2) } else { 1 })
+}
 ```
 
 **As medidas da xanela e das celas.**
 
 - **`Get-Client`** é a de `check-menu.ps1`, coa clase desta comprobación: a área cliente da xanela, ou un erro.
 - **`Get-Scaled`** é a de `check-menu.ps1`: uns píxeles ao 100 %, á escala da xanela, coma os escala meiga: redondeados, e polo menos un.
-- **`Measure-Cells`** calcula a grella e as celas coma `check-mouse.ps1` (ver alí): a grella enche a área cliente debaixo da barra das tabs, de 32 píxeles ao 100 %, menos a franxa da barra de desprazamento, de 12 píxeles, e menos dunha cela. O tamaño da grella sae do arquivo `info` do programa dunha tab, e as dúas medidas, de `Get-Scaled`. Garda tamén o alto da barra, `$barHeight`, para `Get-Y`.
-- **`Get-X` e `Get-Y`** dan o píxel do medio dunha cela, coma en `check-mouse.ps1`.
+- **`Get-Band`**, desde a 2.9, é o de `check-menu.ps1`, coa clase desta comprobación: o alto da banda que redimensiona a xanela, enriba das tabs, se a xanela ten a barra de título de meiga e non está maximizada, e 0 se non (ver *A banda: `Get-Band`*, en [`check-mouse.ps1`](#toolscheck-mouseps1)). A comprobación nunca maximiza a xanela.
+- **`Measure-Cells`** calcula a grella e as celas coma `check-mouse.ps1` (ver alí *As celas*). O tamaño da grella sae do arquivo `info` do programa dunha tab; e, desde a 2.9, tamén o das celas, exacto, se o terminal dixo o tamaño da súa zona de texto en píxeles: o alto entre as filas, e o ancho entre as columnas. `$script:exact` garda se as celas son exactas.
+- **Sen o tamaño en píxeles,** a consola das tabs é a de Windows, que se traga a pregunta. Entón a comprobación avisa, con `Write-Warning`, e calcula as celas coa área cliente, coma ata a 2.8: a grella enche a área cliente debaixo da barra das tabs, menos a franxa da barra de desprazamento, de 12 píxeles ao 100 %, e menos dunha cela. Se sobran máis píxeles ca filas, a división dá unha cela máis alta do que é, e o medio dunha fila podería caer noutra.
+- **O alto da barra,** `$barHeight`, para `Get-Y`, é desde a 2.9 a banda máis a fila das tabs, de 32 píxeles ao 100 %; ata a 2.8, a barra era só a fila. As medidas saen de `Get-Scaled`.
+- **`Get-X` e `Get-Y`** dan un píxel dunha cela: `Get-X`, o do medio da súa columna, coma en `check-mouse.ps1`; e `Get-Y`, o do medio da súa fila, coas celas exactas, e, se non, desde a 2.9, un píxel por debaixo do bordo de arriba da fila, que aínda está nela: a fila calculada empeza máis abaixo cá de verdade, pero sempre menos dunha cela menos un píxel, porque o que se lle suma de máis, unha vez por cada fila de riba, non chega ao que lle sobra á grella, que é menos dunha cela. A comprobación só preme na columna 1 (ver `Assert-Line`).
 
 ```powershell
 # The layout of the bar with $Count tabs, as meiga computes it (see
-# crates/meiga-core/src/ui/tabbar.rs): the bar, its tabs, and its buttons +
-# and of the profiles.
+# crates/meiga-core/src/ui/tabbar.rs): the bar, with the band where the
+# window is resized above the row of tabs, its tabs a gap below the band,
+# and its buttons + and of the profiles; on the right of the bar go the
+# buttons of the window, and the room to drag it.
 function Get-Bar([int]$Count) {
     $client = Get-Client
-    $height = Get-Scaled 32
+    $band = Get-Band
+    $height = $band + (Get-Scaled 32)
     $gap = Get-Scaled 4
+    $top = $band + $gap
     $padding = Get-Scaled 8
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
-    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - 3 * $gap - $newSide - $profilesSide) / $Count))
+    $fixed = 3 * $gap + $newSide + $profilesSide + (Get-Scaled 45) + 3 * (Get-Scaled 46)
+    $width = [int][Math]::Min((Get-Scaled 240), [Math]::Floor([Math]::Max(0, $client.Right - $fixed) / $Count))
     $tabs = @(foreach ($index in 0..($Count - 1)) {
             $left = $gap + $index * $width
-            [pscustomobject]@{ Rect = New-Rect $left $gap ($left + $width) $height; TitleLeft = $left + $padding }
+            [pscustomobject]@{ Rect = New-Rect $left $top ($left + $width) $height; TitleLeft = $left + $padding }
         })
     $newLeft = $gap + $Count * $width + $gap
     [pscustomobject]@{
         Rect = New-Rect 0 0 $client.Right $height
         Tabs = $tabs
-        New = New-Rect $newLeft $gap ($newLeft + $newSide) ($gap + $newSide)
-        Profiles = New-Rect ($newLeft + $newSide) $gap ($newLeft + $newSide + $profilesSide) ($gap + $newSide)
+        New = New-Rect $newLeft $top ($newLeft + $newSide) ($top + $newSide)
+        Profiles = New-Rect ($newLeft + $newSide) $top ($newLeft + $newSide + $profilesSide) ($top + $newSide)
     }
 }
 
@@ -12000,7 +12338,7 @@ function Get-Mouse([int]$Message, [int]$Keys, $Point) {
 
 **A barra e as mensaxes do rato.**
 
-- **`Get-Bar`** calcula a barra con `$Count` tabs coma meiga, coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1) e `check-menu.ps1` (ver alí), máis simple: o rectángulo da barra; o de cada tab, co sitio onde empeza o seu título; e os dos botóns + e dos perfís. As medidas son as de [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs), escaladas con `Get-Scaled`: a barra, de 32 píxeles ao 100 %; o oco de 4 ao redor das tabs e dos botóns; o ancho de cada tab, ata 240, o que deixan os ocos e os botóns, de 28 e 24, repartido entre as tabs; e a marxe de 8 antes do título. A barra enteira é o rectángulo de `Assert-Inside` no paso 2, con catro tabs e despois con tres, e no 5; unha tab, no 9; os botóns, os de `Send-Synced`; e as tabs, as de `Get-TabPoint`. O seu alto, `$barHeight`, é o límite de `Open-TabMenu`.
+- **`Get-Bar`** calcula a barra con `$Count` tabs coma meiga, coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1) e `check-menu.ps1` (ver alí), máis simple: o rectángulo da barra; o de cada tab, co sitio onde empeza o seu título; e os dos botóns + e dos perfís. As medidas son as de [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs), escaladas con `Get-Scaled`: a barra, a banda de `Get-Band` máis unha fila de 32 píxeles ao 100 %; o oco de 4 ao redor das tabs e dos botóns, que empezan, en `$top`, un oco por debaixo da banda; o ancho de cada tab, ata 240, o que deixa o que non é para as tabs, `$fixed`, repartido entre elas: os ocos, os botóns de 28 e 24 e, desde a 2.9, o sitio para arrastrar a xanela, de 45, e os tres botóns da xanela, de 46 cada un, á dereita da barra ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 2, 3 e 5); e a marxe de 8 antes do título. Ata a 2.8, a barra era só a fila, e as tabs empezaban un oco por debaixo do seu bordo de arriba. A barra enteira, coa banda, é o rectángulo de `Assert-Inside` no paso 2, con catro tabs e despois con tres, e no 5; unha tab, no 9; os botóns, os de `Send-Synced`; e as tabs, as de `Get-TabPoint`. O seu alto, `$barHeight`, é o límite de `Open-TabMenu`.
 - **`Get-Middle`** dá o píxel do medio dun rectángulo, coma en `check-tabbar.ps1`.
 - **`Get-TabPoint`** dá un punto dunha tab, sobre o seu título, lonxe do botón de pechala, coma en `check-menu.ps1`: onde preme o botón dereito, para abrir o menú dunha tab oculta (`Open-TabMenu`).
 - **`Get-Mouse`** é a de `check-menu.ps1`: unha mensaxe do rato nun punto, coa mensaxe, o seu `wParam` e o seu `lParam`, coas coordenadas.
@@ -12117,7 +12455,7 @@ function Assert-Line([int]$Row, [string]$Start, [string]$End, [string]$What, [st
 
 **Ler unha liña do terminal: `Assert-Line`.** A comprobación le o que mostra o terminal coma o faría quen o usa: cun triplo clic na liña, que meiga copia enteira ao portapapeis ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
 
-- **O clic,** na segunda columna da fila `$Row`, no medio da cela: tres veces o botón esquerdo, que baixa e sobe, publicadas de vez con `Send-Mouse`. Copia a liña enteira, coas súas filas xuntas se continúa na seguinte, coma a do erro do paso 11.
+- **O clic,** na segunda columna da fila `$Row`, no medio da cela, ou, desde a 2.9, sen as celas exactas, un píxel por debaixo do bordo de arriba da fila (ver `Get-Y`): tres veces o botón esquerdo, que baixa e sobe, publicadas de vez con `Send-Mouse`. Copia a liña enteira, coas súas filas xuntas se continúa na seguinte, coma a do erro do paso 11.
 - **Antes, unha marca no portapapeis,** `meiga-check-exit-<PID>-<n>`, distinta cada vez: así, o texto que se le despois é o que copiou este clic, e non un de antes.
 - **O que ten que ter:** exactamente `$Start`, distinguindo maiúsculas; ou, con `$End`, un texto que empece por `$Start` e remate en `$End`, para a liña que leva o erro de Windows, na súa lingua (paso 11). Con `$Or`, vale tamén un texto que sexa exactamente `$Or`: as filas que seguen esa liña, onde o paso 11 busca o aviso. Devolve o texto, e quen a chama sabe así cal dos dous era.
 - **`$Or` vai despois de `$What`,** para que as chamadas que pasan os seus valores sen nomes, coma `Assert-Line 0 (…) ']' 'The tab of Later'`, sigan dándolle o cuarto a `$What`. E a marca chámase `$either`, e non `$or`: en PowerShell os nomes das variábeis non distinguen maiúsculas, e `$or` sería o propio parámetro, que quedaría en `$true` ou `$false`.
@@ -12174,7 +12512,7 @@ function Move-Pointer {
 }
 ```
 
-**O punteiro: `Move-Pointer`.** É o de `check-shortcuts.ps1`, coa clase desta comprobación (ver alí): se o punteiro está na área cliente da xanela, apártao por riba dela, e garda onde estaba, para devolvelo ao rematar. Os movementos que fai Windows no sitio do punteiro chegarían á barra, que debuxaría.
+**O punteiro: `Move-Pointer`.** É o de `check-shortcuts.ps1`, coa clase desta comprobación (ver alí): se o punteiro está na área cliente da xanela, apártao por riba dela, e garda onde estaba, para devolvelo ao rematar. Os movementos que fai Windows no sitio do punteiro chegarían á barra, que debuxaría. O punto ao que o leva, 8 píxeles por riba da área cliente, está desde a 2.9 fóra da xanela, por riba dela, porque a área cliente chega ata o bordo de arriba da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1); ata a 2.8, estaba na barra de título de Windows. O código non cambiou na 2.9, e o seu comentario xa dicía que o leva fóra da xanela, por riba dela.
 
 ```powershell
 # Shares the input of this thread with the one of the window, whose key
@@ -12383,6 +12721,7 @@ $layout = [IntPtr]::Zero
 $dpi = 96
 $grid = $null
 $cell = $null
+$exact = $false
 $barHeight = 0
 $pointer = $null
 $attached = $false
@@ -12400,7 +12739,7 @@ try {
 
 **Abrir meiga.** A liña de comandos leva o rexistro dos fotogramas, e ningún programa: a primeira tab corre o perfil por defecto, Probe ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5). O cartafol de meiga é o da comprobación, e o contorno, o de PowerShell, co `APPDATA` da comprobación e `MEIGA_CHECK_WORK`, o cartafol que expanden as liñas de comandos dos perfís.
 
-- **As variábeis que len as funcións e o `finally`** créanse antes do `try`, porque, con `Set-StrictMode`, ler unha variábel que non existe sería un erro: a xanela, o seu fío, a distribución do teclado e a escala; a grella, as celas e o alto da barra, que mide `Measure-Cells`; o punteiro, a entrada compartida, o botón de `Send-Synced` e as marcas de `Assert-Line`; desde o mantemento M2, o *job* do paso 14, `$job`, o programa da súa primeira tab, `$closerProgram`, e as consolas das súas tabs, `$tabConsoles`, que pecha o `finally`; e `$passed`.
+- **As variábeis que len as funcións e o `finally`** créanse antes do `try`, porque, con `Set-StrictMode`, ler unha variábel que non existe sería un erro: a xanela, o seu fío, a distribución do teclado e a escala; a grella, as celas, se son exactas, desde a 2.9, e o alto da barra, que mide `Measure-Cells`; o punteiro, a entrada compartida, o botón de `Send-Synced` e as marcas de `Assert-Line`; desde o mantemento M2, o *job* do paso 14, `$job`, o programa da súa primeira tab, `$closerProgram`, e as consolas das súas tabs, `$tabConsoles`, que pecha o `finally`; e `$passed`.
 - **`$saved`,** o texto que ten o portapapeis antes de empezar, coma en `check-mouse.ps1`, para deixalo nel ao rematar.
 - `$started`, a hora á que empezou meiga, para `Get-Shells` e `Get-Consoles`.
 
@@ -12449,7 +12788,7 @@ try {
 
 - **A xanela e o seu fío,** coma en `check-shortcuts.ps1`: `WindowOf` agarda a xanela de meiga, e `GetWindowThreadProcessId` dá o seu fío; `$layout` é a distribución do teclado dese fío, para os códigos de exploración, e `$dpi`, a escala da xanela, para `Get-Scaled`.
 - **A primeira tab:** un só programa, que corre `$probeLine`, a liña de Probe, o perfil por defecto (`Wait-NewShell`), e se mostra (`Wait-Shown`), no cartafol da comprobación, o de Probe (`Assert-Folder`).
-- **As medidas:** `Measure-Cells` le o tamaño da grella que escribiu o script da primeira tab, e calcula as celas. Despois, `Join-Input`, para teclear, e `Move-Pointer`.
+- **As medidas:** `Measure-Cells` le o tamaño da grella que escribiu o script da primeira tab, e calcula as celas: desde a 2.9, coa zona de texto que lle dixo o terminal, ou, se non a dixo, coa xanela, e entón avisa. Despois, `Join-Input`, para teclear, e `Move-Pointer`.
 - **Catro tabs máis,** con Ctrl+Maiús+T (`Open-Tab`): de `$second` a `$fifth`. A quinta, a última, móstrase, e as outras catro quedan ocultas: o paso 2 pecha tres delas.
 - Ao final, a liña da grella: as súas columnas e as súas filas, e o ancho e o alto das celas, en píxeles.
 
@@ -13157,7 +13496,7 @@ A CI executa este script en cada PR, despois de `check-shortcuts.ps1`, no paso *
 
 ## `tools/check-manytabs.ps1`
 
-Desde a subfase 2.8. Comproba que `meiga.exe` mantén manexábeis 30 tabs, e o que din as tabs ocultas ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md); [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). Con 7 tabs, todas se encollen por igual e caben na barra, co botón + detrás delas. A oitava xa non cabe: as tabs quedan co ancho mínimo, nunha franxa entre os dous botóns de desprazamento, que mostra a tab nova, e os botóns + e dos perfís van á dereita da barra. Con 30, cada tab corre o seu programa, nada se solapa, e a franxa mostra a última, que remata antes do botón da dereita; ese botón xa non pode desprazala, e o punteiro enriba del, e un clic nel, non debuxan nada. A roda na barra despraza unha tab por paso, cara á primeira adiante ou á esquerda, e cara á última atrás ou á dereita, e garda o que sobra dun paso para o seguinte xiro. Un clic nun botón de desprazamento leva a franxa ata que a primeira tab que oculta por ese lado, aínda que sexa en parte, queda enteira á vista; e, mentres o botón esquerdo segue premido nel, co punteiro enriba, despraza outra tab aos 250 ms, e despois cada 100 ms. Cada unha das 30 tabs móstrase cun clic no seu título, cando a roda a trae á vista. Cando o × ou o botón do medio pechan unha tab, as outras quedan co seu ancho e no seu sitio mentres o punteiro segue na barra, e o × seguinte queda debaixo do punteiro; cando o punteiro sae da barra, recolócanse, e a franxa mostra a tab que se mostra. Unha tab que pecha o teclado, co punteiro na barra, recoloca as outras no momento, e despois unha que pecha o rato déixaas no seu sitio; e pechar a última co rato recolócaas tamén no momento, así que o × da nova última queda debaixo do punteiro. Mostrar unha tab co teclado, tamén dando a volta, leva a franxa ata ela; a roda pode deixar fóra da vista a tab que se mostra, e alí queda ata que se escolle outra vez: desde a revisión do PR, Ctrl+1 e Ctrl+9, e un clic na parte dela que se ve, levan a franxa ata que está enteira á vista, e Ctrl+9 na tab enteira á vista non debuxa nada; e Maiús+F10 tamén leva a franxa ata ela, e abre o seu menú debaixo dela. E unha tab oculta: o primeiro que escribe o seu programa debuxa só o título da súa tab, unha vez, e a primeira campá, outra; mostrala quita os dous indicadores, e a campá da tab que se mostra non debuxa nada; e o fin do seu programa co código 3 debuxa o título outra vez. Ao final, a xanela péchase: meiga sae co código 0, e os programas das tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs) e [› `session.rs`](meiga.md#cratesmeigasrcsessionrs), e en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Light, que corre `cmd` co cursor oculto, para que as súas tabs custen pouco, e Probe, o perfil por defecto, que corre un script de PowerShell que escribe o texto que lle dá a comprobación, e remata cando llo di ela; e as shells que atopa meiga, ocultas. A xanela recibe unha área cliente de 800 × 400 píxeles a escala 100 %, na que caben 7 tabs e non 8. A comprobación calcula a barra coma meiga, coas mesmas regras ca o `Layout` de `meiga-core`, e sabe que tab se mostra polas prioridades dos fíos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Publica os clics, a roda e as teclas na xanela co seu fío suspendido, coma [`check-exit.ps1`](#toolscheck-exitps1), e le no rexistro o que debuxa: o punteiro enriba dunha parte da barra debuxa só esa parte, e onde a debuxa di onde está a franxa.
+Desde a subfase 2.8. Comproba que `meiga.exe` mantén manexábeis 30 tabs, e o que din as tabs ocultas ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md); [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). Con 7 tabs, todas se encollen por igual e caben na barra, co botón + detrás delas. A oitava xa non cabe: as tabs quedan co ancho mínimo, nunha franxa entre os dous botóns de desprazamento, que mostra a tab nova, e os botóns + e dos perfís van á dereita da barra. Con 30, cada tab corre o seu programa, nada se solapa, e a franxa mostra a última, que remata antes do botón da dereita; ese botón xa non pode desprazala, e o punteiro enriba del, e un clic nel, non debuxan nada. A roda na barra despraza unha tab por paso, cara á primeira adiante ou á esquerda, e cara á última atrás ou á dereita, e garda o que sobra dun paso para o seguinte xiro. Un clic nun botón de desprazamento leva a franxa ata que a primeira tab que oculta por ese lado, aínda que sexa en parte, queda enteira á vista; e, mentres o botón esquerdo segue premido nel, co punteiro enriba, despraza outra tab aos 250 ms, e despois cada 100 ms. Cada unha das 30 tabs móstrase cun clic no seu título, cando a roda a trae á vista. Cando o × ou o botón do medio pechan unha tab, as outras quedan co seu ancho e no seu sitio mentres o punteiro segue na barra, e o × seguinte queda debaixo do punteiro; cando o punteiro sae da barra, recolócanse, e a franxa mostra a tab que se mostra. Unha tab que pecha o teclado, co punteiro na barra, recoloca as outras no momento, e despois unha que pecha o rato déixaas no seu sitio; e pechar a última co rato recolócaas tamén no momento, así que o × da nova última queda debaixo do punteiro. Mostrar unha tab co teclado, tamén dando a volta, leva a franxa ata ela; a roda pode deixar fóra da vista a tab que se mostra, e alí queda ata que se escolle outra vez: desde a revisión do PR, Ctrl+1 e Ctrl+9, e un clic na parte dela que se ve, levan a franxa ata que está enteira á vista, e Ctrl+9 na tab enteira á vista non debuxa nada; e Maiús+F10 tamén leva a franxa ata ela, e abre o seu menú debaixo dela. E unha tab oculta: o primeiro que escribe o seu programa debuxa só o título da súa tab, unha vez, e a primeira campá, outra; mostrala quita os dous indicadores, e a campá da tab que se mostra non debuxa nada; e o fin do seu programa co código 3 debuxa o título outra vez. Ao final, a xanela péchase: meiga sae co código 0, e os programas das tabs e as súas consolas rematan. O código que comproba explícase en [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs) e [› `session.rs`](meiga.md#cratesmeigasrcsessionrs), e en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Light, que corre `cmd` co cursor oculto, para que as súas tabs custen pouco, e Probe, o perfil por defecto, que corre un script de PowerShell que escribe o texto que lle dá a comprobación, e remata cando llo di ela; e as shells que atopa meiga, ocultas. A xanela recibe unha área cliente de 983 × 400 píxeles a escala 100 %, na que caben 7 tabs e non 8; ata a 2.8, de 800 × 400. A comprobación calcula a barra coma meiga, coas mesmas regras ca o `Layout` de `meiga-core`, desde a 2.9 coa banda enriba das tabs, que redimensiona a xanela, e, á dereita, co sitio para arrastrala e os seus tres botóns ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 2, 3 e 5), e sabe que tab se mostra polas prioridades dos fíos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Publica os clics, a roda e as teclas na xanela co seu fío suspendido, coma [`check-exit.ps1`](#toolscheck-exitps1), e le no rexistro o que debuxa: o punteiro enriba dunha parte da barra debuxa só esa parte, e onde a debuxa di onde está a franxa.
 
 ```powershell
 .\tools\check-manytabs.ps1                              # comproba target\release\meiga.exe
@@ -13165,14 +13504,14 @@ Desde a subfase 2.8. Comproba que `meiga.exe` mantén manexábeis 30 tabs, e o q
 .\tools\check-manytabs.ps1 -TimeoutSeconds 30           # nunha máquina moi lenta
 ```
 
-Necesita PowerShell 7 no `PATH`, coma `check-exit.ps1`: a liña de comandos de Probe empeza por `pwsh`, sen ruta, e Windows búscao no `PATH`. Light corre o `cmd.exe` de Windows, pola súa ruta. Non necesita o `Cargo.toml`: non mira a versión de meiga. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`. Non le o `config.toml` de quen a executa, porque meiga corre co `APPDATA` da comprobación, nin abre ningunha shell do usuario: a primeira tab corre o script da comprobación, cun pwsh que non carga o perfil de PowerShell (`-NoProfile`), e as outras, `cmd` sen os comandos de AutoRun do rexistro (`/d`). Calcula a barra á escala da xanela, a da pantalla: a xanela de 800 píxeles a escala 100 % ten que ter sitio para 7 tabs e non para 8, coma en todas as escalas de Windows, do 100 ao 500 %; se non, falla antes de nada, e dío. E Windows ten que deixarlle á xanela ese tamaño: se non, tamén falla, e di o que ten.
+Necesita PowerShell 7 no `PATH`, coma `check-exit.ps1`: a liña de comandos de Probe empeza por `pwsh`, sen ruta, e Windows búscao no `PATH`. Light corre o `cmd.exe` de Windows, pola súa ruta. Non necesita o `Cargo.toml`: non mira a versión de meiga. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`. Non le o `config.toml` de quen a executa, porque meiga corre co `APPDATA` da comprobación, nin abre ningunha shell do usuario: a primeira tab corre o script da comprobación, cun pwsh que non carga o perfil de PowerShell (`-NoProfile`), e as outras, `cmd` sen os comandos de AutoRun do rexistro (`/d`). Calcula a barra á escala da xanela, a da pantalla: a xanela de 983 píxeles a escala 100 % ten que ter sitio para 7 tabs e non para 8, coma en todas as escalas de Windows, do 100 ao 500 %; se non, falla antes de nada, e dío. Desde a 2.9 é 183 píxeles máis ancha ca ata a 2.8, os do sitio para arrastrar a xanela, 45, e os dos seus tres botóns, 138, que agora van na barra: o sitio das tabs, a escala 100 %, é o mesmo (ver `Get-Room`). E Windows ten que deixarlle á xanela ese tamaño: se non, tamén falla, e di o que ten.
 
 **Coidado:** mentres corre, non uses o rato nin o teclado, coma con `check-exit.ps1`. A comprobación conta con que o punteiro do sistema non estea enriba da xanela, para que Windows lle diga a meiga en seguida que o punteiro saíu (ver `Assert-Hover`): o punteiro por riba da xanela resaltaría o que tivese debaixo, e as tabs conxeladas non se recolocarían. E as teclas que premeses mesturaríanse coas da comprobación, que comparte o estado das teclas co fío da xanela. Ao principio, se o punteiro está enriba da xanela, a comprobación apártao; no paso 6, se pode, lévao un segundo ao botón de desprazamento da esquerda, e despois apártao outra vez; e ao rematar devólveo a onde estaba. Cambia o tamaño da xanela de meiga, unha vez, ao principio. Non usa o portapapeis.
 
 Saída esperada, cos tamaños que dependen da pantalla, e co punteiro do sistema no botón do paso 6, coma na CI:
 
 ```text
-The bar is … pixels high, and its tabs from … to … wide: 7 of them fit in the window, … pixels wide, and 8 do not.
+The bar is … pixels high, … of them above the tabs, and its tabs from … to … wide: 7 of them fit in the window, … pixels wide, and 8 do not.
 OK: with 7 tabs, they shrink alike, and fit in the bar, with the button + after them: the pointer on the last tab, on the button +, and on the first tab draws only that part.
 OK: an eighth tab does not fit: the tabs keep their narrowest width, and the strip, between the buttons that scroll it, shows the new one, which is shown; the buttons + and of the profiles go on the right of the bar.
 OK: with 30 tabs, each one runs its own program, nothing overlaps, and the strip shows the last one, which ends before the button that scrolls the strip to the right; that button cannot scroll it further, and the pointer on it, and a click on it, draw nothing.
@@ -13188,7 +13527,7 @@ OK: while a tab is hidden, its program writes, which draws only the title of its
 OK: it ends with exit code 0 when its window closes, and the programs of its tabs and their consoles end too.
 ```
 
-- **A primeira liña** di o alto da barra, os anchos mínimo e máximo das tabs e o ancho da xanela, en píxeles á escala da pantalla, cos que a comprobación calcula a barra: a escala 100 %, `The bar is 32 pixels high, and its tabs from 100 to 240 wide: 7 of them fit in the window, 800 pixels wide, and 8 do not.`, coma na CI; a escala 150 %, 48, 150, 360 e 1200.
+- **A primeira liña** di o alto da barra, canto dela vai enriba das tabs, os anchos mínimo e máximo das tabs e o ancho da xanela, en píxeles á escala da pantalla, cos que a comprobación calcula a barra: a escala 100 %, coas métricas habituais de Windows, `The bar is 40 pixels high, 8 of them above the tabs, and its tabs from 100 to 240 wide: 7 of them fit in the window, 983 pixels wide, and 8 do not.`; a escala 150 %, 59, 11, 150, 360 e 1475. Ata a 2.8, a liña non dicía a banda, e, a escala 100 %, coma na CI, a barra medía 32 píxeles, e a xanela, 800; a escala 150 %, 48 e 1200.
 - **A sexta** di cantas veces se desprazou a franxa no segundo en que o botón esquerdo estivo premido: na CI, 9, ao premelo, aos 250 ms e despois cada 100 ms ata os 950. A comprobación acepta 3 ou máis, se ningunha chega antes de tempo. Se non pode levar o punteiro do sistema ao botón, coma co cliente do Escritorio remoto minimizado, a sexta liña é outra: `OK: the left button down on a button that scrolls the strip scrolls it once, and no more once the pointer leaves the button; the check could not move the pointer of the system onto the button to hold it there.`
 - As outras liñas `OK:` son as mesmas en calquera máquina e pantalla.
 
@@ -13196,7 +13535,7 @@ Se falla unha comprobación, o script remata cun erro que explica cal, e código
 
 **Comprobado** con corenta copias de meiga cun cambio feito a propósito cada unha, trinta e tres antes da revisión do PR e sete na revisión, compiladas noutro cartafol en *release* sen LTO, coma as de `check-exit.ps1`, e co ConPTY ao lado. Trinta e seis fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle. Tres dependen do punteiro do sistema no paso 6: unha falla só onde a comprobación non o pode levar ao botón, e dúas, só onde pode, coma na CI. E unha pasa, e acéptase (ver o paso 12).
 
-Esta comprobación non mira os debuxos, só os rectángulos que se debuxan, e cantas veces: nin os glifos dos indicadores, a × grosa do fin, a 🔔 da campá e o ● da actividade, nin as súas cores, nin a cela baleira despois deles; nin as frechas dos botóns de desprazamento, nin o seu aspecto máis escuro cando non poden desprazar, nin as tabs cortadas polos lados da franxa. Iso próbano as probas de [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), que len os píxeles. Tampouco oe a campá da tab que se mostra, que non soa (decisión 9): só ve que non debuxa nada. Non conta os espertares da xanela, coma [`check-tabbar.ps1`](#toolscheck-tabbarps1): a segunda saída e a segunda campá dunha tab oculta non poden debuxar nada, pero unha meiga que espertase a xanela por elas, sen debuxar, pasaría; que a campá só esperta a xanela unha vez próbao `the_bell_wakes_the_window_once_until_the_tab_is_hidden_again`, en [› `session.rs`](meiga.md#cratesmeigasrcsessionrs). O botón mantido só se mide onde a comprobación pode levar alí o punteiro do sistema; e, aínda así, non comproba que pare cando o punteiro sae do botón, nin que siga cando volta, nin que as repeticións non tarden máis de 250 e 100 ms, só que non cheguen antes, e que haxa polo menos tres: todo iso próbao `the_buttons_on_the_sides_scroll_a_tab_and_again_while_they_stay_down`. Non move a roda coas tabs que caben, nin cun botón premido na barra, nin cara a un lado cara ao que a franxa non pode desprazarse; e, no botón que non pode desprazar, só mira que o punteiro e o clic non debuxan nada: que tampouco recolocan as tabs conxeladas, nin esquecen levar á vista a tab que se mostra, próbao `what_cannot_scroll_the_strip_changes_nothing`. As tabs conxeladas só se recolocan porque o punteiro sae da xanela: non porque vaia ao terminal, nin porque un menú colla o rato, nin porque se desprace a franxa, se abra unha tab ou cambie o tamaño ou a escala da xanela; e, mentres están conxeladas, a tab que se mostra nunca está fóra da vista. Por iso non colle tres copias que collen as probas de Rust, en `the_tab_that_is_shown_comes_into_view`: unha que leva á vista a tab que se mostra tamén coas tabs conxeladas; unha onde desprazar a franxa non esquece que a tab que se mostra ten que ir á vista, porque, cando a roda a deixa fóra (paso 11), meiga xa a levou á vista antes; e unha onde o que debuxa un indicador non se corta coa franxa, porque a tab dos indicadores está enteira nela. Nin unha onde o fin vai despois da campá, que colle `the_end_goes_before_the_bell_and_the_bell_before_what_the_program_wrote`: no paso 12, o programa remata cando a tab non ten campá. Tampouco usa Ctrl+Tab nin a tecla de menú, nin mira o indicador do fin na tab que se mostra, nin o que fai co indicador un reinicio. E só corre á escala da pantalla, nunha xanela de 800 píxeles a escala 100 %: as outras medidas próbanse en Rust, en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs).
+Esta comprobación non mira os debuxos, só os rectángulos que se debuxan, e cantas veces: nin os glifos dos indicadores, a × grosa do fin, a 🔔 da campá e o ● da actividade, nin as súas cores, nin a cela baleira despois deles; nin as frechas dos botóns de desprazamento, nin o seu aspecto máis escuro cando non poden desprazar, nin as tabs cortadas polos lados da franxa. Iso próbano as probas de [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), que len os píxeles. Tampouco oe a campá da tab que se mostra, que non soa (decisión 9): só ve que non debuxa nada. Non conta os espertares da xanela, coma [`check-tabbar.ps1`](#toolscheck-tabbarps1): a segunda saída e a segunda campá dunha tab oculta non poden debuxar nada, pero unha meiga que espertase a xanela por elas, sen debuxar, pasaría; que a campá só esperta a xanela unha vez próbao `the_bell_wakes_the_window_once_until_the_tab_is_hidden_again`, en [› `session.rs`](meiga.md#cratesmeigasrcsessionrs). O botón mantido só se mide onde a comprobación pode levar alí o punteiro do sistema; e, aínda así, non comproba que pare cando o punteiro sae do botón, nin que siga cando volta, nin que as repeticións non tarden máis de 250 e 100 ms, só que non cheguen antes, e que haxa polo menos tres: todo iso próbao `the_buttons_on_the_sides_scroll_a_tab_and_again_while_they_stay_down`. Non move a roda coas tabs que caben, nin cun botón premido na barra, nin cara a un lado cara ao que a franxa non pode desprazarse; e, no botón que non pode desprazar, só mira que o punteiro e o clic non debuxan nada: que tampouco recolocan as tabs conxeladas, nin esquecen levar á vista a tab que se mostra, próbao `what_cannot_scroll_the_strip_changes_nothing`. As tabs conxeladas só se recolocan porque o punteiro sae da xanela: non porque vaia ao terminal, nin porque un menú colla o rato, nin porque se desprace a franxa, se abra unha tab ou cambie o tamaño ou a escala da xanela; e, mentres están conxeladas, a tab que se mostra nunca está fóra da vista. Por iso non colle tres copias que collen as probas de Rust, en `the_tab_that_is_shown_comes_into_view`: unha que leva á vista a tab que se mostra tamén coas tabs conxeladas; unha onde desprazar a franxa non esquece que a tab que se mostra ten que ir á vista, porque, cando a roda a deixa fóra (paso 11), meiga xa a levou á vista antes; e unha onde o que debuxa un indicador non se corta coa franxa, porque a tab dos indicadores está enteira nela. Nin unha onde o fin vai despois da campá, que colle `the_end_goes_before_the_bell_and_the_bell_before_what_the_program_wrote`: no paso 12, o programa remata cando a tab non ten campá. Tampouco usa Ctrl+Tab nin a tecla de menú, nin mira o indicador do fin na tab que se mostra, nin o que fai co indicador un reinicio. E só corre á escala da pantalla, nunha xanela de 983 píxeles a escala 100 %: as outras medidas próbanse en Rust, en [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs). Da barra de título, desde a 2.9, só ten en conta o sitio da banda, o do sitio para arrastrar a xanela e o dos seus botóns, onde non hai tabs (ver `Get-Room` e `Get-CloseAt`): o que fan compróbao [`check-titlebar.ps1`](#toolscheck-titlebarps1).
 
 Explicación por partes. Moito é coma en [`check-exit.ps1`](#toolscheck-exitps1), e a barra calcúlase coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1), pero coa franxa: o código vai enteiro, e o que xa se explicou alí explícase eiquí en breve.
 
@@ -13214,8 +13553,9 @@ own, whose config.toml has two profiles, Light, which runs cmd with a hidden
 cursor, and Probe, the default one, which runs a PowerShell script that
 writes the text that the check gives it, and ends when the check tells it
 to; and hides the shells that meiga finds. The window gets a client area of
-800 x 400 pixels at a scale of 100 %, so that 7 tabs fit in the bar and 8 do
-not.
+983 x 400 pixels at a scale of 100 %, so that 7 tabs fit in the bar, beside
+its buttons, the room to drag the window and the buttons of the window, and
+8 do not.
 
 The check computes the layout of the bar as meiga does (see
 crates/meiga-core/src/ui/tabbar.rs), and follows the tab that is shown by
@@ -13376,6 +13716,13 @@ public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool GetCursorPos(out POINT point);
 
 [DllImport("user32.dll", SetLastError = true)]
@@ -13442,9 +13789,10 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `GetWindowThreadProcessId` e `GetCurrentThreadId` | O fío da xanela de meiga, e o do script. |
 | `PeekMessageW`, `AttachThreadInput` e `SetKeyboardState` | Poñen abaixo os modificadores de cada combinación, coma en `check-shortcuts.ps1`. |
 | `GetKeyboardLayout` e `MapVirtualKeyExW` | O código de exploración de cada tecla, na distribución da xanela. |
-| `GetClientRect`, `GetWindowRect` e `SetWindowPos` | O tamaño da área cliente e o da xanela enteira, para darlle á área cliente o tamaño que necesita a comprobación. |
+| `GetClientRect`, `GetWindowRect` e `SetWindowPos` | O tamaño da área cliente e o da xanela enteira, para darlle á área cliente o tamaño que necesita a comprobación; e, desde a 2.9, onde empeza a xanela, para a banda. |
 | `GetDpiForWindow` | A escala da xanela, para calcular a barra coma meiga. |
-| `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Apartan o punteiro da xanela, se está enriba dela, lévano ao botón do paso 6, e devólveno ao rematar; e dan o punto da pantalla das mensaxes da roda. |
+| `IsZoomed` e `GetSystemMetricsForDpi` | Desde a 2.9, a banda enriba das tabs: se a xanela está maximizada, e o grosor do marco de Windows á súa escala (ver `Get-Band`). |
+| `GetCursorPos`, `SetCursorPos`, `ScreenToClient` e `ClientToScreen` | Apartan o punteiro da xanela, se está enriba dela, lévano ao botón do paso 6, e devólveno ao rematar; e dan o punto da pantalla das mensaxes da roda e, desde a 2.9, o do canto da área cliente, para a banda. |
 | `WindowFromPoint` | Se o punteiro, no botón do paso 6, está enriba da xanela de meiga. |
 | `PostMessageW` | Publica na xanela as mensaxes das teclas e do rato, e a que a pecha. |
 | `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
@@ -13453,7 +13801,7 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
 | `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len as prioridades dos lectores de meiga polo seu nome. |
 
-- **Son as de `check-exit.ps1` con tres máis e sen once.** Máis: `GetWindowRect` e `SetWindowPos`, para o tamaño da xanela (`Resize-Window`), e `WindowFromPoint`, para saber se o punteiro do sistema quedou enriba da xanela (`Set-RealPointer`). Sen: `EnumThreadWindows`, `IsWindowVisible`, `GetWindow` e `GetDlgItemTextW`, porque non abre ningunha caixa de mensaxe; as tres do portapapeis, que non usa; e as catro do *job*, que `check-exit.ps1` ten desde o mantemento M2 para o seu paso 14.
+- **Son as de `check-exit.ps1` con dúas máis e sen once.** Máis: `SetWindowPos`, para o tamaño da xanela (`Resize-Window`), e `WindowFromPoint`, para saber se o punteiro do sistema quedou enriba da xanela (`Set-RealPointer`). Ata a 2.8 eran tres máis, tamén `GetWindowRect`, que `check-exit.ps1` ten desde a 2.9 para a banda; e desde a 2.9 as dúas teñen tamén `IsZoomed` e `GetSystemMetricsForDpi`, que eiquí van despois de `GetDpiForWindow`. Sen: `EnumThreadWindows`, `IsWindowVisible`, `GetWindow` e `GetDlgItemTextW`, porque non abre ningunha caixa de mensaxe; as tres do portapapeis, que non usa; e as catro do *job*, que `check-exit.ps1` ten desde o mantemento M2 para o seu paso 14.
 - **As estruturas.** `RECT`, `POINT`, `MSG` e `EnumProc` son as de `check-exit.ps1`.
 - **As once que non levan `public`,** as tres desde `EnumWindows` e as oito desde `OpenThread`, só as usan as funcións propias da clase, en C#.
 - **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
@@ -14127,7 +14475,7 @@ function Resize-Window([int]$Width, [int]$Height) {
 **A xanela e a escala.**
 
 - **`Get-Client`** e **`Get-Scaled`** son as de `check-exit.ps1`, coa clase desta comprobación: a área cliente da xanela, ou un erro; e uns píxeles a escala 100 %, á escala da xanela, coma os escala meiga: `(píxeles × DPI + 48) / 96`, sen decimais, e polo menos un.
-- **`Resize-Window`** é nova: dálle á xanela unha área cliente de `$Width` × `$Height` píxeles. `SetWindowPos` cambia o tamaño da xanela enteira, co seu bordo e a súa barra de título: a comprobación súmalle ao que quere o que hai entre a xanela enteira (`GetWindowRect`) e a súa área cliente, e cambia o tamaño sen mover a xanela, sen cambiar a súa orde e sen activala. Despois comproba que a área cliente ten ese tamaño: se Windows non llo dá, coma nunha pantalla pequena para a súa escala, falla, e di o que ten.
+- **`Resize-Window`** é nova: dálle á xanela unha área cliente de `$Width` × `$Height` píxeles. `SetWindowPos` cambia o tamaño da xanela enteira, co seu marco: a comprobación súmalle ao que quere o que hai entre a xanela enteira (`GetWindowRect`) e a súa área cliente, e cambia o tamaño sen mover a xanela, sen cambiar a súa orde e sen activala. Ata a 2.8, iso era o bordo e a barra de título de Windows; desde a 2.9, coa barra de título de meiga, só o marco dos lados e de abaixo, porque a área cliente chega ata o bordo de arriba da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1): os 400 píxeles de alto levan agora a barra de título. Despois comproba que a área cliente ten ese tamaño: se Windows non llo dá, coma nunha pantalla pequena para a súa escala, falla, e di o que ten.
 
 ```powershell
 # The pixel in the middle of $Rect.
@@ -14183,7 +14531,7 @@ function Send-Mouse([long[]]$Messages) {
 **Os puntos e as mensaxes do rato.**
 
 - **`Get-Middle`, `Get-Mouse`, `Send-Posted` e `Send-Mouse`** son os de `check-exit.ps1` (ver alí): o píxel do medio dun rectángulo; unha mensaxe do rato nun punto da área cliente, coa mensaxe, o seu `wParam` e o seu `lParam`; publicar unhas mensaxes de vez, e dicir se meiga rematou, se non pode; e publicar mensaxes do rato, sen tocar o estado das teclas.
-- **`Get-OnScreen`** é nova: un punto da área cliente na pantalla (`ClientToScreen`), ou un erro.
+- **`Get-OnScreen`** é nova: un punto da área cliente na pantalla (`ClientToScreen`), ou un erro. Desde a 2.9 úsaa tamén `Get-Band`, co canto da área cliente.
 - **`Get-Wheel`** é nova: unha mensaxe da roda, `WM_MOUSEWHEEL` ou `WM_MOUSEHWHEEL`, co xiro, `$Delta`, en 120 avos de paso, na palabra de arriba do `wParam`, e o punto na pantalla no `lParam`, coma os dá Windows: a xanela pásao á súa área cliente ([Código › meiga-win › `decode`](meiga-win.md#decode)). A palabra de abaixo do `wParam`, a dos botóns e das teclas, vai a 0: sen botóns, nin Ctrl nin Maiús.
 
 ```powershell
@@ -14208,7 +14556,7 @@ function Move-Pointer {
 }
 ```
 
-**O punteiro: `Move-Pointer`.** É o de `check-exit.ps1` (ver alí), cun cambio: o punto por riba da xanela dao `Get-OnScreen`, que falla se Windows non pode calculalo; en `check-exit.ps1`, un fallo de `ClientToScreen` pasaba sen aviso. Se o punteiro está na área cliente da xanela, apártao por riba dela, á barra de título, e a primeira vez garda onde estaba, para devolvelo ao rematar. Os movementos que fai Windows no sitio do punteiro chegarían á barra, que debuxaría. Úsano o principio e o paso 6.
+**O punteiro: `Move-Pointer`.** É o de `check-exit.ps1` (ver alí), cun cambio: o punto por riba da xanela dao `Get-OnScreen`, que falla se Windows non pode calculalo; en `check-exit.ps1`, un fallo de `ClientToScreen` pasaba sen aviso. Se o punteiro está na área cliente da xanela, apártao por riba dela, e a primeira vez garda onde estaba, para devolvelo ao rematar. O punto ao que o leva, 8 píxeles por riba da área cliente, está desde a 2.9 fóra da xanela, por riba dela, porque a área cliente chega ata o bordo de arriba da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1); ata a 2.8, estaba na barra de título de Windows. Os movementos que fai Windows no sitio do punteiro chegarían á barra, que debuxaría. Úsano o principio e o paso 6.
 
 ```powershell
 # Moves the pointer of the system onto $Point of the client area, and
@@ -14339,11 +14687,14 @@ function Send-Chord([string]$Chord) {
 
 ```powershell
 # The bar, as meiga lays it out (see crates/meiga-core/src/ui/tabbar.rs): its
-# sizes, once the window is known; the width of its tabs, whether they do not
-# fit, and how far the strip scrolls them; what is left of the steps of the
-# wheel (see crates/meiga/src/tabbar.rs); and its tabs, by the number of
-# their programs, with the one that is shown.
+# sizes, once the window is known, with the band above its row of tabs, where
+# the window is resized; the width of its tabs, whether they do not fit, and
+# how far the strip scrolls them; what is left of the steps of the wheel (see
+# crates/meiga/src/tabbar.rs); and its tabs, by the number of their programs,
+# with the one that is shown.
 $barWidth = 0
+$band = 0
+$rowHeight = 0
 $barHeight = 0
 $gap = 0
 $padding = 0
@@ -14351,6 +14702,8 @@ $closeSide = 0
 $newSide = 0
 $profilesSide = 0
 $scrollSide = 0
+$dragSide = 0
+$captionSide = 0
 $maxTab = 0
 $minTab = 0
 $barTabWidth = 0
@@ -14363,16 +14716,38 @@ $active = 0
 
 **A barra, coma a calcula meiga.** meiga non di onde debuxa cada cousa, nin canto desprazou a franxa: a comprobación lévao nun modelo propio, coas mesmas regras ca o `Layout` de [`ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs), e cada paso fai nel o mesmo que lle pide a meiga. As variábeis do modelo son do script, e as funcións cámbianas con `$script:`:
 
-- **As medidas,** en píxeles á escala da xanela, que pon o principio da comprobación (ver *A xanela e a barra*): o ancho e o alto da barra; o oco, `$gap`; a marxe antes do título, `$padding`; os lados do ×, do +, do botón dos perfís e dos botóns de desprazamento; e o ancho máximo e o mínimo das tabs.
+- **As medidas,** en píxeles á escala da xanela, que pon o principio da comprobación (ver *A xanela e a barra*): o ancho e o alto da barra e, desde a 2.9, o alto da banda de enriba, `$band`, e o da fila das tabs, `$rowHeight`, que suman o da barra, `$barHeight`; o oco, `$gap`; a marxe antes do título, `$padding`; os lados do ×, do +, do botón dos perfís e dos botóns de desprazamento; desde a 2.9, o sitio para arrastrar a xanela, `$dragSide`, e o ancho de cada botón da xanela, `$captionSide`; e o ancho máximo e o mínimo das tabs.
 - **O estado da barra:** o ancho das tabs, `$barTabWidth`; se non caben, `$barOverflow`; canto desprazou a franxa, `$barScroll`, os píxeles da fila das tabs que oculta á súa esquerda; e o que sobra dos xiros da roda, `$barRest`, en píxeles por 120, coma o `wheel` de `TabBar` ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
 - **As tabs:** `$tabs`, os números dos programas das tabs, na orde da barra; e `$active`, a posición da que se mostra.
 
 **Por que coma meiga, ao píxel.** A comprobación non le a barra: sabe onde está cada cousa porque a calcula coas mesmas regras, e comproba que meiga debuxa xusto eses rectángulos (`Assert-Hover` e `Assert-Drawn`), e que un clic nun punto mostra ou pecha a tab que di o modelo. Se `Layout` cambiase as súas medidas ou as súas regras, a comprobación fallaría, coma `check-tabbar.ps1`, aínda que meiga fose ben: hai que cambiar as dúas.
 
 ```powershell
-# The width of the bar without the buttons that open a tab and three gaps.
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the frame
+# that Windows gives a window to resize it, while the window has the title bar
+# of meiga and is not maximized, and none otherwise. With the title bar of
+# meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.ManyTabsCheck+RECT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ((Get-OnScreen ([pscustomobject]@{ X = 0; Y = 0 })).Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+```
+
+**A banda: `Get-Band`.** Desde a 2.9, é o de `check-exit.ps1` (ver alí), coa clase desta comprobación, pero o canto da área cliente na pantalla dao `Get-OnScreen`, que falla co seu propio erro: o alto da banda que redimensiona a xanela, enriba das tabs, se a xanela ten a barra de título de meiga e non está maximizada, e 0 se non (ver *A banda: `Get-Band`*, en [`check-mouse.ps1`](#toolscheck-mouseps1)). A comprobación chámao unha vez, ao principio, porque nunca maximiza a xanela.
+
+```powershell
+# The width of the bar without what is not for the tabs: three gaps, the
+# buttons that open a tab, the narrowest room to drag the window, and the
+# three buttons of the window.
 function Get-Room {
-    [Math]::Max(0, $barWidth - 3 * $gap - $newSide - $profilesSide)
+    [Math]::Max(0, $barWidth - 3 * $gap - $newSide - $profilesSide - $dragSide - 3 * $captionSide)
 }
 
 # The width of the strip while the tabs do not fit.
@@ -14397,7 +14772,7 @@ function Update-Fit {
 
 **O sitio das tabs e o seu ancho,** coma `room`, `viewport`, `max_scroll` e `fit` en `Layout`:
 
-- **`Get-Room`:** o ancho da barra sen os botóns + e dos perfís nin os tres ocos: onde van as tabs mentres caben. A escala 100 %, 800 − 12 − 28 − 24 = 736.
+- **`Get-Room`:** o ancho da barra sen o que non é para as tabs: os tres ocos, os botóns + e dos perfís e, desde a 2.9, o sitio máis estreito para arrastrar a xanela, de 45 píxeles a escala 100 %, e os tres botóns da xanela, de 46 cada un ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 3 e 5): onde van as tabs mentres caben. A escala 100 %, 983 − 12 − 28 − 24 − 45 − 138 = 736. Ata a 2.8, nunha xanela de 800 píxeles, 800 − 12 − 28 − 24 = 736, o mesmo.
 - **`Get-Viewport`:** o ancho da franxa mentres non caben, sen os dous botóns de desprazamento: 736 − 48 = 688.
 - **`Get-MaxScroll`:** canto pode desprazarse a franxa, o que mide a fila das tabs e non cabe nela; 0, mentres caben. Con 30 tabs de 100, 3 000 − 688 = 2 312.
 - **`Update-Fit`** dálles ás tabs o seu ancho, coma meiga cando se abren ou se pechan, ou cando se recolocan: o que lles toca do sitio, sen decimais, ata o máximo; se é menos ca o mínimo, non caben, e teñen o mínimo, na franxa. O desprazamento queda, ata onde pode chegar. Con 7 tabs, 736 / 7 = 105; con 8, 92, menos de 100: non caben. Cando o rato pecha unha tab co punteiro na barra, non se chama: as outras quedan co seu ancho, e a franxa co seu desprazamento, aínda que pase do máximo, coma con `Layout::keep_widths`.
@@ -14414,16 +14789,18 @@ function Get-Start {
     if ($barOverflow) { (Get-Strip).Left - $barScroll } else { $gap }
 }
 
+# The tab at $Index, from a gap below the band to the bottom of the bar.
 function Get-TabRect([int]$Index) {
     $left = (Get-Start) + $Index * $barTabWidth
-    New-Rect $left $gap ($left + $barTabWidth) $barHeight
+    New-Rect $left ($band + $gap) ($left + $barTabWidth) $barHeight
 }
 
 # What the pointer draws when it comes onto the tab at $Index, or leaves it:
-# its column of the bar, with the separator on its right, in the strip.
+# its column of the row of tabs, with the separator on its right, in the
+# strip.
 function Get-TabArea([int]$Index) {
     $tab = Get-TabRect $Index
-    Get-Intersection (New-Rect $tab.Left 0 ($tab.Right + 1) $barHeight) (Get-Strip)
+    Get-Intersection (New-Rect $tab.Left $band ($tab.Right + 1) $barHeight) (Get-Strip)
 }
 
 # The close button of the tab at $Index, or $null if it is too narrow.
@@ -14432,7 +14809,7 @@ function Get-CloseRect([int]$Index) {
     $right = $tab.Right - $gap
     $left = $right - $closeSide
     if ($left -lt $tab.Left + $gap) { return $null }
-    $top = $tab.Top + [Math]::Floor(($barHeight - $gap - $closeSide) / 2)
+    $top = $tab.Top + [Math]::Floor(($rowHeight - $gap - $closeSide) / 2)
     New-Rect $left $top $right ($top + $closeSide)
 }
 
@@ -14452,7 +14829,8 @@ function Get-LabelArea([int]$Index) {
 
 function Get-NewRect {
     $left = if ($barOverflow) { (Get-Strip).Right + $scrollSide + $gap } else { (Get-TabRect $tabs.Count).Left + $gap }
-    New-Rect $left $gap ($left + $newSide) ($gap + $newSide)
+    $top = $band + $gap
+    New-Rect $left $top ($left + $newSide) ($top + $newSide)
 }
 
 function Get-ProfilesRect {
@@ -14464,24 +14842,32 @@ function Get-ProfilesRect {
 function Get-ScrollRect([string]$Side) {
     $strip = Get-Strip
     $left = if ($Side -eq 'Left') { $strip.Left - $scrollSide } else { $strip.Right }
-    New-Rect $left $gap ($left + $scrollSide) ($gap + $newSide)
+    $top = $band + $gap
+    New-Rect $left $top ($left + $scrollSide) ($top + $newSide)
+}
+
+# The three buttons of the window together, on the right of the bar, as high
+# as all of it, also over the band.
+function Get-CaptionsRect {
+    New-Rect ($barWidth - 3 * $captionSide) 0 $barWidth $barHeight
 }
 ```
 
 **As partes da barra,** coma os métodos de `Layout` que van entre parénteses:
 
-- **`Get-Strip`** (`strip`): a barra enteira, mentres as tabs caben; se non, a franxa, despois do oco e do botón de desprazamento da esquerda, tan ancha coma `Get-Viewport` e tan alta coma a barra.
+- **`Get-Strip`** (`strip`): a barra enteira, mentres as tabs caben; se non, a franxa, despois do oco e do botón de desprazamento da esquerda, tan ancha coma `Get-Viewport` e tan alta coma a barra, desde a 2.9 coa banda.
 - **`Get-Start`** (`start`): onde está, ou estaría, o lado esquerdo da primeira tab: despois do oco, mentres caben; se non, no lado esquerdo da franxa, menos o desprazamento.
-- **`Get-TabRect`** (`tab`): a tab da posición `$Index`, coa súa posición desde `Get-Start`, e desde o oco de arriba ata o fondo da barra. Pode estar fóra da franxa, en parte ou enteira.
-- **`Get-TabArea`** (`tab_area`): o que debuxa o punteiro cando entra nunha tab ou sae dela, toda a súa columna e un píxel máis á dereita, o separador da seguinte, coma o `Area` de `check-tabbar.ps1`; agora, cortada coa franxa.
-- **`Get-CloseRect`** (`close`): o ×, á dereita da tab, cun oco ao seu lado, e centrado no alto da tab debuxada; ou nada, se a tab é tan estreita que non cabe, que con 100 píxeles non pasa (decisión 1).
+- **`Get-TabRect`** (`tab`): a tab da posición `$Index`, coa súa posición desde `Get-Start`, e desde un oco por debaixo da banda ata o fondo da barra; ata a 2.8, sen banda, desde o oco de arriba. Pode estar fóra da franxa, en parte ou enteira.
+- **`Get-TabArea`** (`tab_area`): o que debuxa o punteiro cando entra nunha tab ou sae dela, toda a súa columna da fila das tabs, desde a 2.9 debaixo da banda, e un píxel máis á dereita, o separador da seguinte, coma o `Area` de `check-tabbar.ps1`; agora, cortada coa franxa.
+- **`Get-CloseRect`** (`close`): o ×, á dereita da tab, cun oco ao seu lado, e centrado no alto da tab debuxada, que desde a 2.9 sae do da fila, `$rowHeight`, sen a banda; ou nada, se a tab é tan estreita que non cabe, que con 100 píxeles non pasa (decisión 1).
 - **`Get-TitleRect`** (`title`): o sitio do título, desde a marxe esquerda ata o ×.
 - **`Get-LabelArea`:** o que debuxa o título dunha tab cando cambia, o seu sitio cortado coa franxa, coma `TabBar::label_changed`: é o que debuxa un indicador que aparece ou cambia (decisión 10).
-- **`Get-NewRect`** (`new_tab`): o +, despois da última tab e dun oco, mentres caben; se non, despois do botón de desprazamento da dereita e dun oco, sempre no mesmo sitio.
+- **`Get-NewRect`** (`new_tab`): o +, despois da última tab e dun oco, mentres caben; se non, despois do botón de desprazamento da dereita e dun oco, sempre no mesmo sitio. Desde a 2.9, coma as tabs, empeza un oco por debaixo da banda, en `$top`.
 - **`Get-ProfilesRect`** (`profiles`): o botón dos perfís, pegado ao +.
-- **`Get-ScrollRect`** (`scroll_button`): o botón de desprazamento de `$Side`, `Left` ou `Right`, a cada lado da franxa, tan alto coma o +.
+- **`Get-ScrollRect`** (`scroll_button`): o botón de desprazamento de `$Side`, `Left` ou `Right`, a cada lado da franxa, tan alto coma o +, e á mesma altura.
+- **`Get-CaptionsRect`** (`captions`), desde a 2.9: os tres botóns da xanela xuntos, á dereita da barra, do seu alto enteiro, tamén por riba da banda ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 3). Só o usa `Get-CloseAt`: a comprobación non preme nin resalta os botóns da xanela.
 
-A escala 100 %, coas tabs que non caben: o botón esquerdo, de 4 a 28; a franxa, de 28 a 716; o botón dereito, de 716 a 740; o +, de 744 a 772; e o botón dos perfís, de 772 a 796. Nunha tab de 100, o seu título vai de 8 a 72 desde o seu lado esquerdo, e o seu ×, de 72 a 96.
+A escala 100 %, coas tabs que non caben: o botón esquerdo, de 4 a 28; a franxa, de 28 a 716; o botón dereito, de 716 a 740; o +, de 744 a 772; e o botón dos perfís, de 772 a 796; desde a 2.9, o que queda despois, de 796 a 845, un oco e os 45 píxeles de `$dragSide`, é sitio para arrastrar a xanela, coma os ocos entre as partes da barra; e os botóns da xanela van de 845 a 983. Nunha tab de 100, o seu título vai de 8 a 72 desde o seu lado esquerdo, e o seu ×, de 72 a 96. De arriba abaixo, coa banda de 8 píxeles: as tabs, o + e os botóns de desprazamento, de 12 a 40; o × dunha tab, de 14 a 38; e os botóns da xanela, de 0 a 40.
 
 ```powershell
 # Scrolls the strip to $Target, or as far as it can. Returns whether it
@@ -14584,7 +14970,11 @@ function Get-StepsTo([int]$Index) {
 # The tab whose close button is at $Point, as meiga finds it, or -1.
 function Get-CloseAt($Point) {
     $across = { param($Rect) $Point.X -ge $Rect.Left -and $Point.X -lt $Rect.Right }
-    if ($Point.Y -lt 0 -or $Point.Y -ge $barHeight -or (& $across (Get-NewRect)) -or (& $across (Get-ProfilesRect))) { return -1 }
+    if ($Point.X -lt 0 -or $Point.X -ge $barWidth -or $Point.Y -lt 0 -or $Point.Y -ge $barHeight) { return -1 }
+    # The buttons of the window take all the height of the bar, and the band
+    # is above the tabs and the other buttons.
+    if ((& $across (Get-CaptionsRect)) -or $Point.Y -lt $band) { return -1 }
+    if ((& $across (Get-NewRect)) -or (& $across (Get-ProfilesRect))) { return -1 }
     if ($barOverflow -and ((& $across (Get-ScrollRect 'Left')) -or (& $across (Get-ScrollRect 'Right')))) { return -1 }
     $fromStart = $Point.X - (Get-Start)
     if (-not (& $across (Get-Strip)) -or $fromStart -lt 0) { return -1 }
@@ -14609,7 +14999,7 @@ function Remove-Tab([int]$Index) {
 
 **Pechar tabs no modelo.**
 
-- **`Get-CloseAt`** dá a tab cuxo × está en `$Point`, coma a atopa meiga (`part_at`), ou −1. Fóra da barra, no +, no botón dos perfís ou nun botón de desprazamento, ningunha; nin fóra da franxa. Se non, a tab baixo o punto é a distancia desde `Get-Start` entre o ancho das tabs, sen decimais; e, se existe e o punto está no seu ×, é ela. Os pasos 8 a 10 comproban con ela, antes de publicar os clics, que o × que queda debaixo do punteiro despois de cada peche é o que esperan.
+- **`Get-CloseAt`** dá a tab cuxo × está en `$Point`, coma a atopa meiga (`part_at`), ou −1. Fóra da barra, ningunha: desde a 2.9 mira tamén os lados, porque á dereita da barra van os botóns da xanela, que, coma en `part_at`, van primeiro, e ocupan o alto enteiro da barra; e, na banda, ningunha, porque está por riba das tabs e dos outros botóns. Despois, no +, no botón dos perfís ou nun botón de desprazamento, ningunha; nin fóra da franxa. Se non, a tab baixo o punto é a distancia desde `Get-Start` entre o ancho das tabs, sen decimais; e, se existe e o punto está no seu ×, é ela. Os pasos 8 a 10 comproban con ela, antes de publicar os clics, que o × que queda debaixo do punteiro despois de cada peche é o que esperan.
 - **`Remove-Tab`** quita do modelo a tab de `$Index`. Se era a que se mostraba, móstrase a da súa dereita, que pasa á súa posición, ou, se era a última, a da súa esquerda, coma en meiga; se estaba á esquerda da que se mostra, esa baixa unha posición. As outras quedan co seu ancho e no seu sitio, coma cando o rato pecha unha tab co punteiro na barra: se non, despois vai `Update-Fit`.
 
 ```powershell
@@ -14866,14 +15256,18 @@ try {
     $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
     $layout = $api::GetKeyboardLayout($thread)
     $dpi = $api::GetDpiForWindow($window)
-    $barWidth = Get-Scaled 800
-    $barHeight = Get-Scaled 32
+    $barWidth = Get-Scaled 983
+    $band = Get-Band
+    $rowHeight = Get-Scaled 32
+    $barHeight = $band + $rowHeight
     $gap = Get-Scaled 4
     $padding = Get-Scaled 8
     $closeSide = Get-Scaled 24
     $newSide = Get-Scaled 28
     $profilesSide = Get-Scaled 24
     $scrollSide = Get-Scaled 24
+    $dragSide = Get-Scaled 45
+    $captionSide = Get-Scaled 46
     $maxTab = Get-Scaled 240
     $minTab = Get-Scaled 100
     $fits = { param($Count) [Math]::Floor((Get-Room) / $Count) -ge $minTab }
@@ -14886,9 +15280,9 @@ try {
 **A xanela e a barra.**
 
 - **A xanela e o seu fío,** coma en `check-exit.ps1`: `WindowOf` agarda a xanela de meiga, e `GetWindowThreadProcessId` dá o seu fío; `$layout` é a distribución do teclado dese fío, para os códigos de exploración, e `$dpi`, a escala da xanela, para `Get-Scaled`.
-- **As medidas da barra,** as de `ui/tabbar.rs` a escala 100 %, á escala da xanela: o ancho da xanela, 800; o alto da barra, 32; o oco, 4; a marxe do título, 8; o ×, 24; o +, 28; o botón dos perfís e os de desprazamento, 24; e as tabs, de 100 a 240 (decisións 1 e 2).
-- **7 tabs caben, e 8 non:** `$fits` di se caben `$Count` tabs co ancho mínimo. Se non caben 7, ou se caben 8, falla antes de nada: os pasos 1 e 2 contan con iso.
-- **A área cliente,** 800 × 400 a escala 100 %, coa xanela onde estea (`Resize-Window`). O ancho da barra é o da área cliente.
+- **As medidas da barra,** as de `ui/tabbar.rs` a escala 100 %, á escala da xanela: o ancho da xanela, 983; o alto da fila das tabs, 32, e, desde a 2.9, enriba dela, a banda, que dá `Get-Band`, así que a barra mide a banda máis a fila; o oco, 4; a marxe do título, 8; o ×, 24; o +, 28; o botón dos perfís e os de desprazamento, 24; desde a 2.9, o sitio para arrastrar a xanela, 45, e cada botón da xanela, 46 ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 2, 3 e 5); e as tabs, de 100 a 240 (decisións 1 e 2). Ata a 2.8, a xanela medía 800, e a barra, 32, sen banda.
+- **7 tabs caben, e 8 non:** `$fits` di se caben `$Count` tabs co ancho mínimo. Se non caben 7, ou se caben 8, falla antes de nada: os pasos 1 e 2 contan con iso. Con 983 píxeles a escala 100 %, caben 7 e non 8 en todas as escalas de Windows, do 100 ao 500 %, coma con 800 ata a 2.8.
+- **A área cliente,** 983 × 400 a escala 100 %, coa xanela onde estea (`Resize-Window`). O ancho da barra é o da área cliente. `Get-Band` vai antes, coa xanela aínda co tamaño que lle deu Windows: a banda non depende do tamaño.
 
 ```powershell
     # The first tab runs Probe, the default profile.
@@ -14904,10 +15298,10 @@ try {
     Join-Input
     Move-Pointer
     Wait-Settled @($first) 'The first tab'
-    Write-Host "The bar is $barHeight pixels high, and its tabs from $minTab to $maxTab wide: 7 of them fit in the window, $barWidth pixels wide, and 8 do not."
+    Write-Host "The bar is $barHeight pixels high, $band of them above the tabs, and its tabs from $minTab to $maxTab wide: 7 of them fit in the window, $barWidth pixels wide, and 8 do not."
 ```
 
-**A primeira tab.** `Wait-NewReader` agarda o seu lector, coa prioridade normal, e o seu programa ten que correr exactamente `$probeLine`, distinguindo maiúsculas: a liña de Probe, o perfil por defecto. Despois, agarda a que o script estea listo (`ready-<proceso>.txt`). O modelo empeza con ela, que se mostra, co seu ancho. Despois, `Join-Input`, para teclear, `Move-Pointer`, e `Wait-Settled`, ata que o script leva un segundo sen usar o procesador. Ao final, a primeira liña: o alto da barra, os anchos das tabs, e o ancho da xanela.
+**A primeira tab.** `Wait-NewReader` agarda o seu lector, coa prioridade normal, e o seu programa ten que correr exactamente `$probeLine`, distinguindo maiúsculas: a liña de Probe, o perfil por defecto. Despois, agarda a que o script estea listo (`ready-<proceso>.txt`). O modelo empeza con ela, que se mostra, co seu ancho. Despois, `Join-Input`, para teclear, `Move-Pointer`, e `Wait-Settled`, ata que o script leva un segundo sen usar o procesador. Ao final, a primeira liña: o alto da barra, desde a 2.9 tamén o da banda, os anchos das tabs, e o ancho da xanela.
 
 **Os pasos,** trece, numerados no código, e cada un remata cunha liña `OK:`. As tabs cóntanse desde a esquerda, desde 1, coma nas mensaxes da comprobación; e os números son píxeles a escala 100 %, coma na CI, co punteiro do sistema no botón do paso 6.
 
@@ -15461,6 +15855,2231 @@ O `finally` é coma o de `check-exit.ps1`, sen o portapapeis, nin o *job* que te
 
 A CI executa este script en cada PR, despois de `check-exit.ps1`, no paso *Check many tabs* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
 
+## `tools/check-titlebar.ps1`
+
+Desde a subfase 2.9. Comproba a barra de título de `meiga.exe`: a barra de tabs, que desde esta subfase é a barra de título da xanela, e o que lle di meiga a Windows de cada parte dela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md); [Subfases › 2.9](../subfases/2.9-titulo.md); [Arquitectura › As tabs na barra de título](../arquitectura.md#as-tabs-na-barra-de-título); [Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)). A barra chega ata o bordo de arriba da xanela, e Windows mantén o seu marco nos lados e abaixo (decisión 1). Para Windows, coa xanela restaurada, unha banda por riba das tabs redimensiona a xanela desde arriba, e tamén á esquerda xunto ao lado esquerdo (decisión 2); as partes libres da barra son a barra de título, que move a xanela (decisión 5); os botóns da xanela son eses botóns en todo o seu alto, tamén por riba da banda (decisións 3 e 4); e as tabs, os botóns da barra e o terminal son a área cliente. Maximizada, non hai banda, e a fila de arriba é do que hai debaixo. O punteiro enriba de cada botón da xanela debuxa só ese botón. O botón dereito nas partes libres abre o menú da xanela ao soltalo, no punteiro, cos elementos que permite o seu estado activos e *Close* en negra, e non se debuxa nada mentres está aberto; Esc pécháo, e Abaixo e Intro escollen *Maximize* e *Restore*. Alt+Espazo ábreo debaixo da barra, desde o lado esquerdo da xanela, sen nada resaltado; e, cando Esc o pecha, a xanela non queda no modo menú de Windows, e a tecla seguinte chégalle ao programa da tab (decisión 6). Os botóns maximizan, restauran, minimizan e pechan a xanela, e un dobre clic nas partes libres maximízaa e restáuraa, cun só fotograma completo cada vez; maximizada, a área cliente é a área de traballo do seu monitor, menos 2 píxeles en cada bordo onde se oculta a barra de tarefas (decisión 7); e minimizada, non se debuxa nada. Mentres está aberto o menú dunha tab, as partes libres da barra son área cliente, pero non a banda (decisión 10). A xanela non pode ser máis estreita ca a barra cunha tab entre os botóns de desprazamento, nin máis baixa ca a barra (decisión 9); e, así de pequena, con dúas tabs, que non caben, cada parte da barra é o que ten que ser. Perder e coller o foco debuxa só os botóns da xanela (decisión 8). E o botón de pechar remata meiga co código 0, e os programas das súas tabs. O código que comproba explícase en [Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs), en [Código › meiga-core › `ui/titlebar.rs`](meiga-core.md#cratesmeiga-coresrcuititlebarrs) e [› `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs), e en [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs) e [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: Light, o perfil por defecto, que corre `cmd` cun *prompt* que só oculta o cursor, para que non se debuxe nada mentres nada cambia; e as shells que atopa meiga, ocultas. Pregúntalle á xanela que é cada punto con `WM_NCHITTEST`, coma Windows, e calcula a barra coma meiga, coas mesmas regras ca o `Layout` de `meiga-core`, coma [`check-manytabs.ps1`](#toolscheck-manytabsps1). Coma esa comprobación, publica na xanela as mensaxes do rato e das teclas, as que lle enviaría Windows, co seu fío suspendido, e le no rexistro o que debuxa; e, para Alt+Espazo, comparte a súa entrada co fío da xanela, para poñerlle o estado das teclas, coma ela coas combinacións.
+
+```powershell
+.\tools\check-titlebar.ps1                              # comproba target\release\meiga.exe
+.\tools\check-titlebar.ps1 -Path outro\cartafol\meiga.exe
+.\tools\check-titlebar.ps1 -TimeoutSeconds 30           # nunha máquina moi lenta
+```
+
+Necesita PowerShell 7 para executala, coma as outras, pero non no `PATH`: as súas tabs corren o `cmd.exe` de Windows, pola súa ruta. Non necesita o `Cargo.toml`: non mira a versión de meiga. Funciona co ConPTY que vai con meiga, que [`package.ps1`](#toolspackageps1) deixa ao lado de `meiga.exe`, e tamén co de Windows, se ese non está: as consolas das tabs son entón `conhost.exe`, e non `OpenConsole.exe`. Non le o `config.toml` de quen a executa, porque meiga corre co `APPDATA` da comprobación, nin abre ningunha shell do usuario: as tabs corren `cmd` sen os comandos de AutoRun do rexistro (`/d`). A xanela queda onde a pon Windows ao abrila, e co tamaño que lle dá, salvo no paso 11, que a fai o máis pequena que pode e despois lle devolve o seu tamaño. A comprobación calcula a barra á escala da xanela, a da pantalla, coas métricas do marco de Windows a esa escala; e maximiza a xanela no monitor onde estea, coa barra de tarefas que teña.
+
+**Coidado:** mentres corre, non uses o rato nin o teclado, coma con `check-manytabs.ps1`. A comprobación conta con que o punteiro do sistema non estea enriba da xanela, para que Windows lle diga a meiga en seguida que o punteiro saíu dun botón da xanela (ver `Assert-CaptionHover`): o punteiro por riba da xanela resaltaría o que tivese debaixo, e debuxaría fotogramas que non pide a comprobación. E as teclas que premeses chegaríanlle a meiga, ou ao menú da xanela aberto, mesturadas coas da comprobación; e, no paso 6, mentres a comprobación comparte a súa entrada co fío da xanela, cambiarían o estado das teclas que lle pon. Ao principio, se o punteiro está enriba da xanela, a comprobación apártao ao primeiro sitio xunto a ela que estea nun monitor: 20 píxeles por riba, á esquerda, á dereita ou por debaixo dela. Volta apartalo cada vez que restaura a xanela, e despois dos pasos 11 e 13; maximizada, a xanela pode quedar enriba do punteiro, e entón alí queda. Ao rematar, devólveo a onde estaba. A xanela de meiga maximízase e restáurase tres veces, co menú da xanela, co botón e co dobre clic; faise o máis pequena que pode e volta ao seu tamaño; minimízase e restáurase; e péchase. O menú da xanela ábrese catro veces, tres co botón dereito e unha con Alt+Espazo, e o dunha tab, unha. O foco, a comprobación non llo quita a meiga: publícalle `WM_KILLFOCUS` e `WM_SETFOCUS` (pasos 12 e 13). Non usa o portapapeis. As súas esperas fixas suman uns 20 s, máis o que tardan `cmd` en arrancar e Windows en maximizar, restaurar e minimizar a xanela, coas súas animacións.
+
+Saída esperada, cos tamaños que dependen da pantalla:
+
+```text
+The bar is … pixels high, … of them above the tabs, and the buttons of the window … wide.
+OK: the bar goes up to the top of the window, and Windows keeps its frame on the other sides: … pixels on the left and on the right, and … at the bottom.
+OK: restored, for Windows, the frame resizes the window from its sides and its corners, and the band above the tabs from the top, and from the top left corner next to the left side; the free parts of the bar are the caption, the buttons of the window are those buttons along all their height, also over the band, and the tab, the buttons of the bar and the terminal are the client area.
+OK: the pointer on each button of the window draws only that button.
+OK: the right button on the free part of the bar opens the menu of the window when it goes up, at the pointer, with the commands of a restored window enabled and Close in bold, and nothing is drawn while it is open; Esc closes it, and draws nothing; Down and Enter on Maximize maximize the window, with one full frame, and its client area is the work area of its monitor.
+OK: maximized, the menu of the window has the commands of a maximized window enabled and Close in bold, and Down and Enter on Restore restore the window where it was, with one full frame, and with the band above the tabs.
+OK: Alt+Space opens the menu of the window below the bar, from the left side of the window, with the commands of a restored window enabled, Close in bold and nothing highlighted, and nothing is drawn while it is open, also when Space and Alt go up; Esc closes it, and the window is not left in the menu mode of Windows: the next key reaches the program of the tab, and draws only in the terminal.
+OK: the button to maximize the window maximizes it, with one full frame; then there is no band, and the top row of the bar is the caption on the free parts of the bar, the client area on the tab and on the buttons of the bar, and the buttons of the window on them.
+OK: the same button restores the window where it was, with one full frame.
+OK: a double click on the free part of the bar maximizes the window, and another one restores it, each with one full frame.
+OK: while the menu of a tab is open, the free parts of the bar are the client area, so that a click on them only closes the menu, but for the band, and the buttons of the window are those buttons; once Esc closes it, the free parts of the bar are the caption again.
+OK: the window cannot be narrower than the bar with one tab between the buttons that scroll the strip, nor shorter than the bar: its client area is then … x … pixels; with two tabs, which do not fit, the buttons that scroll the strip, the tab in it, and the buttons + and of the profiles are the client area, and the gaps and the room to drag the window are the caption.
+OK: losing and getting the focus draws only the buttons of the window.
+OK: the button to minimize the window minimizes it, and nothing is drawn while it is minimized, also when it loses and gets the focus; restored, it is where it was, and it is painted whole.
+OK: the button to close the window ends meiga with exit code 0, and the programs of its tabs and their consoles end too.
+```
+
+- **A primeira liña** di o alto da barra, cantos píxeles del son da banda, por riba das tabs, e o ancho dos botóns da xanela, en píxeles á escala da pantalla, cos que a comprobación calcula a barra: a escala 100 %, coas métricas habituais de Windows, `The bar is 40 pixels high, 8 of them above the tabs, and the buttons of the window 46 wide.`; a escala 150 %, 59, 11 e 69.
+- **A do paso 1** di o marco dos lados e o de abaixo: 8 e 8 píxeles a escala 100 %, e 11 e 11 a 150 %.
+- **A do paso 11** di o tamaño da área cliente máis pequena: `395 x 40` a escala 100 %, e `593 x 59` a 150 %.
+- As outras liñas `OK:` son as mesmas en calquera máquina e pantalla.
+
+Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1. Se é dos puntos da xanela, a mensaxe di de vez todos os que non son o que teñen que ser, desde a esquina de arriba á esquerda da área cliente, ou da pantalla: o que son para Windows, e o que tiñan que ser. Se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coas zonas que presentaron, e a mensaxe di cantos fotogramas houbo, ou o rectángulo que esperaba. Se é do menú da xanela, di os elementos que faltan, os que están activos ou inactivos sen deber, e os que están en negra sen deber, ou non o están; onde se abriu, se non foi onde tiña que abrirse; o elemento resaltado, se Alt+Espazo o abriu con algún; ou que o fío da xanela quedou no modo menú de Windows, cos seus *flags*. Se meiga rematou antes de tempo, dío, co seu código de saída. E garda o cartafol da comprobación, co `config.toml` e o rexistro dos fotogramas, e di onde, cunha liña `Kept …`. Pase o que pase, nin `meiga.exe` nin os programas das súas tabs quedan abertos, e o punteiro volta a onde estaba.
+
+**Comprobado** con corenta e sete copias de meiga cun cambio feito a propósito cada unha, compiladas noutro cartafol en *release* sen LTO, coma as de `check-manytabs.ps1`, e co ConPTY ao lado; a copia sen cambios pasa as catorce liñas `OK:`. As corenta e sete fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle. Foron catro roldas. Na primeira, meiga aínda lle quitaba a negra ao menú da xanela, coma o Windows Terminal, e a comprobación pedía un menú sen ningún elemento en negra: `menu-default`, a copia que non lla quitaba, pasou as trece liñas que había entón, porque o menú que dá `GetSystemMenu` non ten elemento por defecto ata que o abre o propio Windows, coma facía con Alt+Espazo, e quitarlla non cambiaba nada. Por iso meiga pon agora *Close* en negra, coma no menú que abre Windows (decisión 6), e os pasos 4, 5 e 6 compróbano. E `band-inclusive`, a copia onde a banda colle tamén a primeira fila de debaixo, só fallou no paso 6 de entón, o 7 de agora, coa xanela maximizada, onde, cunha banda de 0 píxeles, a fila de arriba era o bordo de arriba; por iso o paso 2 mira agora tamén a última fila da banda e a primeira de debaixo. Na segunda rolda, `menu-default` é a copia que non pon *Close* en negra, e falla no paso 4; `band-inclusive` falla no 2; e engadíronse `menu-default-maximize`, `menu-default-cleared` e `button-presses-to-windows`. A terceira, cando o botón dereito pasou a abrir o menú ao soltalo, no punteiro, e Alt+Espazo, a abrilo meiga debaixo da barra (decisión 6), engadiu `right-button-down-opens` e `right-button-menu-elsewhere`, que fallan no paso 4, e as sete copias de Alt+Espazo, que fallan no 6; as trinta e oito de antes fallan cada unha no mesmo paso ca na segunda rolda, que desde o 6 ten agora o número seguinte. A cuarta, despois da revisión do código, deu o mesmo: a copia sen cambios pasa as catorce liñas, e as corenta e sete fallan cada unha no mesmo paso ca na terceira. Despois, a revisión independente cambiou o monitor de `leave_room_for_hidden_taskbars`, que ningunha delas toca, e que sen unha barra de tarefas que se oculte non se mira. Co código final, e coa barra de tarefas oculta un momento no bordo de abaixo, a copia sen cambios pasou as catorce liñas, e `no-autohide-room`, unha copia nova que non lle deixa sitio a esa barra de tarefas (decisión 7), fallou no paso 4. Onde a barra de tarefas non se oculta, esa copia compórtase coma meiga, porque alí `leave_room_for_hidden_taskbars` non cambia nada.
+
+Esta comprobación non mira os debuxos, só os rectángulos que se debuxan, e cantas veces: nin os glifos dos botóns da xanela, nin o vermello de pechar co punteiro enriba ou premido, nin os glifos máis apagados sen o foco. Iso próbano as probas de [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs), que len os píxeles: `the_buttons_of_the_window_have_the_glyphs_of_windows`, `the_close_button_of_the_window_is_red_and_the_others_grey` e `without_the_focus_the_glyphs_of_the_buttons_of_the_window_are_dimmer`. Non usa o rato de verdade: non arrastra a xanela, nin a redimensiona, nin a leva a un bordo da pantalla, nin abre os *snap layouts*, nin mira os punteiros que pon Windows en cada parte. Só mira o que lle responde meiga a `WM_NCHITTEST`, que é co que Windows fai todo iso. Co punteiro do sistema fóra da xanela, Windows dille a meiga en seguida que o punteiro saíu, pídao como o pida: a comprobación non distingue se meiga pide `TME_NONCLIENT` (decisión 4), nin ve que non toma por unha saída da xanela o `WM_MOUSELEAVE` da área cliente que chega cando o punteiro xa está nun botón, nin que as tabs pechadas co rato quedan co seu ancho mentres o punteiro está nos botóns da xanela, nos ocos ou na banda (decisión 12). Os clics nos botóns da xanela son enteiros: non preme nun e solta noutro, que proba `the_buttons_of_the_window_act_when_the_left_button_goes_up_on_them`, nin mira que os movementos do punteiro enriba deles non lle cheguen a Windows. Do menú da xanela non mira os nomes dos elementos, nin se, co botón dereito, ten algún resaltado; e, se non cabe no monitor, só mira que unha das súas esquinas estea onde tiña que abrirse. Alt+Espazo só o proba coa xanela restaurada: maximizada, sen a banda, o menú ábrese máis arriba, e iso próbao `the_keyboard_opens_the_menu_of_the_window_below_the_bar`, en [Código › meiga-core › `ui/titlebar.rs`](meiga-core.md#cratesmeiga-coresrcuititlebarrs); nin o proba coa xanela minimizada nin sen a barra propia, onde llo deixa a Windows. Co menú dunha tab aberto, non fai clic nas partes libres: só mira que son a área cliente. Que un clic fóra do menú só o pecha próbao [`check-menu.ps1`](#toolscheck-menups1). Tampouco usa Alt+F4, que é de Windows ([ADR 0014](../adr/0014-o-teclado.md), decisión 5), nin Win+frechas; nin os modos `--bench`, nin a xanela que segue co marco de Windows porque Windows non a deixa cambialo (decisión 1). Só corre á escala da pantalla, sen cambiala: o ancho mínimo noutras escalas próbano as probas de [Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs), e o que lle responde meiga a Windows, a escala 100 %, `the_title_bar_of_meiga_tells_windows_what_each_of_its_parts_is`, en [Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs). A barra de tarefas que se oculta só a ve onde se oculta, e pregúntalle por ela a Windows coma meiga, así que non vería unha resposta errada de Windows. Cun só monitor, tampouco ve se meiga lle pregunta polo monitor bo, o da área cliente que vai ter a xanela (decisión 7). E non mira que a barra de título non traballe en repouso (decisión 12), nin o bordo e as esquinas que debuxa o DWM (decisión 11).
+
+Explicación por partes. Moito é coma en [`check-manytabs.ps1`](#toolscheck-manytabsps1), e a barra calcúlase coma alí, coa banda e os botóns da xanela: o código vai enteiro, e o que xa se explicou alí explícase eiquí en breve.
+
+```powershell
+<#
+.SYNOPSIS
+Checks the title bar of meiga: its frame, the parts of the window for Windows,
+its buttons and its menu.
+
+.DESCRIPTION
+Starts meiga.exe with its frame log (--trace-frames) and an APPDATA of its
+own, whose config.toml opens its tabs with Light: cmd, with a prompt that only
+hides the cursor, so that nothing is drawn while nothing changes. It checks
+that:
+
+- the bar of meiga goes up to the top of the window, over a band that resizes
+  it, and Windows keeps its frame on the other sides;
+- WM_NCHITTEST, the message with which Windows asks a window what each point
+  of it is, gives the top edge and its corner on the band, the caption on the
+  free parts of the bar, the buttons to minimize, maximize and close the
+  window along all their height, the client area on the tabs, on the buttons
+  of the bar and on the terminal, and the frame of Windows around them: with
+  the window restored, maximized, as small as it can be, with the tabs
+  scrolling in the strip, and while a menu of meiga is open;
+- the pointer on the buttons of the window draws only them;
+- the right button on the bar opens the menu of the window when it goes up,
+  at the pointer, with the commands that the state of the window allows, and
+  Close in bold, as Windows has it, and nothing is drawn while it is open;
+  Esc closes it, and Down and Enter choose its commands;
+- Alt+Space opens the menu of the window below the bar, from the left side of
+  the window, with nothing highlighted; once Esc closes it, the window is not
+  left in the menu mode of Windows, and the next key reaches the program of
+  the tab;
+- the buttons maximize, restore, minimize and close the window, and a double
+  click on the bar maximizes and restores it; maximized, the client area is
+  the work area of the monitor; minimized, nothing is drawn;
+- the window cannot be narrower than the bar with one tab between the buttons
+  that scroll the strip, nor shorter than the bar;
+- losing and getting the focus draws, on the bar, only the buttons of the
+  window;
+- the button to close it ends meiga.exe with exit code 0, and the programs of
+  its tabs.
+
+The check posts the messages of the mouse and of the keys to the window. For
+Alt+Space, it shares its input with the thread of the window, to give it the
+state of the keys, and leaves it with no key down. It moves the pointer of
+the system out of the window, where it can, and puts it back at the end.
+
+If a check fails, the script ends meiga.exe and the programs of its tabs, and
+keeps its folder, with the frame log.
+
+.PARAMETER Path
+The executable to check. Defaults to target\release\meiga.exe.
+
+.PARAMETER TimeoutSeconds
+How long to wait for the window, for each program to start and to end, and
+for each frame.
+#>
+[CmdletBinding()]
+param(
+    [string]$Path,
+    [ValidateRange(1, 600)]
+    [int]$TimeoutSeconds = 10
+)
+```
+
+**A axuda e os parámetros.** A axuda integrada en PowerShell di en inglés o que comproba, e como: `Get-Help .\tools\check-titlebar.ps1 -Full` móstraa, cos parámetros. Os parámetros son os de `check-manytabs.ps1`: `-Path`, o `meiga.exe` que se comproba, e `-TimeoutSeconds`, o tempo máximo de cada espera: que se abra a xanela, que arranque e remate cada programa, e cada fotograma. Os programas que arrancan teñen 10 s máis para quedar quietos (`Wait-Settled`). A axuda non di que necesite pwsh no `PATH`, porque non o necesita.
+
+```powershell
+# Windows PowerShell 5.1 can read this file but not run it: tell how to run
+# it with PowerShell 7. tools/check-powershell.ps1 checks that this works.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $command = "pwsh -File $(Resolve-Path -Relative $PSCommandPath)"
+    if ($PSBoundParameters.Count -gt 0) { $command += ' <the same parameters>' }
+    Write-Host "This script needs PowerShell 7. Run it with: $command" -ForegroundColor Yellow
+    exit 1
+}
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+# Not in param(): there, Windows PowerShell 5.1 leaves $PSScriptRoot empty and
+# fails before the check above.
+if (-not $Path) { $Path = Join-Path $PSScriptRoot '..\target\release\meiga.exe' }
+$Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "$Path does not exist. Build it first with: cargo build --release"
+}
+$exe = Split-Path -Leaf $Path
+```
+
+O comezo é o de todos os scripts, coma en `check-manytabs.ps1`: a comprobación da versión de PowerShell (ver [`check-powershell.ps1`](#toolscheck-powershellps1)); as dúas liñas que deteñen o script ante calquera erro; e a ruta de `meiga.exe`, por defecto `target\release\meiga.exe`, e, se non existe, un erro que di como compilalo.
+
+**As funcións de Windows**, declaradas en C# nunha clase propia, `TitleBarCheck`:
+
+```powershell
+if (-not ('Meiga.Tools.TitleBarCheck' -as [type])) {
+    Add-Type -Namespace Meiga.Tools -Name TitleBarCheck -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT { public int Left, Top, Right, Bottom; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct POINT { public int X, Y; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MONITORINFO { public int Size; public RECT Monitor; public RECT Work; public uint Flags; }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct APPBARDATA
+{
+    public uint Size;
+    public IntPtr Window;
+    public uint CallbackMessage;
+    public uint Edge;
+    public RECT Rect;
+    public IntPtr Param;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MSG
+{
+    public IntPtr Window;
+    public uint Message;
+    public UIntPtr WParam;
+    public IntPtr LParam;
+    public uint Time;
+    public POINT Point;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GUITHREADINFO
+{
+    public int Size;
+    public uint Flags;
+    public IntPtr Active, Focus, Capture, MenuOwner, MoveSize, Caret;
+    public RECT CaretRect;
+}
+
+[DllImport("user32.dll")]
+public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetClientRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool ClientToScreen(IntPtr window, ref POINT point);
+
+[DllImport("user32.dll")]
+public static extern uint GetDpiForWindow(IntPtr window);
+
+[DllImport("user32.dll")]
+public static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+[DllImport("user32.dll")]
+public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsIconic(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool IsWindowVisible(IntPtr window);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetCursorPos(out POINT point);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetCursorPos(int x, int y);
+
+[DllImport("user32.dll")]
+public static extern IntPtr WindowFromPoint(POINT point);
+
+[DllImport("user32.dll")]
+public static extern IntPtr GetAncestor(IntPtr window, uint flags);
+
+[DllImport("user32.dll")]
+public static extern IntPtr MonitorFromPoint(POINT point, uint flags);
+
+[DllImport("user32.dll")]
+public static extern IntPtr MonitorFromWindow(IntPtr window, uint flags);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool GetMonitorInfoW(IntPtr monitor, ref MONITORINFO info);
+
+[DllImport("shell32.dll")]
+static extern UIntPtr SHAppBarMessage(uint message, ref APPBARDATA data);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool PostMessageW(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+
+[DllImport("user32.dll", SetLastError = true)]
+static extern IntPtr SendMessageTimeoutW(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern IntPtr FindWindowExW(IntPtr parent, IntPtr after, string className, string title);
+
+[DllImport("user32.dll")]
+public static extern int GetMenuItemCount(IntPtr menu);
+
+[DllImport("user32.dll")]
+public static extern uint GetMenuItemID(IntPtr menu, int position);
+
+[DllImport("user32.dll")]
+public static extern uint GetMenuState(IntPtr menu, uint item, uint flags);
+
+[DllImport("user32.dll")]
+public static extern uint MapVirtualKeyW(uint code, uint type);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool PeekMessageW(out MSG message, IntPtr window, uint first, uint last, uint remove);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool AttachThreadInput(uint thread, uint to, [MarshalAs(UnmanagedType.Bool)] bool attach);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SetKeyboardState(byte[] state);
+
+[DllImport("user32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetGUIThreadInfo(uint thread, ref GUITHREADINFO info);
+
+[DllImport("kernel32.dll")]
+public static extern uint GetCurrentThreadId();
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint thread);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool CloseHandle(IntPtr handle);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern uint SuspendThread(IntPtr thread);
+
+[DllImport("kernel32.dll")]
+static extern uint ResumeThread(IntPtr thread);
+
+[DllImport("kernel32.dll", SetLastError = true)]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetThreadContext(IntPtr thread, IntPtr context);
+
+delegate bool EnumProc(IntPtr window, IntPtr data);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool EnumWindows(EnumProc callback, IntPtr data);
+
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+static extern int GetClassNameW(IntPtr window, System.Text.StringBuilder name, int size);
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+static extern uint GetLongPathNameW(string path, System.Text.StringBuilder longPath, uint size);
+```
+
+| Función | Para que |
+|---|---|
+| `GetWindowThreadProcessId` | O fío da xanela de meiga, que se suspende para publicar nela; o proceso de cada xanela, para atopar a de meiga; e o fío de cada menú aberto. |
+| `GetClientRect`, `GetWindowRect` e `ClientToScreen` | A área cliente, a xanela enteira co seu marco, e onde está a área cliente na pantalla: o marco (paso 1), os puntos que se lle preguntan á xanela, e onde vai a xanela maximizada; e onde se abriu o menú da xanela. |
+| `GetDpiForWindow` e `GetSystemMetricsForDpi` | A escala da xanela, para calcular a barra coma meiga, e as métricas do marco a esa escala: a banda e o marco dos lados e de abaixo. |
+| `SetThreadDpiAwarenessContext` | Cambia a escala do fío de PowerShell, coma en [`check-present.ps1`](#toolscheck-presentps1). |
+| `IsZoomed`, `IsIconic` e `IsWindowVisible` | Se a xanela está maximizada ou minimizada; e se unha xanela de menú se ve. |
+| `SetWindowPos` | O tamaño da xanela (paso 11). |
+| `GetCursorPos`, `SetCursorPos`, `WindowFromPoint` e `GetAncestor` | Apartan o punteiro da xanela, se está enriba dela, e devólveno ao rematar. |
+| `MonitorFromPoint`, `MonitorFromWindow` e `GetMonitorInfoW` | Se un sitio para o punteiro está nalgún monitor; a área de traballo do monitor da xanela, onde vai a xanela maximizada; e a do monitor onde se abre o menú da xanela, para saber se cabe nel. |
+| `SHAppBarMessage` | Se a barra de tarefas se oculta soa, e en que bordos do monitor. |
+| `PostMessageW` | Publica na xanela as mensaxes do rato, das teclas e do foco, e o comando que a restaura. |
+| `SendMessageTimeoutW` | Pregúntalle á xanela que é un punto (`WM_NCHITTEST`), e a unha xanela de menú que menú mostra (`MN_GETHMENU`). |
+| `FindWindowExW` | As xanelas dos menús emerxentes. |
+| `GetMenuItemCount`, `GetMenuItemID` e `GetMenuState` | Os elementos do menú da xanela e os seus estados: activo ou non, resaltado e en negra. |
+| `MapVirtualKeyW` | O código de exploración de cada tecla. |
+| `PeekMessageW`, `AttachThreadInput`, `SetKeyboardState` e `GetCurrentThreadId` | Comparten a entrada do fío de PowerShell co da xanela, e poñen o estado das teclas, para Alt+Espazo (paso 6). |
+| `GetGUIThreadInfo` | Se o fío da xanela quedou no modo menú de Windows (paso 6). |
+| `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
+| `EnumWindows` e `GetClassNameW` | Atopan a xanela de meiga, aínda que estea oculta. |
+| `GetLongPathNameW` | Os nomes longos do cartafol da comprobación. |
+
+- **Son vinte e cinco das de `check-manytabs.ps1`, e catorce novas.** Novas: o estado da xanela (`IsIconic`), o punteiro e os monitores (`GetAncestor`, `MonitorFromPoint`, `MonitorFromWindow` e `GetMonitorInfoW`), a barra de tarefas (`SHAppBarMessage`), a pregunta á xanela (`SendMessageTimeoutW`), o menú da xanela (`FindWindowExW`, `IsWindowVisible`, `GetMenuItemCount`, `GetMenuItemID` e `GetMenuState`), o modo menú de Windows (`GetGUIThreadInfo`), e `MapVirtualKeyW`, en vez de `MapVirtualKeyExW`. Sen as seis que len a distribución do teclado da xanela, as prioridades dos lectores ou pasan un punto da pantalla á área cliente: esta comprobación non necesita a distribución da xanela (ver `Get-Press`), non mira os lectores, e os seus puntos van da área cliente á pantalla.
+- **As estruturas.** `RECT` e `POINT`, coma nas outras comprobacións; `MONITORINFO`, o rectángulo dun monitor e a súa área de traballo, 40 bytes; `APPBARDATA`, a pregunta de `SHAppBarMessage`, de 48 bytes en x64, coma a `AppBarData` de `window.rs`; `MSG`, a mensaxe que enche `PeekMessageW`, coma en `check-manytabs.ps1`, pero cos campos noutros nomes e o punto nun `POINT`; e `GUITHREADINFO`, o que sabe Windows da interface dun fío, coma en [`check-tabbar.ps1`](#toolscheck-tabbarps1), tamén cos campos noutros nomes, de 72 bytes en x64: eiquí, só os seus *flags* (ver `MenuModesOf`).
+- **As catorce que non levan `public`,** `IsWindowVisible`, `SHAppBarMessage`, `PostMessageW`, `SendMessageTimeoutW`, `FindWindowExW`, `GetGUIThreadInfo`, as cinco do fío desde `OpenThread`, `EnumWindows`, `GetClassNameW` e `GetLongPathNameW`, e o delegado `EnumProc`, só as usan as funcións propias da clase, en C#.
+- **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
+
+```csharp
+// Posts the messages, three numbers for each one (the message, its wParam and
+// its lParam), to the window, with its thread suspended: the thread gets them
+// one after the other, before anything that Windows posts while it handles
+// them, such as WM_MOUSELEAVE when the pointer of the system is elsewhere. If
+// `state` is not null, the thread of the window gets it as its key state,
+// which this thread shares then (AttachThreadInput): the key state changes
+// as the thread reads its input, so it is set while the thread is suspended.
+public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] state)
+{
+    // THREAD_SUSPEND_RESUME and THREAD_GET_CONTEXT.
+    IntPtr handle = OpenThread(0x0002 | 0x0008, false, thread);
+    if (handle == IntPtr.Zero) throw new System.ComponentModel.Win32Exception();
+    // A CONTEXT of x64, 1232 bytes, aligned to 16.
+    IntPtr memory = Marshal.AllocHGlobal(1232 + 16);
+    try
+    {
+        if (SuspendThread(handle) == uint.MaxValue) throw new System.ComponentModel.Win32Exception();
+        try
+        {
+            IntPtr context = new IntPtr((memory.ToInt64() + 15) & ~15L);
+            // ContextFlags: CONTEXT_CONTROL. GetThreadContext returns once the
+            // thread is really suspended.
+            Marshal.WriteInt32(context, 0x30, 0x00100001);
+            if (!GetThreadContext(handle, context)) throw new System.ComponentModel.Win32Exception();
+            if (state != null && !SetKeyboardState(state)) throw new System.ComponentModel.Win32Exception();
+            for (int i = 0; i + 2 < messages.Length; i += 3)
+            {
+                if (!PostMessageW(window, (uint)messages[i], new UIntPtr((ulong)messages[i + 1]), new IntPtr(messages[i + 2])))
+                    throw new System.ComponentModel.Win32Exception();
+            }
+        }
+        finally
+        {
+            ResumeThread(handle);
+        }
+    }
+    finally
+    {
+        Marshal.FreeHGlobal(memory);
+        CloseHandle(handle);
+    }
+}
+```
+
+**`PostAll`** é a de `check-manytabs.ps1` (ver alí), co mesmo código e os comentarios doutra maneira: publica de vez as mensaxes dunha acción, co fío da xanela suspendido, despois de agardar a que pare de verdade, lendo o seu contexto (`GetThreadContext`), e pon o estado das teclas só se `state` non é `null`. Así, o fío le as mensaxes unha tras outra, antes ca o que publique Windows mentres as atende. Eiquí importa polo punteiro: co punteiro do sistema fóra da xanela, cando meiga lle pide a Windows que lle diga cando sae o punteiro (`TrackMouseEvent`), Windows publica en seguida `WM_NCMOUSELEAVE`, ou `WM_MOUSELEAVE`; se chegase entre as mensaxes dun clic, a barra tomaría o punteiro por fóra da xanela no medio do clic. O estado das teclas só o leva Alt+Espazo, no paso 6 (ver `Send-Posted`): as outras teclas son soas, e o fío da xanela trátaas co estado que teña.
+
+```csharp
+// What the window says that a point of the screen is: its answer to
+// WM_NCHITTEST.
+public static int Hit(IntPtr window, int x, int y)
+{
+    IntPtr point = new IntPtr((long)(uint)(((y & 0xFFFF) << 16) | (x & 0xFFFF)));
+    IntPtr result;
+    // SMTO_ABORTIFHUNG, and 2 s.
+    if (SendMessageTimeoutW(window, 0x0084, UIntPtr.Zero, point, 0x0002, 2000, out result) == IntPtr.Zero)
+        throw new System.ComponentModel.Win32Exception();
+    return (int)result.ToInt64();
+}
+
+// The menu window (class #32768) that the thread shows, or zero.
+public static IntPtr MenuOf(uint thread)
+{
+    IntPtr after = IntPtr.Zero;
+    while (true)
+    {
+        after = FindWindowExW(IntPtr.Zero, after, "#32768", null);
+        if (after == IntPtr.Zero) return IntPtr.Zero;
+        uint process;
+        if (GetWindowThreadProcessId(after, out process) == thread && IsWindowVisible(after)) return after;
+    }
+}
+
+// The menu modes of Windows that the thread is in: GUI_INMENUMODE,
+// GUI_SYSTEMMENUMODE and GUI_POPUPMENUMODE of its flags, or zero.
+public static uint MenuModesOf(uint thread)
+{
+    GUITHREADINFO info = new GUITHREADINFO();
+    info.Size = Marshal.SizeOf(typeof(GUITHREADINFO));
+    if (!GetGUIThreadInfo(thread, ref info)) throw new System.ComponentModel.Win32Exception();
+    return info.Flags & (0x0004 | 0x0008 | 0x0010);
+}
+
+// The menu that a menu window shows (MN_GETHMENU), or zero.
+public static IntPtr MenuIn(IntPtr menuWindow)
+{
+    IntPtr result;
+    if (SendMessageTimeoutW(menuWindow, 0x01E1, UIntPtr.Zero, IntPtr.Zero, 0x0002, 2000, out result) == IntPtr.Zero)
+        return IntPtr.Zero;
+    return result;
+}
+```
+
+**A pregunta á xanela e o menú da xanela.**
+
+- **`Hit`** pregúntalle á xanela que é un punto da pantalla, coma llo pregunta Windows: envíalle `WM_NCHITTEST` (0x0084), co punto en `lParam`, x nos 16 bits de abaixo e y nos de arriba, e devolve a súa resposta, un dos códigos `HT…`. É a resposta de verdade, a do procedemento da xanela de meiga: no marco, a de `DefWindowProcW`, e no resto, a da barra que lle deu meiga despois do último evento (decisión 12). Con `SendMessageTimeoutW`, `SMTO_ABORTIFHUNG` e 2 s como moito: se meiga non responde, falla, en vez de quedar agardando.
+- **`MenuOf`** busca, entre as xanelas da clase `#32768`, a dos menús emerxentes de Windows, a do fío de meiga que se ve: o menú da xanela, mentres está aberto. Os menús de meiga debúxanse dentro da súa xanela, sen xanelas propias ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 1), e `MenuOf` non os atopa.
+- **`MenuModesOf`**: os modos menú de Windows nos que está un fío, dos *flags* do seu `GUITHREADINFO`, que dá `GetGUIThreadInfo`: `GUI_INMENUMODE` (0x4), nun modo menú; `GUI_SYSTEMMENUMODE` (0x8), no do menú da xanela; e `GUI_POPUPMENUMODE` (0x10), no dun menú emerxente; ou cero, se non está en ningún. Coma en `CaptureOf`, de `check-tabbar.ps1` (ver alí), o tamaño da estrutura vai no seu primeiro campo, `Size`, antes de chamar; se falla, unha excepción co erro de Windows. Úsaa o paso 6, despois de pechar con Esc o menú que abriu Alt+Espazo: no modo menú no que o deixaría Windows, a tecla seguinte non lle chegaría ao programa da tab ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 6).
+- **`MenuIn`**: o menú que mostra unha xanela de menú, o seu `HMENU`, con `MN_GETHMENU` (0x01E1), tamén con 2 s como moito; ou cero. É o que le `Assert-WindowMenu`: o menú da xanela que abriu meiga, cos seus elementos e os seus estados.
+
+```csharp
+// The edges of the monitor where a taskbar hides itself, as bits: 1 left,
+// 2 top, 4 right and 8 bottom.
+public static int AutoHideEdges(RECT monitor)
+{
+    APPBARDATA data = new APPBARDATA();
+    data.Size = (uint)Marshal.SizeOf(typeof(APPBARDATA));
+    // ABM_GETSTATE, and ABS_AUTOHIDE.
+    if ((SHAppBarMessage(4, ref data).ToUInt64() & 1) == 0) return 0;
+    int edges = 0;
+    for (uint edge = 0; edge < 4; edge++)
+    {
+        data.Edge = edge;
+        data.Rect = monitor;
+        // ABM_GETAUTOHIDEBAREX: the taskbar that hides itself on that edge of
+        // the monitor, if there is one.
+        if (SHAppBarMessage(11, ref data) != UIntPtr.Zero) edges |= 1 << (int)edge;
+    }
+    return edges;
+}
+```
+
+**`AutoHideEdges`** pregunta coma meiga (`leave_room_for_hidden_taskbars`, en `window.rs`): primeiro `ABM_GETSTATE` (4), e, só se a barra de tarefas se oculta soa (`ABS_AUTOHIDE`), `ABM_GETAUTOHIDEBAREX` (11) en cada bordo do monitor, co seu rectángulo, que dá a barra de tarefas que se oculta nese bordo, se a hai. Devolve os bordos coma bits, na orde dos `ABE_…`: 1 a esquerda, 2 arriba, 4 a dereita e 8 abaixo. Úsaa `Get-MaximizedClient` (decisión 7).
+
+```csharp
+// The top-level window of the process with that class, or zero.
+public static IntPtr WindowOf(int process, string className)
+{
+    IntPtr found = IntPtr.Zero;
+    EnumWindows((window, data) =>
+    {
+        uint owner;
+        GetWindowThreadProcessId(window, out owner);
+        if (owner != (uint)process) return true;
+        System.Text.StringBuilder name = new System.Text.StringBuilder(64);
+        if (GetClassNameW(window, name, name.Capacity) > 0 && name.ToString() == className)
+        {
+            found = window;
+            return false;
+        }
+        return true;
+    }, IntPtr.Zero);
+    return found;
+}
+
+// The path with the long names of its folders, or the path itself.
+public static string LongPathOf(string path)
+{
+    System.Text.StringBuilder buffer = new System.Text.StringBuilder(1024);
+    uint length = GetLongPathNameW(path, buffer, (uint)buffer.Capacity);
+    if (length == 0 || length >= buffer.Capacity) return path;
+    return buffer.ToString();
+}
+```
+
+**A xanela e o cartafol.** `WindowOf` e `LongPathOf` fan o mesmo ca as de `check-manytabs.ps1`, escritas doutro xeito. `WindowOf` le a clase de cada xanela do proceso dentro do seu `EnumWindows`, sen `ClassOf`, cun búfer de 64 caracteres, que chega para `meiga`: a xanela de nivel superior de meiga, aínda que estea oculta. `LongPathOf`, cun búfer de 1024, devolve a ruta tal como está se non a pode alongar, en vez de fallar: o cartafol da comprobación quedaría entón cos nomes curtos que tivese, coma `RUNNER~1`.
+
+```powershell
+'@
+}
+$api = [Meiga.Tools.TitleBarCheck]
+
+# The messages that the check posts to the window, and the buttons of the
+# mouse in their wParam.
+$WM_SETFOCUS = 0x0007
+$WM_KILLFOCUS = 0x0008
+$WM_NCMOUSEMOVE = 0x00A0
+$WM_NCLBUTTONDOWN = 0x00A1
+$WM_NCLBUTTONUP = 0x00A2
+$WM_NCLBUTTONDBLCLK = 0x00A3
+$WM_NCRBUTTONDOWN = 0x00A4
+$WM_NCRBUTTONUP = 0x00A5
+$WM_KEYDOWN = 0x0100
+$WM_KEYUP = 0x0101
+$WM_SYSKEYDOWN = 0x0104
+$WM_SYSKEYUP = 0x0105
+$WM_SYSCOMMAND = 0x0112
+$WM_MOUSEMOVE = 0x0200
+$WM_LBUTTONDOWN = 0x0201
+$WM_LBUTTONUP = 0x0202
+$WM_MBUTTONDOWN = 0x0207
+$WM_MBUTTONUP = 0x0208
+$MK_LBUTTON = 0x0001
+$MK_MBUTTON = 0x0010
+
+# The keys.
+$VK_RETURN = 0x0D
+$VK_MENU = 0x12
+$VK_ESCAPE = 0x1B
+$VK_SPACE = 0x20
+$VK_DOWN = 0x28
+$VK_X = 0x58
+$VK_APPS = 0x5D
+$VK_LMENU = 0xA4
+
+# What WM_NCHITTEST gives, and how the check names it.
+$HTCLIENT = 1
+$HTCAPTION = 2
+$HTMINBUTTON = 8
+$HTMAXBUTTON = 9
+$HTLEFT = 10
+$HTRIGHT = 11
+$HTTOP = 12
+$HTTOPLEFT = 13
+$HTTOPRIGHT = 14
+$HTBOTTOM = 15
+$HTBOTTOMLEFT = 16
+$HTBOTTOMRIGHT = 17
+$HTCLOSE = 20
+$hitNames = @{
+    0 = 'nothing'
+    1 = 'the client area'
+    2 = 'the caption'
+    8 = 'the button to minimize'
+    9 = 'the button to maximize'
+    10 = 'the left edge'
+    11 = 'the right edge'
+    12 = 'the top edge'
+    13 = 'the top left corner'
+    14 = 'the top right corner'
+    15 = 'the bottom edge'
+    16 = 'the bottom left corner'
+    17 = 'the bottom right corner'
+    20 = 'the button to close'
+}
+
+# The buttons of the window, from the right: what WM_NCHITTEST gives on them,
+# and their names.
+$captionHits = $HTCLOSE, $HTMAXBUTTON, $HTMINBUTTON
+$captionNames = 'the button to close the window', 'the button to maximize the window',
+    'the button to minimize the window'
+```
+
+**A clase e as constantes,** as que necesita esta comprobación:
+
+- `'@` remata a definición en C#, e `$api` garda a clase, para chamar as súas funcións con `$api::`.
+- **As mensaxes que publica a comprobación:** `WM_SETFOCUS` e `WM_KILLFOCUS`, o foco (pasos 12 e 13); as do rato fóra da área cliente para Windows (`WM_NC…`): o punteiro que se move, o botón esquerdo que baixa e sobe, o dobre clic, e o botón dereito que baixa e sobe, que levan en `wParam` o que é o punto para Windows, e en `lParam` o punto da pantalla; as das teclas, e as das teclas do sistema, as que van con Alt abaixo (`WM_SYSKEYDOWN` e `WM_SYSKEYUP`, paso 6); `WM_SYSCOMMAND`, que restaura a xanela minimizada (paso 13); e as do rato na área cliente: o punteiro, e o botón esquerdo e o do medio, co bit do botón que está abaixo, `MK_LBUTTON` ou `MK_MBUTTON`, en `wParam`, e o punto da área cliente en `lParam` (paso 11).
+- **As teclas:** Intro; Alt, `VK_MENU`, e o Alt esquerdo, `VK_LMENU`: mentres Alt está abaixo, Windows ten as dúas entradas no estado das teclas, a xeral e a do seu lado, e o paso 6 pono igual; Esc; o Espazo; a frecha Abaixo; a X, a tecla que vai despois de pechar o menú que abriu Alt+Espazo (paso 6); e a tecla de menú (`VK_APPS`).
+- **Os códigos de `WM_NCHITTEST`** que espera a comprobación, e o nome de cada un nas mensaxes (`$hitNames`): `HTCLIENT`, a área cliente; `HTCAPTION`, a barra de título; `HTMINBUTTON`, `HTMAXBUTTON` e `HTCLOSE`, os botóns da xanela; e os do marco: os lados, os bordos de arriba e de abaixo, e as catro esquinas. O bordo de arriba e a esquina de arriba á esquerda son tamén a banda. O 0, `HTNOWHERE`, é *nothing*.
+- **`$captionHits` e `$captionNames`:** os botóns da xanela desde a dereita, coma os conta `Get-Caption`: pechar, maximizar e minimizar.
+
+```powershell
+# The commands of the menu of the window, and the states of its items:
+# MF_GRAYED or MF_DISABLED, MF_HILITE and MF_DEFAULT.
+$SC_SIZE = 0xF000
+$SC_MOVE = 0xF010
+$SC_MINIMIZE = 0xF020
+$SC_MAXIMIZE = 0xF030
+$SC_CLOSE = 0xF060
+$SC_RESTORE = 0xF120
+$windowCommands = [ordered]@{
+    Restore = $SC_RESTORE
+    Move = $SC_MOVE
+    Size = $SC_SIZE
+    Minimize = $SC_MINIMIZE
+    Maximize = $SC_MAXIMIZE
+    Close = $SC_CLOSE
+}
+$MF_UNABLE = 0x0003
+$MF_HILITE = 0x0080
+$MF_DEFAULT = 0x1000
+
+# TOP_LEFT_CORNER of crates/meiga-win/src/window.rs: how far from the left
+# side of the window the band resizes it also to the left, in pixels at any
+# scale; and AUTOHIDE_TASKBAR, the pixels that a maximized window leaves free
+# on an edge of its monitor where the taskbar hides itself.
+$topLeftCorner = 19
+$autoHideGap = 2
+
+$consoles = 'OpenConsole.exe', 'conhost.exe'
+```
+
+**O menú da xanela, e dúas constantes de meiga.**
+
+- **Os comandos do menú da xanela** (`SC_…`), os que publica meiga en `WM_SYSCOMMAND` co elemento escollido; e `$windowCommands`, cos seus nomes en inglés, na orde do menú: *Restore*, *Move*, *Size*, *Minimize*, *Maximize* e *Close*. A comprobación busca os elementos polo seu comando, e non polo nome, que vai na lingua de Windows (decisión 6).
+- **Os estados dos elementos,** os bits que dá `GetMenuState`: `MF_UNABLE`, `MF_GRAYED` ou `MF_DISABLED`, inactivo; `MF_HILITE`, resaltado; e `MF_DEFAULT`, o elemento por defecto, en negra.
+- **`$topLeftCorner` e `$autoHideGap`,** copias de `TOP_LEFT_CORNER` e `AUTOHIDE_TASKBAR` de `window.rs`: os 19 píxeles desde o lado esquerdo da xanela nos que a banda a redimensiona tamén á esquerda, a calquera escala (decisión 2), e os 2 píxeles que deixa libres a xanela maximizada nun bordo do monitor onde se oculta a barra de tarefas (decisión 7). Se cambian en meiga, hai que cambialos eiquí.
+- **As consolas das tabs:** a do ConPTY de meiga, ou a de Windows, se o ConPTY non está ao lado de `meiga.exe`.
+
+```powershell
+$name = "meiga-check-titlebar-$PID"
+# All the files of the check, with the APPDATA of meiga. With the long names
+# of the folders, which .NET gives as the current one.
+$work = Join-Path ($api::LongPathOf([IO.Path]::GetTempPath())) $name
+$appdata = Join-Path $work 'appdata'
+$config = Join-Path $appdata 'meiga\config.toml'
+$log = Join-Path $work 'frames.csv'
+Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+$null = New-Item -ItemType Directory -Force -Path (Split-Path $config)
+$utf8 = [Text.UTF8Encoding]::new($false)
+```
+
+**Os arquivos da comprobación,** coma en `check-manytabs.ps1`, todos nun cartafol propio, `$work`, no cartafol temporal, cos seus nomes longos (`LongPathOf`): `meiga-check-titlebar-<PID>`, co número do proceso de PowerShell. Dentro: `appdata`, o `APPDATA` de meiga, co `config.toml`, en UTF-8 sen BOM (`$utf8`); e o rexistro dos fotogramas, `frames.csv`. Sen script: as tabs só corren `cmd`.
+
+```powershell
+# The names of the shells that meiga finds (see
+# crates/meiga-win/src/profiles.rs): the ones of Windows and of Git, and the
+# distributions of WSL of the user. A profile of config.toml that only hides
+# a shell that meiga does not find does nothing.
+function Get-ShellNames {
+    'PowerShell'
+    'Windows PowerShell'
+    'Command Prompt'
+    'Git Bash'
+    $lxss = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Lxss')
+    if (-not $lxss) { return }
+    try {
+        foreach ($subkey in $lxss.GetSubKeyNames()) {
+            $key = $lxss.OpenSubKey($subkey)
+            if (-not $key) { continue }
+            try {
+                $distribution = $key.GetValue('DistributionName')
+                if ($distribution -is [string] -and $distribution) { $distribution }
+            }
+            finally { $key.Dispose() }
+        }
+    }
+    finally { $lxss.Dispose() }
+}
+
+# $Text as a basic string of TOML.
+function ConvertTo-TomlString([string]$Text) {
+    '"' + $Text.Replace('\', '\\').Replace('"', '\"') + '"'
+}
+
+$hidden = [Collections.Generic.List[string]]::new()
+$names = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+foreach ($shell in Get-ShellNames) {
+    if ($names.Add($shell)) { $hidden.Add($shell) }
+}
+```
+
+**As shells que atopa meiga,** coma en `check-manytabs.ps1`, letra por letra (ver alí): `Get-ShellNames` dá os nomes das shells que atopa meiga, as de Windows e de Git, e as distribucións de WSL do usuario, que le no rexistro; `ConvertTo-TomlString`, un texto coma cadea básica de TOML; e `$hidden`, eses nomes, unha vez cada un, para ocultalos.
+
+```powershell
+# The configuration: Light, the default profile, runs cmd with a prompt that
+# only hides the cursor, so that nothing is drawn while nothing changes; and
+# the shells that meiga finds, hidden.
+$lightCommand = '%SystemRoot%\System32\cmd.exe /d /q /k prompt $E[?25l'
+$configLines = @(
+    '# Written by tools/check-titlebar.ps1.'
+    'default_profile = "Light"'
+    ''
+    '[[profiles]]'
+    'name = "Light"'
+    "command = '$lightCommand'"
+    "directory = '%MEIGA_CHECK_WORK%'"
+    foreach ($shell in $hidden) {
+        ''
+        '[[profiles]]'
+        "name = $(ConvertTo-TomlString $shell)"
+        'hidden = true'
+    }
+)
+[IO.File]::WriteAllText($config, ($configLines -join "`n") + "`n", $utf8)
+```
+
+**O `config.toml`,** nun equipo sen distribucións de WSL:
+
+```toml
+# Written by tools/check-titlebar.ps1.
+default_profile = "Light"
+
+[[profiles]]
+name = "Light"
+command = '%SystemRoot%\System32\cmd.exe /d /q /k prompt $E[?25l'
+directory = '%MEIGA_CHECK_WORK%'
+
+[[profiles]]
+name = "PowerShell"
+hidden = true
+
+[[profiles]]
+name = "Windows PowerShell"
+hidden = true
+
+[[profiles]]
+name = "Command Prompt"
+hidden = true
+
+[[profiles]]
+name = "Git Bash"
+hidden = true
+```
+
+- **`default_profile = "Light"`:** a primeira tab corre Light, e a que abre o + no paso 11, tamén ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5).
+- **Light** corre o `cmd.exe` de Windows, pola súa ruta, con `%SystemRoot%`, que expande meiga: `/d`, sen os comandos de AutoRun do rexistro; `/q`, sen eco; e `/k prompt $E[?25l`, que deixa `cmd` aberto cun *prompt* que só oculta o cursor (`$E` é ESC). Así, as súas tabs non mostran nada nin pestanexan: mentres nada cambia, meiga non debuxa nada, e perder e coller o foco non debuxa o cursor (paso 12). Corre no cartafol da comprobación, `%MEIGA_CHECK_WORK%`, que meiga expande; o cartafol vai entre comiñas simples, unha cadea literal de TOML.
+- **As shells, ocultas** (`hidden = true`): o menú dos perfís ten só Light. A comprobación non o abre.
+- **Sen `[shortcuts]`:** os atallos son os de meiga.
+
+```powershell
+# What the tabs of Light run.
+$lightLine = $lightCommand.Replace('%SystemRoot%', $env:SystemRoot)
+
+# As per monitor (v2), the same as meiga, the size of the window is in pixels.
+$previousDpi = $api::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+```
+
+**O que corren as tabs, e a escala.** `$lightLine` é a liña de comandos de Light con `%SystemRoot%` expandida, coma a ten que expandir meiga: a primeira tab compara a súa con ela. E a escala por monitor (v2), a de meiga, para o fío de PowerShell, coma en `check-manytabs.ps1`, que garda a de antes en `$previousDpi`: así, as medidas da xanela, do marco e do punteiro están en píxeles, coma as usa meiga.
+
+```powershell
+# The bar, as meiga lays it out (see crates/meiga-core/src/ui/tabbar.rs), at
+# the scale of the window: its width and its height, the band above the row
+# of the tabs, the middle of that row, its gaps and its buttons, and the width
+# and the scroll of its tabs, which Update-Bar reads; and the programs of the
+# tabs, in their order.
+$barWidth = 0
+$band = 0
+$rowHeight = 0
+$barHeight = 0
+$midY = 0
+$gap = 0
+$newSide = 0
+$profilesSide = 0
+$scrollSide = 0
+$dragSide = 0
+$captionSide = 0
+$maxTab = 0
+$minTab = 0
+$barTabWidth = 0
+$barOverflow = $false
+$barScroll = 0
+$tabs = [Collections.Generic.List[int]]::new()
+```
+
+**O modelo da barra,** coma o de `check-manytabs.ps1`, coa banda e os botóns da xanela: as variábeis que len as funcións, que valen 0 ata que se abre a xanela. `$barWidth`, o ancho da barra, o da área cliente; `$band`, a banda por riba da fila das tabs; `$rowHeight`, o alto desa fila, e `$barHeight`, o da barra enteira, coa banda; `$midY`, o medio da fila das tabs; o oco, o +, o botón dos perfís, os de desprazamento, o sitio para arrastrar a xanela e os botóns da xanela; os anchos máximo e mínimo das tabs; e o ancho que teñen, se non caben, e o desprazamento da franxa, que calcula `Update-Fit`. `$tabs` garda os números dos procesos dos programas das tabs, na súa orde.
+
+```powershell
+# Waits until $Condition is true, or throws what $Failure says.
+function Wait-For([scriptblock]$Condition, [scriptblock]$Failure) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (-not (& $Condition)) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode): $(& $Failure)"
+        }
+        if ([DateTime]::UtcNow -gt $deadline) { throw (& $Failure) }
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+# The lines of the frame log, as objects. meiga writes each line at once.
+function Get-Log {
+    if (-not (Test-Path -LiteralPath $log)) { return }
+    Get-Content -LiteralPath $log | ConvertFrom-Csv
+}
+
+# How many lines of the frame log there are, without its header: where the
+# lines that come next start.
+function Get-Mark {
+    if (-not (Test-Path -LiteralPath $log)) { return 0 }
+    [Math]::Max(0, @(Get-Content -LiteralPath $log).Count - 1)
+}
+
+# The frames after the first $From lines of the log.
+function Get-Frames([int]$From) {
+    @(Get-Log | Select-Object -Skip $From | Where-Object kind -EQ 'frame')
+}
+
+# Waits until meiga has written nothing in its log for $Milliseconds.
+function Wait-Quiet([int]$Milliseconds) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    $count = -1
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $lines = Get-Mark
+        if ($lines -ne $count) {
+            $count = $lines
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge $Milliseconds) {
+            return
+        }
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) while the check waited for it to stop drawing."
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$exe kept drawing for $TimeoutSeconds s."
+        }
+        Start-Sleep -Milliseconds 50
+    }
+}
+
+function Test-Full($Line) {
+    [long]$Line.pixels -eq [long]$Line.width * [long]$Line.height -and [long]$Line.pixels -gt 0
+}
+
+function Show-Lines($Lines) {
+    $Lines | Format-Table frame, time_ms, kind, cause, width, height, rects, pixels, areas -AutoSize | Out-Host
+}
+```
+
+**As esperas e o rexistro dos fotogramas.** `Wait-For`, `Get-Log`, `Get-Mark`, `Get-Frames`, `Wait-Quiet`, `Test-Full` e `Show-Lines` son os de `check-manytabs.ps1`, letra por letra (ver alí): agardar unha condición ata `TimeoutSeconds`, e fallar antes se meiga rematou; as liñas do rexistro, coma obxectos; cantas liñas ten, sen a cabeceira, que é onde empezan as seguintes; os fotogramas despois das `$From` primeiras; agardar a que meiga leve `$Milliseconds` sen escribir no rexistro; se unha liña cubre a xanela enteira; e mostrar unhas liñas, coas súas zonas, cando algo falla. `Get-Frames` só colle as liñas `frame`, as dos fotogramas que presenta meiga, e non as `paint`, as dos repintados que lle pide Windows (ver o paso 13).
+
+```powershell
+# Waits until meiga stops drawing, and checks that it drew one full frame
+# after the first $From lines of the log; otherwise throws $What.
+function Assert-OneFull([int]$From, [string]$What) {
+    Wait-Quiet 400
+    $full = @(Get-Frames $From | Where-Object { Test-Full $_ })
+    if ($full.Count -ne 1) {
+        Show-Lines (Get-Frames $From)
+        throw "$What made $($full.Count) full frames instead of 1."
+    }
+}
+
+# Waits until meiga draws a full frame after the first $From lines of the
+# log, and checks that it drew only one once it stops drawing.
+function Wait-OneFull([int]$From, [string]$What) {
+    Wait-For { @(Get-Frames $From | Where-Object { Test-Full $_ }).Count -gt 0 } { "$What did not draw a full frame." }
+    Assert-OneFull $From $What
+}
+```
+
+**Un fotograma completo.** `Assert-OneFull` e `Wait-OneFull` son as de `check-manytabs.ps1`, letra por letra (ver alí): agardar, ata `TimeoutSeconds`, a que meiga presente un fotograma completo despois das `$From` primeiras liñas, e, cando leva 400 ms sen debuxar, comprobar que foi un só. Maximizar e restaurar a xanela cambian o seu tamaño, e meiga debúxaa enteira, unha vez (`Wait-Maximized` e `Wait-Restored`); o mesmo co tamaño máis pequeno e co de antes, no paso 11.
+
+```powershell
+# A rectangle, from its left and top, included, to its right and bottom,
+# excluded.
+function New-Rect([int]$Left, [int]$Top, [int]$Right, [int]$Bottom) {
+    [pscustomobject]@{ Left = $Left; Top = $Top; Right = $Right; Bottom = $Bottom }
+}
+
+function Show-Rect($Rect) {
+    "($($Rect.Left), $($Rect.Top)) to ($($Rect.Right), $($Rect.Bottom))"
+}
+
+# Whether $Inner is inside $Outer.
+function Test-Inside($Inner, $Outer) {
+    $Inner.Left -ge $Outer.Left -and $Inner.Top -ge $Outer.Top -and
+    $Inner.Right -le $Outer.Right -and $Inner.Bottom -le $Outer.Bottom
+}
+
+# Whether $One and $Other are the same rectangle.
+function Test-Same($One, $Other) {
+    $One.Left -eq $Other.Left -and $One.Top -eq $Other.Top -and
+    $One.Right -eq $Other.Right -and $One.Bottom -eq $Other.Bottom
+}
+
+# The pixels that $One and $Other have in common: an empty rectangle if none.
+function Get-Intersection($One, $Other) {
+    $left = [Math]::Max($One.Left, $Other.Left)
+    $top = [Math]::Max($One.Top, $Other.Top)
+    New-Rect $left $top ([Math]::Max($left, [Math]::Min($One.Right, $Other.Right))) ([Math]::Max($top, [Math]::Min($One.Bottom, $Other.Bottom)))
+}
+
+# The areas that the frames of $Lines presented: "x y w h;x y w h".
+function Get-Areas($Lines) {
+    foreach ($line in $Lines) {
+        foreach ($area in ($line.areas -split ';' | Where-Object { $_ })) {
+            $x, $y, $w, $h = [int[]]($area -split ' ')
+            New-Rect $x $y ($x + $w) ($y + $h)
+        }
+    }
+}
+```
+
+**Os rectángulos.** `New-Rect`, `Show-Rect`, `Test-Inside`, `Test-Same`, `Get-Intersection` e `Get-Areas` son os de `check-manytabs.ps1`, letra por letra (ver alí): un rectángulo, coa esquerda e a parte de arriba incluídas, e a dereita e a de abaixo non; o seu texto nas mensaxes; se un está dentro doutro, e se son o mesmo; os píxeles que teñen en común; e as zonas que presentaron uns fotogramas. `Test-Overlap`, se teñen algún píxel en común, non fai falta eiquí.
+
+```powershell
+# The programs of the tabs: the processes that meiga started, but for the
+# consoles. A process that ended before meiga started may have had a
+# process with the same number as its parent.
+function Get-Shells {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -notin $consoles -and $_.CreationDate -ge $started })
+}
+
+# The consoles of the tabs.
+function Get-Consoles {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -in $consoles -and $_.CreationDate -ge $started })
+}
+
+# Waits until the process $Id has ended, also after meiga.
+function Wait-Ended([int]$Id, [string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while (Get-Process -Id $Id -ErrorAction Ignore) {
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What was still running after $TimeoutSeconds s."
+        }
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+# Waits until the consoles of $Consoles have ended, once meiga has.
+function Wait-ConsolesEnded($Consoles) {
+    foreach ($console in $Consoles) {
+        Wait-Ended ([int]$console.ProcessId) "The console $($console.Name) of a tab"
+    }
+}
+
+# Waits until the processes of $Ids have used no processor time for a
+# second: a shell that starts has written its prompt, and given its title.
+function Wait-Settled([int[]]$Ids, [string]$What) {
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds + 10)
+    $last = -1
+    $since = [DateTime]::UtcNow
+    while ($true) {
+        $programs = @(Get-Process -Id $Ids -ErrorAction Ignore)
+        if ($programs.Count -ne $Ids.Count) { throw "$What`: a program ended." }
+        $time = ($programs | Measure-Object -Sum { $_.TotalProcessorTime.Ticks }).Sum
+        if ($time -ne $last) {
+            $last = $time
+            $since = [DateTime]::UtcNow
+        }
+        elseif (([DateTime]::UtcNow - $since).TotalMilliseconds -ge 1000) {
+            return
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$What`: the programs kept running for $($TimeoutSeconds + 10) s."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+}
+```
+
+**Os programas das tabs.** `Get-Shells`, `Get-Consoles`, `Wait-Ended`, `Wait-ConsolesEnded` e `Wait-Settled` son os de `check-manytabs.ps1`, letra por letra (ver alí): os programas que arrancou meiga, menos as consolas; as consolas; agardar a que remate un proceso, tamén despois de meiga; agardar as consolas, unha a unha; e agardar a que uns programas leven un segundo sen usar o procesador, ou fallar despois de `TimeoutSeconds` máis 10 s.
+
+```powershell
+# The client area of the window.
+function Get-Client {
+    $client = [Meiga.Tools.TitleBarCheck+RECT]::new()
+    if (-not $api::GetClientRect($window, [ref]$client)) {
+        throw "Could not read the size of the window of $exe."
+    }
+    $client
+}
+
+# `$Pixels` at a scale of 100 %, at the scale of the window, as meiga does:
+# rounded, and at least one.
+function Get-Scaled([int]$Pixels) {
+    [int][Math]::Max(1, [Math]::Floor(($Pixels * $dpi + 48) / 96))
+}
+
+# The pixel in the middle of $Rect.
+function Get-Middle($Rect) {
+    [pscustomobject]@{ X = [int][Math]::Floor(($Rect.Left + $Rect.Right) / 2); Y = [int][Math]::Floor(($Rect.Top + $Rect.Bottom) / 2) }
+}
+
+# $Point of the client area on the screen.
+function Get-OnScreen($Point) {
+    $screen = [Meiga.Tools.TitleBarCheck+POINT]::new()
+    $screen.X = $Point.X
+    $screen.Y = $Point.Y
+    if (-not $api::ClientToScreen($window, [ref]$screen)) {
+        throw "Could not find a point of the window of $exe on the screen."
+    }
+    $screen
+}
+
+# A mouse message at a point: the message, its wParam and its lParam.
+function Get-Mouse([int]$Message, [int]$Keys, $Point) {
+    $Message, $Keys, (([int]$Point.X -band 0xFFFF) -bor (([int]$Point.Y -band 0xFFFF) -shl 16))
+}
+```
+
+**A xanela e os puntos.** `Get-Client` e `Get-OnScreen` son as de `check-manytabs.ps1`, coa clase desta comprobación: a área cliente (`GetClientRect`), e onde está na pantalla un punto da área cliente (`ClientToScreen`). `Get-Scaled`, `Get-Middle` e `Get-Mouse` son as de alí, letra por letra: unha medida a escala 100 % á escala da xanela, coma `scale` de `ui/tabbar.rs`, redondeada e polo menos 1; o píxel do medio dun rectángulo; e unha mensaxe do rato na área cliente, co punto en `lParam`.
+
+```powershell
+# The band above the row of tabs, where the pointer resizes the window, as
+# meiga computes it (see crates/meiga-win/src/window.rs): as high as the frame
+# that Windows gives a window to resize it, while the window has the title bar
+# of meiga and is not maximized, and none otherwise. With the title bar of
+# meiga, the client area goes up to the top of the window.
+function Get-Band {
+    if ($api::IsZoomed($window)) { return 0 }
+    $rect = [Meiga.Tools.TitleBarCheck+RECT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect)) {
+        throw "Could not read where the window of $exe is."
+    }
+    if ((Get-OnScreen ([pscustomobject]@{ X = 0; Y = 0 })).Y -ne $rect.Top) { return 0 }
+    # SM_CXPADDEDBORDER and SM_CYSIZEFRAME.
+    $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+}
+```
+
+**A banda: `Get-Band`.** É a de `check-manytabs.ps1`, coa clase desta comprobación, e calcula a banda coma meiga (`Window::resize_band`): ningunha se a xanela está maximizada, nin se a área cliente non empeza arriba de todo da xanela, que é como se ve que a xanela non ten a barra de título de meiga; e, se non, o marco de Windows á escala da xanela, `SM_CXPADDEDBORDER` (92) máis `SM_CYSIZEFRAME` (33), coma `frame` en `window.rs`: 8 píxeles a escala 100 %, e 11 a 150 % (decisión 2). Só mira a xanela e as métricas, e non a barra de meiga: que meiga pon a banda onde di, compróbano os puntos dos pasos 2, 7, 10 e 11.
+
+```powershell
+# The width of the bar without what is not for the tabs: three gaps, the
+# buttons that open a tab, the narrowest room to drag the window, and the
+# three buttons of the window.
+function Get-Room {
+    [Math]::Max(0, $barWidth - 3 * $gap - $newSide - $profilesSide - $dragSide - 3 * $captionSide)
+}
+
+# The width of the strip while the tabs do not fit.
+function Get-Viewport {
+    [Math]::Max(0, (Get-Room) - 2 * $scrollSide)
+}
+
+function Get-MaxScroll {
+    if (-not $barOverflow) { return 0 }
+    [Math]::Max(0, $tabs.Count * $barTabWidth - (Get-Viewport))
+}
+
+# Gives the tabs their width, as meiga does when they open or close, but for
+# the ones that close with the mouse while the pointer is on the bar.
+function Update-Fit {
+    $width = [Math]::Min([Math]::Floor((Get-Room) / [Math]::Max(1, $tabs.Count)), $maxTab)
+    $script:barOverflow = $width -lt $minTab
+    $script:barTabWidth = if ($barOverflow) { $minTab } else { [int]$width }
+    $script:barScroll = [Math]::Min($barScroll, (Get-MaxScroll))
+}
+```
+
+**O sitio das tabs.** `Get-Room`, `Get-Viewport`, `Get-MaxScroll` e `Update-Fit` son as de `check-manytabs.ps1`, letra por letra (ver alí), coma `room`, `viewport`, `max_scroll` e `fit` de `ui/tabbar.rs`: o ancho da barra sen os tres ocos, o +, o botón dos perfís, o sitio para arrastrar a xanela máis estreito e os tres botóns da xanela, que tampouco son para as tabs (decisión 5); a franxa, sen os dous botóns de desprazamento; o desprazamento máximo; e o ancho das tabs, que se encollen ata o mínimo e, se non caben, quedan co mínimo, na franxa.
+
+```powershell
+function Get-Strip {
+    if (-not $barOverflow) { return New-Rect 0 0 $barWidth $barHeight }
+    $left = $gap + $scrollSide
+    New-Rect $left 0 ($left + (Get-Viewport)) $barHeight
+}
+
+# Where the first tab is, or would be.
+function Get-Start {
+    if ($barOverflow) { (Get-Strip).Left - $barScroll } else { $gap }
+}
+
+# The tab at $Index, from a gap below the band to the bottom of the bar.
+function Get-TabRect([int]$Index) {
+    $left = (Get-Start) + $Index * $barTabWidth
+    New-Rect $left ($band + $gap) ($left + $barTabWidth) $barHeight
+}
+
+function Get-NewRect {
+    $left = if ($barOverflow) { (Get-Strip).Right + $scrollSide + $gap } else { (Get-TabRect $tabs.Count).Left + $gap }
+    $top = $band + $gap
+    New-Rect $left $top ($left + $newSide) ($top + $newSide)
+}
+
+function Get-ProfilesRect {
+    $new = Get-NewRect
+    New-Rect $new.Right $new.Top ($new.Right + $profilesSide) $new.Bottom
+}
+
+# The button that scrolls the strip towards $Side, Left or Right.
+function Get-ScrollRect([string]$Side) {
+    $strip = Get-Strip
+    $left = if ($Side -eq 'Left') { $strip.Left - $scrollSide } else { $strip.Right }
+    $top = $band + $gap
+    New-Rect $left $top ($left + $scrollSide) ($top + $newSide)
+}
+
+# The three buttons of the window together, on the right of the bar, as high
+# as all of it, also over the band.
+function Get-CaptionsRect {
+    New-Rect ($barWidth - 3 * $captionSide) 0 $barWidth $barHeight
+}
+```
+
+**As partes da barra.** `Get-Strip`, `Get-Start`, `Get-TabRect`, `Get-NewRect`, `Get-ProfilesRect`, `Get-ScrollRect` e `Get-CaptionsRect` son as de `check-manytabs.ps1`, letra por letra (ver alí): a franxa, ou a barra enteira se as tabs caben; onde está a primeira tab; cada tab, desde un oco por debaixo da banda ata abaixo; o +, o botón dos perfís e os de desprazamento, que empezan un oco por debaixo da banda; e os tres botóns da xanela xuntos, á dereita da barra, do alto da barra enteira, tamén por riba da banda (decisión 3). Son os rectángulos do debuxo. Para Windows, as tabs e os botóns da barra ocupan a fila enteira das tabs, por debaixo da banda (`Layout::part_at`), tamén o oco de enriba: por iso os puntos dos pasos van no medio de cada parte, ou nas súas filas de arriba.
+
+```powershell
+# Flags of SetWindowPos, and of GetMenuState.
+$SWP_NOMOVE = 0x0002
+$SWP_NOZORDER = 0x0004
+$SWP_NOACTIVATE = 0x0010
+$MF_BYPOSITION = 0x0400
+
+# Posts $Messages to the window at once: see PostAll. If meiga has ended, it
+# says so, instead of the error of its thread, which is not there any more.
+# With $Down, the keys of $Down are down while the window reads the messages,
+# and no other one: the input has to be shared with the thread of the window
+# (see Join-Input).
+function Send-Posted([long[]]$Messages, [int[]]$Down) {
+    $state = $null
+    if ($PSBoundParameters.ContainsKey('Down')) {
+        $state = [byte[]]::new(256)
+        foreach ($key in $Down) { $state[$key] = 0x80 }
+    }
+    try {
+        $api::PostAll($window, $thread, $Messages, $state)
+    }
+    catch {
+        if ($process.WaitForExit(2000)) {
+            throw "$exe ended with exit code $($process.ExitCode), and the check could not post its keys or its clicks to its window."
+        }
+        throw
+    }
+}
+```
+
+**Publicar.** `SWP_NOMOVE`, `SWP_NOZORDER` e `SWP_NOACTIVATE`: `SetWindowPos` cambia o tamaño da xanela sen movela, sen cambiar a súa orde entre as outras e sen activala (`Set-WindowSize`); e `MF_BYPOSITION`: `GetMenuState` le un elemento pola súa posición. `Send-Posted` xunta `Send-Posted` e `Send-Keys` de `check-manytabs.ps1`: publica as mensaxes con `PostAll` e, se falla porque meiga xa rematou, dío, co seu código de saída, en vez do erro do fío, que xa non existe. Con `-Down`, pon antes o estado das teclas, cun 0x80, abaixo, nas teclas de `$Down`, e ningunha máis; sen el, o estado das teclas queda coma estea. `$PSBoundParameters` distingue `-Down @()`, ningunha tecla abaixo, de non pasalo. Só o paso 6 lle pasa `-Down`, para Alt+Espazo, coa entrada compartida co fío da xanela.
+
+```powershell
+# Shares the input of this thread with the one of the window, whose key state
+# Send-Posted sets with -Down: SetKeyboardState sets the key state of the
+# thread that calls it. This thread needs a message queue, which PeekMessageW
+# creates.
+function Join-Input {
+    $message = [Meiga.Tools.TitleBarCheck+MSG]::new()
+    $null = $api::PeekMessageW([ref]$message, [IntPtr]::Zero, 0, 0, 0)
+    if (-not $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $true)) {
+        throw "AttachThreadInput failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+    $script:attached = $true
+}
+
+# Stops sharing the input with the thread of the window, with no key down.
+function Split-Input {
+    if ($script:attached) {
+        $null = $api::SetKeyboardState([byte[]]::new(256))
+        $null = $api::AttachThreadInput($api::GetCurrentThreadId(), $thread, $false)
+        $script:attached = $false
+    }
+}
+
+# The message of $Code going down or up while Alt is down, as Windows sends
+# it: a system key, with Alt in its lParam (bit 29). Going up, the key was
+# down (bit 30), and goes up (bit 31).
+function Get-AltKey([int]$Code, [bool]$Down) {
+    $scan = [long]$api::MapVirtualKeyW($Code, 0)
+    [long]$bits = 1 -bor ($scan -shl 16) -bor 0x20000000L
+    if ($Down) { return $WM_SYSKEYDOWN, $Code, $bits }
+    $WM_SYSKEYUP, $Code, ($bits -bor 0xC0000000L)
+}
+```
+
+**Alt+Espazo: a entrada compartida e as teclas do sistema.**
+
+- **`Join-Input` e `Split-Input`** son os de `check-manytabs.ps1`, coa clase desta comprobación (ver alí): o fío de PowerShell comparte a súa entrada co da xanela, para que `SetKeyboardState`, en `PostAll`, poña o estado das teclas do fío da xanela; e deixa de compartila, sen ningunha tecla abaixo. meiga non le Alt na mensaxe, senón no estado das teclas, coma noutras combinacións ([Código › meiga-win › `for_windows` e `control_keys`](meiga-win.md#for_windows-e-control_keys)), así que Alt+Espazo necesita ese estado. Eiquí só se comparte a entrada no paso 6, mentres o menú está aberto; e o `finally` do paso, e o da comprobación, chaman a `Split-Input`.
+- **`Get-AltKey`**: a mensaxe dunha tecla que baixa ou sobe con Alt abaixo, coma a envía Windows: unha tecla do sistema, `WM_SYSKEYDOWN` ou `WM_SYSKEYUP`, coa tecla virtual en `wParam`, e en `lParam` unha repetición, o código de exploración e o bit 29, o de Alt; ao subir, tamén os bits 30 e 31. Coma `Get-Key` de `check-manytabs.ps1` cun `$System`, pero co código de exploración de `MapVirtualKeyW`, coma `Get-Press`. Alt mesmo, cando baixa, vai coma tecla do sistema, co seu bit; cando sobe despois doutra tecla, Windows envíao coma unha tecla normal, e o paso 6 escribe esa mensaxe el mesmo.
+
+```powershell
+# The messages of $Code going down and up, as Windows sends them for a key
+# that is not extended, with its scan code: each message, its wParam and its
+# lParam.
+function Get-Press([int]$Code) {
+    $scan = [long]$api::MapVirtualKeyW($Code, 0)
+    [long]$bits = 1 -bor ($scan -shl 16)
+    # Going up, the key was down (bit 30), and goes up (bit 31).
+    $WM_KEYDOWN, $Code, $bits, $WM_KEYUP, $Code, ($bits -bor 0xC0000000L)
+}
+
+# Types $Code: it goes down and up.
+function Send-Key([int]$Code) {
+    Send-Posted (Get-Press $Code)
+}
+
+# A point of the screen as the lParam of a message.
+function Get-ScreenParam($Point) {
+    ([int]$Point.X -band 0xFFFF) -bor (([int]$Point.Y -band 0xFFFF) -shl 16)
+}
+
+# A point, of the screen or of the client area.
+function New-Point([int]$X, [int]$Y) {
+    $point = [Meiga.Tools.TitleBarCheck+POINT]::new()
+    $point.X = $X
+    $point.Y = $Y
+    $point
+}
+```
+
+**As teclas e os puntos da pantalla.**
+
+- **`Get-Press`** dá as dúas mensaxes dunha tecla que baixa e sobe, sen modificadores: `WM_KEYDOWN` e `WM_KEYUP`, coa tecla virtual en `wParam`, e en `lParam` unha repetición, o código de exploración da tecla e, ao subir, os bits 30 e 31: a tecla estaba abaixo, e sobe. O código de exploración dáo `MapVirtualKeyW`, coa distribución do teclado do fío de PowerShell; `check-manytabs.ps1` usa a da xanela (`MapVirtualKeyExW`). Para Intro, Esc, a frecha Abaixo e a tecla de menú, e para Alt e o Espazo de `Get-AltKey`, é o mesmo en todas as distribucións; para a X, non, pero o paso 6 só mira que a X debuxe no terminal, e o programa da tab escribe o carácter que lle chegue. Sen o bit 24, o das teclas estendidas, que un teclado pon na frecha Abaixo e na tecla de menú: o menú da xanela só mira a tecla virtual, e a tecla de menú non lle chega ao programa da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 6).
+- **`Send-Key`** publica as dúas de vez (`Send-Posted`).
+- **`Get-ScreenParam`**: un punto da pantalla coma `lParam`, x nos 16 bits de abaixo e y nos de arriba. As mensaxes do rato fóra da área cliente (`WM_NC…`) levan o punto da pantalla; as da área cliente, as que fai `Get-Mouse`, levan o da área cliente.
+- **`New-Point`**: un `POINT` da clase, da pantalla ou da área cliente.
+
+```powershell
+# Where the window is on the screen, with its frame.
+function Get-WindowRect {
+    $rect = [Meiga.Tools.TitleBarCheck+RECT]::new()
+    if (-not $api::GetWindowRect($window, [ref]$rect)) {
+        throw "Could not read where the window of $exe is."
+    }
+    $rect
+}
+
+# Reads the bar again, as meiga lays it out for the window as it is now:
+# its width, the band above the tabs, its height, the middle of the row of
+# the tabs, and the width of the tabs.
+function Update-Bar {
+    $script:barWidth = (Get-Client).Right
+    $script:band = Get-Band
+    $script:barHeight = $band + $rowHeight
+    $script:midY = $band + [int][Math]::Floor($rowHeight / 2)
+    Update-Fit
+}
+
+# The button of the window at $Index from the right: 0 closes the window, 1
+# maximizes or restores it, and 2 minimizes it.
+function Get-Caption([int]$Index) {
+    New-Rect ($barWidth - ($Index + 1) * $captionSide) 0 ($barWidth - $Index * $captionSide) $barHeight
+}
+
+# A point in the middle of the room to drag the window, in the middle of the
+# row of the tabs: between the button of the profiles and the buttons of the
+# window, which always leaves that room free, and a gap.
+function Get-DragPoint {
+    New-Point ([int][Math]::Floor(((Get-ProfilesRect).Right + (Get-CaptionsRect).Left) / 2)) $midY
+}
+```
+
+**A xanela e a barra, outra vez.**
+
+- **`Get-WindowRect`**: onde está a xanela na pantalla, co seu marco.
+- **`Update-Bar`** le outra vez a barra, coma a pon meiga para a xanela tal como está: o ancho, o da área cliente; a banda (`Get-Band`); o alto, a banda máis a fila das tabs; o medio desa fila; e o ancho das tabs (`Update-Fit`). Chámana os pasos cada vez que a xanela cambia de tamaño, se maximiza ou se restaura.
+- **`Get-Caption`**: o botón da xanela de `$Index`, desde a dereita, coma `Layout::caption`: 0 pecha a xanela; 1 maximízaa ou restáuraa; e 2 minimízaa. Cada un mide `$captionSide` de ancho, e o alto da barra enteira, tamén por riba da banda (decisión 3).
+- **`Get-DragPoint`**: un punto no medio do sitio para arrastrar a xanela, entre o botón dos perfís e os botóns da xanela, á altura do medio da fila das tabs. Ese sitio sempre está libre: a barra deixa, despois dun oco, polo menos 45 píxeles a escala 100 % (decisión 5). É a parte libre da barra onde a comprobación preme o botón dereito e fai o dobre clic.
+
+```powershell
+# A point of the window, and what it has to be for Windows: what
+# WM_NCHITTEST gives there.
+function New-Hit([int]$X, [int]$Y, [int]$Hit) {
+    [pscustomobject]@{ X = $X; Y = $Y; Hit = $Hit }
+}
+
+function Show-Hit([int]$Hit) {
+    if ($hitNames.ContainsKey($Hit)) { $hitNames[$Hit] } else { "the code $Hit" }
+}
+
+# What the window says that $Point of the screen is.
+function Get-Hit($Point) {
+    try {
+        $api::Hit($window, $Point.X, $Point.Y)
+    }
+    catch {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) while the check asked its window what a point is."
+        }
+        throw
+    }
+}
+
+# Asks the window what each point of $Expected is, from the top left corner
+# of its client area or, with $Screen, of the screen; throws what $When says
+# if any of them is not what Windows has to get.
+function Assert-Hits($Expected, [string]$When, [switch]$Screen) {
+    $wrong = foreach ($item in $Expected) {
+        $at = if ($Screen) { New-Point $item.X $item.Y } else { Get-OnScreen $item }
+        $hit = Get-Hit $at
+        if ($hit -ne $item.Hit) {
+            $whose = if ($Screen) { 'of the screen' } else { 'of the client area' }
+            "the point ($($item.X), $($item.Y)) $whose is $(Show-Hit $hit), and not $(Show-Hit $item.Hit)"
+        }
+    }
+    if (@($wrong).Count -gt 0) {
+        throw "$When, for Windows, $(@($wrong) -join '; ')."
+    }
+}
+```
+
+**Que é cada punto.**
+
+- **`New-Hit`**: un punto, e o que ten que dicir del a xanela: un código `HT…`.
+- **`Show-Hit`**: o nome dun código nas mensaxes (`$hitNames`), ou o seu número.
+- **`Get-Hit`**: o que di a xanela dun punto da pantalla (`Hit`); se falla porque meiga rematou, dío.
+- **`Assert-Hits`** pregúntalle á xanela por cada punto de `$Expected`, desde a esquina de arriba á esquerda da área cliente, ou, con `-Screen`, da pantalla. Os da área cliente pásaos antes á pantalla (`Get-OnScreen`), porque `WM_NCHITTEST` leva o punto da pantalla. Reúne os que non son o que teñen que ser, e a mensaxe dios todos de vez, con `$When`, como estaba a xanela.
+
+```powershell
+# The buttons of the window along all their height, also over the band: in
+# the middle of each one, at the top, in the middle of the row of the tabs and
+# at the bottom of the bar; and the last pixel of the top row.
+function Get-CaptionHits {
+    foreach ($index in 0, 1, 2) {
+        $x = (Get-Middle (Get-Caption $index)).X
+        New-Hit $x 0 $captionHits[$index]
+        New-Hit $x $midY $captionHits[$index]
+        New-Hit $x ($barHeight - 1) $captionHits[$index]
+    }
+    New-Hit ($barWidth - 1) 0 $HTCLOSE
+}
+
+# Clicks the button of the window at $Index from the right, as Windows sends
+# it: the pointer moves onto it, and the left button goes down and up. The
+# bar acts when the left button goes up on the button that it highlights.
+function Send-Caption([int]$Index) {
+    $param = Get-ScreenParam (Get-OnScreen (Get-Middle (Get-Caption $Index)))
+    $code = $captionHits[$Index]
+    Send-Posted @($WM_NCMOUSEMOVE, $code, $param, $WM_NCLBUTTONDOWN, $code, $param, $WM_NCLBUTTONUP, $code, $param)
+}
+```
+
+**Os botóns da xanela.**
+
+- **`Get-CaptionHits`**: os puntos dos tres botóns da xanela, en todo o seu alto (decisións 2 e 4): no medio de cada un, arriba de todo, que é a fila da banda coa xanela restaurada; no medio da fila das tabs; e na última fila da barra. E o último píxel da fila de arriba, a esquina de arriba á dereita da área cliente, que é o botón de pechar, e non a banda. Cada paso que pregunta polos puntos da barra engade estes.
+- **`Send-Caption`**: un clic no botón da xanela de `$Index`, coma o envía Windows: o punteiro móvese enriba del (`WM_NCMOUSEMOVE`), e o botón esquerdo baixa e sobe (`WM_NCLBUTTONDOWN` e `WM_NCLBUTTONUP`), as tres mensaxes de vez, co código do botón en `wParam` e o punto da pantalla en `lParam`. meiga non llas pasa a `DefWindowProcW`, senón á barra, que actúa cando o botón esquerdo sobe enriba do mesmo botón no que baixou (decisión 4): publica o `WM_SYSCOMMAND` do botón, ou `WM_CLOSE`.
+
+```powershell
+# Moves the pointer onto the button of the window at $Index from the right,
+# and checks that the window draws only that button: when the pointer comes,
+# and when it goes, since the pointer of the system is not there, so Windows
+# tells the window at once that it left.
+function Assert-CaptionHover([int]$Index) {
+    $button = Get-Caption $Index
+    $what = $captionNames[$Index]
+    $param = Get-ScreenParam (Get-OnScreen (Get-Middle $button))
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Posted @($WM_NCMOUSEMOVE, $captionHits[$Index], $param)
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { "The pointer on $what drew nothing." }
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    $areas = @(Get-Areas $frames)
+    if ($frames.Count -gt 2 -or @($areas | Where-Object { -not (Test-Same $_ $button) }).Count -gt 0) {
+        Show-Lines $frames
+        throw "The pointer on $what did not draw only $(Show-Rect $button), once or twice: $(@($areas | ForEach-Object { Show-Rect $_ }) -join ', ')."
+    }
+}
+```
+
+**O punteiro nun botón da xanela: `Assert-CaptionHover`.** Cando meiga leva 400 ms sen debuxar, publica o punteiro no medio do botón (`WM_NCMOUSEMOVE`, co seu código), e agarda algún fotograma; cando leva outros 400 ms sen debuxar, non pode haber máis de dous, e todas as súas zonas teñen que ser exactamente o botón (decisión 3). meiga resalta o botón, e pídelle a Windows que lle diga cando sae o punteiro (`TrackMouseEvent`); como o punteiro do sistema non está alí, Windows dillo en seguida, e meiga quítalle o resalte, que debuxa o botón outra vez. Por iso un fotograma ou dous: se o aviso chega antes do fotograma, o botón debúxase unha vez, xa sen resalte. A comprobación non mira o resalte, só que se debuxa o botón, e só el. meiga pide `TME_NONCLIENT`, porque para Windows o botón non é a área cliente, e o aviso é `WM_NCMOUSELEAVE`; sen el, chegaría igual en seguida, coma `WM_MOUSELEAVE`.
+
+```powershell
+# The menu of the window that its thread shows, or zero.
+function Get-WindowMenu {
+    $menuWindow = $api::MenuOf($thread)
+    if ($menuWindow -eq [IntPtr]::Zero) { return [IntPtr]::Zero }
+    $api::MenuIn($menuWindow)
+}
+
+# Opens the menu of the window with the right button on the room to drag it,
+# as Windows sends it, and returns the menu once it is on the screen: as with
+# the title bar of Windows, the menu opens when the button goes up, at the
+# pointer.
+function Open-WindowMenu {
+    $at = Get-OnScreen (Get-DragPoint)
+    $param = Get-ScreenParam $at
+    Send-Posted @($WM_NCRBUTTONDOWN, $HTCAPTION, $param)
+    Start-Sleep -Milliseconds 200
+    if ((Get-WindowMenu) -ne [IntPtr]::Zero) {
+        throw 'The right button on the bar opened the menu of the window when it went down, and not when it went up.'
+    }
+    Send-Posted @($WM_NCRBUTTONUP, $HTCAPTION, $param)
+    Wait-For { (Get-WindowMenu) -ne [IntPtr]::Zero } { 'The right button on the bar did not open the menu of the window.' }
+    Assert-MenuAt $at 'The right button on the bar'
+    Get-WindowMenu
+}
+
+# Checks that the menu window that the thread shows opened at $Point of the
+# screen, its top left corner there, as TrackPopupMenu puts it; where it does
+# not fit that way on the work area of its monitor, Windows moves it, and then
+# one of its corners has to be there. Otherwise throws what $What says.
+function Assert-MenuAt($Point, [string]$What) {
+    $menuWindow = $api::MenuOf($thread)
+    $rect = [Meiga.Tools.TitleBarCheck+RECT]::new()
+    if ($menuWindow -eq [IntPtr]::Zero -or -not $api::GetWindowRect($menuWindow, [ref]$rect)) {
+        throw "$What opened the menu of the window, and the check could not read where it is."
+    }
+    $info = [Meiga.Tools.TitleBarCheck+MONITORINFO]::new()
+    $info.Size = 40
+    # MONITOR_DEFAULTTONEAREST.
+    if (-not $api::GetMonitorInfoW($api::MonitorFromPoint($Point, 2), [ref]$info)) {
+        throw "Could not read the monitor of the menu of the window."
+    }
+    $fits = $Point.X + ($rect.Right - $rect.Left) -le $info.Work.Right -and
+        $Point.Y + ($rect.Bottom - $rect.Top) -le $info.Work.Bottom
+    $atCorner = $rect.Left -eq $Point.X -and $rect.Top -eq $Point.Y
+    $anyCorner = ($rect.Left -eq $Point.X -or $rect.Right -eq $Point.X) -and ($rect.Top -eq $Point.Y -or $rect.Bottom -eq $Point.Y)
+    if (($fits -and -not $atCorner) -or (-not $fits -and -not $anyCorner)) {
+        throw "$What opened the menu of the window at $(Show-Rect $rect) on the screen, and not from ($($Point.X), $($Point.Y))."
+    }
+}
+
+# The position of the item of $Command in $Menu, or -1.
+function Get-ItemPosition([IntPtr]$Menu, [int]$Command) {
+    $count = $api::GetMenuItemCount($Menu)
+    for ($index = 0; $index -lt $count; $index++) {
+        if ($api::GetMenuItemID($Menu, $index) -eq [uint32]$Command) { return $index }
+    }
+    -1
+}
+```
+
+**O menú da xanela.**
+
+- **`Get-WindowMenu`**: o menú da xanela que mostra o fío de meiga (`MenuOf` e `MenuIn`), ou cero, se non hai ningún aberto.
+- **`Open-WindowMenu`**: o botón dereito no sitio para arrastrar a xanela (`Get-DragPoint`), coma o envía Windows, en dous tempos: baixa (`WM_NCRBUTTONDOWN`, con `HTCAPTION` e o punto da pantalla) e, 200 ms despois, se o menú aínda non se abriu, sobe (`WM_NCRBUTTONUP`). meiga abre o menú ao soltar o botón, no punteiro, coma a barra de título de Windows (decisión 6), con `TrackPopupMenu`, que corre o seu propio bucle de mensaxes no fío da xanela ata que se pecha. Se o menú se abre co botón aínda abaixo, a comprobación dío. Despois agarda a que se vexa, mira que se abriu no punteiro (`Assert-MenuAt`) e devolve o seu `HMENU`.
+- **`Assert-MenuAt`** mira onde está a xanela do menú que mostra o fío de meiga (`MenuOf` e `GetWindowRect`). `TrackPopupMenu` pon a esquina de arriba á esquerda do menú no punto que lle dá meiga, se o menú cabe así na área de traballo do monitor dese punto (`MonitorFromPoint`, co monitor máis próximo, e `GetMonitorInfoW`): entón, a esquina ten que estar exactamente nel. Se non cabe, Windows móveo, e a comprobación só pide que estea no punto algunha das súas esquinas. Úsana `Open-WindowMenu`, co punto do botón dereito, e o paso 6, coa esquina debaixo da barra ([Código › meiga-core › `menu_corner`](meiga-core.md#onde-se-abre-o-menú-da-xanela-co-teclado-menu_corner)). Se non pode ler onde está o menú, ou o seu monitor, dío.
+- **`Get-ItemPosition`**: a posición no menú do elemento dun comando, ou -1, se non o ten.
+
+```powershell
+# Checks that the menu of the window has the commands that the window
+# allows, maximized or not, enabled, the others disabled, and Close as the
+# default one, in bold, as in the menu that Windows opens itself;
+# otherwise throws what $When says.
+function Assert-WindowMenu([IntPtr]$Menu, [bool]$Maximized, [string]$When) {
+    $enabled = @{
+        Restore = $Maximized
+        Move = -not $Maximized
+        Size = -not $Maximized
+        Minimize = $true
+        Maximize = -not $Maximized
+        Close = $true
+    }
+    $wrong = foreach ($command in $windowCommands.Keys) {
+        $position = Get-ItemPosition $Menu $windowCommands[$command]
+        if ($position -lt 0) {
+            "it has no $command"
+            continue
+        }
+        $state = $api::GetMenuState($Menu, [uint32]$position, $MF_BYPOSITION)
+        $able = ($state -band $MF_UNABLE) -eq 0
+        if ($able -ne $enabled[$command]) {
+            "$command is $(if ($able) { 'enabled' } else { 'disabled' })"
+        }
+        $default = ($state -band $MF_DEFAULT) -ne 0
+        if ($default -ne ($command -eq 'Close')) {
+            "$command is $(if (-not $default) { 'not ' })the default item"
+        }
+    }
+    if (@($wrong).Count -gt 0) {
+        throw "$When, in the menu of the window, $(@($wrong) -join ', ')."
+    }
+}
+```
+
+**Os elementos do menú: `Assert-WindowMenu`.** Para cada comando de `$windowCommands`, o elemento ten que estar no menú, activo ou inactivo coma no menú que abre o propio Windows, e só *Close* en negra, tamén coma nel (decisión 6):
+
+| Elemento | Restaurada | Maximizada |
+|---|---|---|
+| *Restore* | Inactivo | Activo |
+| *Move* e *Size* | Activos | Inactivos |
+| *Minimize* | Activo | Activo |
+| *Maximize* | Activo | Inactivo |
+| *Close* | Activo, en negra | Activo, en negra |
+
+Le o estado de cada elemento con `GetMenuState`, pola súa posición: inactivo é `MF_GRAYED` ou `MF_DISABLED`, e en negra, `MF_DEFAULT`. A mensaxe di todo o que está mal, con `$When`, como estaba a xanela.
+
+```powershell
+# The position of the item that $Menu highlights, or -1.
+function Get-Highlight([IntPtr]$Menu) {
+    $count = $api::GetMenuItemCount($Menu)
+    for ($index = 0; $index -lt $count; $index++) {
+        $state = $api::GetMenuState($Menu, [uint32]$index, $MF_BYPOSITION)
+        if ($state -ne [uint32]::MaxValue -and ($state -band $MF_HILITE) -ne 0) { return $index }
+    }
+    -1
+}
+
+# Moves the highlight of the menu of the window with Down until it is on the
+# item of $Command: Down highlights the items one after the other, also the
+# disabled ones, skips the separator, and goes round. The menu takes the
+# highlight from an item before it gives it to the next one, so the check
+# waits for another item, and not only for a change.
+function Select-WindowCommand([IntPtr]$Menu, [string]$Command) {
+    $target = Get-ItemPosition $Menu $windowCommands[$Command]
+    if ($target -lt 0) { throw "The menu of the window has no $Command." }
+    for ($press = 0; $press -le 10; $press++) {
+        $before = Get-Highlight $Menu
+        if ($before -eq $target) { return }
+        Send-Key $VK_DOWN
+        Wait-For { (Get-Highlight $Menu) -notin -1, $before } { 'Down did not move the highlight of the menu of the window.' }
+    }
+    throw "Down did not highlight $Command in the menu of the window."
+}
+
+# Closes the menu of the window with Esc.
+function Close-WindowMenu {
+    Send-Key $VK_ESCAPE
+    Wait-For { $api::MenuOf($thread) -eq [IntPtr]::Zero } { 'Esc did not close the menu of the window.' }
+}
+```
+
+**Escoller co teclado.**
+
+- **`Get-Highlight`**: a posición do elemento resaltado (`MF_HILITE`), ou -1. `GetMenuState` dá -1, todos os bits, para unha posición que non existe; a comprobación non o toma por un resalte.
+- **`Select-WindowCommand`** teclea Abaixo ata que o resalte está no elemento do comando, ou falla despois de teclealo once veces. Abaixo resalta os elementos un tras outro, tamén os inactivos, salta a liña que separa *Close* dos outros, e dá a volta; o menú quítalle o resalte a un elemento antes de darllo ao seguinte, así que a comprobación agarda a que se resalte outro, e non só a que cambie.
+- **`Close-WindowMenu`**: Esc, e agarda a que o menú desapareza.
+
+```powershell
+# Whether $Point of the screen is on the window: the window there, or its
+# top-level one (GA_ROOT), is it.
+function Test-OnWindow($Point) {
+    $api::GetAncestor($api::WindowFromPoint($Point), 2) -eq $window
+}
+
+# If the pointer of the system is on the window, moves it out, to the first
+# place next to the window that is on a monitor: the moves that Windows makes
+# at its place would reach the bar, which would draw, and keep what it
+# highlights. With the client of the Remote Desktop minimized, Windows does
+# not let a program read nor move the pointer, and a maximized window may
+# leave no place for it: then it stays.
+function Move-Pointer {
+    $now = [Meiga.Tools.TitleBarCheck+POINT]::new()
+    if (-not $api::GetCursorPos([ref]$now) -or -not (Test-OnWindow $now)) { return }
+    if ($null -eq $script:pointer) { $script:pointer = $now }
+    $rect = Get-WindowRect
+    $middleX = [int][Math]::Floor(($rect.Left + $rect.Right) / 2)
+    $middleY = [int][Math]::Floor(($rect.Top + $rect.Bottom) / 2)
+    $places = @(
+        New-Point $middleX ($rect.Top - 20)
+        New-Point ($rect.Left - 20) $middleY
+        New-Point ($rect.Right + 20) $middleY
+        New-Point $middleX ($rect.Bottom + 20)
+    )
+    foreach ($place in $places) {
+        # MONITOR_DEFAULTTONULL: zero out of the monitors.
+        if ($api::MonitorFromPoint($place, 0) -eq [IntPtr]::Zero -or (Test-OnWindow $place)) { continue }
+        if ($api::SetCursorPos($place.X, $place.Y)) { return }
+    }
+}
+```
+
+**Apartar o punteiro: `Move-Pointer`.** É distinta da das outras comprobacións, que levan o punteiro 8 píxeles por riba da área cliente: coa barra de título de meiga, ese sitio está por riba da xanela, e fóra da pantalla se a xanela está maximizada, ou contra o bordo de arriba do monitor.
+
+- **`Test-OnWindow`**: se un punto da pantalla está enriba da xanela, tamén do seu marco: a xanela alí (`WindowFromPoint`), ou a súa de nivel superior (`GetAncestor` con `GA_ROOT`), é a de meiga.
+- **`Move-Pointer`**: se o punteiro do sistema está enriba da xanela, lévao ao primeiro destes sitios que estea nalgún monitor (`MonitorFromPoint` con `MONITOR_DEFAULTTONULL`) e fóra da xanela: 20 píxeles por riba do medio do seu bordo de arriba, á esquerda do medio do lado esquerdo, á dereita do medio do dereito, e por debaixo do medio do de abaixo. A primeira vez que o move, garda onde estaba, para devolvelo no `finally`. Se non pode ler o punteiro, coma co cliente do Escritorio remoto minimizado, ou se a xanela maximizada non deixa ningún sitio libre, queda onde está.
+- **Por que:** os movementos que fai Windows no sitio do punteiro chegarían á barra, que debuxaría, e quedaría co que resalta; e Windows non lle diría a meiga en seguida que o punteiro saíu dun botón da xanela.
+
+```powershell
+# Asks Windows to make the window $Width x $Height pixels, with its frame,
+# where it is. Windows makes it no smaller than meiga lets it.
+function Set-WindowSize([int]$Width, [int]$Height) {
+    if (-not $api::SetWindowPos($window, [IntPtr]::Zero, 0, 0, $Width, $Height, $SWP_NOMOVE -bor $SWP_NOZORDER -bor $SWP_NOACTIVATE)) {
+        throw "SetWindowPos failed: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    }
+}
+
+# Does $Action, and checks that the window draws nothing.
+function Assert-NothingDrawn([scriptblock]$Action, [string]$What) {
+    Wait-Quiet 400
+    $from = Get-Mark
+    & $Action
+    Start-Sleep -Milliseconds 300
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    if ($frames.Count -gt 0) {
+        Show-Lines $frames
+        throw "$What drew $($frames.Count) frames instead of none."
+    }
+}
+```
+
+**O tamaño, e nada debuxado.**
+
+- **`Set-WindowSize`** pídelle a Windows unha xanela de `$Width` × `$Height` píxeles, co marco, onde está (`SetWindowPos`): Windows non a fai máis pequena do que deixa meiga en `WM_GETMINMAXINFO`. O paso 11 pide 100 × 40, menos ca o mínimo a calquera escala, e despois o tamaño de antes.
+- **`Assert-NothingDrawn`** é a de `check-manytabs.ps1`, letra por letra (ver alí): fai `$Action` cando meiga leva 400 ms sen debuxar, agarda 300 ms, e despois a que meiga leve outros 400 sen debuxar: non pode haber ningún fotograma. É a do menú da xanela, que se abre e se pecha, e no que soben o Espazo e Alt (pasos 4 e 6), e a da xanela minimizada (paso 13).
+
+```powershell
+# Where the client area of the window is on the screen once it is maximized:
+# the work area of its monitor, but for a few pixels on the edges where a
+# taskbar hides itself (see leave_room_for_hidden_taskbars in
+# crates/meiga-win/src/window.rs).
+function Get-MaximizedClient {
+    $info = [Meiga.Tools.TitleBarCheck+MONITORINFO]::new()
+    $info.Size = 40
+    # MONITOR_DEFAULTTONEAREST.
+    if (-not $api::GetMonitorInfoW($api::MonitorFromWindow($window, 2), [ref]$info)) {
+        throw "Could not read the monitor of the window of $exe."
+    }
+    $edges = $api::AutoHideEdges($info.Monitor)
+    $left = $info.Work.Left
+    $top = $info.Work.Top
+    $right = $info.Work.Right
+    $bottom = $info.Work.Bottom
+    if ($edges -band 1) { $left += $autoHideGap }
+    if ($edges -band 2) { $top += $autoHideGap }
+    if ($edges -band 4) { $right -= $autoHideGap }
+    if ($edges -band 8) { $bottom -= $autoHideGap }
+    New-Rect $left $top $right $bottom
+}
+
+# Where the client area of the window is on the screen.
+function Get-ClientOnScreen {
+    $origin = Get-OnScreen (New-Point 0 0)
+    $client = Get-Client
+    New-Rect $origin.X $origin.Y ($origin.X + $client.Right) ($origin.Y + $client.Bottom)
+}
+```
+
+**Onde vai a xanela maximizada.**
+
+- **`Get-MaximizedClient`**: onde ten que estar na pantalla a área cliente da xanela maximizada, coma `leave_room_for_hidden_taskbars`: a área de traballo do seu monitor (`MonitorFromWindow`, co máis próximo, e `GetMonitorInfoW`), sen a barra de tarefas, salvo onde se oculta soa; e, en cada bordo onde se oculta, 2 píxeles menos (`AutoHideEdges`, decisión 7). meiga pide o monitor coa área cliente que vai ter a xanela (`MonitorFromRect`), porque o pide antes de que Windows a mova; a comprobación, coa xanela xa maximizada no seu sitio, pídeo coa xanela. Windows deixa a xanela maximizada fóra do monitor o grosor do marco en cada lado, e meiga baixa o bordo de arriba da área cliente ese grosor (decisión 2): así, a área cliente é a área de traballo.
+- **`Get-ClientOnScreen`**: onde está a área cliente na pantalla, coa súa esquina de arriba á esquerda (`Get-OnScreen`) e o seu tamaño.
+
+```powershell
+# Waits until the window is maximized, and checks that it drew one full frame
+# after the first $From lines of the log, and that its client area is the
+# work area of its monitor; otherwise throws what $What says.
+function Wait-Maximized([int]$From, [string]$What) {
+    Wait-For { $api::IsZoomed($window) } { "$What did not maximize the window." }
+    Wait-OneFull $From $What
+    Update-Bar
+    $expected = Get-MaximizedClient
+    $actual = Get-ClientOnScreen
+    if (-not (Test-Same $actual $expected)) {
+        throw "$What maximized the window, and its client area is $(Show-Rect $actual) on the screen instead of $(Show-Rect $expected)."
+    }
+}
+
+# Waits until the window is restored, and checks that it drew one full frame
+# after the first $From lines of the log, and that it is where it was, with
+# the band above the tabs; otherwise throws what $What says.
+function Wait-Restored([int]$From, [string]$What) {
+    Wait-For { -not $api::IsZoomed($window) -and -not $api::IsIconic($window) } { "$What did not restore the window." }
+    Wait-OneFull $From $What
+    Update-Bar
+    $now = Get-WindowRect
+    if (-not (Test-Same $now $restored) -or $band -le 0) {
+        throw "$What restored the window to $(Show-Rect $now), with a band of $band pixels, instead of $(Show-Rect $restored), with one."
+    }
+    Move-Pointer
+}
+```
+
+**Maximizada e restaurada.**
+
+- **`Wait-Maximized`** agarda a que a xanela estea maximizada (`IsZoomed`), e o seu fotograma completo, só un (`Wait-OneFull`); despois le outra vez a barra (`Update-Bar`), xa sen banda, e a área cliente ten que estar exactamente onde di `Get-MaximizedClient`. `$What` di o que a maximizou, para a mensaxe.
+- **`Wait-Restored`** agarda a que a xanela non estea nin maximizada nin minimizada, e o seu fotograma completo, só un; le outra vez a barra, e a xanela ten que estar onde estaba e co mesmo tamaño, `$restored`, e ter banda. A banda é a de `Get-Band`, a da xanela e as métricas, e non a que usa a barra de meiga: que esta volta ter banda compróbano os puntos do paso 10. Despois, `Move-Pointer`.
+
+```powershell
+# The command line of meiga: its frame log, and no program, so that its first
+# tab runs the default profile, Light.
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+$info.WorkingDirectory = $work
+$info.Environment['APPDATA'] = $appdata
+$info.Environment['MEIGA_CHECK_WORK'] = $work
+$info.ArgumentList.Add('--trace-frames')
+$info.ArgumentList.Add($log)
+$process = $null
+$started = [DateTime]::MinValue
+$window = [IntPtr]::Zero
+$thread = [uint32]0
+$dpi = 96
+$pointer = $null
+$restored = $null
+$windowMenu = [IntPtr]::Zero
+$attached = $false
+$passed = $false
+try {
+    $process = [Diagnostics.Process]::Start($info)
+    $started = $process.StartTime
+```
+
+**Abrir meiga,** coma en `check-manytabs.ps1`: a liña de comandos leva o rexistro dos fotogramas, e ningún programa, así que a primeira tab corre o perfil por defecto, Light ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 5). O cartafol de meiga é o da comprobación, e o contorno, o de PowerShell, co `APPDATA` da comprobación e `MEIGA_CHECK_WORK`, o cartafol que expande o `directory` de Light.
+
+- **As variábeis que len as funcións e o `finally`** créanse antes do `try`, porque, con `Set-StrictMode`, ler unha variábel que non existe sería un erro: o proceso e a hora á que empezou, para `Get-Shells` e `Get-Consoles`; a xanela, o seu fío e a escala; o punteiro, para devolvelo; `$restored`, onde está a xanela restaurada; o menú da xanela; `$attached`, se a comprobación comparte a súa entrada co fío da xanela, que le `Split-Input`; e `$passed`.
+
+```powershell
+    Wait-For { $api::WindowOf($process.Id, 'meiga') -ne [IntPtr]::Zero } { "$exe did not open its window." }
+    $window = $api::WindowOf($process.Id, 'meiga')
+    $processId = [uint32]0
+    $thread = $api::GetWindowThreadProcessId($window, [ref]$processId)
+    $dpi = $api::GetDpiForWindow($window)
+    $rowHeight = Get-Scaled 32
+    $gap = Get-Scaled 4
+    $newSide = Get-Scaled 28
+    $profilesSide = Get-Scaled 24
+    $scrollSide = Get-Scaled 24
+    $dragSide = Get-Scaled 45
+    $captionSide = Get-Scaled 46
+    $maxTab = Get-Scaled 240
+    $minTab = Get-Scaled 100
+```
+
+**A xanela e a barra.**
+
+- **A xanela e o seu fío,** coma en `check-manytabs.ps1`: `WindowOf` agarda a xanela de meiga, e `GetWindowThreadProcessId` dá o seu fío, o que se suspende para publicar e o que abre o menú da xanela; e `$dpi`, a escala da xanela, para `Get-Scaled`.
+- **As medidas da barra,** as de `ui/tabbar.rs` a escala 100 %, á escala da xanela: a fila das tabs, 32 (`ROW`); o oco, 4; o +, 28; o botón dos perfís e os de desprazamento, 24; o sitio para arrastrar a xanela, 45 (`DRAG`); os botóns da xanela, 46 (`CAPTION`); e as tabs, de 100 a 240. A banda depende da xanela: lea `Update-Bar`.
+- **Sen cambiar o tamaño da xanela,** a diferenza de `check-manytabs.ps1`: os pasos valen para calquera ancho que lle dea Windows.
+
+```powershell
+    # The first tab runs Light, the default profile.
+    Wait-For { @(Get-Shells).Count -gt 0 } { 'The first tab started no program.' }
+    $first = @(Get-Shells)[0]
+    if ($first.CommandLine -cne $lightLine) {
+        throw "The first tab runs '$($first.CommandLine)' instead of '$lightLine'."
+    }
+    $tabs.Add([int]$first.ProcessId)
+    Wait-Settled $tabs.ToArray() 'The first tab'
+    Update-Bar
+    $restored = Get-WindowRect
+    Move-Pointer
+    Wait-Quiet 400
+    Write-Host "The bar is $barHeight pixels high, $band of them above the tabs, and the buttons of the window $captionSide wide."
+```
+
+**A primeira tab.** A comprobación agarda o seu programa (`Get-Shells`), que ten que correr exactamente `$lightLine`, distinguindo maiúsculas: a liña de Light, o perfil por defecto. Despois, `Wait-Settled`, ata que leva un segundo sen usar o procesador; `Update-Bar`, a barra da xanela restaurada, coa banda; `$restored`, onde está a xanela, coa que comparan os pasos que a restauran; `Move-Pointer`; e, cando meiga leva 400 ms sen debuxar, a primeira liña: o alto da barra, a banda e o ancho dos botóns da xanela.
+
+**Os pasos,** catorce, numerados no código, e cada un remata cunha liña `OK:`: o paso 1 é a primeira liña `OK:`, e o 14, a última. Os puntos cóntanse desde a esquina de arriba á esquerda da área cliente, salvo os do marco, que son da pantalla; e os números son píxeles a escala 100 %, coas métricas habituais de Windows: a barra mide 40 de alto, 8 da banda e 32 da fila das tabs, e o marco dos lados, 8.
+
+| Paso | Que fai a comprobación | Que ten que pasar |
+|---|---|---|
+| 1 | Le onde están a xanela e a súa área cliente. | A área cliente empeza arriba de todo da xanela, e o marco de Windows queda nos lados e abaixo, do grosor das súas métricas. |
+| 2 | Pregunta que é cada punto: os lados, o bordo de abaixo e as esquinas do marco; a banda e a súa esquina; as partes libres da barra; a tab, o +, o botón dos perfís e o terminal; e os botóns da xanela. | O marco redimensiona a xanela. A banda tamén, desde arriba, e, nos 19 primeiros píxeles da xanela, tamén á esquerda. As partes libres son a barra de título, desde a primeira fila debaixo da banda; os botóns da xanela, eses botóns en todo o seu alto; e o resto, a área cliente. |
+| 3 | O punteiro no botón de minimizar, no de maximizar e no de pechar. | Cada un debuxa só ese botón, unha ou dúas veces. |
+| 4 | O botón dereito no sitio para arrastrar a xanela, e Esc. Outra vez o botón dereito, Abaixo ata *Maximize*, e Intro. | Ábrese o menú da xanela ao soltar o botón, no punteiro, cos elementos dunha xanela restaurada activos e *Close* en negra, e non se debuxa nada; Esc pécháo, e tampouco. Intro maximiza a xanela, cun fotograma completo, e a súa área cliente é a área de traballo do monitor. |
+| 5 | O botón dereito na xanela maximizada, Abaixo ata *Restore*, e Intro. | O menú ten os elementos dunha xanela maximizada activos e *Close* en negra. Intro restaura a xanela onde estaba, cun fotograma completo. |
+| 6 | Alt+Espazo, co estado das teclas da comprobación. Soben o Espazo e Alt, e Esc. Despois, a X, e Esc. | Ábrese o menú debaixo da barra, desde o lado esquerdo da xanela, cos elementos dunha xanela restaurada activos, *Close* en negra e nada resaltado, e non se debuxa nada, tampouco ao subir o Espazo e Alt; Esc pécháo, o fío da xanela non queda no modo menú de Windows, e a X chégalle ao programa da tab, e só se debuxa no terminal. |
+| 7 | Un clic no botón de maximizar. Pregunta que é cada punto da fila de arriba. | A xanela maximízase, cun fotograma completo. Non hai banda: a fila de arriba é a barra de título nas partes libres, a área cliente na tab e no +, e os botóns da xanela neles. |
+| 8 | Un clic no mesmo botón. | A xanela restáurase onde estaba, cun fotograma completo. |
+| 9 | Un dobre clic no sitio para arrastrar a xanela, e outro. | Windows maximiza a xanela, e despois restáuraa, cun fotograma completo cada vez. |
+| 10 | A tecla de menú, que abre o menú da tab. Pregunta que é cada punto. Esc, e outra vez as partes libres. | Co menú aberto, as partes libres son a área cliente, e a banda e os botóns da xanela, o que eran. Co menú pechado, as partes libres voltan ser a barra de título. |
+| 11 | Pide unha xanela de 100 × 40. Un clic no +, e pregunta que é cada punto. O botón do medio na tab nova, e o tamaño de antes. | A área cliente mide 395 × 40. Con dúas tabs, que non caben, os botóns de desprazamento, a tab da franxa, o + e o botón dos perfís son a área cliente, e os ocos e o sitio para arrastrar a xanela, a barra de título. O botón do medio pecha a tab, e a xanela volta ao seu tamaño e ao seu sitio. |
+| 12 | Perder e coller o foco. | Só se debuxan os botóns da xanela, os tres. |
+| 13 | Un clic no botón de minimizar. Perder e coller o foco. `SC_RESTORE`. | A xanela minimízase, e non se debuxa nada. Restaurada, está onde estaba, e píntase enteira. |
+| 14 | Un clic no botón de pechar. | meiga sae co código 0, e os programas das tabs e as súas consolas rematan. |
+
+```powershell
+    # 1. The client area, with the bar, goes up to the top of the window, and
+    # Windows keeps its frame on the other sides.
+    $rect = Get-WindowRect
+    $origin = Get-OnScreen (New-Point 0 0)
+    $client = Get-Client
+    # SM_CXPADDEDBORDER, and SM_CXSIZEFRAME and SM_CYSIZEFRAME.
+    $side = $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(32, $dpi)
+    $low = $api::GetSystemMetricsForDpi(92, $dpi) + $api::GetSystemMetricsForDpi(33, $dpi)
+    $sides = "left $($origin.X - $rect.Left), top $($origin.Y - $rect.Top), right $($rect.Right - $origin.X - $client.Right) and bottom $($rect.Bottom - $origin.Y - $client.Bottom)"
+    if ($origin.Y -ne $rect.Top -or $origin.X - $rect.Left -ne $side -or
+        $rect.Right - $origin.X - $client.Right -ne $side -or $rect.Bottom - $origin.Y - $client.Bottom -ne $low) {
+        throw "The frame of the window is $sides pixels wide, instead of left $side, top 0, right $side and bottom $low."
+    }
+    Write-Host "OK: the bar goes up to the top of the window, and Windows keeps its frame on the other sides: $side pixels on the left and on the right, and $low at the bottom."
+```
+
+**1. O marco** (decisión 1). A comprobación le onde está a xanela, co seu marco (`GetWindowRect`); onde empeza a área cliente na pantalla (`ClientToScreen` do punto 0, 0); e o tamaño da área cliente. O marco de cada lado é o que queda entre as dúas. Arriba ten que ser 0: a área cliente, coa barra, empeza arriba de todo da xanela, porque meiga lle volta poñer en `WM_NCCALCSIZE` o bordo de arriba que lle quitaría Windows para a súa barra de título. Nos lados, `SM_CXPADDEDBORDER` máis `SM_CXSIZEFRAME`, e abaixo, `SM_CXPADDEDBORDER` máis `SM_CYSIZEFRAME`, á escala da xanela: o que deixa `DefWindowProcW` a unha xanela `WS_OVERLAPPEDWINDOW`, 8 píxeles a escala 100 %, e 11 a 150 %. A liña `OK:` di o marco dos lados e o de abaixo; a banda dina a primeira liña, e que redimensiona a xanela compróbao o paso 2.
+
+- **O que colle:** `nccalc-no-top`, unha meiga que non volta poñer o bordo de arriba: a área cliente empeza debaixo dunha barra de título de Windows, e o marco de arriba mide o que ela.
+
+```powershell
+    # 2. What each part of the restored window is for Windows: its frame, the
+    # band and its corner, the free parts of the bar, its buttons and the
+    # buttons of the window, the tab and the terminal.
+    $middleX = [int][Math]::Floor(($rect.Left + $rect.Right) / 2)
+    $middleY = [int][Math]::Floor(($rect.Top + $rect.Bottom) / 2)
+    Assert-Hits @(
+        New-Hit $rect.Left $rect.Top $HTTOPLEFT
+        New-Hit ($rect.Right - 1) $rect.Top $HTTOPRIGHT
+        New-Hit $rect.Left $middleY $HTLEFT
+        New-Hit ($rect.Right - 1) $middleY $HTRIGHT
+        New-Hit $rect.Left ($rect.Bottom - 1) $HTBOTTOMLEFT
+        New-Hit $middleX ($rect.Bottom - 1) $HTBOTTOM
+        New-Hit ($rect.Right - 1) ($rect.Bottom - 1) $HTBOTTOMRIGHT
+    ) 'On the frame of the restored window' -Screen
+```
+
+**2. Que é cada parte da xanela restaurada** (decisións 2, 4 e 5). Primeiro, o marco de Windows, cos puntos da pantalla (`-Screen`): o primeiro píxel da fila de arriba da xanela é a esquina de arriba á esquerda, e o último, a de arriba á dereita; o medio dos lados, os lados; e, na fila de abaixo, as dúas esquinas e o medio do bordo. Responde `DefWindowProcW`: meiga pregúntalle primeiro a el, e só onde di que é a área cliente mira a súa barra (decisión 12).
+
+- **O que colle:** `frame-not-default`, unha meiga que non lle pregunta a `DefWindowProcW`: o marco é para ela a área cliente.
+
+```powershell
+    # How far from the left side of the client area the band resizes the
+    # window also to the left: as far from the left side of the window as on
+    # a window of Windows.
+    $corner = $topLeftCorner - ($origin.X - $rect.Left)
+    $tabX = (Get-Middle (Get-TabRect 0)).X
+    $drag = Get-DragPoint
+    Assert-Hits @(
+        if ($corner -gt 0) {
+            New-Hit 0 0 $HTTOPLEFT
+            New-Hit ($corner - 1) ($band - 1) $HTTOPLEFT
+            New-Hit $corner 0 $HTTOP
+        }
+        else {
+            New-Hit 0 0 $HTTOP
+        }
+        New-Hit $tabX 0 $HTTOP
+        New-Hit $tabX ($band - 1) $HTTOP
+        New-Hit $drag.X 0 $HTTOP
+        New-Hit $drag.X ($band - 1) $HTTOP
+        New-Hit $drag.X $band $HTCAPTION
+        New-Hit $drag.X $drag.Y $HTCAPTION
+        New-Hit ([int][Math]::Floor($gap / 2)) $midY $HTCAPTION
+        New-Hit $tabX $band $HTCLIENT
+        New-Hit $tabX $midY $HTCLIENT
+        New-Hit (Get-Middle (Get-NewRect)).X $midY $HTCLIENT
+        New-Hit (Get-Middle (Get-ProfilesRect)).X $midY $HTCLIENT
+        New-Hit $tabX ($barHeight + $rowHeight) $HTCLIENT
+        Get-CaptionHits
+    ) 'On the restored window'
+    Write-Host 'OK: restored, for Windows, the frame resizes the window from its sides and its corners, and the band above the tabs from the top, and from the top left corner next to the left side; the free parts of the bar are the caption, the buttons of the window are those buttons along all their height, also over the band, and the tab, the buttons of the bar and the terminal are the client area.'
+```
+
+Despois, a barra, cos puntos da área cliente. `$tabX` é o medio da primeira tab, e `$drag`, o punto do sitio para arrastrar a xanela.
+
+- **A esquina da banda.** A banda redimensiona a xanela tamén á esquerda nos 19 primeiros píxeles desde o lado esquerdo da xanela, sen escalar, coma o marco de Windows (`TOP_LEFT_CORNER`); como a área cliente empeza despois do marco da esquerda, a esquina chega ata `$corner`, 19 menos ese marco: 11 a escala 100 %, e 8 a 150 %. O píxel 0, 0, e o último da esquina na última fila da banda, son a esquina de arriba á esquerda (`HTTOPLEFT`); e o primeiro despois dela, o bordo de arriba (`HTTOP`). Se o marco mide 19 ou máis, non hai esquina na área cliente, e o 0, 0 xa é o bordo de arriba.
+- **A banda,** enriba da tab e do sitio para arrastrar a xanela, na súa primeira fila e na última, é o bordo de arriba; e a primeira fila debaixo dela, no sitio para arrastrar a xanela, xa é a barra de título.
+- **As partes libres** son a barra de título (`HTCAPTION`): o sitio para arrastrar a xanela, e o oco da esquerda da primeira tab.
+- **A área cliente:** a tab, xa na primeira fila debaixo da banda, porque ocupa a fila enteira das tabs; o medio da fila das tabs na tab, no + e no botón dos perfís; e o terminal, unha fila das tabs por debaixo da barra.
+- **Os botóns da xanela,** en todo o seu alto (`Get-CaptionHits`).
+- **O que colle:** `no-band`, unha meiga sen banda; `corner-unscaled`, unha onde a esquina mide 19 píxeles desde o lado da área cliente, e non desde o da xanela; `no-top-left`, unha sen esquina; `captions-below-band`, unha onde a banda lles gaña aos botóns da xanela; `empty-is-client`, unha onde as partes libres son a área cliente, e non moven a xanela; `band-inclusive`, unha onde a banda colle tamén a primeira fila de debaixo; e `maximize-not-button`, unha onde o botón de maximizar é a barra de título para Windows, que así non mostraría os *snap layouts* de Windows 11.
+
+```powershell
+    # 3. The pointer on each button of the window draws only that button.
+    foreach ($index in 2, 1, 0) {
+        Assert-CaptionHover $index
+    }
+    Write-Host 'OK: the pointer on each button of the window draws only that button.'
+```
+
+**3. O punteiro en cada botón da xanela** (decisión 3). `Assert-CaptionHover` no botón de minimizar, no de maximizar e no de pechar, nesa orde: cada un debuxa só o seu rectángulo, do alto da barra enteira.
+
+- **O que colle:** `hover-damages-all`, unha meiga que debuxa os tres botóns cando o punteiro está nun; e `no-caption-hover`, unha onde o punteiro non resalta os botóns da xanela, e non debuxa nada.
+
+```powershell
+    # 4. The right button on the free part of the bar opens the menu of the
+    # window when it goes up, at the pointer, and nothing is drawn while it
+    # is open; Esc closes it; Down and Enter choose Maximize.
+    Assert-NothingDrawn { $script:windowMenu = Open-WindowMenu } 'The right button on the bar, which opened the menu of the window,'
+    Assert-WindowMenu $windowMenu $false 'With the window restored'
+    Assert-NothingDrawn { Close-WindowMenu } 'Esc, which closed the menu of the window,'
+    $windowMenu = Open-WindowMenu
+    Select-WindowCommand $windowMenu 'Maximize'
+    $from = Get-Mark
+    Send-Key $VK_RETURN
+    Wait-Maximized $from 'Enter on Maximize, in the menu of the window,'
+    Write-Host 'OK: the right button on the free part of the bar opens the menu of the window when it goes up, at the pointer, with the commands of a restored window enabled and Close in bold, and nothing is drawn while it is open; Esc closes it, and draws nothing; Down and Enter on Maximize maximize the window, with one full frame, and its client area is the work area of its monitor.'
+```
+
+**4. O menú da xanela restaurada** (decisión 6). O botón dereito no sitio para arrastrar a xanela abre o menú cando sobe, e non cando baixa, coa súa esquina de arriba á esquerda no punteiro (`Open-WindowMenu`), e non se debuxa nada mentres está aberto (`Assert-NothingDrawn`): o menú non lle quita o foco á xanela, e nada cambia nela. Os elementos, os dunha xanela restaurada (`Assert-WindowMenu`). Esc pécháo, tamén sen debuxar nada. Despois, outra vez o botón dereito, que tamén abre o menú ao soltalo e no punteiro, Abaixo ata *Maximize* (`Select-WindowCommand`), e Intro: `TrackPopupMenu` devólvelle a meiga `SC_MAXIMIZE`, e meiga publícao en `WM_SYSCOMMAND`. A xanela maximízase, cun fotograma completo, e a área cliente é a área de traballo do monitor (`Wait-Maximized`).
+
+- **O que colle:** `right-button-down-opens`, unha meiga que abre o menú cando o botón dereito baixa; `right-button-menu-elsewhere`, unha que o abre na esquina de arriba á esquerda da área cliente, e non no punteiro; `menu-restore-enabled`, unha que deixa *Restore* activo coa xanela restaurada; `menu-default`, unha que non pon ningún elemento en negra; `menu-default-maximize`, unha que pon *Maximize* en negra, coma Chromium coa xanela restaurada; `menu-default-cleared`, unha que lle quita a negra ao menú, coma o Windows Terminal; `no-window-menu`, unha que lle deixa o botón dereito a `DefWindowProcW`, que non abre nada; `menu-command-ignored`, unha que non fai o comando escollido; `menu-loop-unfocuses`, unha que toma o bucle do menú por unha perda do foco, e debuxa os botóns da xanela; e `max-top-offscreen`, unha que non baixa o bordo de arriba da área cliente maximizada, que queda fóra do monitor o grosor do marco. E, só cunha barra de tarefas que se oculta, `no-autohide-room`, unha que non lle deixa os 2 píxeles: a área cliente maximizada chega ata o bordo do monitor onde se oculta.
+
+```powershell
+    # 5. Maximized, the menu of the window has other commands enabled: Down
+    # and Enter choose Restore.
+    $windowMenu = Open-WindowMenu
+    Assert-WindowMenu $windowMenu $true 'With the window maximized'
+    Select-WindowCommand $windowMenu 'Restore'
+    $from = Get-Mark
+    Send-Key $VK_RETURN
+    Wait-Restored $from 'Enter on Restore, in the menu of the window,'
+    Write-Host 'OK: maximized, the menu of the window has the commands of a maximized window enabled and Close in bold, and Down and Enter on Restore restore the window where it was, with one full frame, and with the band above the tabs.'
+```
+
+**5. O menú da xanela maximizada** (decisión 6). Outra vez o botón dereito, coa xanela maximizada: os elementos, os dunha xanela maximizada. Abaixo ata *Restore*, e Intro: a xanela restáurase onde estaba, cun fotograma completo (`Wait-Restored`).
+
+- **O que colle:** `menu-maximize-enabled`, unha meiga que deixa *Maximize* activo coa xanela maximizada.
+
+```powershell
+    # 6. Alt+Space opens the menu of the window below the bar, from the left
+    # side of the window, where the terminal starts, with nothing
+    # highlighted, and nothing is drawn while it is open, also when Space and
+    # Alt go up. Esc closes it, and the window is not left in the menu mode
+    # of Windows, which would take the next key: it reaches the program of
+    # the tab. meiga reads Alt in the state of the keys, which the check sets
+    # for the thread of the window while it shares its input.
+    $menuCorner = Get-OnScreen (New-Point 0 $barHeight)
+    $altScan = [long]$api::MapVirtualKeyW($VK_MENU, 0)
+    Join-Input
+    try {
+        Assert-NothingDrawn {
+            Send-Posted @(
+                Get-AltKey $VK_MENU $true
+                Get-AltKey $VK_SPACE $true
+            ) -Down $VK_MENU, $VK_LMENU, $VK_SPACE
+            Wait-For { (Get-WindowMenu) -ne [IntPtr]::Zero } { 'Alt+Space did not open the menu of the window.' }
+        } 'Alt+Space, which opened the menu of the window,'
+        $windowMenu = Get-WindowMenu
+        Assert-MenuAt $menuCorner 'Alt+Space'
+        Assert-WindowMenu $windowMenu $false 'Opened with Alt+Space'
+        $highlight = Get-Highlight $windowMenu
+        if ($highlight -ge 0) {
+            throw "Alt+Space opened the menu of the window with the item at the position $highlight highlighted, and not with none."
+        }
+        # As Windows sends them: Space goes up as a system key, with Alt down,
+        # and Alt, after another key, as a key.
+        Assert-NothingDrawn {
+            Send-Posted @(
+                Get-AltKey $VK_SPACE $false
+                $WM_KEYUP, $VK_MENU, (1 -bor ($altScan -shl 16) -bor 0xC0000000L)
+            ) -Down @()
+        } 'Space and Alt, which went up while the menu of the window was open,'
+        if ($api::MenuOf($thread) -eq [IntPtr]::Zero) {
+            throw 'Space and Alt, which went up, closed the menu of the window that Alt+Space opened.'
+        }
+        Assert-NothingDrawn { Close-WindowMenu } 'Esc, which closed the menu of the window that Alt+Space opened,'
+    }
+    finally {
+        Split-Input
+    }
+    $modes = $api::MenuModesOf($thread)
+    if ($modes -ne 0) {
+        throw "Once Esc closed the menu of the window that Alt+Space opened, the thread of the window is still in the menu mode of Windows (flags 0x$($modes.ToString('X')))."
+    }
+    $from = Get-Mark
+    Send-Key $VK_X
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Once Esc closed the menu of the window that Alt+Space opened, X drew nothing: it did not reach the program of the tab, which writes it.' }
+    Wait-Quiet 400
+    $terminal = New-Rect 0 $barHeight $barWidth (Get-Client).Bottom
+    $frames = @(Get-Frames $from)
+    $areas = @(Get-Areas $frames)
+    if (@($areas | Where-Object { -not (Test-Inside $_ $terminal) }).Count -gt 0) {
+        Show-Lines $frames
+        throw "X, which the program of the tab writes, drew outside the terminal, $(Show-Rect $terminal): $(@($areas | ForEach-Object { Show-Rect $_ }) -join ', ')."
+    }
+    # Esc empties the line of cmd.
+    Send-Key $VK_ESCAPE
+    Wait-Quiet 400
+    Write-Host 'OK: Alt+Space opens the menu of the window below the bar, from the left side of the window, with the commands of a restored window enabled, Close in bold and nothing highlighted, and nothing is drawn while it is open, also when Space and Alt go up; Esc closes it, and the window is not left in the menu mode of Windows: the next key reaches the program of the tab, and draws only in the terminal.'
+```
+
+**6. Alt+Espazo** (decisión 6). Primeiro, onde ten que abrirse o menú: a esquina de arriba á esquerda da área cliente, baixada o alto da barra, coa banda, e pasada á pantalla (`Get-OnScreen`), debaixo da barra e no lado esquerdo da xanela, onde empeza o terminal ([Código › meiga-core › `menu_corner`](meiga-core.md#onde-se-abre-o-menú-da-xanela-co-teclado-menu_corner)); e o código de exploración de Alt (`MapVirtualKeyW`), para cando sobe. Despois, a comprobación comparte a súa entrada co fío da xanela (`Join-Input`), e publica Alt e o Espazo que baixan, coma teclas do sistema (`Get-AltKey`), con Alt e o Espazo abaixo no estado das teclas: Alt coma o pon Windows, coa tecla xenérica, `VK_MENU`, e coa da esquerda, `VK_LMENU`, que é a que le meiga ([Código › meiga-win › `for_windows` e `control_keys`](meiga-win.md#for_windows-e-control_keys)). meiga deixa Alt+Espazo a Windows ([ADR 0014](../adr/0014-o-teclado.md), decisión 5), que lle pide o menú á xanela cun `WM_SYSCOMMAND`, con `SC_KEYMENU` e o espazo; e meiga ábreo entón debaixo da barra ([Código › meiga-win › O menú co teclado](meiga-win.md#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)). A comprobación agarda a que se abra (`Get-WindowMenu`), sen que se debuxe nada mentres tanto (`Assert-NothingDrawn`); e mira onde se abriu (`Assert-MenuAt`), que ten os elementos dunha xanela restaurada, con *Close* en negra (`Assert-WindowMenu`), e que non ten ningún resaltado (`Get-Highlight`), coma co botón dereito.
+
+Despois soben o Espazo e Alt, coma os envía Windows: o Espazo, coma tecla do sistema, con Alt aínda abaixo; e Alt, que sobe despois doutra tecla, coma unha tecla normal, `WM_KEYUP`, co seu código de exploración e os bits 30 e 31; e o estado, xa sen ningunha tecla abaixo (`-Down @()`). As dúas chegan ao bucle de mensaxes do menú, e o menú ten que seguir aberto (`MenuOf`), sen que se debuxe nada. Esc pécháo (`Close-WindowMenu`), tamén sen debuxar nada; e o `finally` do paso deixa de compartir a entrada (`Split-Input`), tamén se algo falla.
+
+Ao final, o fío da xanela non pode estar en ningún modo menú de Windows (`MenuModesOf`): no modo menú no que o deixaba o menú que abría Windows, a tecla seguinte a Esc non lle chegaría ao programa da tab. E chégalle: a X (`Send-Key`) ten que debuxar algo, porque o `cmd` da tab escríbea na súa liña; e, cando meiga leva 400 ms sen debuxar, todas as zonas dos fotogramas teñen que estar no terminal, debaixo da barra. Esc baleira a liña de `cmd`, e a comprobación agarda a que meiga leve outros 400 ms sen debuxar (`Wait-Quiet`).
+
+- **O que colle:** `no-alt-space`, unha meiga que lle deixa a Windows o `WM_SYSCOMMAND` de Alt+Espazo, coma ata a 2.8: Windows abre o seu menú debaixo de onde estaría a súa barra de título, enriba da de meiga; `alt-space-then-windows`, unha que, cando se pecha o seu menú, lle deixa tamén a Windows o `WM_SYSCOMMAND`: Esc pecha o menú de meiga, e Windows abre entón o seu; `alt-space-to-program`, unha que lle envía Alt+Espazo ao programa da tab, e non abre ningún menú; `alt-space-at-window-corner`, unha que o abre na esquina de arriba á esquerda da área cliente, enriba da banda e das tabs; `alt-space-not-on-screen`, unha que non pasa a esquina á pantalla, e o abre nese punto da pantalla; `alt-space-below-row-only`, unha que baixa a esquina só o alto da fila das tabs, sen a banda: o menú ábrese o alto da banda máis arriba, enriba das tabs; e `alt-space-highlights`, unha que publica unha frecha Abaixo antes de abrilo, que resalta o primeiro elemento.
+```powershell
+    # 7. The button to maximize the window maximizes it: then there is no
+    # band, and the top row of the bar is what is below it.
+    $from = Get-Mark
+    Send-Caption 1
+    Wait-Maximized $from 'The button to maximize the window'
+    $tabX = (Get-Middle (Get-TabRect 0)).X
+    $drag = Get-DragPoint
+    Assert-Hits @(
+        New-Hit 0 0 $HTCAPTION
+        New-Hit ($gap - 1) 0 $HTCAPTION
+        New-Hit $gap 0 $HTCLIENT
+        New-Hit $tabX 0 $HTCLIENT
+        New-Hit (Get-Middle (Get-NewRect)).X 0 $HTCLIENT
+        New-Hit $drag.X 0 $HTCAPTION
+        New-Hit $drag.X $drag.Y $HTCAPTION
+        Get-CaptionHits
+    ) 'On the maximized window'
+    Write-Host 'OK: the button to maximize the window maximizes it, with one full frame; then there is no band, and the top row of the bar is the caption on the free parts of the bar, the client area on the tab and on the buttons of the bar, and the buttons of the window on them.'
+```
+
+**7. O botón de maximizar** (decisións 2 e 4). Un clic nel (`Send-Caption 1`): a barra publica `SC_MAXIMIZE`, e a xanela maximízase, cun fotograma completo e coa área cliente na área de traballo (`Wait-Maximized`). Maximizada, non hai banda, e a fila de arriba, a do bordo da pantalla, é do que hai debaixo: o píxel 0, 0 e o último do oco da esquerda da primeira tab, a barra de título; o primeiro da tab, o medio da tab e o do +, a área cliente; o sitio para arrastrar a xanela, a barra de título, arriba e no medio da fila das tabs; e os botóns da xanela, en todo o seu alto.
+
+- **O que colle:** `max-keeps-band`, unha meiga que deixa a banda tamén coa xanela maximizada; `band-not-relaid`, unha onde a barra non se recoloca cando só cambia a banda; `buttons-swapped`, unha onde o botón de maximizar minimiza, e o de minimizar maximiza; e `button-presses-to-windows`, unha que lle pasa a `DefWindowProcW` o botón esquerdo que baixa nun botón da xanela: Windows segue el o botón, co rato de verdade, e o clic publicado non maximiza a xanela.
+
+```powershell
+    # 8. The same button restores the window.
+    $from = Get-Mark
+    Send-Caption 1
+    Wait-Restored $from 'The button to restore the window'
+    Write-Host 'OK: the same button restores the window where it was, with one full frame.'
+```
+
+**8. O mesmo botón restaura** (decisión 4). Outro clic no botón do medio dos tres, que agora restaura a xanela: a barra publica `SC_RESTORE`, e a xanela volta ao seu sitio, cun fotograma completo (`Wait-Restored`).
+
+- **O que colle:** `toggle-always-maximizes`, unha meiga onde ese botón sempre maximiza.
+
+```powershell
+    # 9. A double click on the free part of the bar maximizes the window, and
+    # another one restores it.
+    $from = Get-Mark
+    Send-Posted @($WM_NCLBUTTONDBLCLK, $HTCAPTION, (Get-ScreenParam (Get-OnScreen (Get-DragPoint))))
+    Wait-Maximized $from 'A double click on the bar'
+    $from = Get-Mark
+    Send-Posted @($WM_NCLBUTTONDBLCLK, $HTCAPTION, (Get-ScreenParam (Get-OnScreen (Get-DragPoint))))
+    Wait-Restored $from 'A double click on the bar of the maximized window'
+    Write-Host 'OK: a double click on the free part of the bar maximizes the window, and another one restores it, each with one full frame.'
+```
+
+**9. O dobre clic** (decisión 5). `WM_NCLBUTTONDBLCLK` no sitio para arrastrar a xanela, con `HTCAPTION`, coma o envía Windows onde o *hit test* non é a área cliente, tamén a unha xanela sen `CS_DBLCLKS`, coma a de meiga: meiga pásallo a `DefWindowProcW`, que maximiza a xanela. E outro, que a restaura. Cada un, cun fotograma completo.
+
+- **O que colle:** `caption-presses-taken`, unha meiga que non lle pasa a Windows as mensaxes do rato da barra de título: o dobre clic non fai nada.
+
+```powershell
+    # 10. While a menu of meiga is open, a click on the free part of the bar
+    # only closes it: there, the bar is the client area, but for the band and
+    # the buttons of the window.
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Key $VK_APPS
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { 'The Menu key did not open the menu of the tab.' }
+    Wait-Quiet 400
+    $drag = Get-DragPoint
+    Assert-Hits @(
+        if ($corner -gt 0) { New-Hit 0 0 $HTTOPLEFT } else { New-Hit 0 0 $HTTOP }
+        New-Hit $drag.X 0 $HTTOP
+        New-Hit $drag.X $drag.Y $HTCLIENT
+        New-Hit ([int][Math]::Floor($gap / 2)) $midY $HTCLIENT
+        Get-CaptionHits
+    ) 'While the menu of the tab is open'
+    $from = Get-Mark
+    Send-Key $VK_ESCAPE
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Esc did not close the menu of the tab.' }
+    Wait-Quiet 400
+    Assert-Hits @(
+        New-Hit $drag.X $drag.Y $HTCAPTION
+        New-Hit ([int][Math]::Floor($gap / 2)) $midY $HTCAPTION
+    ) 'Once Esc closed the menu of the tab'
+    Write-Host 'OK: while the menu of a tab is open, the free parts of the bar are the client area, so that a click on them only closes the menu, but for the band, and the buttons of the window are those buttons; once Esc closes it, the free parts of the bar are the caption again.'
+```
+
+**10. Cun menú de meiga aberto** (decisión 10). A tecla de menú abre o menú da tab que se mostra, debaixo dela ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 6): a comprobación agarda os seus fotogramas, e que meiga deixe de debuxar. Despois de cada evento, meiga dálle á xanela a súa barra, e se hai un menú aberto (`Tabs::title_bar`): con el aberto, as partes libres son a área cliente, e un clic nelas chegaríalle a meiga, que só pecharía o menú ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 8), sen mover nin maximizar a xanela. A banda segue sendo o bordo de arriba, coa súa esquina, e os botóns da xanela, eses botóns. Esc pecha o menú, e as partes libres voltan ser a barra de título. A comprobación non fai ese clic: só pregunta que son os puntos.
+
+- **O que colle:** `menu-not-told`, unha meiga que non lle di á xanela que hai un menú aberto; e `menu-takes-band`, unha onde o menú aberto fai tamén a banda área cliente.
+
+```powershell
+    # 11. The window cannot be narrower than the bar with one tab between the
+    # buttons that scroll the strip, nor shorter than the bar. Then, with two
+    # tabs, which do not fit, what each part of the bar is.
+    Wait-Quiet 400
+    $from = Get-Mark
+    Set-WindowSize 100 40
+    Wait-OneFull $from 'The smallest size of the window'
+    Update-Bar
+    $narrowest = 3 * $gap + $newSide + $profilesSide + $dragSide + 3 * $captionSide + 2 * $scrollSide + $minTab
+    $client = Get-Client
+    if ($client.Right -ne $narrowest -or $client.Bottom -ne $barHeight) {
+        throw "As small as it can be, the client area of the window is $($client.Right) x $($client.Bottom) pixels instead of $narrowest x $barHeight."
+    }
+```
+
+**11. A xanela máis pequena** (decisión 9). Cando meiga leva 400 ms sen debuxar, `Set-WindowSize` pide unha xanela de 100 × 40, e Windows dálle a máis pequena que deixa meiga en `WM_GETMINMAXINFO`, cun fotograma completo. A área cliente ten que medir exactamente o ancho da barra máis estreita, coma `Layout::min_width`: os tres ocos, o +, o botón dos perfís, o sitio para arrastrar a xanela, os tres botóns da xanela, os dous botóns de desprazamento e unha tab do ancho mínimo, 395 píxeles a escala 100 %, e 593 a 150 %; e de alto, a barra, coa banda: 40, e 59.
+
+- **O que colle:** `no-minmax`, unha meiga sen tamaño mínimo; `min-width-no-frame` e `min-height-no-frame`, unhas que lle dan a Windows o tamaño mínimo da área cliente coma o da xanela, sen o marco, no ancho ou no alto, e a área cliente queda máis estreita ou máis baixa ca a barra; e `min-width-no-scroll`, unha onde a barra máis estreita non conta os botóns de desprazamento.
+
+```powershell
+    $at = Get-Middle (Get-NewRect)
+    Send-Posted @(
+        Get-Mouse $WM_MOUSEMOVE 0 $at
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $at
+        Get-Mouse $WM_LBUTTONUP 0 $at
+    )
+    Wait-For { @(Get-Shells).Count -gt 1 } { 'The button + did not open a tab.' }
+    $second = @(Get-Shells | Where-Object { [int]$_.ProcessId -notin $tabs })[0]
+    $tabs.Add([int]$second.ProcessId)
+    Wait-Settled $tabs.ToArray() 'The second tab'
+    Wait-Quiet 400
+    Update-Fit
+    if (-not $barOverflow) {
+        throw "At $dpi DPI, two tabs fit in the window as small as it can be, and the check needs them not to."
+    }
+    # The tab that is shown, the new one, is in view: the strip is at its end.
+    $barScroll = Get-MaxScroll
+    $strip = Get-Strip
+    $right = Get-ScrollRect 'Right'
+    $shown = Get-Intersection (Get-TabRect 1) $strip
+    $drag = Get-DragPoint
+    Assert-Hits @(
+        New-Hit (Get-Middle (Get-ScrollRect 'Left')).X $midY $HTCLIENT
+        New-Hit (Get-Middle $right).X $midY $HTCLIENT
+        New-Hit (Get-Middle $shown).X $midY $HTCLIENT
+        New-Hit (Get-Middle (Get-NewRect)).X $midY $HTCLIENT
+        New-Hit (Get-Middle (Get-ProfilesRect)).X $midY $HTCLIENT
+        New-Hit ([int][Math]::Floor($gap / 2)) $midY $HTCAPTION
+        New-Hit ($right.Right + [int][Math]::Floor($gap / 2)) $midY $HTCAPTION
+        New-Hit $drag.X $drag.Y $HTCAPTION
+        New-Hit (Get-Middle $strip).X 0 $HTTOP
+        Get-CaptionHits
+    ) 'With two tabs that do not fit in the window as small as it can be'
+```
+
+**Con dúas tabs, que non caben.** Un clic no + (`WM_MOUSEMOVE`, e o botón esquerdo que baixa e sobe, na área cliente) abre unha tab de Light, o perfil por defecto, que se mostra: a comprobación agarda o seu programa, e que leve un segundo quieto. Dúas tabs de 100 non caben na franxa da barra máis estreita, que mide unha (`Update-Fit`); se cupesen, a comprobación fallaría, porque o paso conta con iso. A tab nova móstrase, e vai á vista: a franxa vai ata o final (`Get-MaxScroll`). A escala 100 %, o botón de desprazamento da esquerda vai de 4 a 28; a franxa, de 28 a 128, coa tab nova enteira; o botón da dereita, de 128 a 152; o +, de 156 a 184; o botón dos perfís, de 184 a 208; o sitio para arrastrar a xanela, despois dun oco, de 212 a 257; e os botóns da xanela, de 257 a 395. Cada parte, no medio da fila das tabs:
+
+- os dous botóns de desprazamento, a parte da tab nova que se ve na franxa (`Get-Intersection`), o + e o botón dos perfís son a área cliente;
+- o oco da esquerda, o oco despois do botón de desprazamento da dereita, e o sitio para arrastrar a xanela, a barra de título;
+- a banda, enriba da franxa, o bordo de arriba;
+- e os botóns da xanela, en todo o seu alto.
+
+Ningunha das corenta e sete copias falla nestes puntos: as catro que fallan no paso 11 fano no tamaño.
+
+```powershell
+    # The middle button closes the second tab, and the window gets its size
+    # back.
+    $at = Get-Middle $shown
+    Send-Posted @(
+        Get-Mouse $WM_MOUSEMOVE 0 $at
+        Get-Mouse $WM_MBUTTONDOWN $MK_MBUTTON $at
+        Get-Mouse $WM_MBUTTONUP 0 $at
+    )
+    Wait-Ended $tabs[1] 'The program of the second tab, which the middle button closed,'
+    $tabs.RemoveAt(1)
+    Update-Fit
+    Wait-Quiet 400
+    $from = Get-Mark
+    Set-WindowSize ($restored.Right - $restored.Left) ($restored.Bottom - $restored.Top)
+    Wait-OneFull $from 'Giving the window its size back'
+    Update-Bar
+    $now = Get-WindowRect
+    if (-not (Test-Same $now $restored)) {
+        throw "With its size back, the window is at $(Show-Rect $now) instead of $(Show-Rect $restored)."
+    }
+    Move-Pointer
+    Write-Host "OK: the window cannot be narrower than the bar with one tab between the buttons that scroll the strip, nor shorter than the bar: its client area is then $narrowest x $barHeight pixels; with two tabs, which do not fit, the buttons that scroll the strip, the tab in it, and the buttons + and of the profiles are the client area, and the gaps and the room to drag the window are the caption."
+```
+
+**O tamaño de antes.** O botón do medio na tab nova péchaa ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6), e o seu programa remata; o modelo volta ter unha tab. Cando meiga leva 400 ms sen debuxar, `Set-WindowSize` dálle á xanela o tamaño de antes, cun fotograma completo, e a xanela ten que estar exactamente onde estaba. Despois, `Move-Pointer`, e a liña `OK:`, co tamaño da área cliente máis pequena.
+
+```powershell
+    # 12. Losing and getting the focus draws only the buttons of the window.
+    Wait-Quiet 400
+    $from = Get-Mark
+    Send-Posted @($WM_KILLFOCUS, 0, 0, $WM_SETFOCUS, 0, 0)
+    Wait-For { @(Get-Frames $from).Count -gt 0 } { 'Losing and getting the focus drew nothing.' }
+    Wait-Quiet 400
+    $frames = @(Get-Frames $from)
+    $areas = @(Get-Areas $frames)
+    $captions = Get-CaptionsRect
+    if (@($areas | Where-Object { -not (Test-Inside $_ $captions) }).Count -gt 0 -or
+        @($areas | Where-Object { Test-Same $_ $captions }).Count -eq 0) {
+        Show-Lines $frames
+        throw "Losing and getting the focus did not draw only the buttons of the window, $(Show-Rect $captions): $(@($areas | ForEach-Object { Show-Rect $_ }) -join ', ')."
+    }
+    Write-Host 'OK: losing and getting the focus draws only the buttons of the window.'
+```
+
+**12. O foco** (decisión 8). Cando meiga leva 400 ms sen debuxar, `WM_KILLFOCUS` e `WM_SETFOCUS` de vez, coma cando a xanela perde o foco e o volta coller: sen o foco, os glifos dos botóns da xanela apáganse, e co foco voltan ser coma antes. Todas as zonas dos fotogramas teñen que estar dentro dos tres botóns da xanela, e algunha ser exactamente os tres. O cursor do terminal tamén se debuxaría, pero Light ocúltao. A comprobación non mira as cores, só onde se debuxa.
+
+- **O que colle:** `focus-close-only`, unha meiga que só debuxa o botón de pechar; `focus-whole-bar`, unha que debuxa a barra enteira; e `focus-ignored`, unha que non debuxa nada.
+
+```powershell
+    # 13. The button to minimize the window minimizes it, and nothing is drawn
+    # while it is minimized; restored, it is painted whole.
+    Send-Caption 2
+    Wait-For { $api::IsIconic($window) } { 'The button to minimize the window did not minimize it.' }
+    Assert-NothingDrawn { Send-Posted @($WM_KILLFOCUS, 0, 0, $WM_SETFOCUS, 0, 0) } 'While the window was minimized, losing and getting the focus'
+    $from = Get-Mark
+    Send-Posted @($WM_SYSCOMMAND, $SC_RESTORE, 0)
+    Wait-For { -not $api::IsIconic($window) } { 'SC_RESTORE did not restore the window.' }
+    Wait-For { @(Get-Log | Select-Object -Skip $from | Where-Object { $_.kind -eq 'paint' -and (Test-Full $_) }).Count -gt 0 } { 'Restoring the window did not paint all of it.' }
+    Wait-Quiet 400
+    Update-Bar
+    $now = Get-WindowRect
+    if (-not (Test-Same $now $restored)) {
+        throw "Restored, the window is at $(Show-Rect $now) instead of $(Show-Rect $restored)."
+    }
+    Move-Pointer
+    Write-Host 'OK: the button to minimize the window minimizes it, and nothing is drawn while it is minimized, also when it loses and gets the focus; restored, it is where it was, and it is painted whole.'
+```
+
+**13. Minimizar** (decisión 4). Un clic no botón de minimizar (`Send-Caption 2`): a barra publica `SC_MINIMIZE`, e a xanela minimízase (`IsIconic`). Minimizada, perder e coller o foco non debuxa nada (`Assert-NothingDrawn`): meiga non presenta fotogramas mentres a xanela está minimizada. Despois, a comprobación restáuraa con `SC_RESTORE`: Windows pídelle a meiga que pinte a xanela enteira (`WM_PAINT`), e a comprobación agarda unha liña `paint` completa no rexistro, e non un fotograma, `frame`. A xanela ten que estar onde estaba.
+
+- **O que colle:** `minimized-draws`, unha meiga que presenta fotogramas coa xanela minimizada; e `minimize-restores`, unha onde o botón de minimizar publica `SC_RESTORE`, que non a minimiza.
+
+```powershell
+    # 14. The button to close the window ends meiga, and the programs of its
+    # tabs.
+    $shells = @(Get-Shells)
+    $tabConsoles = @(Get-Consoles)
+    Send-Caption 0
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "$exe was still running $TimeoutSeconds s after a click on the button to close its window."
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0."
+    }
+    foreach ($shell in $shells) {
+        Wait-Ended ([int]$shell.ProcessId) "The program $($shell.Name) of a tab"
+    }
+    Wait-ConsolesEnded $tabConsoles
+    Write-Host 'OK: the button to close the window ends meiga with exit code 0, and the programs of its tabs and their consoles end too.'
+    $passed = $true
+}
+```
+
+**14. Pechar** (decisión 4). Antes, a comprobación apunta os programas das tabs (`Get-Shells`) e as súas consolas (`Get-Consoles`). Un clic no botón de pechar (`Send-Caption 0`): a barra publica `WM_CLOSE`, coma Alt+F4, e meiga ten que saír en `TimeoutSeconds`, co código 0, e os programas e as consolas que apuntou teñen que rematar. Despois, `$passed` di que todo foi ben.
+
+- **O que colle:** `close-button-minimizes`, unha meiga onde o botón de pechar minimiza a xanela: meiga non sae, e a mensaxe di que seguía correndo despois do clic no botón de pechar.
+
+```powershell
+finally {
+    # If a check failed while the input was shared with the thread of the
+    # window, with no key down.
+    Split-Input
+    if ($process) {
+        if (-not $process.HasExited) {
+            # With the programs of its tabs, and their consoles.
+            try { $process.Kill($true) }
+            catch { Write-Host "Could not end $exe and the programs of its tabs: $($_.Exception.Message)" }
+        }
+        $process.Dispose()
+    }
+    if ($null -ne $pointer) {
+        $null = $api::SetCursorPos($pointer.X, $pointer.Y)
+    }
+    $null = $api::SetThreadDpiAwarenessContext($previousDpi)
+    if ($passed) {
+        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    if (Test-Path -LiteralPath $work) {
+        Write-Host "Kept $work"
+    }
+}
+```
+
+O `finally` é o de `check-manytabs.ps1`, cun comentario máis:
+
+- Primeiro, `Split-Input`, por se algo fallou no paso 6 mentres a comprobación compartía a entrada co fío da xanela: deixa de compartila, e o estado das teclas queda sen ningunha abaixo. Se non a compartía, non fai nada.
+- meiga non queda aberto: se a comprobación fallou no medio, remátao cos programas das súas tabs e as súas consolas, toda a árbore de procesos (`Kill($true)`). Se non pode, dío, e segue.
+- O punteiro volta a onde estaba, se `Move-Pointer` o moveu, e o fío, á súa escala.
+- **Se todo foi ben,** bórrase o cartafol da comprobación enteiro. **Se algo fallou,** queda, e a comprobación di onde, cunha liña `Kept …`: nel están o `config.toml` e o rexistro dos fotogramas. Tamén o di se o cartafol queda porque non se puido borrar enteiro.
+
+A CI executa este script en cada PR, despois de `check-manytabs.ps1`, no paso *Check the title bar* (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)).
+
 ## `tools/terminal-sample.ps1`
 
 Desde a subfase 1.6. Escribe unha mostra do que ten que saber mostrar un terminal, para comprobala a ollo: as cores, os estilos e os caracteres que non son ASCII. Ata a 1.5, a demo de meiga mostraba un texto fixo; desde a 1.6, meiga só mostra o que escribe o seu programa, e esta mostra é o programa que ensina de vez todo o que debuxa. Tamén se pode executar noutro terminal, para comparar. Non comproba nada soa: hai que mirala.
@@ -15505,7 +18124,7 @@ Add-Text "$e]0;meiga sample$e\"
 
 - A mostra constrúese enteira nun `StringBuilder`, un texto que crece sen copiarse cada vez, e escríbese ao final, dunha vez (máis abaixo).
 - `Append` devolve o propio `StringBuilder`. `$null =` descártao: sen el, sería a saída de `Add-Text`, e PowerShell mostraría o obxecto na consola por cada texto que se engade.
-- O primeiro é o título, `ESC ] 0 ; texto`, unha secuencia *OSC* que remata con `ESC \` ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). meiga pono na barra de título da xanela ([Tecnoloxías › O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
+- O primeiro é o título, `ESC ] 0 ; texto`, unha secuencia *OSC* que remata con `ESC \` ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). meiga pono na súa tab e, se é a que se mostra, no título da xanela, que vai a Windows ([Tecnoloxías › O foco e o título da xanela](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)). Ata a 2.8, Windows mostrábao na barra de título da xanela; desde a 2.9, a xanela ten a barra de título de meiga, que non o debuxa, e Windows móstrao na barra de tarefas e en Alt+Tab ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1).
 
 ```powershell
 Add-Text "Text colours (30-37 and 90-97):`r`n"
@@ -15733,10 +18352,10 @@ A comprobación só funciona se Windows PowerShell 5.1 chega a executala, e iso 
    }
    ```
 
-`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 2.7, con [`check-exit.ps1`](#toolscheck-exitps1), son 28:
+`check-powershell.ps1` comproba as dúas cousas en todos os `.ps1` de `tools\`, incluídos os subcartafoles; desde a subfase 2.9, con [`check-titlebar.ps1`](#toolscheck-titlebarps1), son 30. Na 2.7, con [`check-exit.ps1`](#toolscheck-exitps1), eran 28, e na 2.8, con [`check-manytabs.ps1`](#toolscheck-manytabsps1), 29:
 
 ```text
-OK: the 28 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
+OK: the 30 scripts ask for PowerShell 7, and Windows PowerShell 5.1 shows how to run them.
 ```
 
 | Comprobación | Como |

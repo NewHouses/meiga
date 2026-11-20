@@ -579,6 +579,12 @@ impl TerminalView {
         self.wanted = (grid != self.grid).then_some(grid);
     }
 
+    /// The next frame draws the whole window again: the tab bar changed
+    /// height, so the view is at another place of it.
+    pub const fn redraw(&mut self) {
+        self.redraw = true;
+    }
+
     /// Gives the grid that fills the window to the terminal and to the
     /// program, if it changed, unless it changed less than a frame interval
     /// before `now`. Returns when it has to, then.

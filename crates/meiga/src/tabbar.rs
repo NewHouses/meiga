@@ -25,6 +25,19 @@
 //! program rang the bell, or wrote something. Each of them is a symbol that
 //! does not move: the bar has no animation.
 //!
+//! While the window has the title bar of meiga, the bar is its title bar
+//! (ADR 0027): on its right go the buttons of the window, minimize, maximize
+//! or restore, and close, as in Windows 11. They act as the other buttons,
+//! when the left button goes up on the same one where it went down, and the
+//! pointer highlights them: the close button, in red. Without the focus,
+//! their glyphs are dimmer. The rest of the bar is the caption of the
+//! window: dragging it moves the window, and a double click maximizes or
+//! restores it, as Windows does with its own; the right button opens the
+//! menu of the window, where it goes up; and the band above the tabs, while
+//! the window is not maximized, resizes it. Those clicks never reach the
+//! bar. While a menu of meiga is open, the rest of the bar is client area,
+//! and a click on it only closes the menu.
+//!
 //! The bar only draws what changed: a title, the highlight of a tab or of a
 //! button, and all of it when its layout changes or it scrolls.
 
@@ -36,7 +49,7 @@ use meiga_core::geometry::{Point, Rect};
 use meiga_core::model::{self, TabId};
 use meiga_core::mouse::Button;
 use meiga_core::text::{self, CellChar};
-use meiga_core::ui::tabbar::{Layout, Part, Side};
+use meiga_core::ui::tabbar::{CaptionButton, Layout, Part, Side};
 use meiga_render::{Canvas, Error, Font, FontStyle, FontSystem};
 
 use crate::tabs::TabAction;
@@ -64,6 +77,16 @@ const DISABLED_TEXT: Rgb = Rgb::new(0x3a, 0x3f, 0x49);
 /// colour of the title of its tab.
 const ENDED: Rgb = Rgb::new(0xe7, 0x48, 0x56);
 const BELL: Rgb = Rgb::new(0xe5, 0xc0, 0x7b);
+/// The close button of the window, as the one of Windows 11 and of Windows
+/// Terminal: red under the pointer, with a white glyph; and pressed, the
+/// red at 90 % over the bar, with the white at 70 %.
+const CLOSE_HOVERED: Rgb = Rgb::new(0xc4, 0x2b, 0x1c);
+const CLOSE_GLYPH: Rgb = Rgb::new(0xff, 0xff, 0xff);
+const CLOSE_PRESSED: Rgb = BAR.mix(CLOSE_HOVERED, 230);
+const CLOSE_PRESSED_GLYPH: Rgb = CLOSE_PRESSED.mix(CLOSE_GLYPH, 179);
+/// The glyphs of the buttons of the window without the focus: halfway
+/// between the text and the bar.
+const INACTIVE_GLYPH: Rgb = TEXT.mix(BAR, 128);
 
 /// While the left button stays down on a button that scrolls the tabs, and
 /// the pointer on it, they scroll another tab after `FIRST_REPEAT`, as the
@@ -109,6 +132,18 @@ impl Indicator {
     }
 }
 
+/// How the window frames the bar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Frame {
+    /// Whether the bar is the title bar of the window, with its buttons:
+    /// while the window has the title bar of meiga.
+    pub buttons: bool,
+    /// How many pixels above the tabs resize the window from its top edge.
+    pub band: u32,
+    /// Whether the window is maximized: its button restores it then.
+    pub maximized: bool,
+}
+
 /// A part of the bar that the pointer highlights.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Target {
@@ -118,6 +153,8 @@ enum Target {
     New,
     Profiles,
     Scroll(Side),
+    /// A button of the window.
+    Caption(CaptionButton),
 }
 
 impl Target {
@@ -125,7 +162,7 @@ impl Target {
     const fn tab(self) -> Option<TabId> {
         match self {
             Target::Tab(id) | Target::Close(id) => Some(id),
-            Target::New | Target::Profiles | Target::Scroll(_) => None,
+            Target::New | Target::Profiles | Target::Scroll(_) | Target::Caption(_) => None,
         }
     }
 }
@@ -143,6 +180,8 @@ enum Press {
     /// The left button, on a button that scrolls the tabs: they scrolled,
     /// and scroll again while it stays down.
     Scroll(Side),
+    /// The left button, on a button of the window.
+    Caption(CaptionButton),
     /// The middle button, on a tab.
     Middle(TabId),
     /// The right button, on a tab.
@@ -183,6 +222,11 @@ pub struct TabBar {
     /// The tab that is shown has to be in view: the next frame scrolls the
     /// tabs for it, once the bar is not frozen.
     reveal: bool,
+    /// How the window frames the bar.
+    frame: Frame,
+    /// Whether the window has the focus: the glyphs of its buttons are
+    /// dimmer without it.
+    focused: bool,
     /// The areas that changed since the last frame.
     damage: Vec<Rect>,
     /// The cells of a title, kept to avoid an allocation for each one.
@@ -191,14 +235,21 @@ pub struct TabBar {
 
 impl TabBar {
     /// The bar of `tabs` tabs in a window `width` pixels wide at `dpi`,
-    /// with a font of `fonts`.
-    pub fn new(fonts: &FontSystem, dpi: u32, width: u32, tabs: usize) -> Result<Self, Error> {
+    /// which frames it as `frame` says, with a font of `fonts`. The window
+    /// does not have the focus yet.
+    pub fn new(
+        fonts: &FontSystem,
+        dpi: u32,
+        width: u32,
+        tabs: usize,
+        frame: Frame,
+    ) -> Result<Self, Error> {
         let font = Font::new(fonts, &FONT_FAMILIES, FONT_POINTS, dpi)?;
         Ok(Self {
             fonts: fonts.clone(),
             font,
             dpi,
-            layout: Layout::new(dpi, width, tabs),
+            layout: Layout::new(dpi, width, tabs, frame.band),
             pointer: None,
             hover: None,
             pressed: None,
@@ -207,6 +258,8 @@ impl TabBar {
             closing: None,
             frozen: false,
             reveal: false,
+            frame,
+            focused: false,
             damage: Vec::new(),
             cells: Vec::new(),
         })
@@ -215,6 +268,11 @@ impl TabBar {
     /// The height of the bar, in pixels, where the terminal starts.
     pub const fn height(&self) -> u32 {
         self.layout.height()
+    }
+
+    /// Where each part of the bar is, for the title bar of the window.
+    pub const fn layout(&self) -> Layout {
+        self.layout
     }
 
     /// Whether a button of the mouse went down on the bar and did not go up
@@ -271,8 +329,39 @@ impl TabBar {
         self.frozen = false;
         self.reveal = true;
         self.wheel = 0;
-        self.layout = Layout::new(dpi, self.layout.width(), tabs.tab_count());
+        self.layout = Layout::new(
+            dpi,
+            self.layout.width(),
+            tabs.tab_count(),
+            self.layout.band(),
+        );
         self.relayout(tabs);
+    }
+
+    /// The window frames the bar as `frame` says now. Another band moves the
+    /// parts of the bar down or up, and the tabs keep their width and their
+    /// scroll; with or without the buttons of the window, the parts stay,
+    /// since the bar always keeps the room of those buttons. Either way, all
+    /// of the bar is drawn again. With the same band, once the window is
+    /// maximized or restored, only the button that does it changes, if the
+    /// bar has the buttons; but a maximized window has no band, so with the
+    /// title bar of meiga the band changes too.
+    pub fn set_frame<T>(&mut self, frame: Frame, tabs: &model::Window<T>) {
+        let old = mem::replace(&mut self.frame, frame);
+        if old.band != frame.band || old.buttons != frame.buttons {
+            self.layout.set_band(frame.band);
+            self.relayout(tabs);
+        } else if old.maximized != frame.maximized && frame.buttons {
+            self.damage(self.layout.caption(CaptionButton::Maximize));
+        }
+    }
+
+    /// The window gained or lost the focus: the glyphs of its buttons
+    /// change.
+    pub fn set_focused(&mut self, focused: bool) {
+        if mem::replace(&mut self.focused, focused) != focused && self.frame.buttons {
+            self.damage(self.layout.captions());
+        }
     }
 
     /// Tabs opened or closed, but not one alone: [`TabBar::tab_closed`].
@@ -380,6 +469,7 @@ impl TabBar {
             (Button::Left, Target::Close(id)) => Press::Close(id),
             (Button::Left, Target::New) => Press::New,
             (Button::Left, Target::Profiles) => Press::Profiles,
+            (Button::Left, Target::Caption(caption)) => Press::Caption(caption),
             (Button::Left, Target::Scroll(side)) => {
                 if !self.scroll(tabs, side, |layout| layout.step(side)) {
                     return None;
@@ -399,8 +489,9 @@ impl TabBar {
 
     /// `button` went up where the pointer is. Returns what its press asks
     /// of the tabs, if it went down on the same place: to close a tab, to
-    /// open one, or to open the menu of the profiles, or the one of a tab
-    /// where the pointer is. The left button that scrolls the tabs stops.
+    /// open one, to open the menu of the profiles, or the one of a tab
+    /// where the pointer is, or what a button of the window does. The left
+    /// button that scrolls the tabs stops.
     pub fn up<T>(&mut self, tabs: &model::Window<T>, button: Button) -> Option<TabAction> {
         let press = self.pressed?;
         let on_tab = |id| self.hover.is_some_and(|hover| hover.tab() == Some(id));
@@ -413,6 +504,13 @@ impl TabBar {
             }
             (Press::Profiles, Button::Left) => (self.hover == Some(Target::Profiles))
                 .then_some(TabAction::ProfileMenu { keyboard: false }),
+            (Press::Caption(caption), Button::Left) => {
+                (self.hover == Some(Target::Caption(caption))).then_some(match caption {
+                    CaptionButton::Minimize => TabAction::Minimize,
+                    CaptionButton::Maximize => TabAction::ToggleMaximize,
+                    CaptionButton::Close => TabAction::CloseWindow,
+                })
+            }
             (Press::Scroll(_), Button::Left) => None,
             (Press::Middle(id), Button::Middle) => on_tab(id).then_some(TabAction::CloseTab(id)),
             (Press::Right(id), Button::Right) => self
@@ -575,6 +673,13 @@ impl TabBar {
         if clip.intersects(self.layout.profiles()) {
             self.draw_profiles(canvas);
         }
+        if self.frame.buttons {
+            for button in CaptionButton::ALL {
+                if clip.intersects(self.layout.caption(button)) {
+                    self.draw_caption(canvas, button);
+                }
+            }
+        }
     }
 
     /// Draws the tab at `index`, which looks as `look`, with the separator
@@ -730,17 +835,61 @@ impl TabBar {
         draw_diagonals(canvas, self.layout.chevron(), self.layout.stroke(), color);
     }
 
+    /// Draws the button `button` of the window: its highlight, as big as
+    /// the button, and its glyph, restore while the window is maximized.
+    fn draw_caption(&self, canvas: &mut Canvas<'_>, button: CaptionButton) {
+        let target = Target::Caption(button);
+        let pressed = self.highlight(target, Press::Caption(button));
+        let fill = pressed.map(|pressed| match (button, pressed) {
+            (CaptionButton::Close, true) => CLOSE_PRESSED,
+            (CaptionButton::Close, false) => CLOSE_HOVERED,
+            (_, true) => BUTTON_PRESSED,
+            (_, false) => BUTTON_HOVERED,
+        });
+        if let Some(fill) = fill {
+            canvas.fill(self.layout.caption(button), fill);
+        }
+        let color = match (button, pressed) {
+            (CaptionButton::Close, Some(true)) => CLOSE_PRESSED_GLYPH,
+            (CaptionButton::Close, Some(false)) => CLOSE_GLYPH,
+            _ if self.hover == Some(target) => HOVERED_TEXT,
+            _ if self.focused => TEXT,
+            _ => INACTIVE_GLYPH,
+        };
+        let (glyph, stroke) = (self.layout.glyph(button), self.layout.stroke());
+        match button {
+            CaptionButton::Minimize => draw_minimize(canvas, glyph, stroke, color),
+            CaptionButton::Maximize if self.frame.maximized => {
+                draw_restore(canvas, glyph, self.layout.glyph_offset(), stroke, color);
+            }
+            CaptionButton::Maximize => draw_outline(canvas, glyph, stroke, color),
+            CaptionButton::Close => draw_diagonals(canvas, glyph, stroke, color),
+        }
+    }
+
     /// The colour of the highlight of the button `target`, which `press`
     /// presses, if it has one: while the pointer is on it, unless another
     /// button is down.
     fn button_color(&self, target: Target, press: Press) -> Option<Rgb> {
+        self.highlight(target, press).map(|pressed| {
+            if pressed {
+                BUTTON_PRESSED
+            } else {
+                BUTTON_HOVERED
+            }
+        })
+    }
+
+    /// Whether the button `target`, which `press` presses, is highlighted,
+    /// and if so, whether it is pressed: while the pointer is on it, unless
+    /// another button is down.
+    fn highlight(&self, target: Target, press: Press) -> Option<bool> {
         if self.hover != Some(target) {
             return None;
         }
         match self.pressed {
-            None => Some(BUTTON_HOVERED),
-            Some(pressed) if pressed == press => Some(BUTTON_PRESSED),
-            Some(_) => None,
+            None => Some(false),
+            Some(pressed) => (pressed == press).then_some(true),
         }
     }
 
@@ -755,6 +904,9 @@ impl TabBar {
             // A button that cannot scroll the tabs is not highlighted, and a
             // press on it does nothing.
             Part::Scroll(side) => self.layout.can_scroll(side).then_some(Target::Scroll(side)),
+            // Without the title bar of meiga, the window has its own buttons,
+            // and the bar keeps their room empty.
+            Part::Caption(button) => self.frame.buttons.then_some(Target::Caption(button)),
             Part::Empty => None,
         }
     }
@@ -780,6 +932,7 @@ impl TabBar {
                 Target::New => self.damage(self.layout.new_tab()),
                 Target::Profiles => self.damage(self.layout.profiles()),
                 Target::Scroll(side) => self.damage_scroll(side),
+                Target::Caption(button) => self.damage(self.layout.caption(button)),
                 Target::Tab(_) => {}
             }
         }
@@ -792,6 +945,7 @@ impl TabBar {
             Press::New => self.damage(self.layout.new_tab()),
             Press::Profiles => self.damage(self.layout.profiles()),
             Press::Scroll(side) => self.damage_scroll(side),
+            Press::Caption(button) => self.damage(self.layout.caption(button)),
             Press::Middle(_) | Press::Right(_) => {}
         }
     }
@@ -897,6 +1051,63 @@ fn draw_plus(canvas: &mut Canvas<'_>, rect: Rect, stroke: u32, color: Rgb) {
     canvas.fill(Rect::new(x, rect.top, x + stroke, rect.bottom), color);
 }
 
+/// Draws the glyph of minimize in the square `rect`: a line across its
+/// middle, `stroke` pixels thick.
+fn draw_minimize(canvas: &mut Canvas<'_>, rect: Rect, stroke: u32, color: Rgb) {
+    // A glyph is a few pixels.
+    let stroke = stroke as i32;
+    let middle = rect.top + (rect.height() as i32 - stroke) / 2;
+    canvas.fill(
+        Rect::new(rect.left, middle, rect.right, middle + stroke),
+        color,
+    );
+}
+
+/// Draws the sides of `rect`, inside it, `stroke` pixels thick: the glyph
+/// of maximize.
+fn draw_outline(canvas: &mut Canvas<'_>, rect: Rect, stroke: u32, color: Rgb) {
+    // A glyph is a few pixels.
+    let stroke = stroke as i32;
+    let (top, bottom) = (rect.top + stroke, rect.bottom - stroke);
+    canvas.fill(Rect::new(rect.left, rect.top, rect.right, top), color);
+    canvas.fill(Rect::new(rect.left, bottom, rect.right, rect.bottom), color);
+    canvas.fill(Rect::new(rect.left, top, rect.left + stroke, bottom), color);
+    canvas.fill(
+        Rect::new(rect.right - stroke, top, rect.right, bottom),
+        color,
+    );
+}
+
+/// Draws the glyph of restore in the square `rect`, with lines `stroke`
+/// pixels thick: a square in front, in its bottom left corner, and another
+/// one behind it, `offset` pixels up and to the right, without what the
+/// one in front hides.
+fn draw_restore(canvas: &mut Canvas<'_>, rect: Rect, offset: u32, stroke: u32, color: Rgb) {
+    // A glyph is a few pixels.
+    let (shift, thick) = (offset as i32, stroke as i32);
+    let front = Rect::new(rect.left, rect.top + shift, rect.right - shift, rect.bottom);
+    let back = Rect::new(rect.left + shift, rect.top, rect.right, rect.bottom - shift);
+    draw_outline(canvas, front, stroke, color);
+    // The top and the right side of the one behind, and what shows of its
+    // left side above the one in front and of its bottom on its right.
+    canvas.fill(
+        Rect::new(back.left, back.top, back.right, back.top + thick),
+        color,
+    );
+    canvas.fill(
+        Rect::new(back.right - thick, back.top, back.right, back.bottom),
+        color,
+    );
+    canvas.fill(
+        Rect::new(back.left, back.top, back.left + thick, front.top),
+        color,
+    );
+    canvas.fill(
+        Rect::new(front.right, back.bottom - thick, back.right, back.bottom),
+        color,
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use meiga_core::geometry::Size;
@@ -910,15 +1121,26 @@ mod tests {
         }
     }
 
-    /// The tabs of `programs`, the first one active, in a window of 800
-    /// pixels at 100 %, and their bar.
+    /// A maximized window with the title bar of meiga: the bar has the
+    /// buttons of the window, and no band above the tabs.
+    const MAXIMIZED: Frame = Frame {
+        buttons: true,
+        band: 0,
+        maximized: true,
+    };
+
+    /// The tabs of `programs`, the first one active, in a window of 983
+    /// pixels at 100 %, maximized, with the title bar of meiga, and their
+    /// bar: the buttons of the window on its right, from 845, and 736 pixels
+    /// for the tabs, as the 800 of the bar of 2.8, which had no buttons of
+    /// the window nor room to drag it. The window does not have the focus.
     fn bar(programs: &[&str]) -> (TabBar, model::Window<String>) {
         let mut tabs = model::Window::new(programs[0].to_owned());
         for program in &programs[1..] {
             tabs.open((*program).to_owned());
         }
         let fonts = FontSystem::new().unwrap();
-        let bar = TabBar::new(&fonts, 96, 800, tabs.tab_count()).unwrap();
+        let bar = TabBar::new(&fonts, 96, 983, tabs.tab_count(), MAXIMIZED).unwrap();
         (bar, tabs)
     }
 
@@ -926,7 +1148,7 @@ mod tests {
         bar(&["pwsh", "cmd", "wsl"])
     }
 
-    /// `count` tabs, the first one active, in a window of 800 pixels at
+    /// `count` tabs, the first one active, in a window of 983 pixels at
     /// 100 %. From 8 on, they do not fit even at their narrowest, 100
     /// pixels: the strip, from 28 to 716, is between the buttons that scroll
     /// it, from 4 to 28 and from 716 to 740.
@@ -957,7 +1179,7 @@ mod tests {
     }
 
     /// The whole bar, as its damage says when it is drawn again.
-    const WHOLE: Rect = Rect::new(0, 0, 800, 32);
+    const WHOLE: Rect = Rect::new(0, 0, 983, 32);
 
     #[test]
     fn the_pointer_draws_again_only_what_it_highlights() {
@@ -1003,7 +1225,7 @@ mod tests {
         assert_eq!(action, Some(TabAction::Activate(id(&tabs, 1))));
         assert!(!bar.is_pressed());
         assert_eq!(bar.up(&tabs, Button::Left), None);
-        // The empty bar does nothing yet.
+        // The empty bar does nothing: Windows drags the window from it.
         bar.moved(&tabs, Point::new(790, 20));
         assert_eq!(bar.down(&tabs, Button::Left), None);
         assert_eq!(bar.down(&tabs, Button::Right), None);
@@ -1138,20 +1360,20 @@ mod tests {
             })
         ));
         bar.tabs_changed(&tabs);
-        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 800, 32)]);
+        assert_eq!(damage(&mut bar), [WHOLE]);
         // The pointer is on the tab that took the place of the closed one.
         assert_eq!(bar.hover, Some(Target::Tab(id(&tabs, 1))));
         bar.label_changed(1);
         bar.label_changed(1);
         assert_eq!(damage(&mut bar), [Rect::new(252, 4, 456, 32)]);
         // The same width is no change; another one is.
-        bar.resize(800, &tabs);
+        bar.resize(983, &tabs);
         assert!(!bar.has_damage());
-        bar.resize(600, &tabs);
-        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 600, 32)]);
+        bar.resize(783, &tabs);
+        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 783, 32)]);
         bar.set_dpi(144, &tabs);
         assert_eq!(bar.height(), 48);
-        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 600, 48)]);
+        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 783, 48)]);
     }
 
     #[test]
@@ -1484,7 +1706,7 @@ mod tests {
         tabs.open(Marked("wsl", Some(Indicator::Activity)));
         tabs.open(Marked("ssh", Some(Indicator::Bell)));
         let fonts = FontSystem::new().unwrap();
-        let mut bar = TabBar::new(&fonts, 96, 800, tabs.tab_count()).unwrap();
+        let mut bar = TabBar::new(&fonts, 96, 983, tabs.tab_count(), MAXIMIZED).unwrap();
         // A cell is a few pixels.
         let cell = bar.font_mut().cell().width as i32;
         let pixels = draw(&mut bar, &tabs);
@@ -1520,15 +1742,15 @@ mod tests {
     /// Draws the whole bar of `tabs` on a canvas of its size, and returns
     /// its pixels.
     fn draw<T: Label>(bar: &mut TabBar, tabs: &model::Window<T>) -> Vec<u32> {
-        let size = Size::new(800, bar.height());
+        let size = Size::new(983, bar.height());
         let mut pixels = vec![0; size.area() as usize];
-        let mut canvas = Canvas::new(&mut pixels, size, 800).unwrap();
+        let mut canvas = Canvas::new(&mut pixels, size, 983).unwrap();
         bar.draw(&mut canvas, tabs, &Palette::MEIGA);
         pixels
     }
 
     fn at(pixels: &[u32], x: usize, y: usize) -> u32 {
-        pixels[y * 800 + x]
+        pixels[y * 983 + x]
     }
 
     #[test]
@@ -1615,6 +1837,267 @@ mod tests {
         let pixels = draw(&mut bar, &tabs);
         assert_eq!(at(&pixels, 777, 29), pixel(BUTTON_PRESSED));
         assert_eq!(at(&pixels, 764, 16), pixel(HOVERED_TEXT));
+    }
+
+    #[test]
+    fn the_buttons_of_the_window_act_when_the_left_button_goes_up_on_them() {
+        // Minimize from 845 to 891, maximize to 937 and close to 983, as
+        // high as the bar: at the top row of the screen, and close at its
+        // corner, while the window is maximized.
+        let (mut bar, tabs) = three();
+        for (at, action) in [
+            (Point::new(860, 20), TabAction::Minimize),
+            (Point::new(900, 0), TabAction::ToggleMaximize),
+            (Point::new(982, 0), TabAction::CloseWindow),
+        ] {
+            bar.moved(&tabs, at);
+            assert_eq!(bar.down(&tabs, Button::Left), None);
+            assert!(bar.is_pressed());
+            assert_eq!(bar.up(&tabs, Button::Left), Some(action));
+            assert!(!bar.is_pressed());
+        }
+        // Moving away takes the click back, also onto another button.
+        bar.moved(&tabs, Point::new(960, 10));
+        bar.down(&tabs, Button::Left);
+        bar.moved(&tabs, Point::new(900, 10));
+        assert_eq!(bar.up(&tabs, Button::Left), None);
+        // And coming back gives it again.
+        bar.moved(&tabs, Point::new(960, 10));
+        bar.down(&tabs, Button::Left);
+        bar.moved(&tabs, Point::new(960, 100));
+        bar.moved(&tabs, Point::new(970, 30));
+        assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::CloseWindow));
+        // The other buttons of the mouse do nothing on them.
+        for button in [Button::Middle, Button::Right] {
+            assert_eq!(bar.down(&tabs, button), None);
+            assert!(!bar.is_pressed());
+        }
+    }
+
+    #[test]
+    fn the_pointer_and_the_press_draw_again_only_the_button_of_the_window() {
+        let (mut bar, tabs) = three();
+        let (minimize, maximize) = (Rect::new(845, 0, 891, 32), Rect::new(891, 0, 937, 32));
+        assert!(bar.moved(&tabs, Point::new(860, 20)));
+        assert_eq!(damage(&mut bar), [minimize]);
+        assert!(!bar.moved(&tabs, Point::new(870, 2)));
+        assert_eq!(damage(&mut bar), []);
+        bar.moved(&tabs, Point::new(900, 20));
+        assert_eq!(damage(&mut bar), [minimize, maximize]);
+        bar.down(&tabs, Button::Left);
+        assert_eq!(damage(&mut bar), [maximize]);
+        assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::ToggleMaximize));
+        assert_eq!(damage(&mut bar), [maximize]);
+        bar.left(&tabs);
+        assert_eq!(damage(&mut bar), [maximize]);
+        // Once the window is maximized or restored, only its button; and in
+        // practice, the band above the tabs changes with it.
+        bar.set_frame(
+            Frame {
+                maximized: false,
+                ..MAXIMIZED
+            },
+            &tabs,
+        );
+        assert_eq!(damage(&mut bar), [maximize]);
+    }
+
+    #[test]
+    fn a_band_above_the_tabs_moves_them_down_but_not_the_buttons_of_the_window() {
+        let (mut bar, tabs) = three();
+        damage(&mut bar);
+        let restored = Frame {
+            band: 8,
+            maximized: false,
+            ..MAXIMIZED
+        };
+        bar.set_frame(restored, &tabs);
+        assert_eq!(bar.height(), 40);
+        assert_eq!(damage(&mut bar), [Rect::new(0, 0, 983, 40)]);
+        bar.set_frame(restored, &tabs);
+        assert!(!bar.has_damage());
+        // The band, which Windows uses to resize the window, is not a part
+        // of the tabs.
+        bar.moved(&tabs, Point::new(300, 5));
+        assert!(!bar.has_damage());
+        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert!(!bar.is_pressed());
+        bar.moved(&tabs, Point::new(300, 10));
+        assert_eq!(damage(&mut bar), [Rect::new(244, 8, 485, 40)]);
+        // The buttons of the window are as high as the whole bar.
+        bar.moved(&tabs, Point::new(960, 2));
+        damage(&mut bar);
+        bar.down(&tabs, Button::Left);
+        assert_eq!(damage(&mut bar), [Rect::new(937, 0, 983, 40)]);
+        assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::CloseWindow));
+        // Without the band again, the tabs keep their width.
+        let width = bar.tab(1).width();
+        bar.set_frame(MAXIMIZED, &tabs);
+        assert_eq!(bar.height(), 32);
+        assert_eq!(damage(&mut bar), [WHOLE]);
+        assert_eq!(bar.tab(1).width(), width);
+    }
+
+    #[test]
+    fn without_the_title_bar_of_meiga_the_room_of_the_buttons_stays_empty() {
+        let (mut bar, tabs) = three();
+        damage(&mut bar);
+        let windows = Frame {
+            buttons: false,
+            ..MAXIMIZED
+        };
+        bar.set_frame(windows, &tabs);
+        assert_eq!(damage(&mut bar), [WHOLE]);
+        bar.set_focused(true);
+        bar.moved(&tabs, Point::new(960, 10));
+        assert!(!bar.has_damage());
+        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert!(!bar.is_pressed());
+        let pixels = draw(&mut bar, &tabs);
+        for (x, y) in [(865, 15), (911, 11), (955, 11), (960, 10)] {
+            assert_eq!(at(&pixels, x, y), pixel(BAR), "({x}, {y})");
+        }
+        // With it again, they are there, under the pointer.
+        bar.set_frame(MAXIMIZED, &tabs);
+        assert_eq!(damage(&mut bar), [WHOLE]);
+        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert!(bar.is_pressed());
+        assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::CloseWindow));
+    }
+
+    #[test]
+    fn the_buttons_of_the_window_have_the_glyphs_of_windows() {
+        let (mut bar, tabs) = three();
+        bar.set_focused(true);
+        let pixels = draw(&mut bar, &tabs);
+        // Minimize: a line across the middle of its square, from (863, 11)
+        // to (873, 21).
+        for x in 863..873 {
+            assert_eq!(at(&pixels, x, 15), pixel(TEXT));
+        }
+        for (x, y) in [(862, 15), (873, 15), (867, 14), (867, 16)] {
+            assert_eq!(at(&pixels, x, y), pixel(BAR), "({x}, {y})");
+        }
+        // Restore, while the window is maximized: the square in front, from
+        // (909, 13) to (917, 21), and of the one behind, from (911, 11) to
+        // (919, 19), what shows.
+        for (x, y) in [
+            (909, 13),
+            (916, 13),
+            (909, 17),
+            (909, 20),
+            (913, 20),
+            (916, 20),
+            (911, 11),
+            (918, 11),
+            (918, 18),
+            (911, 12),
+            (917, 18),
+        ] {
+            assert_eq!(at(&pixels, x, y), pixel(TEXT), "({x}, {y})");
+        }
+        for (x, y) in [(910, 11), (914, 12), (912, 15), (917, 15), (918, 19)] {
+            assert_eq!(at(&pixels, x, y), pixel(BAR), "({x}, {y})");
+        }
+        // Close: a cross, as steps, from (955, 11) to (965, 21).
+        for (x, y) in [
+            (955, 11),
+            (964, 11),
+            (959, 15),
+            (960, 15),
+            (955, 20),
+            (964, 20),
+        ] {
+            assert_eq!(at(&pixels, x, y), pixel(TEXT), "({x}, {y})");
+        }
+        assert_eq!(at(&pixels, 960, 11), pixel(BAR));
+
+        // Maximize, once the window is restored, below the band: the sides
+        // of its square, from (909, 15) to (919, 25).
+        let restored = Frame {
+            band: 8,
+            maximized: false,
+            ..MAXIMIZED
+        };
+        bar.set_frame(restored, &tabs);
+        let pixels = draw(&mut bar, &tabs);
+        for (x, y) in [
+            (909, 15),
+            (913, 15),
+            (918, 15),
+            (909, 20),
+            (918, 20),
+            (909, 24),
+            (913, 24),
+            (918, 24),
+        ] {
+            assert_eq!(at(&pixels, x, y), pixel(TEXT), "({x}, {y})");
+        }
+        for (x, y) in [(910, 16), (913, 20), (917, 23), (919, 20), (913, 25)] {
+            assert_eq!(at(&pixels, x, y), pixel(BAR), "({x}, {y})");
+        }
+    }
+
+    #[test]
+    fn the_close_button_of_the_window_is_red_and_the_others_grey() {
+        let (mut bar, tabs) = three();
+        bar.set_focused(true);
+        bar.moved(&tabs, Point::new(960, 20));
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 936, 0), pixel(BAR));
+        assert_eq!(at(&pixels, 937, 0), pixel(CLOSE_HOVERED));
+        assert_eq!(at(&pixels, 982, 31), pixel(CLOSE_HOVERED));
+        assert_eq!(at(&pixels, 955, 11), pixel(CLOSE_GLYPH));
+        bar.down(&tabs, Button::Left);
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 937, 0), pixel(CLOSE_PRESSED));
+        assert_eq!(at(&pixels, 955, 11), pixel(CLOSE_PRESSED_GLYPH));
+        assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::CloseWindow));
+
+        bar.moved(&tabs, Point::new(860, 20));
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 845, 0), pixel(BUTTON_HOVERED));
+        assert_eq!(at(&pixels, 865, 15), pixel(HOVERED_TEXT));
+        assert_eq!(at(&pixels, 937, 0), pixel(BAR));
+        assert_eq!(at(&pixels, 955, 11), pixel(TEXT));
+        bar.down(&tabs, Button::Left);
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 890, 31), pixel(BUTTON_PRESSED));
+        assert_eq!(at(&pixels, 865, 15), pixel(HOVERED_TEXT));
+        // While it is down, the pointer on another button highlights
+        // nothing, and gives its glyph the colour of the hovered text.
+        bar.moved(&tabs, Point::new(960, 20));
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 845, 0), pixel(BAR));
+        assert_eq!(at(&pixels, 865, 15), pixel(TEXT));
+        assert_eq!(at(&pixels, 937, 0), pixel(BAR));
+        assert_eq!(at(&pixels, 955, 11), pixel(HOVERED_TEXT));
+    }
+
+    #[test]
+    fn without_the_focus_the_glyphs_of_the_buttons_of_the_window_are_dimmer() {
+        let (mut bar, tabs) = three();
+        let captions = Rect::new(845, 0, 983, 32);
+        let pixels = draw(&mut bar, &tabs);
+        for (x, y) in [(865, 15), (911, 11), (955, 11)] {
+            assert_eq!(at(&pixels, x, y), pixel(INACTIVE_GLYPH), "({x}, {y})");
+        }
+        // The pointer still highlights them.
+        bar.moved(&tabs, Point::new(860, 20));
+        let pixels = draw(&mut bar, &tabs);
+        assert_eq!(at(&pixels, 845, 0), pixel(BUTTON_HOVERED));
+        assert_eq!(at(&pixels, 865, 15), pixel(HOVERED_TEXT));
+        bar.left(&tabs);
+        damage(&mut bar);
+        // The focus draws the three again, once.
+        bar.set_focused(true);
+        assert_eq!(damage(&mut bar), [captions]);
+        bar.set_focused(true);
+        assert!(!bar.has_damage());
+        assert_eq!(at(&draw(&mut bar, &tabs), 865, 15), pixel(TEXT));
+        bar.set_focused(false);
+        assert_eq!(damage(&mut bar), [captions]);
+        assert_eq!(at(&draw(&mut bar, &tabs), 865, 15), pixel(INACTIVE_GLYPH));
     }
 
     /// Whether `area` has text of `text` on `background`: some of its

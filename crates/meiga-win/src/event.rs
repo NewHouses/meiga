@@ -11,7 +11,9 @@ use windows_sys::Win32::Foundation::{LPARAM, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::HDC;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     SIZE_MINIMIZED, WM_APP, WM_CAPTURECHANGED, WM_KILLFOCUS, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN,
+    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_NCLBUTTONDBLCLK,
+    WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_NCMBUTTONDBLCLK, WM_NCMBUTTONDOWN, WM_NCMBUTTONUP,
+    WM_NCMOUSEMOVE, WM_NCRBUTTONDBLCLK, WM_NCRBUTTONDOWN, WM_NCRBUTTONUP, WM_RBUTTONDOWN,
     WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
 };
 
@@ -30,9 +32,10 @@ const MK_SHIFT: WPARAM = 0x0004;
 const MK_CONTROL: WPARAM = 0x0008;
 const MK_MBUTTON: WPARAM = 0x0010;
 
-/// The message of [`Window::track_mouse_leave`]. It is in the
-/// `Win32_UI_Controls` feature, for the same reason.
-const WM_MOUSELEAVE: u32 = 0x02a3;
+/// The message of [`Window::track_mouse_leave`] for the client area, which
+/// the window handles itself. It is in the `Win32_UI_Controls` feature, for
+/// the same reason.
+pub(crate) const WM_MOUSELEAVE: u32 = 0x02a3;
 
 /// An error from the code that handles the events. It ends the message loop.
 pub type HandlerError = Box<dyn StdError>;
@@ -102,8 +105,9 @@ pub enum Event {
     /// ([`Window::capture_mouse`]), for example because another window took
     /// it.
     CaptureLost,
-    /// The pointer left the client area, once after each
-    /// [`Window::track_mouse_leave`].
+    /// The pointer left the client area, which with the title bar of meiga
+    /// ([`WindowOptions::title_bar`](crate::window::WindowOptions::title_bar))
+    /// is also the title bar: once after each [`Window::track_mouse_leave`].
     MouseLeft,
     /// A key went down or up, with the character that it writes, if any.
     /// Alt+F4 and Alt+Space never come as events: Windows handles them, to
@@ -126,9 +130,11 @@ pub enum Event {
 
 /// The event of a window message, or `None` if it is not one of them. The
 /// keyboard messages are not: they become events in the window, which asks
-/// Windows more about them. `alt` says whether Alt is down, which the mouse
-/// messages do not say. The point of [`Event::Wheel`] is from the top-left
-/// corner of the screen: the window makes it of its client area.
+/// Windows more about them. Nor are the messages of the pointer leaving the
+/// window, nor the ones of the mouse over its frame ([`decode_nonclient`]),
+/// which the window handles itself. `alt` says whether Alt is down, which
+/// the mouse messages do not say. The point of [`Event::Wheel`] is from the
+/// top-left corner of the screen: the window makes it of its client area.
 pub(crate) fn decode(
     message: u32,
     wparam: WPARAM,
@@ -184,7 +190,6 @@ pub(crate) fn decode(
             modifiers: modifiers(alt()),
         },
         WM_CAPTURECHANGED => Event::CaptureLost,
-        WM_MOUSELEAVE => Event::MouseLeft,
         WM_SETFOCUS => Event::Focus { focused: true },
         WM_KILLFOCUS => Event::Focus { focused: false },
         WM_WAKE => Event::Wake(wparam as u64),
@@ -192,10 +197,66 @@ pub(crate) fn decode(
     })
 }
 
+/// A mouse message of the frame of the window, the non-client area: the
+/// event, with its point from the top-left corner of the screen, and what
+/// the pointer is over for Windows, its answer to `WM_NCHITTEST`, such as
+/// `HTCAPTION` or `HTCLOSE`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct NonClient {
+    pub(crate) event: Event,
+    pub(crate) hit: u32,
+}
+
+/// The event of a mouse message of the frame of the window, or `None` if it
+/// is not one of them. These messages do not say which buttons and modifier
+/// keys are down: a move comes without a button, and `modifiers` gives the
+/// keys. A double click comes as a button that goes down: Windows sends
+/// them over the frame also to windows without `CS_DBLCLKS`.
+pub(crate) fn decode_nonclient(
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    modifiers: impl FnOnce() -> Modifiers,
+) -> Option<NonClient> {
+    let (button, down) = match message {
+        WM_NCMOUSEMOVE => (None, false),
+        WM_NCLBUTTONDOWN | WM_NCLBUTTONDBLCLK => (Some(Button::Left), true),
+        WM_NCLBUTTONUP => (Some(Button::Left), false),
+        WM_NCMBUTTONDOWN | WM_NCMBUTTONDBLCLK => (Some(Button::Middle), true),
+        WM_NCMBUTTONUP => (Some(Button::Middle), false),
+        WM_NCRBUTTONDOWN | WM_NCRBUTTONDBLCLK => (Some(Button::Right), true),
+        WM_NCRBUTTONUP => (Some(Button::Right), false),
+        _ => return None,
+    };
+    let at = point(lparam);
+    let modifiers = modifiers();
+    let event = match button {
+        None => Event::MouseMoved {
+            at,
+            button: None,
+            modifiers,
+        },
+        Some(button) if down => Event::MouseDown {
+            button,
+            at,
+            modifiers,
+        },
+        Some(button) => Event::MouseUp {
+            button,
+            at,
+            modifiers,
+        },
+    };
+    Some(NonClient {
+        event,
+        hit: wparam as u32,
+    })
+}
+
 /// The point of a mouse message. Each coordinate is a signed 16-bit number,
 /// because it is negative to the left of or above the window while the mouse
-/// is captured.
-fn point(lparam: LPARAM) -> Point {
+/// is captured, and on a monitor on the left of or above the main one.
+pub(crate) fn point(lparam: LPARAM) -> Point {
     Point::new(
         i32::from(low_word(lparam) as i16),
         i32::from(high_word(lparam) as i16),
@@ -235,14 +296,14 @@ mod tests {
             decode(WM_SIZE, 0, xy(1920, 1080)),
             Some(Event::Resized {
                 size: Size::new(1920, 1080),
-                minimized: false
+                minimized: false,
             })
         );
         assert_eq!(
             decode(WM_SIZE, SIZE_MINIMIZED as WPARAM, 0),
             Some(Event::Resized {
                 size: Size::new(0, 0),
-                minimized: true
+                minimized: true,
             })
         );
     }
@@ -352,5 +413,79 @@ mod tests {
     fn other_messages_are_not_events() {
         assert_eq!(decode(0x0400, 0, 0), None);
         assert_eq!(decode(WM_WAKE + 1, 0, 0), None);
+        // The window handles these itself.
+        assert_eq!(decode(WM_MOUSELEAVE, 0, 0), None);
+        assert_eq!(decode(WM_NCMOUSEMOVE, 2, xy(10, 10)), None);
+    }
+
+    fn decode_nonclient(message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<NonClient> {
+        super::decode_nonclient(message, wparam, lparam, || Modifiers {
+            shift: true,
+            ..NONE
+        })
+    }
+
+    // The answers of `WM_NCHITTEST` that the tests use.
+    const HTCAPTION: WPARAM = 2;
+    const HTCLOSE: WPARAM = 20;
+
+    #[test]
+    fn mouse_messages_of_the_frame_say_where_on_the_screen_and_what_is_there() {
+        let shift = Modifiers {
+            shift: true,
+            ..NONE
+        };
+        // Over the caption of a window at the top of a monitor above the
+        // main one: a negative point.
+        assert_eq!(
+            decode_nonclient(WM_NCMOUSEMOVE, HTCAPTION, xy(300, -1070)),
+            Some(NonClient {
+                event: Event::MouseMoved {
+                    at: Point::new(300, -1070),
+                    button: None,
+                    modifiers: shift,
+                },
+                hit: 2,
+            })
+        );
+        // A double click comes as a button that goes down.
+        assert_eq!(
+            decode_nonclient(WM_NCLBUTTONDBLCLK, HTCLOSE, xy(1900, 5)),
+            Some(NonClient {
+                event: Event::MouseDown {
+                    button: Button::Left,
+                    at: Point::new(1900, 5),
+                    modifiers: shift,
+                },
+                hit: 20,
+            })
+        );
+        assert_eq!(
+            decode_nonclient(WM_NCRBUTTONUP, HTCAPTION, xy(40, 8)),
+            Some(NonClient {
+                event: Event::MouseUp {
+                    button: Button::Right,
+                    at: Point::new(40, 8),
+                    modifiers: shift,
+                },
+                hit: 2,
+            })
+        );
+        assert_eq!(
+            decode_nonclient(WM_NCMBUTTONDOWN, HTCAPTION, xy(40, 8)).map(|nc| nc.event),
+            Some(Event::MouseDown {
+                button: Button::Middle,
+                at: Point::new(40, 8),
+                modifiers: shift,
+            })
+        );
+    }
+
+    #[test]
+    fn other_messages_are_not_of_the_frame() {
+        assert_eq!(decode_nonclient(WM_MOUSEMOVE, 0, xy(1, 2)), None);
+        assert_eq!(decode_nonclient(WM_LBUTTONDOWN, MK_LBUTTON, xy(1, 2)), None);
+        // WM_NCMOUSELEAVE: the window handles it itself.
+        assert_eq!(decode_nonclient(0x02a2, 0, 0), None);
     }
 }

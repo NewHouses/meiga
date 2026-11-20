@@ -1,6 +1,6 @@
 # ADR 0021 · Os menús e o menú da tab
 
-- **Estado:** Aceptado; concretado polos [ADR 0022](0022-os-perfis-e-a-configuracion.md), [ADR 0023](0023-os-atallos-de-teclado.md), [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md) e [ADR 0025](0025-moitas-tabs-e-os-indicadores.md)
+- **Estado:** Aceptado; concretado polos [ADR 0022](0022-os-perfis-e-a-configuracion.md), [ADR 0023](0023-os-atallos-de-teclado.md), [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md), [ADR 0025](0025-moitas-tabs-e-os-indicadores.md) e [ADR 0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md)
 - **Data:** 2026-11-15
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0008](0008-temporizador-dos-fotogramas.md), [ADR 0014](0014-o-teclado.md), [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [ADR 0018](0018-o-modelo-das-tabs.md), [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [ADR 0020](0020-a-barra-de-tabs.md)
 

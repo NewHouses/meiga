@@ -1,6 +1,6 @@
 # Código › `meiga-win`
 
-> Estado: mantemento M2, despois da subfase 2.8. Contén a xanela, que o programa tamén pode pechar, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, entre eles o de que a xanela xa está na pantalla e pintada, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar e a que só avisa, o portapapeis, as sesións de ConPTY, co cartafol e o contorno do seu programa, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, e a lista das sesións pechadas, polas que agarda un proceso antes de saír, cun exemplo que as mostra e as grava, as shells instaladas, que atopa sen lanzar ningún proceso, o contorno de meiga e o cartafol do sistema, e o tipo dos erros de Windows. Na 2.3 e na 2.4 non cambiou o código. Na 2.5 chegaron `profiles.rs`, coas shells instaladas, o contorno de meiga e o cartafol do sistema; `Command`, co que unha sesión recibe tamén o cartafol onde empeza o seu programa e o seu contorno; `Event::Shown`, o aviso de que a xanela xa está na pantalla e pintada; e `Window::alert`, a caixa de mensaxe que só avisa. Na 2.6, na 2.7 e na 2.8 non cambiou o código. No M2, o fío escritor dunha sesión pechada ve rematar cada un dos programas que tiña, e unha sesión bloqueada remata 10 s despois do último deles, e non 10 ou 20 s despois de pecharse; o `Pty` garda o seu fío escritor e, ao pecharse a sesión, pásao á lista `CLOSING`, pola que agarda `wait_for_closed_sessions`: meiga chámaa antes de saír, e o exemplo `conpty` tamén; co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, que ninguén agarda, porque antes de Windows 11 24H2 ese peche agarda a que remate o ConPTY, cunha proba unitaria; e chegaron dúas probas de integración, que lanzan coma axudante o propio programa das probas.
+> Estado: subfase 2.9. Contén a xanela, que o programa tamén pode pechar, minimizar, maximizar e restaurar, coa barra de título de meiga, da que o programa lle di que é cada parte, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, entre eles o de que a xanela xa está na pantalla e pintada, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar e a que só avisa, o portapapeis, as sesións de ConPTY, co cartafol e o contorno do seu programa, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, e a lista das sesións pechadas, polas que agarda un proceso antes de saír, cun exemplo que as mostra e as grava, as shells instaladas, que atopa sen lanzar ningún proceso, o contorno de meiga e o cartafol do sistema, e o tipo dos erros de Windows. Na 2.3 e na 2.4 non cambiou o código. Na 2.5 chegaron `profiles.rs`, coas shells instaladas, o contorno de meiga e o cartafol do sistema; `Command`, co que unha sesión recibe tamén o cartafol onde empeza o seu programa e o seu contorno; `Event::Shown`, o aviso de que a xanela xa está na pantalla e pintada; e `Window::alert`, a caixa de mensaxe que só avisa. Na 2.6, na 2.7 e na 2.8 non cambiou o código. No M2, o fío escritor dunha sesión pechada ve rematar cada un dos programas que tiña, e unha sesión bloqueada remata 10 s despois do último deles, e non 10 ou 20 s despois de pecharse; o `Pty` garda o seu fío escritor e, ao pecharse a sesión, pásao á lista `CLOSING`, pola que agarda `wait_for_closed_sessions`: meiga chámaa antes de saír, e o exemplo `conpty` tamén; co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, que ninguén agarda, porque antes de Windows 11 24H2 ese peche agarda a que remate o ConPTY, cunha proba unitaria; e chegaron dúas probas de integración, que lanzan coma axudante o propio programa das probas. Na 2.9, a xanela quita a barra de título de Windows, e o programa dille que é cada parte da súa barra de tabs, que é a barra de título, para que ela llo diga a Windows ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)): os botóns da xanela, que debuxa o programa, minimizan, maximizan ou restauran e pechan coma os de Windows; o botón dereito nas partes libres da barra abre o menú da xanela, e Alt+Espazo ábreo debaixo da barra; a banda enriba das tabs redimensiona a xanela restaurada; a xanela maximizada deixa sitio para a barra de tarefas que se oculta, e a máis pequena ten sitio para a barra máis estreita; e o aviso da saída do punteiro chega cando sae da xanela, e non cando pasa a unha parte da barra que non é área cliente para Windows. Chegaron catro probas unitarias, dúas en `event.rs` e dúas en `window.rs`.
 
 **Responsabilidade:** a capa de plataforma. Envolve todo o que é específico de Windows: ConPTY, a detección das shells instaladas e o contorno dos seus programas, o sistema de arquivos, o portapapeis, a xanela Win32 e a xestión do DPI. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -9,9 +9,9 @@
 | [`Cargo.toml`](#cratesmeiga-wincargotoml) | As dependencias: `meiga-core` e `windows-sys`. |
 | [`src/lib.rs`](#cratesmeiga-winsrclibrs) | A raíz do crate: os módulos, os tipos que se publican e a conversión dos textos a UTF-16. |
 | [`src/error.rs`](#cratesmeiga-winsrcerrorrs) | `Error`: unha chamada a Windows que fallou, e o erro que deu. |
-| [`src/event.rs`](#cratesmeiga-winsrceventrs) | Os eventos da xanela, tamén os do rato, o cambio de escala e o aviso de que a xanela xa está pintada, e o *trait* `Handler`, que os recibe. |
+| [`src/event.rs`](#cratesmeiga-winsrceventrs) | Os eventos da xanela, tamén os do rato, o cambio de escala e o aviso de que a xanela xa está pintada, e o *trait* `Handler`, que os recibe. Desde a subfase 2.9, tamén as mensaxes do rato no marco da xanela. |
 | [`src/keyboard.rs`](#cratesmeiga-winsrckeyboardrs) | O teclado da xanela: as mensaxes das teclas e dos seus caracteres, xuntas en eventos de tecla, e as que son para Windows. |
-| [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o seu DPI, tamén cando cambia, o seu título e o seu peche desde o programa, o bucle de mensaxes, o temporizador dos fotogramas, o `Waker` que a esperta desde outro fío cun número, a captura do rato, a forma do punteiro e o aviso de cando sae da xanela, se está en primeiro plano, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta, a que só avisa e a mensaxe de erro. |
+| [`src/window.rs`](#cratesmeiga-winsrcwindowrs) | A xanela, o seu DPI, tamén cando cambia, o seu título e o seu peche desde o programa, o bucle de mensaxes, o temporizador dos fotogramas, o `Waker` que a esperta desde outro fío cun número, a captura do rato, a forma do punteiro e o aviso de cando sae da xanela, se está en primeiro plano, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta, a que só avisa e a mensaxe de erro. Desde a subfase 2.9, a barra de título de meiga: o marco propio, o que é cada parte da barra para Windows, os botóns e o menú da xanela, a xanela máis pequena e a barra de tarefas que se oculta. |
 | [`src/clipboard.rs`](#cratesmeiga-winsrcclipboardrs) | O portapapeis de Windows: ler e escribir texto. |
 | [`src/conpty.rs`](#cratesmeiga-winsrcconptyrs) | As sesións: un programa nunha pseudoconsola, co cartafol onde empeza e o seu contorno, cos seus fíos lector e escritor, a prioridade do lector, que se pode cambiar mentres a sesión corre, e a súa entrada, que se pode usar desde calquera fío, tamén para cambiar o tamaño da pseudoconsola. Desde o mantemento M2, tamén a espera polas sesións pechadas, que fai un proceso antes de saír. |
 | [`src/profiles.rs`](#cratesmeiga-winsrcprofilesrs) | As shells instaladas, atopadas sen lanzar ningún proceso, nos cartafoles onde as deixan os seus instaladores e no rexistro de Windows; o contorno de meiga e o cartafol do sistema. |
@@ -19,9 +19,9 @@
 | [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs) | Probas de integración: as shells do equipo onde corren e o contorno do programa da proba. |
 | [`examples/conpty.rs`](#cratesmeiga-winexamplesconptyrs) | Un programa de consola que mostra o que escribe un programa nunha pseudoconsola, e envíalle o que se teclea. Desde o M2, se pecha a sesión, agarda a que remate antes de saír. |
 
-Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); o rato, en [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows); o portapapeis e a caixa que pregunta antes de pegar, en [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows) e [› Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste); o cambio de escala e a saída do punteiro, en [Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged) e [› O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent); o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos), e o cambio do tamaño dunha pseudoconsola, en [Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor); a prioridade dos fíos, en [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority); e as shells instaladas, o rexistro de Windows e o contorno e o cartafol dos programas, en [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows). O camiño dun clic, da xanela á selección, ao portapapeis ou ao programa, está en [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); o dun cambio de tamaño, da xanela ao ConPTY, en [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom); e o dun perfil, do arquivo de configuración e das shells instaladas á sesión dunha tab, en [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración). As tabs, cada unha coa súa sesión, e o que fan as que non se ven, coa prioridade do seu fío lector máis baixa, decídense no [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md); e os perfís, coas shells que atopa meiga e o contorno e o cartafol dos seus programas, no [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md).
+Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); o rato, en [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows); o portapapeis e a caixa que pregunta antes de pegar, en [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows) e [› Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste); o cambio de escala e a saída do punteiro, en [Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged) e [› O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent); o marco da xanela e a barra de título de meiga, en [Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título); o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos), e o cambio do tamaño dunha pseudoconsola, en [Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor); a prioridade dos fíos, en [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority); e as shells instaladas, o rexistro de Windows e o contorno e o cartafol dos programas, en [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows). O camiño dun clic, da xanela á selección, ao portapapeis ou ao programa, está en [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); o dun cambio de tamaño, da xanela ao ConPTY, en [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom); e o dun perfil, do arquivo de configuración e das shells instaladas á sesión dunha tab, en [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración); e o da barra de título de meiga, do programa a Windows, en [Arquitectura › As tabs na barra de título](../arquitectura.md#as-tabs-na-barra-de-título). As tabs, cada unha coa súa sesión, e o que fan as que non se ven, coa prioridade do seu fío lector máis baixa, decídense no [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md); e os perfís, coas shells que atopa meiga e o contorno e o cartafol dos seus programas, no [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md); e a barra de tabs coma barra de título, no [ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md).
 
-O crate ten 26 probas unitarias nos arquivos de `src/` (23 na 2.4, as mesmas ca na subfase 1.9: a 2.5 trouxo unha en `conpty.rs` e dúas en `profiles.rs`), e 16 de integración: as 14 de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (12 ata a 2.8, 10 na 2.4 e 9 na 1.9) e as 2 de [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs), novas na 2.5. `cargo test -p meiga-win` córreas todas. Desde o M2, `tests/conpty.rs` ten ademais `helper`, unha proba ignorada que non comproba nada: é a entrada dos programas axudantes das outras, e Cargo non a corre: cóntaa á parte (`14 passed; 1 ignored`).
+O crate ten 31 probas unitarias nos arquivos de `src/`, catro delas novas na 2.9, dúas en `event.rs` e dúas en `window.rs` (27 no M2, que trouxo unha en `conpty.rs`; 26 na 2.5, que trouxo unha en `conpty.rs` e dúas en `profiles.rs`; e 23 na 2.4, as mesmas ca na subfase 1.9), e 16 de integración: as 14 de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (12 ata a 2.8, 10 na 2.4 e 9 na 1.9) e as 2 de [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs), novas na 2.5. `cargo test -p meiga-win` córreas todas. Desde o M2, `tests/conpty.rs` ten ademais `helper`, unha proba ignorada que non comproba nada: é a entrada dos programas axudantes das outras, e Cargo non a corre: cóntaa á parte (`14 passed; 1 ignored`).
 
 ## `crates/meiga-win/Cargo.toml`
 
@@ -83,8 +83,8 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 
 | *Feature* | Que trae | Que se usa |
 |---|---|---|
-| `Win32_Foundation` | Os tipos básicos. | `HWND`, `HANDLE`, `RECT`, `WPARAM`, `LPARAM`, `LRESULT`, `FALSE`, `TRUE`, `CloseHandle` e os resultados das esperas (`WAIT_OBJECT_0`, `WAIT_TIMEOUT` e `WAIT_FAILED`). Desde a subfase 1.8, tamén `POINT`, para o punto da roda, e a memoria global do portapapeis: o seu tipo, `HGLOBAL`, e `GlobalFree`. Desde a 2.5, `ERROR_SUCCESS` e `ERROR_MORE_DATA`, dous dos resultados das funcións do rexistro. Desde o mantemento M2, `TRUE` só o usan as probas de integración: [`wait_for_end`](#a-espera-do-fin-wait_for_end) xa non agarda por todos os obxectos á vez. |
-| `Win32_Graphics_Gdi` | GDI, a API clásica de debuxo. | `BeginPaint`, `EndPaint`, `InvalidateRect`, `ValidateRect` e `UpdateWindow`. Desde a 1.8, tamén `ScreenToClient`, que pasa o punto da roda á área cliente. |
+| `Win32_Foundation` | Os tipos básicos. | `HWND`, `HANDLE`, `RECT`, `WPARAM`, `LPARAM`, `LRESULT`, `FALSE`, `TRUE`, `CloseHandle` e os resultados das esperas (`WAIT_OBJECT_0`, `WAIT_TIMEOUT` e `WAIT_FAILED`). Desde a subfase 1.8, tamén `POINT`, para o punto da roda, e a memoria global do portapapeis: o seu tipo, `HGLOBAL`, e `GlobalFree`. Desde a 2.5, `ERROR_SUCCESS` e `ERROR_MORE_DATA`, dous dos resultados das funcións do rexistro. Desde o mantemento M2, `TRUE` só o usan as probas de integración: [`wait_for_end`](#a-espera-do-fin-wait_for_end) xa non agarda por todos os obxectos á vez. Desde a 2.9, `ERROR_CLASS_ALREADY_EXISTS`, o erro de `RegisterClassExW` cunha clase xa rexistrada ([`create`](#windowcreate)). |
+| `Win32_Graphics_Gdi` | GDI, a API clásica de debuxo. | `BeginPaint`, `EndPaint`, `InvalidateRect`, `ValidateRect` e `UpdateWindow`. Desde a 1.8, tamén `ScreenToClient`, que pasa o punto da roda á área cliente. Desde a 2.9, `MonitorFromRect`, `GetMonitorInfoW`, `MONITORINFO` e `MONITOR_DEFAULTTONEAREST`, o monitor da xanela maximizada ([a barra de tarefas que se oculta](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)); e `ClientToScreen`, que pasa un punto da área cliente á pantalla, para o menú que abre Alt+Espazo ([`screen_point`](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)) e nas probas. |
 | `Win32_Security` | A seguridade dos obxectos de Windows. | Nada directamente: `CreateWaitableTimerExW`, `CreatePipe`, `CreateEventW`, `CreateJobObjectW` e `CreateProcessW` reciben uns `SECURITY_ATTRIBUTES`, e `windows-sys` só declara cada función se existen os tipos que usa. Por iso vai co comentario. |
 | `Win32_Storage_FileSystem` | Os arquivos e o que se le e escribe coma eles. | `ReadFile` e `WriteFile`, para as tubaxes, desde a subfase 1.4; e, desde a 2.5, `GetFileAttributesW`, `INVALID_FILE_ATTRIBUTES` e `FILE_ATTRIBUTE_DIRECTORY`, que din se un programa existe ([`is_file`](#is_file)). |
 | `Win32_System_Console` | A consola. | `CreatePseudoConsole`, `ClosePseudoConsole`, `HPCON` e `COORD`, desde a 1.4, e `ResizePseudoConsole`, desde a 1.9. Desde o M2, nas probas de integración, `SetConsoleCtrlHandler` e `CTRL_CLOSE_EVENT`, cos que os programas axudantes atenden o peche da súa consola. |
@@ -92,21 +92,21 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 | `Win32_System_Environment` | As variábeis de contorno. | `GetEnvironmentStringsW` e `FreeEnvironmentStringsW`, desde a subfase 2.5: o bloque co contorno de meiga ([`environment`](#environment)). |
 | `Win32_System_IO` | A E/S solapada. | Nada directamente: `ReadFile` e `WriteFile` reciben un `OVERLAPPED`, que meiga pasa nulo. O comentario de `Win32_Storage_FileSystem` explícao. |
 | `Win32_System_JobObjects` | Os *jobs*, que agrupan procesos. | `CreateJobObjectW`, `SetInformationJobObject`, `JOBOBJECT_EXTENDED_LIMIT_INFORMATION`, `JOB_OBJECT_LIMIT_BREAKAWAY_OK`, `QueryInformationJobObject`, `JOBOBJECT_BASIC_PROCESS_ID_LIST` e `TerminateJobObject`, desde a 1.4. Desde o M2, nas probas de integración, tamén `AssignProcessToJobObject`, `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, `JobObjectBasicAccountingInformation` e `JOBOBJECT_BASIC_ACCOUNTING_INFORMATION`: o *job* dunha proba, que conta os seus programas e remata os que queden. |
-| `Win32_System_LibraryLoader` | A carga de DLL e módulos. | `GetModuleHandleW` e, desde a 1.4, `LoadLibraryExW`, `GetProcAddress` e as opcións da busca das DLL. |
+| `Win32_System_LibraryLoader` | A carga de DLL e módulos. | `GetModuleHandleW` e, desde a 1.4, `LoadLibraryExW`, `GetProcAddress` e as opcións da busca das DLL. Desde a 2.9, tamén para `shell32.dll` ([`app_bar_message`](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)). |
 | `Win32_System_Memory` | A memoria: a global, a virtual, os *heaps*… | `GlobalAlloc`, `GlobalLock`, `GlobalSize`, `GlobalUnlock` e `GMEM_MOVEABLE`, desde a 1.8: a memoria onde vai o texto do portapapeis. |
 | `Win32_System_Pipes` | As tubaxes. | `CreatePipe`, desde a 1.4. |
 | `Win32_System_Registry` | O rexistro de Windows. | Desde a subfase 2.5, `RegOpenKeyExW`, `RegEnumKeyExW`, `RegGetValueW` e `RegCloseKey`, co tipo das chaves, `HKEY`, as dúas raíces que le meiga, `HKEY_CURRENT_USER` e `HKEY_LOCAL_MACHINE`, o dereito `KEY_ENUMERATE_SUB_KEYS` e as opcións `RRF_RT_REG_SZ` e `RRF_RT_REG_DWORD`, que din que tipo de valor se le: as distribucións de WSL e o cartafol de Git for Windows ([`profiles.rs`](#cratesmeiga-winsrcprofilesrs)). |
 | `Win32_System_SystemInformation` | A información do sistema: a súa versión, o hardware, os seus cartafoles… | `GetSystemDirectoryW`, desde a 2.5: o cartafol do sistema ([`system_folder`](#system_folder)). |
 | `Win32_System_Threading` | Fíos, procesos e obxectos de sincronización. | O temporizador: `CreateWaitableTimerExW`, `SetWaitableTimer`, `CancelWaitableTimer` e `INFINITE`. Desde a 1.4, tamén os procesos e os eventos: `CreateProcessW`, `STARTUPINFOEXW`, a lista de atributos e os seus dous atributos, `OpenProcess` e `PROCESS_SYNCHRONIZE`, `CreateEventW`, `SetEvent`, as esperas e `GetExitCodeProcess`. A estrutura dos límites estendidos dos *jobs* tamén a necesita, porque leva uns `IO_COUNTERS`. Desde a 2.2, a prioridade dos fíos: `SetThreadPriority`, o tipo `THREAD_PRIORITY` e as dúas prioridades que usa meiga, `THREAD_PRIORITY_NORMAL` e `THREAD_PRIORITY_BELOW_NORMAL`, coas que cambia a do fío lector dunha sesión; e, nas probas de integración, `GetCurrentThread` e `GetThreadPriority`, coas que a le. Desde a 2.5, `CREATE_UNICODE_ENVIRONMENT`, a opción de `CreateProcessW` para un bloque do contorno en UTF-16. |
-| `Win32_UI_HiDpi` | A escala e o DPI. | `GetDpiForWindow`, desde a subfase 1.3. |
-| `Win32_UI_Input_KeyboardAndMouse` | O teclado e o rato. | `SetCapture`, `GetCapture` e `ReleaseCapture`, que capturan o rato; desde a subfase 1.7, o teclado: `GetKeyboardState`, `ToUnicodeEx`, `GetKeyboardLayout`, `MapVirtualKeyW` e os códigos de tecla virtual (`VK_…`); desde a 1.8, `GetKeyState`, que di se Alt está premido cos eventos do rato, e `GetDoubleClickTime`; e, desde a 1.9, `TrackMouseEvent`, coa súa estrutura, `TRACKMOUSEEVENT`, e `TME_LEAVE`, que piden o aviso de cando o punteiro sae da xanela. |
+| `Win32_UI_HiDpi` | A escala e o DPI. | `GetDpiForWindow`, desde a subfase 1.3. Desde a 2.9, `GetSystemMetricsForDpi`, o marco de Windows a un DPI ([`frame`](#window_dpi-e-frame)). |
+| `Win32_UI_Input_KeyboardAndMouse` | O teclado e o rato. | `SetCapture`, `GetCapture` e `ReleaseCapture`, que capturan o rato; desde a subfase 1.7, o teclado: `GetKeyboardState`, `ToUnicodeEx`, `GetKeyboardLayout`, `MapVirtualKeyW` e os códigos de tecla virtual (`VK_…`); desde a 1.8, `GetKeyState`, que di se Alt está premido cos eventos do rato, e `GetDoubleClickTime`; e, desde a 1.9, `TrackMouseEvent`, coa súa estrutura, `TRACKMOUSEEVENT`, e `TME_LEAVE`, que piden o aviso de cando o punteiro sae da xanela. Desde a 2.9, `TME_NONCLIENT`, o aviso de cando sae das partes da xanela que non son área cliente ([`track_mouse_leave`](#windowtrack_mouse_leave)), e `VK_SHIFT` e `VK_CONTROL`, coas que a xanela pregunta polas teclas modificadoras nas mensaxes do rato no marco. |
 | `Win32_UI_WindowsAndMessaging` | As xanelas, as mensaxes, os temporizadores das xanelas, os cursores e as caixas de mensaxe. | O resto. |
 
-Algunhas constantes defínense no propio código en vez de activar a súa *feature*, que traería milleiros de declaracións por uns poucos números: os bits dos botóns e das teclas modificadoras nas mensaxes do rato (`MK_LBUTTON`…), de `Win32_System_SystemServices` (ver [`event.rs`](#cratesmeiga-winsrceventrs)); desde a subfase 1.8, o formato do texto no portapapeis, `CF_UNICODETEXT`, de `Win32_System_Ole` (ver [`clipboard.rs`](#cratesmeiga-winsrcclipboardrs)); e, desde a 1.9, a mensaxe que chega cando o punteiro sae da xanela, `WM_MOUSELEAVE`, de `Win32_UI_Controls` (ver [`decode`](#decode)); e, desde o M2, os obxectos que agarda como moito `WaitForMultipleObjects`, `MAXIMUM_WAIT_OBJECTS`, tamén de `Win32_System_SystemServices` (ver [`conpty.rs`](#constantes-e-tipos)). Outra, `WHEEL_PAGE`, o `WHEEL_PAGESCROLL` de Windows, non está en `windows-sys` (ver [`mouse_settings`](#mousesettings-e-mouse_settings)). O tipo `HRESULT` está en `windows_sys::core`, que non necesita ningunha *feature*, coma `BOOL`, que usan desde o M2 as probas de integración.
+Algunhas constantes defínense no propio código en vez de activar a súa *feature*, que traería milleiros de declaracións por uns poucos números: os bits dos botóns e das teclas modificadoras nas mensaxes do rato (`MK_LBUTTON`…), de `Win32_System_SystemServices` (ver [`event.rs`](#cratesmeiga-winsrceventrs)); desde a subfase 1.8, o formato do texto no portapapeis, `CF_UNICODETEXT`, de `Win32_System_Ole` (ver [`clipboard.rs`](#cratesmeiga-winsrcclipboardrs)); e, desde a 1.9, a mensaxe que chega cando o punteiro sae da xanela, `WM_MOUSELEAVE`, de `Win32_UI_Controls` (ver [`decode`](#decode)); e, desde o M2, os obxectos que agarda como moito `WaitForMultipleObjects`, `MAXIMUM_WAIT_OBJECTS`, tamén de `Win32_System_SystemServices` (ver [`conpty.rs`](#constantes-e-tipos)); e, desde a 2.9, a estrutura `APPBARDATA` e as constantes de `SHAppBarMessage` (`ABM_GETSTATE`…), de `Win32_UI_Shell` (ver [a barra de tarefas que se oculta](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)). Outra, `WHEEL_PAGE`, o `WHEEL_PAGESCROLL` de Windows, non está en `windows-sys` (ver [`mouse_settings`](#mousesettings-e-mouse_settings)). O tipo `HRESULT` está en `windows_sys::core`, que non necesita ningunha *feature*, coma `BOOL`, que usan desde o M2 as probas de integración.
 
-A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes. A 2.3 e a 2.4 non cambiaron o crate. A 2.5 necesitou tres, coma din os seus comentarios: `Win32_System_Environment`, para o contorno de meiga, que reciben os programas das tabs con poucos cambios; `Win32_System_Registry`, para o rexistro, onde WSL garda as súas distribucións e Git for Windows o seu cartafol; e `Win32_System_SystemInformation`, para `GetSystemDirectoryW`, o cartafol de `cmd.exe`, `wsl.exe` e Windows PowerShell. O resto xa estaba: `GetFileAttributesW`, en `Win32_Storage_FileSystem`, coma `ReadFile`; `ERROR_SUCCESS` e `ERROR_MORE_DATA`, en `Win32_Foundation`; e `CREATE_UNICODE_ENVIRONMENT`, en `Win32_System_Threading`, con `CreateProcessW`. A 2.6, a 2.7 e a 2.8 non cambiaron o crate. O M2 non necesitou ningunha *feature* nova: `WaitForMultipleObjects` xa estaba en `Win32_System_Threading`; e o que usan as súas probas de integración, en `Win32_System_Console`, coas funcións das pseudoconsolas, en `Win32_System_JobObjects`, coas dos *jobs*, e en `Win32_Foundation`.
+A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes. A 2.3 e a 2.4 non cambiaron o crate. A 2.5 necesitou tres, coma din os seus comentarios: `Win32_System_Environment`, para o contorno de meiga, que reciben os programas das tabs con poucos cambios; `Win32_System_Registry`, para o rexistro, onde WSL garda as súas distribucións e Git for Windows o seu cartafol; e `Win32_System_SystemInformation`, para `GetSystemDirectoryW`, o cartafol de `cmd.exe`, `wsl.exe` e Windows PowerShell. O resto xa estaba: `GetFileAttributesW`, en `Win32_Storage_FileSystem`, coma `ReadFile`; `ERROR_SUCCESS` e `ERROR_MORE_DATA`, en `Win32_Foundation`; e `CREATE_UNICODE_ENVIRONMENT`, en `Win32_System_Threading`, con `CreateProcessW`. A 2.6, a 2.7 e a 2.8 non cambiaron o crate. O M2 non necesitou ningunha *feature* nova: `WaitForMultipleObjects` xa estaba en `Win32_System_Threading`; e o que usan as súas probas de integración, en `Win32_System_Console`, coas funcións das pseudoconsolas, en `Win32_System_JobObjects`, coas dos *jobs*, e en `Win32_Foundation`. A 2.9 tampouco: as mensaxes do marco, `WM_GETMINMAXINFO`, `WM_SYSCOMMAND`, as respostas de `WM_NCHITTEST`, o menú da xanela e as súas ordes, `SWP_FRAMECHANGED`, `IsZoomed`, `GetCursorPos`, `WindowFromPoint` e `GetWindowRect` están en `Win32_UI_WindowsAndMessaging`; `GetSystemMetricsForDpi`, en `Win32_UI_HiDpi`, con `GetDpiForWindow`; `TME_NONCLIENT`, en `Win32_UI_Input_KeyboardAndMouse`, con `TME_LEAVE`; o monitor da xanela, en `Win32_Graphics_Gdi`; e `ERROR_CLASS_ALREADY_EXISTS`, en `Win32_Foundation`. `Win32_UI_Shell`, a de `SHAppBarMessage`, non: meiga carga a función ela mesma, e define a súa estrutura e as súas constantes.
 
-**As DLL.** Cada función de `windows-sys` di de que DLL vén, e `meiga.exe` importa as DLL das funcións que usa. As do rexistro (`RegOpenKeyExW`, `RegEnumKeyExW`, `RegGetValueW` e `RegCloseKey`) están en `advapi32.dll`, que `meiga.exe` non importaba ata a 2.5; as outras funcións novas, `GetEnvironmentStringsW`, `FreeEnvironmentStringsW`, `GetSystemDirectoryW` e `GetFileAttributesW`, en `kernel32.dll`, coma as dos procesos e as tubaxes. Desde a 2.5, [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1) mostra `meiga.exe imports: kernel32.dll, dwrite.dll, ntdll.dll, oleaut32.dll, combase.dll, api-ms-win-core-synch-l1-2-0.dll, gdi32.dll, user32.dll, advapi32.dll`: todas son do sistema ([Código › meiga](meiga.md#comprobacións-feitas)).
+**As DLL.** Cada función de `windows-sys` di de que DLL vén, e `meiga.exe` importa as DLL das funcións que usa. As do rexistro (`RegOpenKeyExW`, `RegEnumKeyExW`, `RegGetValueW` e `RegCloseKey`) están en `advapi32.dll`, que `meiga.exe` non importaba ata a 2.5; as outras funcións novas, `GetEnvironmentStringsW`, `FreeEnvironmentStringsW`, `GetSystemDirectoryW` e `GetFileAttributesW`, en `kernel32.dll`, coma as dos procesos e as tubaxes. Desde a 2.5, [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1) mostra `meiga.exe imports: kernel32.dll, dwrite.dll, ntdll.dll, oleaut32.dll, combase.dll, api-ms-win-core-synch-l1-2-0.dll, gdi32.dll, user32.dll, advapi32.dll`: todas son do sistema ([Código › meiga](meiga.md#comprobacións-feitas)). A 2.9 non engade ningunha: as súas funcións novas están en `user32.dll`, coma as outras das xanelas, tamén as do monitor e `GetSystemMetricsForDpi`. `SHAppBarMessage` está en `shell32.dll`, que non vai na táboa de importacións: meiga cárgaa mentres corre, só do cartafol do sistema, e só a primeira vez que se maximiza unha xanela ([`app_bar_message`](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)). `dwmapi.dll` segue sen cargarse: meiga non estende o marco do DWM na área cliente ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 11).
 
 ## `crates/meiga-win/src/lib.rs`
 
@@ -249,7 +249,7 @@ Desde a subfase 1.6, **`os_error`** deixa ver o erro que garda o `Error`, para q
 
 ## `crates/meiga-win/src/event.rs`
 
-O que lle pasa á xanela, traducido das mensaxes de Windows a tipos de Rust, e o *trait* que recibe eses eventos. Este módulo non ten `unsafe` (`#![forbid(unsafe_code)]`): só le números. Desde a subfase 1.6 define tamén [`WM_WAKE`](#wm_wake), a mensaxe coa que outro fío esperta a xanela, que desde a 2.2 leva un número; desde a 1.8, os eventos do rato teñen os tres botóns, a roda e as teclas modificadoras ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)); e desde a 1.9, hai dous eventos máis: o cambio de escala, que chega antes ca o tamaño novo da xanela ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)), e a saída do punteiro ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)); e desde a 2.5, outro, `Shown`, cando a xanela xa está na pantalla e pintada.
+O que lle pasa á xanela, traducido das mensaxes de Windows a tipos de Rust, e o *trait* que recibe eses eventos. Este módulo non ten `unsafe` (`#![forbid(unsafe_code)]`): só le números. Desde a subfase 1.6 define tamén [`WM_WAKE`](#wm_wake), a mensaxe coa que outro fío esperta a xanela, que desde a 2.2 leva un número; desde a 1.8, os eventos do rato teñen os tres botóns, a roda e as teclas modificadoras ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)); e desde a 1.9, hai dous eventos máis: o cambio de escala, que chega antes ca o tamaño novo da xanela ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)), e a saída do punteiro ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)); e desde a 2.5, outro, `Shown`, cando a xanela xa está na pantalla e pintada. Desde a 2.9, coa barra de título de meiga, este módulo traduce tamén as mensaxes do rato no marco da xanela ([`decode_nonclient`](#nonclient-decode_nonclient-e-point)), mentres que a saída do punteiro xa non a traduce `decode`, senón que a trata a xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)).
 
 ### `Handler`
 
@@ -270,7 +270,7 @@ pub trait Handler {
 - Un ***trait*** é un conxunto de funcións que un tipo pode implementar, como unha interface. `meiga-win` non sabe que fai o programa: só sabe chamar a quen implemente `Handler`. No programa implementao `App` (ver [Código › meiga](meiga.md#cratesmeigasrcapprs)).
 - `&mut self`: o *handler* pode cambiar o seu estado en cada evento. `&Window`: recibe tamén a xanela, para pedirlle cousas (un temporizador, cambiar o título, capturar o rato…).
 - `HandlerError` é un **alias**, outro nome para un tipo: `Box<dyn StdError>`, calquera erro nunha caixa. `dyn StdError` significa «un valor de calquera tipo que implemente `std::error::Error`», e a caixa (`Box`) gárdao na memoria dinámica, porque cada tipo de erro ten un tamaño distinto. Así, o *handler* pode devolver erros de `meiga-win`, de `meiga-render` ou de entrada e saída, e `?` convérteos solos.
-- **Unha regra importante**, na documentación do *trait*: o *handler* non pode chamar a funcións que envían unha mensaxe á xanela e agardan a resposta, como `SetWindowPos`. A xanela chamaría ao *handler* de novo antes de que remate a primeira chamada, e Rust non permite dúas referencias `&mut` ao mesmo valor á vez; ese evento perderíase (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). [`set_title`](#windowset_title) si se pode chamar, porque a mensaxe que envía non chega ao *handler*; e, desde a subfase 2.2, [`close`](#windowclose), que publica a súa mensaxe e non agarda. Desde a subfase 1.8, o programa chama a algunhas que si perden eventos, sabéndoo: [`release_mouse`](#a-captura-do-rato-e-o-repintado), cuxo aviso non lle fai falta, e a caixa de [`confirm`](#windowconfirm) e, desde a 2.5, a de [`alert`](#windowalert), despois das que compensa o que se perdeu.
+- **Unha regra importante**, na documentación do *trait*: o *handler* non pode chamar a funcións que envían unha mensaxe á xanela e agardan a resposta, como `SetWindowPos`. A xanela chamaría ao *handler* de novo antes de que remate a primeira chamada, e Rust non permite dúas referencias `&mut` ao mesmo valor á vez; ese evento perderíase (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). [`set_title`](#windowset_title) si se pode chamar, porque a mensaxe que envía non chega ao *handler*; e, desde a subfase 2.2, [`close`](#windowclose), que publica a súa mensaxe e non agarda, coma desde a 2.9 [`minimize` e `toggle_maximize`](#windowminimize-windowtoggle_maximize-e-command); e [`set_title_bar`](#windowset_title_bar), que só garda a barra. Desde a subfase 1.8, o programa chama a algunhas que si perden eventos, sabéndoo: [`release_mouse`](#a-captura-do-rato-e-o-repintado), cuxo aviso non lle fai falta, e a caixa de [`confirm`](#windowconfirm) e, desde a 2.5, a de [`alert`](#windowalert), despois das que compensa o que se perdeu.
 
 ### `Event` e `mouse::Button`
 
@@ -320,22 +320,22 @@ Un `enum` de Rust é un tipo que pode ser **unha** de varias variantes, e cada v
 | `Resized` | `WM_SIZE` | A área cliente cambiou de tamaño, ou a xanela se minimizou ou se restaurou. Unha xanela minimizada ten tamaño 0 × 0. |
 | `DpiChanged` | `WM_DPICHANGED` | Desde a subfase 1.9. A xanela pasou a un monitor con outra escala, ou cambiou a escala do seu monitor: ten `dpi` puntos por polgada. O seu tamaño novo, se cambia, chega xusto despois, con `Resized`. |
 | `SizeMoveStarted` e `SizeMoveEnded` | `WM_ENTERSIZEMOVE` e `WM_EXITSIZEMOVE` | O usuario empeza e remata de mover ou redimensionar a xanela. Entre os dous, Windows executa o seu propio bucle de mensaxes (ver [os bucles modais](#os-bucles-modais-de-windows)). |
-| `MouseDown` e `MouseUp` | `WM_LBUTTONDOWN`, `WM_LBUTTONUP`, `WM_MBUTTONDOWN`, `WM_MBUTTONUP`, `WM_RBUTTONDOWN` e `WM_RBUTTONUP` | Premer e soltar o botón esquerdo, o do medio ou o dereito, coas teclas modificadoras que estaban premidas. O do medio e as teclas, desde a subfase 1.8. |
-| `MouseMoved` | `WM_MOUSEMOVE` | O rato moveuse, co primeiro botón que está premido, se hai algún. Windows tamén envía `WM_MOUSEMOVE` sen que o rato se mova, por exemplo cando cambia a captura. |
+| `MouseDown` e `MouseUp` | `WM_LBUTTONDOWN`, `WM_LBUTTONUP`, `WM_MBUTTONDOWN`, `WM_MBUTTONUP`, `WM_RBUTTONDOWN` e `WM_RBUTTONUP` | Premer e soltar o botón esquerdo, o do medio ou o dereito, coas teclas modificadoras que estaban premidas. O do medio e as teclas, desde a subfase 1.8. Desde a 2.9, coa barra de título de meiga, tamén os botóns que se premen e se soltan nos botóns da xanela, que chegan coma mensaxes do marco (`WM_NCLBUTTONDOWN`…), co punto na área cliente ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)). |
+| `MouseMoved` | `WM_MOUSEMOVE` | O rato moveuse, co primeiro botón que está premido, se hai algún. Windows tamén envía `WM_MOUSEMOVE` sen que o rato se mova, por exemplo cando cambia a captura. Desde a subfase 2.9, coa barra de título de meiga, tamén `WM_NCMOUSEMOVE` nas partes da barra que non son área cliente para Windows, sen botón ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)). |
 | `Wheel` | `WM_MOUSEWHEEL` e `WM_MOUSEHWHEEL` | Desde a subfase 1.8. A roda xirou, ou inclinouse cara a un lado. |
 | `CaptureLost` | `WM_CAPTURECHANGED` | A xanela deixa de recibir todo o rato (ver [`capture_mouse`](#a-captura-do-rato-e-o-repintado)), por exemplo porque outra xanela o colleu. |
-| `MouseLeft` | `WM_MOUSELEAVE` | Desde a subfase 1.9. O punteiro saíu da área cliente: unha vez despois de cada [`track_mouse_leave`](#windowtrack_mouse_leave). |
-| `Key` | `WM_KEYDOWN`, `WM_KEYUP`, `WM_SYSKEYDOWN`, `WM_SYSKEYUP` e as mensaxes dos caracteres | Desde a subfase 1.7. Unha tecla baixou ou subiu, co carácter que escribe, se escribe algún: un [`KeyEvent`](meiga-core.md#keyevent), coma os da consola de Windows. Non os dá `decode`, senón o [teclado da xanela](#cratesmeiga-winsrckeyboardrs). Alt+F4 e Alt+Espazo nunca chegan coma eventos: trátaos Windows, que pecha a xanela e abre o seu menú. |
+| `MouseLeft` | `WM_MOUSELEAVE` e, desde a 2.9, `WM_NCMOUSELEAVE` | Desde a subfase 1.9. O punteiro saíu da área cliente: unha vez despois de cada [`track_mouse_leave`](#windowtrack_mouse_leave). Desde a 2.9, coa barra de título de meiga, cando sae da xanela ou chega ao marco que a redimensiona: pasar da área cliente ás partes libres da barra, á banda ou aos botóns da xanela non é saír ([`mouse_left`](#leave-rearm-e-mouse_left)). Non o dá `decode`, senón a xanela. |
+| `Key` | `WM_KEYDOWN`, `WM_KEYUP`, `WM_SYSKEYDOWN`, `WM_SYSKEYUP` e as mensaxes dos caracteres | Desde a subfase 1.7. Unha tecla baixou ou subiu, co carácter que escribe, se escribe algún: un [`KeyEvent`](meiga-core.md#keyevent), coma os da consola de Windows. Non os dá `decode`, senón o [teclado da xanela](#cratesmeiga-winsrckeyboardrs). Alt+F4 e Alt+Espazo nunca chegan coma eventos: van a Windows, que pecha a xanela ou lle pide o seu menú; desde a subfase 2.9, coa barra de título de meiga, ábreo a propia xanela, debaixo da barra ([O menú co teclado](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)). |
 | `Focus` | `WM_SETFOCUS` e `WM_KILLFOCUS` | Desde a subfase 1.6. A xanela gañou o foco do teclado (`focused: true`) ou perdeuno (`false`): por exemplo, ao facer clic nela ou noutra xanela, ou con Alt+Tab. |
 | `FrameTimer` | — | Venceu o temporizador dos fotogramas (ver [o temporizador](#o-temporizador-dos-fotogramas)). |
 | `Wake` | `WM_WAKE` | Desde a 1.6. Outro fío espertou a xanela co seu [`Waker`](#windowwaker-e-waker). Desde a 2.2, co número que lle deu ao avisar. |
 | `Shown` | — | Desde a subfase 2.5. A xanela está na pantalla por primeira vez, pintada: unha vez, ao empezar [`run`](#windowrun). |
 
-- **O tamaño e a escala.** Desde a subfase 1.9, o programa calcula con `Resized` a grella que enche a área cliente, sen a franxa da barra de desprazamento, e dálla ao terminal e ao programa da sesión, como moito unha vez por intervalo dos fotogramas; e con `DpiChanged` crea a fonte, a barra de desprazamento e o cursor para a escala nova ([Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom), [Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). `DpiChanged` non o dá `decode`, senón o [*window procedure*](#window_proc), antes de que a xanela colla o tamaño que suxire Windows: así a fonte nova xa está lista cando chega o `Resized`, e a grella cambia unha soa vez ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)).
+- **O tamaño e a escala.** Desde a subfase 1.9, o programa calcula con `Resized` a grella que enche a área cliente, sen a franxa da barra de desprazamento, e dálla ao terminal e ao programa da sesión, como moito unha vez por intervalo dos fotogramas; e con `DpiChanged` crea a fonte, a barra de desprazamento e o cursor para a escala nova ([Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom), [Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)). `DpiChanged` non o dá `decode`, senón o [*window procedure*](#window_proc), antes de que a xanela colla o tamaño que suxire Windows: así a fonte nova xa está lista cando chega o `Resized`, e a grella cambia unha soa vez ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)). Desde a subfase 2.9, maximizar ou restaurar a xanela chega coma un `Resized`, co tamaño novo, que non di se está maximizada: o programa pregúntallo á xanela con [`is_maximized`](#windowis_maximized), cando fai a barra de tabs.
 - **Os botóns e as teclas modificadoras** son, desde a subfase 1.8, tipos de `meiga-core`, que o programa usa tamén para contar os clics e escribir os informes do rato ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)): `Button`, o esquerdo (`Left`), o do medio (`Middle`) ou o dereito (`Right`), e `Modifiers`, se estaban premidos Maiús (`shift`), Alt (`alt`) e Ctrl (`ctrl`). Ata a 1.7, o botón era `MouseButton`, deste módulo, só co esquerdo e o dereito, e os eventos non levaban as teclas.
 - **`MouseMoved`** leva o primeiro botón premido na orde esquerdo, do medio e dereito, ou `None` se non hai ningún: os informes dos movementos que reciben os programas só levan un ([Tecnoloxías › O rato nos programas](../tecnoloxias.md#45-o-rato-nos-programas-modos-e-formatos)). Ata a 1.7, `left_down` só dicía se o esquerdo estaba premido.
 - **`Wheel`.** `delta` é o xiro, en 120 avos dunha parte da roda (*notch*): positivo cara adiante ou, se é `horizontal`, cara á dereita. Algúns ratos e *touchpads* xiran a anacos, que o programa suma ata facer partes enteiras ou, desde a subfase 1.9, filas enteiras do historial ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)). `at` é onde está o punteiro, na área cliente coma nos outros eventos, aínda que Windows o envíe en coordenadas da pantalla ([`window_proc`](#window_proc)).
-- **`MouseLeft`** só chega se se pide, con [`track_mouse_leave`](#windowtrack_mouse_leave), e unha vez por petición: Windows non avisa de que o punteiro saíu da área cliente se non llo piden. O programa úsao para a barra de desprazamento: o polgar, que se ensancha mentres o punteiro está sobre a franxa, estréitase cando sae dela, tamén se sae da xanela directamente desde a franxa ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers), [Código › meiga › `scrollbar.rs`](meiga.md#cratesmeigasrcscrollbarrs)).
+- **`MouseLeft`** só chega se se pide, con [`track_mouse_leave`](#windowtrack_mouse_leave), e unha vez por petición: Windows non avisa de que o punteiro saíu da área cliente se non llo piden. O programa úsao para a barra de desprazamento: o polgar, que se ensancha mentres o punteiro está sobre a franxa, estréitase cando sae dela, tamén se sae da xanela directamente desde a franxa ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers), [Código › meiga › `scrollbar.rs`](meiga.md#cratesmeigasrcscrollbarrs)). Desde a subfase 2.3, tamén para a barra de tabs, que deixa de resaltar o que había debaixo do punteiro, e desde a 2.4, para os menús ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Desde a 2.9, coa barra de título de meiga, chega cando o punteiro sae da xanela ou chega ao marco de Windows, e non cando pasa a unha parte da barra que non é área cliente para Windows ([`track_mouse_leave`](#windowtrack_mouse_leave)).
 - **`Key`** leva un [`KeyEvent`](meiga-core.md#keyevent) de `meiga-core`: a tecla, onde está no teclado, o seu carácter, se baixou ou subiu, as teclas modificadoras e as repeticións. Ata a subfase 1.6, o evento era `KeyDown`, só co código de tecla virtual e se se repetía, e o programa só usaba a P, para as marcas dos fotogramas. Desde a 1.7, todas as teclas van ao programa do terminal, e as marcas actívanse coa opción `--marks` ([Código › meiga › `options.rs`](meiga.md#cratesmeigasrcoptionsrs)).
 - Os tipos derivan `Clone`, `Copy`, `Debug`, `PartialEq` e `Eq`: son pequenos, cópianse ao pasalos, móstranse nas mensaxes de diagnóstico e compáranse nas probas.
 - **O foco.** O programa úsao para o cursor do terminal, coma o Windows Terminal: só pestanexa coa xanela enfocada, e sen o foco é un rectángulo baleiro. Ao recuperalo, volta ler os [axustes do cursor](#caretsettings-e-caret_settings), que poden cambiar mentres meiga corre ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela), [Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a subfase 1.7, tamén lle avisa ao programa da sesión, se o pediu (`ESC [ ? 1004 h`). Desde a 1.8, ao recuperalo le tamén os [axustes do rato](#mousesettings-e-mouse_settings); e, antes de deixar que un programa copie ao portapapeis, mira ademais se a xanela está en primeiro plano ([`is_foreground`](#windowis_foreground)), porque o foco non abonda.
@@ -392,7 +392,6 @@ pub(crate) fn decode(
             modifiers: modifiers(alt()),
         },
         WM_CAPTURECHANGED => Event::CaptureLost,
-        WM_MOUSELEAVE => Event::MouseLeft,
         WM_SETFOCUS => Event::Focus { focused: true },
         WM_KILLFOCUS => Event::Focus { focused: false },
         WM_WAKE => Event::Wake(wparam as u64),
@@ -401,7 +400,7 @@ pub(crate) fn decode(
 }
 ```
 
-Traduce unha mensaxe ao seu evento, ou devolve `None` se non é ningunha destas. É unha función pura, sen ningunha chamada a Windows, e por iso ten probas. As mensaxes do teclado non pasan por eiquí desde a subfase 1.7: o seu evento necesita saber máis cousas, que lle pregunta a Windows o [teclado da xanela](#cratesmeiga-winsrckeyboardrs). Nin o evento de `WM_DPICHANGED`, desde a 1.9: ten que chegar antes de que a xanela colla o tamaño novo, e dáo o [*window procedure*](#window_proc).
+Traduce unha mensaxe ao seu evento, ou devolve `None` se non é ningunha destas. É unha función pura, sen ningunha chamada a Windows, e por iso ten probas. As mensaxes do teclado non pasan por eiquí desde a subfase 1.7: o seu evento necesita saber máis cousas, que lle pregunta a Windows o [teclado da xanela](#cratesmeiga-winsrckeyboardrs). Nin o evento de `WM_DPICHANGED`, desde a 1.9: ten que chegar antes de que a xanela colla o tamaño novo, e dáo o [*window procedure*](#window_proc). Nin, desde a 2.9, a saída do punteiro (`WM_MOUSELEAVE`), que trata a xanela ([`mouse_left`](#leave-rearm-e-mouse_left)), nin as mensaxes do rato no marco, que traduce [`decode_nonclient`](#nonclient-decode_nonclient-e-point).
 
 - Cada mensaxe leva os seus datos en dous números, `wParam` e `lParam`, de 64 bits. Que significa cada bit depende da mensaxe:
 
@@ -412,15 +411,94 @@ Traduce unha mensaxe ao seu evento, ou devolve `None` se non é ningunha destas.
 | Roda (`WM_MOUSEWHEEL` e `WM_MOUSEHWHEEL`) | Os mesmos bits nos 16 baixos, e o xiro, con signo, nos 16 seguintes. | O punto, coma nas outras, pero desde a esquina superior esquerda da pantalla. |
 | `WM_WAKE` | Desde a subfase 2.2, o número do aviso: o que lle deu ao [`Waker`](#windowwaker-e-waker) quen avisa. | 0. |
 
-- As mensaxes do foco e, desde a subfase 1.9, `WM_MOUSELEAVE` non necesitan os seus datos. En `WM_SETFOCUS` e `WM_KILLFOCUS`, `wParam` é a outra xanela, a que perde ou a que recibe o foco, e meiga non o usa; e `WM_MOUSELEAVE` chega sempre con 0 e 0. `WM_WAKE` tampouco os necesitaba ata a subfase 2.1: o [`Waker`](#windowwaker-e-waker) enviábaa con 0 e 0.
+- As mensaxes do foco non necesitan os seus datos. En `WM_SETFOCUS` e `WM_KILLFOCUS`, `wParam` é a outra xanela, a que perde ou a que recibe o foco, e meiga non o usa. Tampouco `WM_MOUSELEAVE`, que chega sempre con 0 e 0, e que `decode` traduciu a `MouseLeft` desde a subfase 1.9 ata a 2.8. `WM_WAKE` tampouco os necesitaba ata a subfase 2.1: o [`Waker`](#windowwaker-e-waker) enviábaa con 0 e 0.
 - **O número de `WM_WAKE`.** Desde a subfase 2.2, `decode` dá o `wParam` enteiro co evento: `wparam as u64`. En `windows-sys`, `WPARAM` é un `usize`, que ten o tamaño dun punteiro, e meiga só se compila para x64 (`x86_64-pc-windows-msvc`), cousa que `window.rs` comproba ao compilar (ver [`Waker`](#windowwaker-e-waker)): o `usize` e o `u64` teñen os mesmos 64 bits, e a conversión non perde nada. Así, o *handler* recibe o mesmo número que lle deu ao `Waker` quen avisa, como comproba a [proba](#probas) cun número que usa os 64 bits. O `lParam` non leva nada: o `Waker` envíao a 0.
 - `low_word` e `high_word` collen os 16 bits baixos (`value as u16`) e os 16 seguintes (`(value >> 16) as u16`). `as` en Rust trunca: quedan os bits baixos.
-- **As coordenadas con signo.** Mentres a xanela ten o rato capturado, recibe tamén os movementos fóra dela: á esquerda ou por riba, as coordenadas son negativas. `point` convérteas primeiro a `i16`, que interpreta os 16 bits como un número con signo (`0xFFFD` é -3), e despois a `i32`. O punto da roda, que é da pantalla, tamén pode ser negativo: nun monitor á esquerda ou por riba do principal.
+- **As coordenadas con signo.** Mentres a xanela ten o rato capturado, recibe tamén os movementos fóra dela: á esquerda ou por riba, as coordenadas son negativas. `point` convérteas primeiro a `i16`, que interpreta os 16 bits como un número con signo (`0xFFFD` é -3), e despois a `i32`. O punto da roda, que é da pantalla, tamén pode ser negativo: nun monitor á esquerda ou por riba do principal. Desde a 2.9, `point` é `pub(crate)`: úsao tamén a xanela, co punto de `WM_NCHITTEST`, e `decode_nonclient`, cos das mensaxes do marco, que tamén son da pantalla ([`point`](#nonclient-decode_nonclient-e-point)).
 - `let at = || point(lparam);` é un ***closure***, unha función pequena sen nome que usa as variábeis de onde se define. Só se chama nas mensaxes do rato. `modifiers`, desde a subfase 1.8, é outro: recibe Alt, e le Maiús e Ctrl dos bits do `wParam`.
 - **Alt.** As mensaxes do rato non din se Alt está premido. `decode` recíbeo nun *closure*, `alt`, que só chama nas mensaxes do rato: o [*window procedure*](#window_proc) pásalle un que llo pregunta a Windows, e as probas, un que dá sempre o mesmo. Así `decode` segue sen chamar a Windows, e coas outras mensaxes ninguén pregunta. `impl FnOnce() -> bool` acepta calquera *closure* que devolva un `bool` e se poida chamar unha vez: cada mensaxe chámao como moito unha vez.
 - **Os botóns.** Nas mensaxes dos botóns, o `match` de dentro escolle o botón polo número da mensaxe; `_` é o dereito, porque alí só chegan as tres da rama de fóra. En `WM_MOUSEMOVE`, `find_map` percorre os pares de bit e botón, na orde esquerdo, do medio e dereito, e devolve o primeiro botón que ten o seu bit no `wParam`, ou `None`. `then_some` dá `Some(button)` se o bit está, e `None` se non.
 - **A roda.** `(wparam >> 16) as u16 as i16` colle os 16 bits do xiro e interprétaos con signo, coma `point`: `0xFF88` é -120, unha parte cara atrás ou cara á esquerda. `horizontal` di cal das dúas mensaxes chegou. O punto queda en coordenadas da pantalla: pásao á área cliente a xanela, que sabe onde está ([`window_proc`](#window_proc)).
-- `MK_LBUTTON`, `MK_RBUTTON`, `MK_SHIFT`, `MK_CONTROL` e `MK_MBUTTON` son constantes do propio módulo: en `windows-sys` están na *feature* `Win32_System_SystemServices`, que traería milleiros de declaracións por elas. Ata a subfase 1.7, só había `MK_LBUTTON`. Desde a 1.9, tamén `WM_MOUSELEAVE` (`0x02A3`), a mensaxe de [`track_mouse_leave`](#windowtrack_mouse_leave): está en `Win32_UI_Controls`, que tamén traería milleiros de declaracións por ela ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)).
+- `MK_LBUTTON`, `MK_RBUTTON`, `MK_SHIFT`, `MK_CONTROL` e `MK_MBUTTON` son constantes do propio módulo: en `windows-sys` están na *feature* `Win32_System_SystemServices`, que traería milleiros de declaracións por elas. Ata a subfase 1.7, só había `MK_LBUTTON`. Desde a 1.9, tamén `WM_MOUSELEAVE` (`0x02A3`), a mensaxe de [`track_mouse_leave`](#windowtrack_mouse_leave): está en `Win32_UI_Controls`, que tamén traería milleiros de declaracións por ela ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)). Desde a 2.9 é `pub(crate)`, coma di o seu comentario: trátaa a propia xanela, que a importa.
+
+### `NonClient`, `decode_nonclient` e `point`
+
+```rust
+/// A mouse message of the frame of the window, the non-client area: the
+/// event, with its point from the top-left corner of the screen, and what
+/// the pointer is over for Windows, its answer to `WM_NCHITTEST`, such as
+/// `HTCAPTION` or `HTCLOSE`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct NonClient {
+    pub(crate) event: Event,
+    pub(crate) hit: u32,
+}
+
+/// The event of a mouse message of the frame of the window, or `None` if it
+/// is not one of them. These messages do not say which buttons and modifier
+/// keys are down: a move comes without a button, and `modifiers` gives the
+/// keys. A double click comes as a button that goes down: Windows sends
+/// them over the frame also to windows without `CS_DBLCLKS`.
+pub(crate) fn decode_nonclient(
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    modifiers: impl FnOnce() -> Modifiers,
+) -> Option<NonClient> {
+    let (button, down) = match message {
+        WM_NCMOUSEMOVE => (None, false),
+        WM_NCLBUTTONDOWN | WM_NCLBUTTONDBLCLK => (Some(Button::Left), true),
+        WM_NCLBUTTONUP => (Some(Button::Left), false),
+        WM_NCMBUTTONDOWN | WM_NCMBUTTONDBLCLK => (Some(Button::Middle), true),
+        WM_NCMBUTTONUP => (Some(Button::Middle), false),
+        WM_NCRBUTTONDOWN | WM_NCRBUTTONDBLCLK => (Some(Button::Right), true),
+        WM_NCRBUTTONUP => (Some(Button::Right), false),
+        _ => return None,
+    };
+    let at = point(lparam);
+    let modifiers = modifiers();
+    let event = match button {
+        None => Event::MouseMoved {
+            at,
+            button: None,
+            modifiers,
+        },
+        Some(button) if down => Event::MouseDown {
+            button,
+            at,
+            modifiers,
+        },
+        Some(button) => Event::MouseUp {
+            button,
+            at,
+            modifiers,
+        },
+    };
+    Some(NonClient {
+        event,
+        hit: wparam as u32,
+    })
+}
+
+/// The point of a mouse message. Each coordinate is a signed 16-bit number,
+/// because it is negative to the left of or above the window while the mouse
+/// is captured, and on a monitor on the left of or above the main one.
+pub(crate) fn point(lparam: LPARAM) -> Point {
+    Point::new(
+        i32::from(low_word(lparam) as i16),
+        i32::from(high_word(lparam) as i16),
+    )
+}
+```
+
+Desde a subfase 2.9. Coa barra de título de meiga, as partes da barra que non son área cliente para Windows, as partes libres, a banda e os botóns da xanela, reciben as mensaxes do rato do marco, a área non cliente: `WM_NCMOUSEMOVE`, `WM_NCLBUTTONDOWN`… A xanela trátaas ela mesma ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)), e `decode_nonclient` tradúceas, coma `decode` as da área cliente ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4).
+
+- **`NonClient`** é o resultado: o evento, `MouseMoved`, `MouseDown` ou `MouseUp`, co seu punto na pantalla, e `hit`, a parte da xanela onde está o punteiro para Windows, a resposta de `WM_NCHITTEST` que leva o `wParam` (`HTCAPTION`, `HTCLOSE`…). A xanela pasa o punto á área cliente se o evento vai ao *handler*. É `pub(crate)`, coma os seus campos: só o usa `window.rs`.
+- **Os datos.** O `wParam` destas mensaxes non leva os botóns e as teclas premidos, coma o das da área cliente, senón a resposta de `WM_NCHITTEST`; e o `lParam`, o punto da pantalla, coma o da roda. Por iso os movementos van sen botón, e as teclas modificadoras chegan cun *closure*, `modifiers`, que lle pregunta a Windows a xanela, coma Alt en `decode`. `decode_nonclient` só o chama coas mensaxes do marco.
+- **O primeiro `match`** dá o botón e se baixa: `None` nos movementos, e o botón esquerdo, o do medio ou o dereito, que baixa (`true`) ou sobe (`false`). O segundo fai o evento.
+- **Os dobres clics** (`WM_NCLBUTTONDBLCLK`…) son un botón que baixa: Windows envíaos no marco tamén ás xanelas sen `CS_DBLCLKS`, coma a de meiga ([axustes do rato](#mousesettings-e-mouse_settings)), no canto do segundo `WM_NCLBUTTONDOWN`. Así un dobre clic nun botón da xanela son dous clics, coma na área cliente.
+- **`point`** fai o punto dun `lParam`, con signo ([`decode`](#decode)). Desde a 2.9 é `pub(crate)`: úsao tamén a xanela, co punto de `WM_NCHITTEST`.
+- **`WM_MOUSELEAVE`**, o aviso de que o punteiro saíu da área cliente, é tamén `pub(crate)` desde a 2.9: `decode` xa non o traduce, e trátao a xanela, xunto con `WM_NCMOUSELEAVE` ([`mouse_left`](#leave-rearm-e-mouse_left)). As mensaxes do marco están en `Win32_UI_WindowsAndMessaging`, que meiga xa usa.
 
 ### `WM_WAKE`
 
@@ -444,7 +522,7 @@ Desde a subfase 1.6. A mensaxe que publica o [`Waker`](#windowwaker-e-waker) par
 
 ### Probas
 
-Seis probas de `decode` con mensaxes construídas a man (catro na subfase 1.7). O `decode` das probas chama ao do módulo cun Alt que nunca está premido (`|| false`); `NONE` é un `Modifiers` sen ningunha tecla premida, e `xy`, o `lParam` dun punto.
+Oito probas con mensaxes construídas a man: seis de `decode` (catro na subfase 1.7) e, desde a 2.9, dúas de `decode_nonclient`. O `decode` das probas chama ao do módulo cun Alt que nunca está premido (`|| false`); `NONE` é un `Modifiers` sen ningunha tecla premida, e `xy`, o `lParam` dun punto. O `decode_nonclient` das probas chama ao do módulo cunhas teclas modificadoras nas que só está Maiús, e as dúas respostas de `WM_NCHITTEST` que usan, `HTCAPTION` (2) e `HTCLOSE` (20), van definidas nas probas, coma constantes do tipo do `wParam`.
 
 | Proba | Que comproba |
 |---|---|
@@ -453,7 +531,11 @@ Seis probas de `decode` con mensaxes construídas a man (catro na subfase 1.7). 
 | `mouse_messages_say_the_buttons_and_the_modifier_keys` | Desde a subfase 1.8. `WM_MBUTTONUP` con Maiús e Ctrl, e `WM_RBUTTONDOWN` co Alt que dá o *closure*; e o botón de `WM_MOUSEMOVE`, o primeiro dos premidos: o do medio ou o esquerdo antes ca o dereito, o dereito con Maiús se é o único botón, e ningún se só está Maiús. |
 | `the_wheel_turns_forward_or_back` | Desde a 1.8. `WM_MOUSEWHEEL` con -240, dúas partes cara atrás, e Ctrl; e `WM_MOUSEHWHEEL` con 30, un cuarto de parte cara á dereita, nun punto con coordenadas negativas, que `decode` deixa como está. |
 | `focus_and_wake_messages_are_events` | Desde a subfase 1.6. `WM_SETFOCUS` dá `Focus { focused: true }`, `WM_KILLFOCUS` dá `Focus { focused: false }` e `WM_WAKE` dá `Wake`. Desde a 2.2, `Wake` co número do `wParam`: `Wake(0)` con 0, e `Wake(0x0123_4567_89ab_cdef)` cun número que ten bits a 1 nos 32 altos, que se perderían se a conversión cortase o `wParam` a 32 bits. |
-| `other_messages_are_not_events` | Unha mensaxe calquera (`0x0400`, `WM_USER`) dá `None`, e desde a 1.6 tamén a seguinte a `WM_WAKE`: dos números do programa, só `WM_WAKE` é un evento. |
+| `other_messages_are_not_events` | Unha mensaxe calquera (`0x0400`, `WM_USER`) dá `None`, e desde a 1.6 tamén a seguinte a `WM_WAKE`: dos números do programa, só `WM_WAKE` é un evento. Desde a 2.9, tamén `WM_MOUSELEAVE` e `WM_NCMOUSEMOVE`, que trata a xanela. |
+| `mouse_messages_of_the_frame_say_where_on_the_screen_and_what_is_there` | Desde a subfase 2.9. `WM_NCMOUSEMOVE` na barra de título dunha xanela arriba dun monitor que está por riba do principal, cun punto negativo e sen botón; `WM_NCLBUTTONDBLCLK` no botón de pechar, que é un botón que baixa; `WM_NCRBUTTONUP` e `WM_NCMBUTTONDOWN` na barra de título. Todas levan o punto da pantalla e as teclas que dá o *closure*; e as tres primeiras, a parte da xanela do `wParam` en `hit`. |
+| `other_messages_are_not_of_the_frame` | Desde a 2.9. As mensaxes do rato da área cliente, `WM_MOUSEMOVE` e `WM_LBUTTONDOWN`, e `WM_NCMOUSELEAVE` (`0x02A2`), que trata a xanela, dan `None`. |
+
+Unha copia de meiga na que o dobre clic no marco non é un botón que baixa falla `mouse_messages_of_the_frame_say_where_on_the_screen_and_what_is_there`, na aserción de `WM_NCLBUTTONDBLCLK`.
 
 Ata a subfase 1.7 había outra, `keys_tell_when_they_repeat`, que comprobaba `KeyDown` e desapareceu con ese evento: as probas do teclado están en [`keyboard.rs`](#probas-do-teclado).
 
@@ -508,7 +590,7 @@ pub(crate) enum Destination {
 ```
 
 - **`is_keyboard_message`** di se unha mensaxe é do teclado: as oito que trata este módulo. `matches!` compara un valor cun patrón, eiquí varias constantes separadas por `|`.
-- **`Destination`** di quen trata a mensaxe. `Program`: o programa, aínda que o evento chegue máis tarde, ou non chegue. `Windows`: o *window procedure* pásalla a `DefWindowProcW`, que pecha a xanela con Alt+F4 e abre o seu menú con Alt+Espazo. As outras teclas do sistema, coma Alt só ou F10, van ao programa, e Windows non as ve: non entran no modo do menú ([ADR 0014](../adr/0014-o-teclado.md)).
+- **`Destination`** di quen trata a mensaxe. `Program`: o programa, aínda que o evento chegue máis tarde, ou non chegue. `Windows`: o *window procedure* pásalla a `DefWindowProcW`, que pecha a xanela con Alt+F4 e, con Alt+Espazo, lle pide á xanela o seu menú; desde a subfase 2.9, coa barra de título de meiga, ábreo a xanela, debaixo da barra ([O menú co teclado](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)). As outras teclas do sistema, coma Alt só ou F10, van ao programa, e Windows non as ve: non entran no modo do menú ([ADR 0014](../adr/0014-o-teclado.md)).
 
 ### `Keyboard` e `Waiting`
 
@@ -686,7 +768,7 @@ fn character(
 }
 ```
 
-- **O espazo de Alt+Espazo** vai a Windows, coma a súa tecla: con el, `DefWindowProcW` abre o menú da xanela.
+- **O espazo de Alt+Espazo** vai a Windows, coma a súa tecla: con el, `DefWindowProcW` pídelle á xanela o seu menú (`WM_SYSCOMMAND`, con `SC_KEYMENU` e o espazo), que desde a subfase 2.9, coa barra de título de meiga, abre a xanela ([O menú co teclado](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)).
 - **Unha tecla morta** non escribe nada aínda: o seu evento vai co carácter 0, e o carácter composto chega coa tecla seguinte, coma na consola de Windows. O seu `WM_DEADCHAR` sempre chega despois da tecla, que o espera; sen ela, non fai nada.
 - **Un carácter coa súa tecla esperando** completa o evento, que vai xa.
 - **Un carácter sen tecla** vai nun evento propio: o segundo de ´ e x, que escriben ´x, porque a X só espera polo primeiro; ou un do IME ou do panel de emoji, que chega sen ningunha tecla ([Tecnoloxías › O IME](../tecnoloxias.md#43-o-ime-e-o-panel-de-emoji)). A tecla sae do código de exploración do `lParam` ([`key_at`](#system-e-windows-o-que-se-lle-pregunta-a-windows)), coma na consola de Windows; os do IME, que non o teñen, van coa tecla 0. Esa tecla pode non ser a que sobe despois: co Bloq Num activado, o 2 de ´2, escrito no teclado numérico, chega coa tecla da frecha abaixo, e a tecla sobe coa do 2. Desde a terceira revisión do código da 2.4, a vista recoñéceo polo sitio da tecla ([Código › meiga › `DownKey`](meiga.md#as-teclas-e-o-foco-key-e-focus)).
@@ -910,7 +992,7 @@ Co Windows de verdade compróbao [`tools/check-keyboard.ps1`](ferramentas.md#too
 
 ## `crates/meiga-win/src/window.rs`
 
-A xanela de meiga, o bucle de mensaxes, o temporizador dos fotogramas e unha mensaxe de erro. Desde a subfase 1.6, tamén o seu título, o aviso que a esperta desde outro fío e os axustes do cursor de Windows; desde a 1.7, as mensaxes do teclado van ao [teclado da xanela](#cratesmeiga-winsrckeyboardrs); desde a 1.8, o rato: a súa captura, a forma do punteiro, o punto da roda e os axustes do rato de Windows, xunto coa caixa de mensaxe que pregunta antes de pegar e se a xanela está en primeiro plano; desde a 1.9, o cambio de escala, que o *handler* coñece antes ca o tamaño novo, e o aviso de cando o punteiro sae da área cliente; desde a 2.2, o número que leva cada aviso doutro fío e o peche da xanela desde o programa; e desde a 2.5, o aviso de que a xanela xa está na pantalla e pintada, e unha caixa de mensaxe que só avisa, para os erros da configuración. Os fragmentos de código desta sección son extractos: omiten os comentarios `// SAFETY:`, que no arquivo van antes de cada bloque `unsafe`, e algún outro comentario.
+A xanela de meiga, o bucle de mensaxes, o temporizador dos fotogramas e unha mensaxe de erro. Desde a subfase 1.6, tamén o seu título, o aviso que a esperta desde outro fío e os axustes do cursor de Windows; desde a 1.7, as mensaxes do teclado van ao [teclado da xanela](#cratesmeiga-winsrckeyboardrs); desde a 1.8, o rato: a súa captura, a forma do punteiro, o punto da roda e os axustes do rato de Windows, xunto coa caixa de mensaxe que pregunta antes de pegar e se a xanela está en primeiro plano; desde a 1.9, o cambio de escala, que o *handler* coñece antes ca o tamaño novo, e o aviso de cando o punteiro sae da área cliente; desde a 2.2, o número que leva cada aviso doutro fío e o peche da xanela desde o programa; e desde a 2.5, o aviso de que a xanela xa está na pantalla e pintada, e unha caixa de mensaxe que só avisa, para os erros da configuración. Desde a 2.9, a barra de título de meiga: a xanela quita a barra de título de Windows, dille a Windows que é cada parte da barra que debuxa o programa, e trata o rato no marco, os botóns e o menú da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), [Arquitectura › As tabs na barra de título](../arquitectura.md#as-tabs-na-barra-de-título)). Os fragmentos de código desta sección son extractos: omiten os comentarios `// SAFETY:`, que no arquivo van antes de cada bloque `unsafe`, e algún outro comentario.
 
 Así vive a xanela, desde que se crea ata que a pecha o usuario ou, desde a subfase 2.2, o programa:
 
@@ -921,6 +1003,7 @@ sequenceDiagram
     participant S as Windows
     M->>W: Window::create
     W->>S: CreateWaitableTimerExW, RegisterClassExW e CreateWindowExW
+    W->>S: SetWindowPos (SWP_FRAMECHANGED), desde a 2.9, coa barra de título de meiga
     M->>W: window.run(&mut app)
     W->>S: ShowWindow e UpdateWindow
     S->>W: WM_PAINT
@@ -936,7 +1019,7 @@ sequenceDiagram
             W->>M: app.event(FrameTimer)
         end
     end
-    Note over S: o usuario preme X, ou o programa chama a window.close(): WM_CLOSE → DestroyWindow → WM_DESTROY
+    Note over S: o usuario preme X, ou o programa chama a window.close(), desde a 2.9 tamén co botón de pechar da barra de título de meiga: WM_CLOSE → DestroyWindow → WM_DESTROY
     W->>S: PostQuitMessage(0) en WM_DESTROY
     W-->>M: run devolve Ok(()) → código de saída 0
 ```
@@ -945,11 +1028,13 @@ sequenceDiagram
 
 ```rust
 use std::cell::{Cell, RefCell};
-use std::ptr;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+use std::{io, mem, ptr};
 
 use meiga_core::geometry::{Point, Rect, Size};
-use meiga_core::mouse::ClickSettings;
+use meiga_core::mouse::{Button, ClickSettings, Modifiers};
+use meiga_core::ui::titlebar::{Hit, TitleBar, min_client};
 use windows_sys::Win32::Foundation::{ … };
 …
 /// Name of the window class of meiga windows.
@@ -968,14 +1053,53 @@ const FRAME_TIMER_ID: usize = 1;
 - `Point` e `ClickSettings`, de `meiga-core`, desde a subfase 1.8: o punto da roda, que a xanela pasa á área cliente, e as medidas do dobre clic, que van nos [axustes do rato](#mousesettings-e-mouse_settings).
 - `TrackMouseEvent`, `TRACKMOUSEEVENT` e `TME_LEAVE`, de `Win32_UI_Input_KeyboardAndMouse`, desde a subfase 1.9: o aviso de cando o punteiro sae da área cliente ([`track_mouse_leave`](#windowtrack_mouse_leave)).
 - `WM_CLOSE`, desde a subfase 2.2: a mensaxe coa que [`close`](#windowclose) pecha a xanela.
+- **Desde a subfase 2.9**, o que necesita a barra de título de meiga ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)). De `std`, `OnceLock`, que garda a función de `shell32.dll` despois de buscala a primeira vez, e `mem`, co que se lle dá a súa firma ([`app_bar_message`](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)); e `io`, co que se le o erro da clase que xa está rexistrada ([`create`](#windowcreate)). De `meiga-core`, `Button` e `Modifiers`, cos que a xanela fai os eventos do rato no marco ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)); e `Hit`, `TitleBar` e `min_client`, o que é cada parte da barra para Windows e a área cliente máis pequena ([Código › meiga-core › `ui/titlebar.rs`](meiga-core.md#cratesmeiga-coresrcuititlebarrs)). De [`event.rs`](#cratesmeiga-winsrceventrs), `WM_MOUSELEAVE`, `NonClient`, `decode_nonclient` e `point`: a xanela trata ela mesma a saída do punteiro e as mensaxes do rato no marco. E de `windows-sys`, entre outras, as mensaxes do marco (`WM_NCCALCSIZE`, `WM_NCHITTEST`, `WM_NCMOUSEMOVE`…) e `WM_GETMINMAXINFO`, as respostas de `WM_NCHITTEST` (`HTCAPTION`, `HTTOP`…), `TME_NONCLIENT`, o menú da xanela e as súas ordes (`GetSystemMenu`, `SC_MINIMIZE`…), `GetSystemMetricsForDpi` e o monitor da xanela maximizada (`MonitorFromRect` e `GetMonitorInfoW`), todas en *features* que xa estaban ([`Cargo.toml`](#cratesmeiga-wincargotoml)).
+
+### `CUSTOM_FRAME`, `TOP_LEFT_CORNER` e `AUTOHIDE_TASKBAR`
+
+```rust
+/// Where the flag of the title bar of meiga ([`WindowOptions::title_bar`])
+/// is, in the extra bytes of each window of the class: the window procedure
+/// reads it also before [`Window::run`], while Windows creates the window
+/// and asks for its frame.
+const CUSTOM_FRAME: i32 = 0;
+
+/// How far from its left side the top edge of a window resizes it also to
+/// the left, in pixels at any scale: as on a window of Windows 11 with the
+/// title bar of Windows, which does not scale it.
+const TOP_LEFT_CORNER: i32 = 19;
+
+/// The pixels that a maximized window leaves free on an edge of its monitor
+/// with a taskbar that hides itself, so that the pointer can show it, as in
+/// Windows Terminal.
+const AUTOHIDE_TASKBAR: i32 = 2;
+```
+
+Desde a subfase 2.9, as constantes da barra de título de meiga ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)):
+
+| Constante | Que é |
+|---|---|
+| `CUSTOM_FRAME` | Onde vai a marca da barra de título de meiga nos bytes extra de cada xanela da clase: no índice 0, o primeiro. A clase reserva eses bytes ([`create`](#windowcreate)), e [`own_title_bar`](#o-marco-propio-own_title_bar-e-custom_frame) pon a marca. O *window procedure* le a marca en `WM_NCCALCSIZE` e `WM_GETMINMAXINFO`, que chegan tamén antes de [`run`](#windowrun), mentres Windows crea a xanela e calcula o seu marco: daquela aínda non pode chegar á `Window` ([`State`](#state-e-installed-o-handler-dentro-do-window-procedure)), e por iso a marca vai na propia xanela. |
+| `TOP_LEFT_CORNER` | Ata onde redimensiona en diagonal o bordo de arriba, desde o lado esquerdo da xanela: 19 píxeles, a calquera escala, coma co marco de Windows, que tampouco os escala ([Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)). Co marco propio, `DefWindowProcW` só dá esa esquina no marco da esquerda; na banda da barra de meiga, dáa [`hit_test`](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows), que lle resta o marco da esquerda, porque a barra conta desde a área cliente ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 2). |
+| `AUTOHIDE_TASKBAR` | Os píxeles que deixa libres a xanela maximizada nun bordo do monitor onde se oculta a barra de tarefas, para que o punteiro a poida mostrar: 2, coma o Windows Terminal e Chrome (decisión 7, [a barra de tarefas que se oculta](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)). |
+
+As tres son `i32`: o tipo do índice de `GetWindowLongPtrW` e das coordenadas dun `RECT`, cos que se usan.
 
 ### `WindowOptions` e `Window`
 
 ```rust
 /// How a new window looks.
 pub struct WindowOptions<'a> {
-    /// Text of the title bar.
+    /// The text of the window, which the taskbar shows, and the title bar of
+    /// Windows, if the window has it.
     pub title: &'a str,
+    /// Whether the window has the title bar of meiga: its client area goes
+    /// up to the top of the window, where the title bar of Windows would
+    /// be, and the handler draws it, and tells the window what each part of
+    /// it is with [`Window::set_title_bar`]. The window keeps the frame of
+    /// Windows on its other sides, which resizes it. Without it, the window
+    /// has the frame and the title bar of Windows.
+    pub title_bar: bool,
 }
 
 pub struct Window {
@@ -985,13 +1109,35 @@ pub struct Window {
     text: HCURSOR,
     /// The pointer over the client area.
     pointer: Cell<HCURSOR>,
+    /// Whether the window has the title bar of meiga.
+    custom: bool,
+    /// What each part of the title bar of meiga is, from the handler.
+    title_bar: Cell<Option<TitleBar>>,
+    /// What the pointer was over for Windows in the last mouse message: its
+    /// answer to `WM_NCHITTEST`, `HTCLIENT` over the client area.
+    hit: Cell<u32>,
+    /// Whether the window watches for the pointer to leave it.
+    leave: Cell<Leave>,
+    /// Whether the window asked Windows again to tell when the pointer
+    /// leaves, after it went from a part of the window to another, since the
+    /// pointer last moved.
+    retracked: Cell<bool>,
 }
 ```
 
-- `WindowOptions` agrupa o aspecto da xanela nova; polo de agora, só o título. `<'a>` é un **tempo de vida** (*lifetime*): o título é un texto prestado, e o compilador garante que `WindowOptions` non se usa despois de que ese texto deixe de existir. Na subfase 1.1 levaba tamén a cor do fondo; desde a 1.2, o fondo debúxao o programa no seu *framebuffer*. Desde a 1.6, o título pódese cambiar despois con [`set_title`](#windowset_title).
+- `WindowOptions` agrupa o aspecto da xanela nova: o título e, desde a subfase 2.9, se ten a barra de título de meiga. `<'a>` é un **tempo de vida** (*lifetime*): o título é un texto prestado, e o compilador garante que `WindowOptions` non se usa despois de que ese texto deixe de existir. Na subfase 1.1 levaba tamén a cor do fondo; desde a 1.2, o fondo debúxao o programa no seu *framebuffer*. Desde a 1.6, o título pódese cambiar despois con [`set_title`](#windowset_title).
+- **`title`** é o texto da xanela: o que mostran a barra de tarefas e Alt+Tab e, se a xanela a ten, a barra de título de Windows. Ata a 2.8, o seu comentario dicía «Text of the title bar». Coa barra de título de meiga, ningunha parte da xanela o debuxa: o título de cada tab vai na súa tab ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1).
+- **`title_bar`**, desde a 2.9: se a xanela ten a barra de título de meiga. A súa área cliente chega entón ata o bordo de arriba da xanela, onde iría a barra de título de Windows; o *handler* debuxa alí a súa barra, e dille á xanela que é cada parte dela ([`set_title_bar`](#windowset_title_bar)); e Windows mantén o seu marco nos outros tres lados, que redimensiona a xanela coma sempre ([`WM_NCCALCSIZE`](#wm_nccalcsize-a-área-cliente-ata-o-bordo-de-arriba)). Sen ela, a xanela ten o marco e a barra de título de Windows, coma ata a 2.8. O programa pídea sempre, salvo nos modos `--bench`, que non teñen barra de tabs ([Código › meiga › `main.rs`](meiga.md#cratesmeigasrcmainrs)); e se Windows non deixa cambiar o marco, a xanela queda co seu ([`own_title_bar`](#o-marco-propio-own_title_bar-e-custom_frame)).
 - `Window` garda o **HWND**, o *handle* da xanela: un número opaco que a identifica ante Windows. En `windows-sys`, `HWND` é un punteiro (`*mut c_void`), e por iso Rust non deixa pasar unha `Window` a outro fío (os punteiros non son `Send`). É xusto a regra de Win32: unha xanela pertence ao fío que a crea, e as súas mensaxes chegan só a ese fío. Para avisala desde outro fío está o [`Waker`](#windowwaker-e-waker).
 - `timer` é o [temporizador dos fotogramas](#o-temporizador-dos-fotogramas), que vive tanto coma a xanela.
 - `arrow` e `text`, desde a subfase 1.8, son os dous punteiros do rato que carga [`create`](#windowcreate): a frecha e a barra de texto. `pointer` é o que se mostra na área cliente, e empeza coa frecha: cámbiao [`set_pointer`](#windowset_pointer-e-pointer). Vai nun `Cell`, coma o estado do temporizador, porque cambia a través de `&self`. `HCURSOR`, o *handle* dun cursor, é en `windows-sys` un punteiro sen tipo, coma `HWND`.
+- **Desde a 2.9**, cinco campos máis, para a barra de título de meiga:
+  - `custom`, se a ten: se a pediron as opcións e Windows deixou cambiar o marco ([`has_title_bar`](#windowhas_title_bar-e-windowresize_band));
+  - `title_bar`, o que lle dixo o *handler* a última vez que é cada parte dela ([`set_title_bar`](#windowset_title_bar)), ou `None` antes da primeira;
+  - `hit`, o que había debaixo do punteiro para Windows na última mensaxe do rato: a resposta de `WM_NCHITTEST`, que levan as mensaxes do rato no marco, ou `HTCLIENT` coas da área cliente e ao principio ([`window_proc`](#window_proc));
+  - `leave` e `retracked`, se a xanela vixía a saída do punteiro, e se xa pediu o aviso outra vez desde o último movemento ([`Leave`](#leave-rearm-e-mouse_left)).
+
+  Todos menos `custom`, que non cambia, van nun `Cell`, coma `pointer`, porque cambian a través de `&self`. `Cell::get` devolve unha copia, e só vale para tipos `Copy`, coma `TitleBar`: uns poucos números.
 - **`Drop`.** Ao destruír unha `Window`, se a xanela aínda existe (`IsWindow`), destrúese con `DestroyWindow`. Normalmente xa non existe, porque a pechou o usuario ou, desde a subfase 2.2, o programa, con [`close`](#windowclose); pero se `run` remata por un erro, ou se o programa falla antes de `run`, a xanela non queda orfa. Destruíla deixa un `WM_QUIT` na cola, que [`show_error`](#is_remote_session-e-show_error) ten en conta. Despois, o `Drop` de `FrameTimer` pecha o temporizador.
 
 ### `Window::create`
@@ -1023,13 +1169,19 @@ let class_name = wide(CLASS_NAME);
 let class = WNDCLASSEXW {
     cbSize: size_of::<WNDCLASSEXW>() as u32,
     lpfnWndProc: Some(window_proc),
+    // The flag of the title bar of meiga (CUSTOM_FRAME).
+    cbWndExtra: size_of::<isize>() as i32,
     hInstance: instance,
     hCursor: arrow,
     lpszClassName: class_name.as_ptr(),
     ..Default::default()
 };
 if unsafe { RegisterClassExW(&class) } == 0 {
-    return Err(Error::last("RegisterClassExW"));
+    // Another window of this process registered it: the same class.
+    let error = io::Error::last_os_error();
+    if error.raw_os_error() != Some(ERROR_CLASS_ALREADY_EXISTS as i32) {
+        return Err(Error::new("RegisterClassExW", error));
+    }
 }
 ```
 
@@ -1038,7 +1190,8 @@ if unsafe { RegisterClassExW(&class) } == 0 {
 - `lpfnWndProc: Some(window_proc)`: a función que recibirá as mensaxes. En `windows-sys` é un `Option`, porque en C pode ser nula.
 - **Sen brocha.** Na subfase 1.1, a clase levaba unha brocha coa que Windows pintaba o fondo (`WM_ERASEBKGND`). Agora o programa pinta todos os píxeles en `WM_PAINT`, desde o seu *framebuffer*: borrar antes o fondo sería pintar dúas veces, e ademais faría parpadear a xanela, porque se vería un instante o fondo antes do contido.
 - `..Default::default()`: os campos que non se nomean quedan a cero. Entre eles, `style`: a clase non leva `CS_HREDRAW` nin `CS_VREDRAW`, que farían que Windows repintase a xanela enteira cada vez que cambia de tamaño. Sen eles, só se pinta a parte nova que queda á vista: menos traballo, como manda o principio de debuxar só o que cambia.
-- Unha clase só se pode rexistrar unha vez por proceso: por iso `create` documenta que se chama unha soa vez. Cando meiga teña varias xanelas (mellora futura F6), o rexistro separarase da creación.
+- **`cbWndExtra`**, desde a subfase 2.9: os bytes extra que Windows reserva en cada xanela da clase para o programa, despois dos seus. Son os dun `isize`, 8, para a marca da barra de título de meiga, no índice [`CUSTOM_FRAME`](#custom_frame-top_left_corner-e-autohide_taskbar), coma di o comentario. Windows ponos a 0 ao crear a xanela, e lense e escríbense con `GetWindowLongPtrW` e `SetWindowLongPtrW`, coma `GWLP_USERDATA`, que ten toda xanela ([`State`](#state-e-installed-o-handler-dentro-do-window-procedure)).
+- **Unha clase por proceso.** Unha clase só se pode rexistrar unha vez por proceso: a segunda vez, `RegisterClassExW` falla co erro `ERROR_CLASS_ALREADY_EXISTS` (1410). Ata a 2.8, `create` devolvía ese erro coma calquera outro, e a súa documentación dicía que se chamase unha soa vez por proceso. Desde a 2.9, tómao coma un éxito: a clase xa está rexistrada, e é a mesma, porque só a rexistra este código, coma di o comentario. Así, cada proba que crea unha xanela rexistra a clase, salvo que xa o fixese a outra, que corre á vez noutro fío ([Probas](#probas-1)); e o programa poderá crear máis xanelas cando as teña (mellora futura F6). `io::Error::last_os_error` le o código do erro do fío (`GetLastError`), e `raw_os_error` dá o seu número. Con calquera outro erro, `create` devólveo co nome da función ([`error.rs`](#cratesmeiga-winsrcerrorrs)).
 
 ```rust
 let title = wide(options.title);
@@ -1048,8 +1201,14 @@ let handle = unsafe {
         class_name.as_ptr(),
         title.as_ptr(),
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-        ptr::null_mut(), ptr::null_mut(), instance, ptr::null(),
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        ptr::null_mut(),
+        ptr::null_mut(),
+        instance,
+        ptr::null(),
     )
 };
 ```
@@ -1060,11 +1219,33 @@ Crea a xanela, aínda oculta:
 |---|---|---|
 | Estilo estendido | `0` | Ningún. |
 | Clase e título | `class_name`, `title` | Textos en UTF-16 rematados en 0 (ver [Conversións](#conversións)). Teñen que existir mentres dura a chamada: son variábeis da función, e viven ata o seu final. |
-| Estilo | `WS_OVERLAPPEDWINDOW` | Unha xanela normal: barra de título, bordo para redimensionar e botóns de minimizar, maximizar e pechar. Sen `WS_VISIBLE`, nace oculta. |
+| Estilo | `WS_OVERLAPPEDWINDOW` | Unha xanela normal: barra de título, bordo para redimensionar e botóns de minimizar, maximizar e pechar. Sen `WS_VISIBLE`, nace oculta. Desde a subfase 2.9, tamén coa barra de título de meiga, que só cambia onde vai a área cliente: Windows segue facendo con ela o que fai coas outras xanelas, co seu marco, as ordes do menú da xanela, Win+frechas e os *snap layouts* ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1); o menú ábreo a xanela, co botón dereito nas partes libres da barra e con Alt+Espazo (decisión 6). |
 | Posición e tamaño | `CW_USEDEFAULT` | Windows escolle, en cascada respecto das últimas xanelas abertas. |
 | Pai, menú e datos | nulos | Unha xanela de nivel superior, sen menú. |
 
 `CreateWindowExW` envía xa algunhas mensaxes á xanela, entre elas un `WM_SIZE`, antes de que exista o *handler*: van a `DefWindowProcW`. Por iso o programa le o tamaño inicial con `client_size` antes de chamar a `run`.
+
+```rust
+let custom = options.title_bar && own_title_bar(handle);
+Ok(Self {
+    handle,
+    timer,
+    arrow,
+    text,
+    pointer: Cell::new(arrow),
+    custom,
+    title_bar: Cell::new(None),
+    hit: Cell::new(HTCLIENT),
+    leave: Cell::new(Leave::Off),
+    retracked: Cell::new(false),
+})
+```
+
+Desde a subfase 2.9, se as opcións piden a barra de título de meiga, [`own_title_bar`](#o-marco-propio-own_title_bar-e-custom_frame) pásaa a ela antes de mostrala. A xanela nace co marco e a barra de título de Windows, e o primeiro cálculo da súa área cliente, o que fai `CreateWindowExW`, é o de Windows, coma en Chrome; despois, coa marca nos seus bytes extra, Windows calcúlao outra vez co marco propio ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1).
+
+- Con `&&`, `own_title_bar` só se chama se as opcións a piden. `custom` queda en `false` sen ela, e tamén se Windows non deixou cambiar o marco.
+- Ese cambio tamén lle envía mensaxes á xanela, que tampouco chegan ao *handler*, que aínda non existe: a área cliente crece ata o bordo de arriba, e o programa le o seu tamaño con `client_size` despois.
+- Os outros campos novos empezan sen barra (`None`), co punteiro na área cliente (`HTCLIENT`) e sen vixiar a súa saída (`Leave::Off` e `false`).
 
 ### `Window::client_size`
 
@@ -1074,24 +1255,27 @@ pub fn client_size(&self) -> Result<Size, Error> {
     if unsafe { GetClientRect(self.handle, &mut rect) } == 0 {
         return Err(Error::last("GetClientRect"));
     }
-    Ok(Size::new(rect.right.max(0) as u32, rect.bottom.max(0) as u32))
+    // The client rectangle starts at (0, 0).
+    Ok(Size::new(
+        rect.right.max(0) as u32,
+        rect.bottom.max(0) as u32,
+    ))
 }
 ```
 
-O tamaño da área cliente: a xanela sen a barra de título nin os bordos. `GetClientRect` devolve un rectángulo que empeza sempre en (0, 0), así que `right` e `bottom` son o ancho e o alto. `.max(0)` evita converter un número negativo a `u32`, que daría un número enorme.
+O tamaño da área cliente: a xanela sen o marco de Windows e, se a xanela a ten, sen a barra de título de Windows. Coa barra de título de meiga, a área cliente chega ata o bordo de arriba, e inclúe a barra ([`WM_NCCALCSIZE`](#wm_nccalcsize-a-área-cliente-ata-o-bordo-de-arriba)). Ata a 2.8, o comentario dicía «the window without its title bar and borders». `GetClientRect` devolve un rectángulo que empeza sempre en (0, 0), así que `right` e `bottom` son o ancho e o alto. `.max(0)` evita converter un número negativo a `u32`, que daría un número enorme.
 
 ### `Window::dpi`
 
 ```rust
 pub fn dpi(&self) -> u32 {
-    match unsafe { GetDpiForWindow(self.handle) } {
-        0 => USER_DEFAULT_SCREEN_DPI,
-        dpi => dpi,
-    }
+    window_dpi(self.handle)
 }
 ```
 
 Os puntos por polgada do monitor da xanela: 96 ao 100 % de escala, 120 ao 125 % e 144 ao 150 %. O programa créa con el a fonte do texto, para que os glifos teñan o seu tamaño real ([Tecnoloxías › Manifesto e DPI](../tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)).
+
+Desde a subfase 2.9, o método chama a [`window_dpi`](#window_dpi-e-frame), que ten o código que tiña el ata entón: o *window procedure* tamén necesita o DPI, en `WM_NCCALCSIZE` e `WM_GETMINMAXINFO`, e alí só ten o *handle* da xanela.
 
 - `GetDpiForWindow` dá o DPI que corresponde á escala da xanela: como meiga é *per monitor* v2, o do monitor onde está.
 - Devolve 0 se o *handle* non é dunha xanela, que non pode pasar mentres exista a `Window`. Nese caso, o DPI por defecto, 96 (`USER_DEFAULT_SCREEN_DPI`), en vez dun erro.
@@ -1106,6 +1290,54 @@ pub fn is_minimized(&self) -> bool {
 ```
 
 Desde a revisión do código da subfase 1.9: se a xanela está minimizada. [`IsIconic`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-isiconic) acepta calquera *handle*, e devolve un `BOOL` distinto de 0 se a xanela está minimizada. Ao pecharse a caixa de [`confirm`](#windowconfirm), o programa dálle á vista o tamaño da xanela coma se acabase de chegar nun `Resized`, que di tamén se está minimizada ([Código › meiga › `respond`](meiga.md#respond-o-que-pide-a-vista)). Minimizada, [`client_size`](#windowclient_size) dá 0 × 0, coma o `WM_SIZE` dunha xanela que se minimiza.
+
+### `Window::is_maximized`
+
+```rust
+pub fn is_maximized(&self) -> bool {
+    unsafe { IsZoomed(self.handle) != 0 }
+}
+```
+
+Desde a subfase 2.9: se a xanela está maximizada. [`IsZoomed`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-iszoomed), coma `IsIconic`, acepta calquera *handle*, e devolve un `BOOL` distinto de 0 se a xanela está maximizada. Úsano a propia xanela, para a banda ([`resize_band`](#windowhas_title_bar-e-windowresize_band)), para o botón que maximiza ou restaura ([`toggle_maximize`](#windowminimize-windowtoggle_maximize-e-command)) e para o menú da xanela ([`system_menu`](#o-menú-da-xanela-system_menu)); e o programa, para a barra de tabs, que maximizada non ten banda e mostra o botón de restaurar ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)), cada vez que a xanela cambia de tamaño: o `Resized` non di se está maximizada ([`Event`](#event-e-mousebutton)).
+
+### `Window::has_title_bar` e `Window::resize_band`
+
+```rust
+pub const fn has_title_bar(&self) -> bool {
+    self.custom
+}
+
+pub fn resize_band(&self, dpi: u32) -> u32 {
+    if self.custom && !self.is_maximized() {
+        frame(dpi)
+    } else {
+        0
+    }
+}
+```
+
+Desde a subfase 2.9. O que necesita saber do marco da xanela a barra de tabs, que debuxa o programa ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)):
+
+- **`has_title_bar`**: se a xanela ten a barra de título de meiga, se a pediron as opcións ([`WindowOptions`](#windowoptions-e-window)) e Windows deixou cambiar o marco ([`own_title_bar`](#o-marco-propio-own_title_bar-e-custom_frame)). Con ela, a barra de tabs leva os botóns da xanela, e o programa dille á xanela que é cada parte dela ([`set_title_bar`](#windowset_title_bar)); sen ela, a barra vai debaixo da barra de título de Windows, co sitio deses botóns baleiro. É `const`: só le un campo, que non cambia.
+- **`resize_band`**: cantos píxeles de arriba da área cliente redimensionan a xanela desde o seu bordo de arriba, a **banda** enriba das tabs: tantos coma o marco de Windows a `dpi` ([`frame`](#window_dpi-e-frame)) coa barra de título de meiga e a xanela restaurada, e ningún se non ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 2). A escala 100 % son 8 píxeles, e 11 ao 150 %. Maximizada non hai banda: a fila de arriba da pantalla é do que hai debaixo, unha tab, un botón ou unha parte libre da barra. A barra de tabs baixa as tabs o alto da banda, e píntaa coa súa cor ([Código › meiga-core › `ui/tabbar.rs`](meiga-core.md#cratesmeiga-coresrcuitabbarrs)); o que é a banda para Windows dío [`WM_NCHITTEST`](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows).
+- **Recibe o DPI.** Co cambio de escala, o programa fai a barra para a escala nova ao recibir `DpiChanged`, e pásalle o DPI do evento; noutro caso, o da xanela ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+
+Unha copia de meiga sen banda, na que `resize_band` dá sempre 0, falla [a proba de `window.rs`](#probas-1) e o paso 2 de `check-titlebar.ps1`; e outra que ten banda tamén coa xanela maximizada, o paso 7 da comprobación ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
+
+### `Window::set_title_bar`
+
+```rust
+pub fn set_title_bar(&self, bar: TitleBar) {
+    self.title_bar.set(Some(bar));
+}
+```
+
+Desde a subfase 2.9. O *handler* dille á xanela que é cada parte da súa barra: un [`TitleBar`](meiga-core.md#cratesmeiga-coresrcuititlebarrs) de `meiga-core`, co `Layout` da barra, onde están as tabs, os seus botóns, a banda e os botóns da xanela, e se hai un menú de meiga aberto. A xanela gárdao, e úsao desde a seguinte vez que Windows lle pregunte que hai debaixo do punteiro ([`WM_NCHITTEST`](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows)).
+
+- **Despois de cada evento.** O programa chámaa ao crear as tabs e despois de cada evento, porque cada un pode mover as partes da barra, ou abrir ou pechar un menú ([Código › meiga › `app.rs`](meiga.md#cratesmeigasrcapprs) e [`tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Só garda uns poucos números nun `Cell`: non chama a Windows, nin agarda.
+- **Así a xanela responde sen o programa.** Windows pregunta que hai debaixo do punteiro cada vez que este se move, tamén mentres o *handler* trata outro evento, coma cunha caixa de mensaxe aberta, cando non pode responder ([`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). A barra non cambia entre dous eventos, así que a que deu o *handler* despois do último segue valendo ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 12).
+- **Sen a barra de título de meiga**, a xanela non a mira: `WM_NCHITTEST` vai enteira a `DefWindowProcW`. O programa só a chama se a xanela a ten ([`has_title_bar`](#windowhas_title_bar-e-windowresize_band)).
 
 ### `Window::run`
 
@@ -1278,7 +1510,7 @@ Venceu o temporizador, ou o temporizador de xanela que o substitúe. Se `due` xa
 
 ### Os bucles modais de Windows
 
-Cando o usuario move ou redimensiona a xanela, ou abre o seu menú (Alt+Espazo), Windows executa **o seu propio bucle de mensaxes** ata que remata: un **bucle modal**. Mentres tanto, `pump` está parado dentro de `DispatchMessageW`, e ninguén espera o temporizador dos fotogramas. As mensaxes seguen chegando ao *window procedure*, tamén `WM_TIMER`.
+Cando o usuario move ou redimensiona a xanela, ou abre o seu menú (Alt+Espazo), Windows executa **o seu propio bucle de mensaxes** ata que remata: un **bucle modal**. Mentres tanto, `pump` está parado dentro de `DispatchMessageW`, e ninguén espera o temporizador dos fotogramas. As mensaxes seguen chegando ao *window procedure*, tamén `WM_TIMER`. Desde a subfase 2.9, coa barra de título de meiga, tamén cando o usuario arrastra a xanela polas partes libres da barra, ou a redimensiona pola banda, que para Windows son a súa barra de título e o seu bordo ([`WM_NCHITTEST`](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows)); e cando abre o menú da xanela, co botón dereito nas partes libres da barra ou con Alt+Espazo, onde o bucle é o de `TrackPopupMenu` ([`system_menu`](#o-menú-da-xanela-system_menu)). Os fotogramas seguen entón co temporizador de xanela, coma coa barra de título de Windows ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 5).
 
 ```rust
 fn enter_modal_loop(&self) {
@@ -1354,7 +1586,7 @@ pub fn invalidate(&self, area: Option<Rect>) {
 ```
 
 - **Capturar o rato.** Normalmente, cada xanela recibe o rato só mentres está enriba dela. Ao arrastrar, iso fai que se perda o movemento ao saír da xanela, e mesmo o momento de soltar o botón. `SetCapture` envía todo o rato a esta xanela ata `ReleaseCapture`, tamén fóra dela, onde as coordenadas poden ser negativas ([`decode`](#decode)). Se outra xanela o colle, chega `WM_CAPTURECHANGED`, o evento `CaptureLost` ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)).
-- **Quen o captura.** Desde a subfase 1.8, o programa captura o rato cando baixa o botón esquerdo para seleccionar, ou un botón que vai ao programa da sesión, e sóltao cando sobe o último: así segue unha selección que se arrastra fóra da xanela ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)). Desde a 1.9, tamén cando o botón esquerdo baixa sobre a franxa da barra de desprazamento: así segue o polgar que se arrastra, ou as páxinas que pasa un clic na franxa, ata que se solta. Da subfase 1.2 á 1.5 só o facía a demo, para debuxar rectángulos, e na 1.6 e na 1.7, ninguén.
+- **Quen o captura.** Desde a subfase 1.8, o programa captura o rato cando baixa o botón esquerdo para seleccionar, ou un botón que vai ao programa da sesión, e sóltao cando sobe o último: así segue unha selección que se arrastra fóra da xanela ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)). Desde a 1.9, tamén cando o botón esquerdo baixa sobre a franxa da barra de desprazamento: así segue o polgar que se arrastra, ou as páxinas que pasa un clic na franxa, ata que se solta. Desde a 2.3, tamén a barra de tabs, mentres hai un botón premido nela, e desde a 2.4, o menú aberto ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)); e desde a 2.9, coa barra de título de meiga, tamén cando se preme un botón da xanela, que chega coma unha mensaxe do marco ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)): o resto da pulsación chega xa coma mensaxes da área cliente. Da subfase 1.2 á 1.5 só o facía a demo, para debuxar rectángulos, e na 1.6 e na 1.7, ninguén.
 - `release_mouse` só o solta se o ten esta xanela, para non quitarllo a outra.
 - `ReleaseCapture` envía `WM_CAPTURECHANGED` a esta mesma xanela antes de voltar. O programa chámaa desde o *handler*, e ese aviso non lle chega (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)), e é o correcto: o *handler* xa sabe que soltou o rato. Por iso `CaptureLost` só chega cando a captura remata fóra das chamadas ao *handler*: por exemplo, cando outra xanela colle o rato.
 - **`invalidate`** pídelle a Windows un `WM_PAINT` dunha zona, ou da xanela enteira con `None`. O programa úsao cando non pode presentar un fotograma: o `WM_PAINT` repíntao máis tarde. Desde a subfase 1.8, tamén cando se pecha a caixa de [`confirm`](#windowconfirm): os `WM_PAINT` de mentres estaba aberta perdéronse. `ptr::from_ref` converte a referencia nun punteiro, e `map_or` dá o punteiro nulo se non hai rectángulo. O último argumento, `0` (`FALSE`), di que non hai que borrar o fondo antes.
@@ -1363,9 +1595,18 @@ pub fn invalidate(&self, area: Option<Rect>) {
 
 ```rust
 pub fn track_mouse_leave(&self) {
+    self.leave.set(Leave::Armed);
+    self.track(self.hit.get());
+}
+
+fn track(&self, hit: u32) {
+    let mut flags = TME_LEAVE;
+    if hit != HTCLIENT {
+        flags |= TME_NONCLIENT;
+    }
     let mut track = TRACKMOUSEEVENT {
         cbSize: size_of::<TRACKMOUSEEVENT>() as u32,
-        dwFlags: TME_LEAVE,
+        dwFlags: flags,
         hwndTrack: self.handle,
         dwHoverTime: 0,
     };
@@ -1373,13 +1614,100 @@ pub fn track_mouse_leave(&self) {
 }
 ```
 
-Desde a subfase 1.9. Pídelle a Windows un aviso para cando o punteiro saia da área cliente: o evento [`MouseLeft`](#event-e-mousebutton), unha vez ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)).
+Desde a subfase 1.9. Pídelle a Windows un aviso para cando o punteiro saia da área cliente: o evento [`MouseLeft`](#event-e-mousebutton), unha vez ([Tecnoloxías › O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent)). Desde a 2.9, coa barra de título de meiga, que é da área cliente para o *handler*, as partes da barra que non o son para Windows tamén contan coma área cliente: as partes libres, a banda e os botóns da xanela. O aviso chega entón cando o punteiro sae da xanela, ou cando chega ao marco que a redimensiona ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 4 e 12).
 
 - **Por que fai falta.** Windows envía `WM_MOUSEMOVE` mentres o punteiro se move por riba da área cliente, pero nada cando sae dela: salvo que teña o rato [capturado](#a-captura-do-rato-e-o-repintado), a xanela non sabe que o punteiro xa non está.
+- **Dous pasos**, desde a 2.9. `track_mouse_leave` apunta que a xanela vixía a saída (`Leave::Armed`, [máis abaixo](#leave-rearm-e-mouse_left)), e `track` pídelle o aviso a Windows. A xanela tamén chama a `track` ela soa, cando o punteiro pasa dunha parte da xanela a outra sen saír dela; o *handler*, a `track_mouse_leave`.
 - **`TRACKMOUSEEVENT`** di o que se pide: `cbSize`, o tamaño da estrutura, coma en [`create`](#windowcreate); `dwFlags`, `TME_LEAVE`, o aviso da saída; `hwndTrack`, a xanela; e `dwHoverTime`, o tempo do aviso de cando o punteiro se para enriba dela (`TME_HOVER`), que non se pide e vai a 0. `TrackMouseEvent` recibe un punteiro mutábel (`&mut track`) porque, con outra opción, `TME_QUERY`, escribe na estrutura o que está pedido; con `TME_LEAVE`, só a le.
-- **Unha vez.** Cando o punteiro sae, Windows envía `WM_MOUSELEAVE`, que [`decode`](#decode) traduce a `MouseLeft`, e o seguimento remata: para outro aviso, hai que chamala outra vez. A captura do rato tamén o pode rematar.
-- **Quen a chama.** O programa, cando o punteiro entra na franxa da barra de desprazamento, para estreitar o polgar cando saia, tamén se sae da xanela directamente desde a franxa, sen ningún outro `WM_MOUSEMOVE`; e outra vez ao soltar o botón sobre a franxa, porque a captura puido rematar o seguimento. Fóra da franxa non a chama: nin mensaxes nin temporizadores ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
+- **A parte onde está o punteiro.** `TrackMouseEvent` segue unha parte da xanela: a área cliente para Windows, con `TME_LEAVE` só, ou o resto da xanela, tamén con `TME_NONCLIENT`. Se o punteiro está noutra parte, Windows avisa no momento. Por iso, desde a 2.9, `track` recibe onde estaba o punteiro na última mensaxe do rato, `hit`, que garda o [*window procedure*](#window_proc): `HTCLIENT` na área cliente, e outra resposta de `WM_NCHITTEST`, coma `HTCAPTION` ou `HTCLOSE`, nas partes da barra de título de meiga que non son área cliente para Windows ([Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)). `TME_NONCLIENT` está na mesma *feature* ca `TME_LEAVE`, `Win32_UI_Input_KeyboardAndMouse`, e `|=` engade o seu bit.
+- **Unha vez.** Cando o punteiro sae, Windows envía `WM_MOUSELEAVE` ou, se se pediu con `TME_NONCLIENT`, `WM_NCMOUSELEAVE`, e o seguimento remata: para outro aviso, hai que pedilo outra vez. A captura do rato tamén o pode rematar. Ata a 2.8, [`decode`](#decode) traducía `WM_MOUSELEAVE` a `MouseLeft`; desde a 2.9, a xanela trata as dúas mensaxes, e só dá `MouseLeft` se o punteiro saíu de verdade ([`mouse_left`](#leave-rearm-e-mouse_left)).
+- **Quen a chama.** O programa, cando o punteiro entra na franxa da barra de desprazamento, para estreitar o polgar cando saia, tamén se sae da xanela directamente desde a franxa, sen ningún outro `WM_MOUSEMOVE`; e outra vez ao soltar o botón sobre a franxa, porque a captura puido rematar o seguimento ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)). Desde a subfase 2.3, tamén a barra de tabs, cando o punteiro entra nela, para quitar o resalte cando saia, e outra vez ao soltar nela o botón; e desde a 2.4, o menú aberto, co primeiro movemento desde que se abre, e outra vez ao soltar o botón ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Desde a 2.9, coa barra de título de meiga, o punteiro segue na barra tamén sobre os botóns da xanela, os ocos e a banda, e o aviso chega cando sae da xanela ou chega ao marco de Windows: así, as tabs que se pecharon co rato quedan co seu ancho ata entón ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 12). Fóra desas partes non a chama: nin mensaxes nin temporizadores.
 - **Non devolve nada.** Se `TrackMouseEvent` falla, o aviso non chega, e para o programa o punteiro só segue máis tempo sobre a xanela: o polgar queda ancho ata o seguinte movemento por riba dela. Non é motivo para parar meiga.
+
+### `Leave`, `rearm` e `mouse_left`
+
+```rust
+/// Whether the window watches for the pointer to leave it, for
+/// [`Event::MouseLeft`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Leave {
+    /// It does not: the handler did not ask, or the event already came.
+    Off,
+    /// Windows tells it when the pointer leaves the part of the window where
+    /// it is: the client area, or the title bar of meiga or its buttons,
+    /// which are not of the client area for Windows.
+    Armed,
+    /// The pointer went from one of those parts to another, which are all
+    /// of the handler: the window asks Windows again when the pointer moves.
+    Rearm,
+}
+
+fn rearm(&self) {
+    if self.leave.get() == Leave::Rearm && unsafe { GetCapture() } != self.handle {
+        self.leave.set(Leave::Armed);
+        self.track(self.hit.get());
+    }
+}
+
+fn mouse_left(&self, state: &State<'_>) {
+    match self.leave.get() {
+        Leave::Off => {}
+        // It went between the client area and the title bar of meiga,
+        // which are both of the handler. The move that took it there
+        // comes after this message, which Windows posted: until then,
+        // the window does not know where it is for Windows. It asks again
+        // once, which is right if the move already came, and else waits
+        // for the move: asking with the wrong part, Windows would tell
+        // it at once, again and again, before the move.
+        _ if self.custom && self.pointer_inside() => {
+            if self.retracked.replace(true) {
+                self.leave.set(Leave::Rearm);
+            } else {
+                self.leave.set(Leave::Armed);
+                self.track(self.hit.get());
+            }
+        }
+        _ => {
+            self.leave.set(Leave::Off);
+            state.dispatch(Event::MouseLeft);
+        }
+    }
+}
+```
+
+Desde a subfase 2.9. Coa barra de título de meiga, a área cliente do *handler*, todo o que debuxa, non é a de Windows: as partes libres da barra, a banda e os botóns da xanela son para Windows outras partes da xanela (`HTCAPTION`, `HTTOP`, `HTCLOSE`…), coma na súa barra de título, para que as arrastre, redimensione ou mostre os *snap layouts* ([`WM_NCHITTEST`](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows)). E `TrackMouseEvent` segue só unha parte: cando o punteiro pasa dunha tab a un botón da xanela, Windows avisa de que saíu da área cliente, aínda que segue na barra. A xanela non toma ese aviso por unha saída ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4): pide outro, para a parte nova, e o *handler* non sabe nada ([Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)).
+
+- **`Leave`** di se a xanela vixía a saída do punteiro: `Off`, non, porque o *handler* non o pediu ou xa recibiu o evento; `Armed`, si, e Windows avisará cando o punteiro saia da parte onde está; e `Rearm`, o punteiro pasou dunha parte a outra, e a xanela volta pedir o aviso cando se mova. Un `enum` propio, e non dous `bool`, deixa só os tres estados que poden pasar.
+- **`mouse_left`** trata os avisos, `WM_MOUSELEAVE` e `WM_NCMOUSELEAVE` ([`window_proc`](#window_proc)). Con `Off`, nada: ninguén o pediu. Se non, mira se o punteiro segue na xanela ([`pointer_inside`](#pointer_inside-e-in_client_area)): se está, pasou entre a área cliente e a barra de título de meiga, que son as dúas do *handler*, e pide outro aviso; se non, ou sen a barra de título de meiga, deixa de vixiar e dá `MouseLeft`, coma ata a 2.8. `_ if …` é unha garda sen patrón, coma en `window_proc`.
+- **O aviso chega antes ca o movemento.** Windows publica o aviso da saída cando o punteiro cambia de parte, e o movemento que o levou á parte nova (`WM_MOUSEMOVE` ou `WM_NCMOUSEMOVE`) chega despois. Ata entón, `hit` aínda di a parte vella, e pedir o aviso con ela faría que Windows avisase no momento, outra vez, antes do movemento. Por iso, coma di o comentario, a xanela pídeo unha vez, que acerta se o movemento xa chegou, e a segunda espera polo movemento (`Rearm`). `retracked` di se xa o pediu desde o último movemento: `replace(true)` pono a `true` e devolve o que tiña. O *window procedure* pono a `false` en cada movemento.
+- **`rearm`** é o que fai o movemento: se a xanela agarda (`Rearm`), pide o aviso, agora coa parte boa. Non mentres a xanela ten o rato capturado (`GetCapture`): a captura remata o seguimento, e o *handler* pide outro aviso cando solta o rato ([`track_mouse_leave`](#windowtrack_mouse_leave)).
+- **Sen a barra de título de meiga**, `custom` é `false`, a garda non se cumpre nunca, e cada aviso é un `MouseLeft`. `WM_NCMOUSELEAVE` nin chega a `mouse_left`.
+
+Ningunha proba nin comprobación automática pasa o punteiro do sistema dunha parte da xanela a outra: as comprobacións envíanlle á xanela as mensaxes do rato, co punteiro noutro sitio, así que Windows avisa no momento, `pointer_inside` dá `false`, e o aviso é sempre unha saída ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)). Os dous camiños de cando o punteiro segue na xanela, e `TME_NONCLIENT`, compróbanse a man.
+
+### `pointer_inside` e `in_client_area`
+
+```rust
+fn pointer_inside(&self) -> bool {
+    let mut cursor = POINT::default();
+    if unsafe { GetCursorPos(&mut cursor) } == 0 {
+        return false;
+    }
+    (unsafe { WindowFromPoint(cursor) } == self.handle)
+        && self.in_client_area(self.client_point(Point::new(cursor.x, cursor.y)))
+}
+
+fn in_client_area(&self, at: Point) -> bool {
+    self.client_size()
+        .is_ok_and(|size| Rect::from_size(size).contains_point(at))
+}
+```
+
+Desde a subfase 2.9. Dúas preguntas da xanela sobre o punteiro:
+
+- **`pointer_inside`**: se o punteiro está na área cliente da xanela, e non enriba doutra xanela que está diante dela. Coa barra de título de meiga, a área cliente chega ata o bordo de arriba: as partes libres da barra, a banda e os botóns da xanela están dentro dela, e o marco de Windows, nos outros tres lados, fóra. [`GetCursorPos`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getcursorpos) dá o punto do punteiro na pantalla, e [`WindowFromPoint`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-windowfrompoint), a xanela que está nese punto, a de diante; a de meiga non ten xanelas fillas, así que é ela se o punteiro está enriba. Se Windows non pode dicir onde está o punteiro, coma co cliente do Escritorio remoto minimizado, `GetCursorPos` falla, e o punteiro non está, coma di o comentario: o *handler* recibe `MouseLeft`.
+- **`in_client_area`**: se un punto da área cliente, desde a súa esquina, está dentro dela. `client_size` dá o seu tamaño, e `is_ok_and` dá `false` se falla. Úsaa tamén [`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse), para saber se o punteiro está na barra ou no marco que redimensiona a xanela.
+- O `&&` só chama a `in_client_area` se a xanela é a que está no punto: `WindowFromPoint` tamén a dá co punteiro no seu marco.
 
 ### `Window::is_foreground`
 
@@ -1389,7 +1717,7 @@ pub fn is_foreground(&self) -> bool {
 }
 ```
 
-Desde a subfase 1.8. Se a xanela é a de primeiro plano: a que está a usar o usuario, a da barra de título activa ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
+Desde a subfase 1.8. Se a xanela é a de primeiro plano: a que está a usar o usuario, a que Windows mostra activa ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)).
 
 - **Non é o mesmo ca o foco.** Unha xanela que abre un programa en segundo plano, coma unha comprobación automática, pode recibir o foco do seu fío ([`Focus`](#event-e-mousebutton)) sen estar en primeiro plano; e pode non haber ningunha en primeiro plano, por exemplo co cliente do Escritorio remoto minimizado. Atopouno a comprobación do rato, cando un programa copiou ao portapapeis desde unha xanela que tiña o foco e non estaba en primeiro plano ([Subfases › 1.8](../subfases/1.8-rato.md#resultados)).
 - **Para que.** O programa mira as dúas cousas antes de poñer no portapapeis o texto que copia un programa da sesión con OSC 52: un programa non pode cambiar o portapapeis desde unha xanela que non se está a usar ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Código › meiga](meiga.md#cratesmeigasrcapprs)).
@@ -1404,10 +1732,10 @@ pub fn set_title(&self, title: &str) {
 }
 ```
 
-Desde a subfase 1.6. Cambia o texto da barra de título, que tamén mostra a barra de tarefas ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)). O programa chámaa cando o programa da sesión cambia o seu título: co título novo ou, se non pon ningún, con «meiga» ([Código › meiga](meiga.md#cratesmeigasrcapprs)).
+Desde a subfase 1.6. Cambia o texto da xanela: o que mostran a barra de tarefas e Alt+Tab e, se a xanela a ten, a barra de título de Windows ([Tecnoloxías › O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela)). Desde a 2.9, coa barra de título de meiga, ningunha parte da xanela o mostra: o título de cada tab vai na súa tab ([`WindowOptions`](#windowoptions-e-window)). O programa chámaa cando o programa da sesión cambia o seu título: co título novo ou, se non pon ningún, con «meiga» ([Código › meiga](meiga.md#cratesmeigasrcapprs)).
 
 - `wide` converte o título ao UTF-16 rematado en 0 que espera Windows (ver [`lib.rs`](#cratesmeiga-winsrclibrs)). O vector vive ata o final da función, despois da chamada.
-- **Pódese chamar desde o *handler*.** `SetWindowTextW` non cambia o texto ela mesma: envíalle `WM_SETTEXT` á xanela e agarda, coma as funcións das que advirte [`Handler`](#handler). Pero esa mensaxe non chega ao *handler*: [`window_proc`](#window_proc) pásaa a `DefWindowProcW`, que garda o texto e redebuxa a barra de título. Por iso non se perde ningún evento cando o programa a chama desde o *handler*, ao recibir `Wake`.
+- **Pódese chamar desde o *handler*.** `SetWindowTextW` non cambia o texto ela mesma: envíalle `WM_SETTEXT` á xanela e agarda, coma as funcións das que advirte [`Handler`](#handler). Pero esa mensaxe non chega ao *handler*: [`window_proc`](#window_proc) pásaa a `DefWindowProcW`, que garda o texto e, se a xanela ten a barra de título de Windows, redebúxaa. Por iso non se perde ningún evento cando o programa a chama desde o *handler*, ao recibir `Wake`.
 - Non devolve erro: se fallase, o título quedaría como estaba, e iso non é motivo para parar meiga.
 
 ### `Window::close`
@@ -1418,12 +1746,41 @@ pub fn close(&self) {
 }
 ```
 
-Desde a subfase 2.2. Pecha a xanela coma Alt+F4 ou o botón de pechar da barra de título, pero cando volta o *handler*: publica `WM_CLOSE` na cola da xanela, e o bucle de mensaxes de [`run`](#windowrun) remata despois de tratala. O programa chámaa cando se pecha a última tab: unha xanela de meiga nunca queda sen tabs, e pechar a última pecha a xanela ([ADR 0018](../adr/0018-o-modelo-das-tabs.md), [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+Desde a subfase 2.2. Pecha a xanela coma Alt+F4 ou o botón de pechar da barra de título de Windows, pero cando volta o *handler*: publica `WM_CLOSE` na cola da xanela, e o bucle de mensaxes de [`run`](#windowrun) remata despois de tratala. O programa chámaa cando se pecha a última tab: unha xanela de meiga nunca queda sen tabs, e pechar a última pecha a xanela ([ADR 0018](../adr/0018-o-modelo-das-tabs.md), [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)). Desde a 2.9, tamén co botón de pechar da barra de título de meiga, ao soltar nel o botón esquerdo ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4).
 
-- **O mesmo camiño ca o usuario.** Alt+F4 e o botón de pechar acaban nun `WM_CLOSE`, que o [*window procedure*](#window_proc) pasa a `DefWindowProcW`, coma calquera mensaxe que meiga non trata. `DefWindowProcW` destrúe a xanela con `DestroyWindow`, `WM_DESTROY` publica `WM_QUIT`, e `run` devolve `Ok(())` cando o bucle o atopa: meiga remata co código 0. `close` entra nese camiño polo mesmo `WM_CLOSE`.
+- **O mesmo camiño ca o usuario.** Alt+F4, o botón de pechar da barra de título de Windows e *Close* no menú da xanela acaban nun `WM_CLOSE`, que o [*window procedure*](#window_proc) pasa a `DefWindowProcW`, coma calquera mensaxe que meiga non trata. `DefWindowProcW` destrúe a xanela con `DestroyWindow`, `WM_DESTROY` publica `WM_QUIT`, e `run` devolve `Ok(())` cando o bucle o atopa: meiga remata co código 0. `close` entra nese camiño polo mesmo `WM_CLOSE`, e con el o botón de pechar da barra de título de meiga, coma os botóns de Windows.
 - **Por que publicala, e non chamar a `DestroyWindow`.** O programa chámaa desde o *handler*, ao tratar o atallo que pecha a tab. `DestroyWindow` envíalle á xanela `WM_DESTROY` e outras mensaxes, e agarda por elas: chegarían ao *window procedure* mentres o *handler* aínda traballa, e os seus eventos perderíanse, coma advirte o *trait* [`Handler`](#handler) (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)); e despois o *handler* seguiría cunha xanela que xa non existe. `PostMessageW`, en cambio, deixa a mensaxe na cola e volta no momento: a xanela péchase cando o *handler* xa rematou, como di a documentación de `close`, e as mensaxes da súa destrución trátanse coma cando a pecha o usuario.
 - **Sen datos.** `WM_CLOSE` non leva nada: `wParam` e `lParam` van a 0. `PostMessageW` acepta calquera *handle*, e se a xanela xa non existise, fallaría sen efectos.
 - **Non devolve nada.** Se `PostMessageW` fallase, por exemplo coa cola chea, a xanela só seguiría aberta, e iso non é motivo para parar meiga.
+
+### `Window::minimize`, `Window::toggle_maximize` e `command`
+
+```rust
+pub fn minimize(&self) {
+    self.command(SC_MINIMIZE);
+}
+
+pub fn toggle_maximize(&self) {
+    self.command(if self.is_maximized() {
+        SC_RESTORE
+    } else {
+        SC_MAXIMIZE
+    });
+}
+
+fn command(&self, command: u32) {
+    unsafe { PostMessageW(self.handle, WM_SYSCOMMAND, command as WPARAM, 0) };
+}
+```
+
+Desde a subfase 2.9. Os botóns de minimizar e de maximizar ou restaurar da barra de título de meiga: o programa chámaas cando se solta o botón esquerdo enriba deles, e co de pechar chama a [`close`](#windowclose) ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4, [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+
+- **Coma os botóns de Windows.** `command` publica [`WM_SYSCOMMAND`](https://learn.microsoft.com/windows/win32/menurc/wm-syscommand), a mensaxe das ordes do menú da xanela, coa orde no `wParam`: `SC_MINIMIZE`, `SC_MAXIMIZE` ou `SC_RESTORE`. `DefWindowProcW` faina coma cando se preme un botón da barra de título de Windows, ou se escolle a orde no menú da xanela: coas animacións de Windows, e coa posición e o tamaño da xanela restaurada, que Windows lembra. O `lParam`, que leva o punto do punteiro cando a orde vén do rato, vai a 0.
+- **Cando volta o *handler*.** `PostMessageW` deixa a mensaxe na cola, coma en `close`: minimizar ou maximizar envíalle á xanela `WM_SIZE` e outras mensaxes, e agarda por elas, e se chegasen mentres o *handler* traballa, os seus eventos perderíanse ([`State`](#state-e-installed-o-handler-dentro-do-window-procedure)). Así, o *handler* recibe despois os eventos do cambio, coma o `Resized`, coma cando o fai o usuario.
+- **`toggle_maximize`** maximiza a xanela ou, se xa está maximizada, restáuraa ([`is_maximized`](#windowis_maximized)): é un só botón, que mostra o glifo de restaurar mentres a xanela está maximizada ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 3).
+- **`command`** é privada: úsana estes dous métodos e o [menú da xanela](#o-menú-da-xanela-system_menu), coa orde que escolle o usuario. `command as WPARAM` converte o número da orde, un `u32`, no `usize` do `wParam`.
+
+Unha copia de meiga na que o botón de maximizar sempre maximiza falla o paso 8 de `check-titlebar.ps1`, que restaura a xanela co mesmo botón; e outra na que o de minimizar restaura, o paso 13 ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
 
 ### `Window::set_pointer` e `Pointer`
 
@@ -1447,6 +1804,7 @@ pub fn set_pointer(&self, pointer: Pointer) {
 Desde a subfase 1.8. A forma do punteiro do rato na área cliente: a frecha (`Arrow`), cando os clics van ao programa do terminal, ou a barra de texto (`Text`), cando seleccionan texto ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)). O programa pon a barra de texto ao arrancar o terminal, e en cada movemento escolle a forma segundo se o programa da sesión pediu o rato e se Maiús está premido ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
 
 - **Só garda a forma.** `set_pointer` non cambia o punteiro que se ve: garda en `pointer` o cursor que corresponde, e o [*window procedure*](#window_proc) pono cando Windows o pide con `WM_SETCURSOR`, que chega antes de cada movemento mentres o rato non está capturado. Por iso a forma nova vese desde o seguinte movemento, e o programa, que a escolle ao recibir un, pon sempre a do seguinte.
+- **Só na área cliente para Windows.** Desde a subfase 2.9, coa barra de título de meiga, nas partes libres da barra, na banda e nos botóns da xanela pon o punteiro Windows: a frecha, ou a de redimensionar na banda ([`window_proc`](#window_proc)). Nas tabs e nos botóns da barra, que son área cliente, o programa pon a frecha.
 - **Un tipo propio.** `Pointer` só ten as dúas formas que usa meiga, e os cursores quedan dentro da `Window`, que os cargou en [`create`](#windowcreate): o programa escolle a forma sen ver ningún *handle* de Windows.
 - `Cell::set` cambia o cursor gardado a través de `&self`, coma no temporizador.
 
@@ -1565,6 +1923,178 @@ sequenceDiagram
 - **Poucos avisos pendentes.** Cada chamada deixa unha mensaxe máis na cola, que agarda ata que a colle o bucle, e a cola dun fío admite como moito 10 000 mensaxes publicadas. Por iso, coma di a documentación do `Waker`, quen o usa debe publicar só uns poucos avisos co mesmo número mentres agardan: por exemplo, un por cada tipo de cambio, coma o fío lector de meiga. Os de números distintos, no programa os de tabs distintas, poden agardar xuntos, e unha xanela ten decenas de tabs, non miles ([ADR 0018](../adr/0018-o-modelo-das-tabs.md)). O `Waker` non o comproba el mesmo, porque non sabe cando fai falta outro aviso. O fío lector dunha sesión avisa só dos cambios dos que a xanela aínda non sabe, e non volta avisar dun mesmo tipo de cambio ata que a xanela o atende: a pantalla, ata que a copia; o título e o texto para o portapapeis, ata que os colle; e unha actualización sincronizada, ata que sabe cando remata ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Mentres a xanela está minimizada, que non copia a pantalla, a saída non a volta espertar por ela, agás para que remate á súa hora unha actualización sincronizada. Desde a subfase 2.2, o mesmo pasa cunha tab que non se ve, da que a xanela tampouco colle o texto para o portapapeis: a súa saída espértaa como moito unha vez por cada unha desas cousas, e só as súas actualizacións sincronizadas a voltan espertar, para rematalas á súa hora ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md)). Desde a 2.3, a xanela colle tamén os títulos das tabs que non se ven, para a barra de tabs, nun fotograma: mentres o programa o cambia, o título esperta a xanela como moito unha vez por intervalo de fotograma ([ADR 0020](../adr/0020-a-barra-de-tabs.md)).
 - **Despois de pechar a xanela.** Os fíos lectores poden seguir vivos un tempo despois de destruírse a xanela, cos seus `Waker`. `PostMessageW` acepta calquera *handle*, e falla sen efectos se xa non é dunha xanela. Por iso `wake` non devolve nada: o fío que avisa non podería facer nada cun erro.
 - **Só desde os fíos lectores.** Ata a subfase 2.3, a vista do terminal gardaba outro `Waker` e avisábase a si mesma no fío da interface: cando atopaba ela un título novo ao rematar unha actualización sincronizada, e desde a 1.8, igual co texto que copiara o programa ao portapapeis. Desde a 2.3, a xanela colle os títulos no fotograma, e dálle ao portapapeis no momento o texto dunha actualización sincronizada que remata ela, así que xa non lle fai falta ([Código › meiga](meiga.md#cratesmeigasrcviewrs)).
+
+### O marco propio: `own_title_bar` e `custom_frame`
+
+```rust
+fn own_title_bar(window: HWND) -> bool {
+    unsafe { SetWindowLongPtrW(window, CUSTOM_FRAME, 1) };
+    // Windows asks for the frame again, with WM_NCCALCSIZE, now with the
+    // flag.
+    let changed = unsafe {
+        SetWindowPos(
+            window,
+            ptr::null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+        )
+    } != 0;
+    if !changed {
+        unsafe { SetWindowLongPtrW(window, CUSTOM_FRAME, 0) };
+    }
+    changed && custom_frame(window)
+}
+
+fn custom_frame(window: HWND) -> bool {
+    unsafe { GetWindowLongPtrW(window, CUSTOM_FRAME) != 0 }
+}
+```
+
+Desde a subfase 2.9. [`create`](#windowcreate) chama a `own_title_bar` cando as opcións piden a barra de título de meiga, coa xanela xa creada e aínda oculta ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1):
+
+- **A marca.** `SetWindowLongPtrW` escribe 1 nos bytes extra da xanela, no índice [`CUSTOM_FRAME`](#custom_frame-top_left_corner-e-autohide_taskbar), que a clase reserva e Windows pon a 0 ao crear a xanela. Devolve o valor de antes, 0, que non se usa.
+- **O marco outra vez.** `SetWindowPos` con [`SWP_FRAMECHANGED`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setwindowpos) fai que Windows calcule outra vez a área cliente, con `WM_NCCALCSIZE`, que agora atopa a marca ([`WM_NCCALCSIZE`](#wm_nccalcsize-a-área-cliente-ata-o-bordo-de-arriba)). As outras opcións din que a xanela non se move (`SWP_NOMOVE`), nin cambia de tamaño (`SWP_NOSIZE`), nin de orde entre as outras (`SWP_NOZORDER`), nin colle o foco (`SWP_NOACTIVATE`): por iso a posición, o tamaño e a xanela de despois van a 0 e nulo.
+- **Se Windows non deixa.** Se `SetWindowPos` falla, a marca volta a 0, e a xanela segue co marco e a barra de título de Windows, coma ata a 2.8: a barra de tabs vai debaixo, co sitio dos botóns da xanela baleiro. `own_title_bar` devolve se a xanela ten a barra de título de meiga, e `create` gárdao en `custom`.
+- **`custom_frame`** le a marca. Úsana `own_title_bar`, ao final, e o [*window procedure*](#window_proc), en `WM_NCCALCSIZE` e `WM_GETMINMAXINFO`, que só teñen o *handle* da xanela. Os bytes extra son 0 ata que `own_title_bar` os cambia: sen a barra de título de meiga, coma nos modos `--bench`, a marca nunca está, e as dúas mensaxes van a `DefWindowProcW`, coma ata a 2.8.
+
+`check-titlebar.ps1` mira o resultado no paso 1: que a área cliente chega ata o bordo de arriba da xanela, e Windows mantén o seu marco nos outros lados ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)); e [a proba de `window.rs`](#probas-1), que unha xanela coa barra de título de meiga a ten (`has_title_bar`), e que a súa área cliente chega ata o bordo de arriba. Unha copia de meiga na que `WM_NCCALCSIZE` non volta poñer o bordo de arriba falla as dúas.
+
+### `window_dpi` e `frame`
+
+```rust
+fn window_dpi(window: HWND) -> u32 {
+    match unsafe { GetDpiForWindow(window) } {
+        0 => USER_DEFAULT_SCREEN_DPI,
+        dpi => dpi,
+    }
+}
+
+fn frame(dpi: u32) -> u32 {
+    let metric = |index| unsafe { GetSystemMetricsForDpi(index, dpi) };
+    u32::try_from(metric(SM_CXPADDEDBORDER).saturating_add(metric(SM_CYSIZEFRAME))).unwrap_or(0)
+}
+```
+
+Desde a subfase 2.9, dúas funcións da xanela que non necesitan a `Window`, para o *window procedure*, que só ten o *handle* da xanela, e para os métodos:
+
+- **`window_dpi`** é o código de [`Window::dpi`](#windowdpi) ata a 2.8, co *handle* coma argumento: o DPI do monitor da xanela, ou 96 se Windows dá 0.
+- **`frame`** é o grosor do marco de Windows en cada lado da xanela, o que a redimensiona: [`SM_CXPADDEDBORDER`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getsystemmetrics) máis `SM_CYSIZEFRAME`, coma no Windows Terminal. Son 8 píxeles á escala do 100 %, 9 ao 125 %, 11 ao 150 % e 13 ao 200 %, coma di o comentario; a maior parte non se ve ([Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)). É o alto da banda ([`resize_band`](#windowhas_title_bar-e-windowresize_band)), o que baixa a área cliente da xanela maximizada ([`WM_NCCALCSIZE`](#wm_nccalcsize-a-área-cliente-ata-o-bordo-de-arriba)) e o que se lle suma á xanela máis pequena ([`WM_GETMINMAXINFO`](#wm_getminmaxinfo-a-xanela-máis-pequena)).
+- [`GetSystemMetricsForDpi`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getsystemmetricsfordpi) dá as métricas de Windows para un DPI calquera, e non para o do sistema, coma `GetSystemMetrics`: a xanela pode estar noutro monitor, e o programa fai a barra para o DPI que chega con [`DpiChanged`](#event-e-mousebutton) antes de que a xanela cambie de tamaño. Está na *feature* `Win32_UI_HiDpi`, coma `GetDpiForWindow`.
+- **Sen erros.** `GetSystemMetricsForDpi` dá 0 cunha métrica que non coñece. `saturating_add` suma sen desbordar, e `u32::try_from` dá un erro cun número negativo, que `unwrap_or(0)` fai 0: sen marco, a banda non mide nada, e a xanela segue funcionando.
+
+### A barra de tarefas que se oculta: `AppBarData`, `app_bar_message` e `leave_room_for_hidden_taskbars`
+
+```rust
+/// What `SHAppBarMessage` takes: the `APPBARDATA` of shellapi.h, which
+/// windows-sys has in a feature that meiga does not use.
+#[repr(C)]
+struct AppBarData {
+    size: u32,
+    window: HWND,
+    callback_message: u32,
+    edge: u32,
+    rect: RECT,
+    lparam: LPARAM,
+}
+
+// As in shellapi.h for x64, where its members have their natural alignment.
+const _: () = assert!(size_of::<AppBarData>() == 48);
+
+impl AppBarData {
+    fn new(edge: u32, rect: RECT) -> Self {
+        Self {
+            size: size_of::<Self>() as u32,
+            window: ptr::null_mut(),
+            callback_message: 0,
+            edge,
+            rect,
+            lparam: 0,
+        }
+    }
+}
+
+/// `SHAppBarMessage`.
+type AppBarFn = unsafe extern "system" fn(u32, *mut AppBarData) -> usize;
+
+/// The messages of `SHAppBarMessage` that say whether the taskbar hides
+/// itself, and whether it does on an edge of a monitor.
+const ABM_GETSTATE: u32 = 4;
+const ABM_GETAUTOHIDEBAREX: u32 = 11;
+
+/// What `ABM_GETSTATE` gives when the taskbar hides itself.
+const ABS_AUTOHIDE: usize = 1;
+
+/// The edges of a monitor.
+const ABE_LEFT: u32 = 0;
+const ABE_TOP: u32 = 1;
+const ABE_RIGHT: u32 = 2;
+const ABE_BOTTOM: u32 = 3;
+
+fn app_bar_message() -> Option<AppBarFn> {
+    static FUNCTION: OnceLock<Option<AppBarFn>> = OnceLock::new();
+    *FUNCTION.get_or_init(|| {
+        let name = wide("shell32.dll");
+        let module =
+            unsafe { LoadLibraryExW(name.as_ptr(), ptr::null_mut(), LOAD_LIBRARY_SEARCH_SYSTEM32) };
+        if module.is_null() {
+            return None;
+        }
+        // The module is never freed: the function points into it.
+        let function = unsafe { GetProcAddress(module, c"SHAppBarMessage".as_ptr().cast()) }?;
+        Some(unsafe { mem::transmute::<unsafe extern "system" fn() -> isize, AppBarFn>(function) })
+    })
+}
+
+fn leave_room_for_hidden_taskbars(client: &mut RECT) {
+    let Some(app_bar_message) = app_bar_message() else {
+        return;
+    };
+    let mut query = AppBarData::new(0, RECT::default());
+    if unsafe { app_bar_message(ABM_GETSTATE, &mut query) } & ABS_AUTOHIDE == 0 {
+        return;
+    }
+    let monitor = unsafe { MonitorFromRect(&*client, MONITOR_DEFAULTTONEAREST) };
+    let mut info = MONITORINFO {
+        cbSize: size_of::<MONITORINFO>() as u32,
+        ..Default::default()
+    };
+    if unsafe { GetMonitorInfoW(monitor, &mut info) } == 0 {
+        return;
+    }
+    let hides_on = |edge| {
+        let mut query = AppBarData::new(edge, info.rcMonitor);
+        unsafe { app_bar_message(ABM_GETAUTOHIDEBAREX, &mut query) != 0 }
+    };
+    if hides_on(ABE_LEFT) {
+        client.left += AUTOHIDE_TASKBAR;
+    }
+    if hides_on(ABE_TOP) {
+        client.top += AUTOHIDE_TASKBAR;
+    }
+    if hides_on(ABE_RIGHT) {
+        client.right -= AUTOHIDE_TASKBAR;
+    }
+    if hides_on(ABE_BOTTOM) {
+        client.bottom -= AUTOHIDE_TASKBAR;
+    }
+}
+```
+
+Desde a subfase 2.9. Maximizada, unha xanela cobre a área de traballo do seu monitor, o monitor sen a barra de tarefas. Pero unha barra de tarefas que se oculta soa non lle quita nada á área de traballo: a xanela maximizada tapa entón ese bordo enteiro, e o punteiro xa non pode mostrar a barra de tarefas. Coa barra de título de meiga, a área cliente queda 2 píxeles máis curta nese bordo ([`AUTOHIDE_TASKBAR`](#custom_frame-top_left_corner-e-autohide_taskbar)), coma no Windows Terminal e en Chrome ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 7, [Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)).
+
+- **`SHAppBarMessage`** pregúntalle ao Explorador pola barra de tarefas. Recibe unha mensaxe e unha estrutura, `APPBARDATA`, e devolve un número, que depende da mensaxe. meiga usa dúas: [`ABM_GETSTATE`](https://learn.microsoft.com/windows/win32/shell/abm-getstate) (4), se a barra de tarefas se oculta soa (o bit `ABS_AUTOHIDE`, 1); e [`ABM_GETAUTOHIDEBAREX`](https://learn.microsoft.com/windows/win32/shell/abm-getautohidebarex) (11), a barra que se oculta nun bordo (`uEdge`, un dos `ABE_*`) do monitor do rectángulo `rc`, ou 0.
+- **`AppBarData`** é o `APPBARDATA` de `shellapi.h`. `windows-sys` téno na *feature* `Win32_UI_Shell`, que meiga non usa: traería milleiros de declaracións por unha estrutura e catro constantes, coma `WM_MOUSELEAVE` ([`event.rs`](#cratesmeiga-winsrceventrs)). `#[repr(C)]` pon os campos na orde e coa aliñación de C, e a aserción `const _` compróbao ao compilar: en x64, os 48 bytes de `sizeof(APPBARDATA)` de C. Os nomes dos campos son os de Rust; a orde e os tipos, os de C (`cbSize`, `hWnd`, `uCallbackMessage`, `uEdge`, `rc` e `lParam`). `new` enche o tamaño, como manda Windows, e deixa a cero o que non se usa.
+- **`AppBarFn`** é a firma de `SHAppBarMessage`: `unsafe extern "system"`, coma as funcións de `windows-sys`, e o `UINT_PTR` que devolve, un `usize`.
+- **`app_bar_message`** dá a función, cargada a primeira vez que se pide. `shell32.dll`, onde está, non a usaba meiga, e cargala leva tempo: por iso non vai na táboa de importacións de `meiga.exe`. meiga cárgaa con [`LoadLibraryExW`](https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw) e `GetProcAddress`, coma `conpty.dll` ([`Conpty::load`](#conptyload-bundled-e-system)), pero só do cartafol do sistema (`LOAD_LIBRARY_SEARCH_SYSTEM32`, tamén para as DLL que necesite ela), e a primeira vez que unha xanela se maximiza. `GetProcAddress` busca a función polo seu nome, un texto de C rematado en 0 (`c"…"`), e dá `None` se non a atopa: `?` devolve entón `None`. `mem::transmute` dálle a firma de `AppBarFn` ao punteiro de función xenérico que devolve `GetProcAddress`, `unsafe extern "system" fn() -> isize`.
+- **Unha vez por proceso.** [`OnceLock`](https://doc.rust-lang.org/std/sync/struct.OnceLock.html) garda o resultado nunha variábel `static`: `get_or_init` executa o *closure* a primeira vez, e as outras devolve o gardado, tamén `None`, se non se puido cargar. A DLL nunca se solta (`FreeLibrary`): a función apunta a ela. Sen `shell32.dll`, a xanela maximizada non deixa sitio, e todo o demais segue igual.
+- **`leave_room_for_hidden_taskbars`** fai as preguntas, coma o Windows Terminal, no fío da xanela, desde [`WM_NCCALCSIZE`](#wm_nccalcsize-a-área-cliente-ata-o-bordo-de-arriba), coa xanela maximizada: primeiro `ABM_GETSTATE`; e só se a barra de tarefas se oculta, `ABM_GETAUTOHIDEBAREX` en cada bordo do monitor onde vai estar a xanela. O monitor dáo [`MonitorFromRect`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-monitorfromrect) coa área cliente que vai ter a xanela, `client` (o máis próximo, se non está en ningún), e o seu rectángulo, `GetMonitorInfoW` (`rcMonitor`). `&*client` é unha referencia só para ler ao mesmo rectángulo: `*client` é o rectángulo ao que apunta a referencia mutábel, e `&` toma del unha compartida, que Rust converte no punteiro `*const RECT` que pide `MonitorFromRect`. En cada bordo cunha barra que se oculta, o lado da área cliente pásase 2 píxeles para dentro.
+- **O monitor da área cliente, e non o da xanela.** Windows envía `WM_NCCALCSIZE` antes de mover a xanela, e `MonitorFromWindow`, coma no Windows Terminal, daría o monitor de onde está: cando se restaura desde a barra de tarefas unha xanela maximizada que estaba minimizada, aínda en (−32000, −32000), o máis próximo a ese punto, que pode ser outro se hai un monitor á esquerda do principal; e, cando Win+Maiús+frecha a leva a outro monitor, o que deixa. Atopouno a revisión independente da subfase 2.9 ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 7, e [Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título), *O monitor*).
+- **Mentres agarda.** `SHAppBarMessage` espera a resposta do Explorador, e mentres tanto as mensaxes que lle envíen ao fío chegan ao *window procedure*, coma di o comentario. Chrome pregunta noutro fío por iso; meiga, coma o Windows Terminal, no da xanela, e só coa xanela maximizada.
+
+Os 2 píxeles comprobáronse unha vez, na subfase 2.9, coa barra de tarefas oculta un momento no bordo de abaixo dun só monitor: [`check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1), que mira que a área cliente da xanela maximizada é a área de traballo do monitor sen eses 2 píxeles, pasou; e unha copia de meiga que non chama a `leave_room_for_hidden_taskbars` fallou no paso 4. As probas non os comproban, e `check-titlebar.ps1` só os mira onde a barra de tarefas se oculta, que na máquina da subfase non o fai. Con dous monitores non se comprobou que o monitor sexa o bo. Se `ABM_GETAUTOHIDEBAREX` non a atopase, coma di Chrome que lle pasa ás veces, a xanela maximizada taparía o seu bordo, e o punteiro non a mostraría; a tecla Win móstraa igual ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md#consecuencias)).
 
 ### `is_remote_session` e `show_error`
 
@@ -1701,7 +2231,7 @@ Desde a subfase 1.8. Como quere o usuario o rato: cando dous clics son un dobre 
 | `wheel_chars` | `SystemParametersInfoW(SPI_GETWHEELSCROLLCHARS)` | Os caracteres que despraza cada parte da roda cara a un lado. |
 
 - **Unha función, coma [`caret_settings`](#caretsettings-e-caret_settings):** os axustes son do usuario, e poden cambiar mentres meiga corre, por exemplo ao conectarse por Escritorio remoto. O programa chámaa ao arrancar o terminal e cada vez que a xanela recupera o foco ([Código › meiga › `mouse.rs`](meiga.md#cratesmeigasrcmousers)).
-- **meiga conta os clics.** Windows só detecta os dobres clics nas xanelas dunha clase con `CS_DBLCLKS`, e nunca os triplos. A clase de meiga non o leva ([`create`](#windowcreate)): o segundo clic chega coma o primeiro, cun `WM_LBUTTONDOWN`, e o programa contao coas mesmas medidas ca Windows ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)).
+- **meiga conta os clics.** Windows só detecta os dobres clics nas xanelas dunha clase con `CS_DBLCLKS`, e nunca os triplos. A clase de meiga non o leva ([`create`](#windowcreate)): o segundo clic chega coma o primeiro, cun `WM_LBUTTONDOWN`, e o programa contao coas mesmas medidas ca Windows ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). No marco, Windows envía os dobres clics a todas as xanelas, e trátaos el: desde a subfase 2.9, o dobre clic nas partes libres da barra de título de meiga maximiza e restaura a xanela, coma na barra de título de Windows ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)).
 - **Os valores por defecto** son os de Windows: 500 ms e 4 × 4 píxeles (`ClickSettings::default()`), e 3 liñas e 3 caracteres por parte da roda. Úsanse cando Windows non dá o seu:
   - `GetDoubleClickTime` dá milisegundos, e un 0 non sería un tempo. `Some(time).filter(…)` converte o número nun `Option`, que é `None` se non cumpre a condición; e `map_or`, coma no cursor, dá o valor por defecto se é `None` e, se non, aplícalle o *closure*.
   - `GetSystemMetrics` dá un `i32`. `u32::try_from` convérteo, e só falla, e dá o valor por defecto, cun número negativo.
@@ -1800,6 +2330,12 @@ unsafe extern "system" fn window_proc(
             unsafe { PostQuitMessage(0) };
             return 0;
         }
+        // With the title bar of meiga, the client area goes up to the top of
+        // the window, and Windows keeps its frame on the other sides.
+        WM_NCCALCSIZE if custom_frame(window) => { … }
+        // The smallest window has room for the narrowest title bar of meiga,
+        // with the frame of Windows on its sides and below it.
+        WM_GETMINMAXINFO if custom_frame(window) => { … }
         _ => {}
     }
 
@@ -1820,10 +2356,28 @@ unsafe extern "system" fn window_proc(
         }
         WM_ENTERMENULOOP => this.enter_modal_loop(),
         WM_EXITMENULOOP => this.leave_modal_loop(),
+        // Alt+Space, which the keyboard leaves to Windows, opens the menu of
+        // the window: with the title bar of meiga, the window opens its own.
+        WM_SYSCOMMAND if is_alt_space(wparam, lparam) => {
+            if !this.keyboard_menu() {
+                return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+            }
+        }
         // Over the client area, the pointer that the handler chose.
         WM_SETCURSOR if (lparam & 0xffff) as u32 == HTCLIENT => {
             unsafe { SetCursor(this.pointer.get()) };
             return 1;
+        }
+        // With the title bar of meiga, what a point of the client area is for
+        // Windows: the title bar drags the window, its top edge resizes it,
+        // and its buttons are the ones of the window, so that the one to
+        // maximize opens the snap layouts of Windows 11.
+        WM_NCHITTEST if this.custom => { … }
+        WM_NCMOUSEMOVE..=WM_NCMBUTTONDBLCLK if this.custom => { … }
+        WM_MOUSELEAVE => this.mouse_left(state),
+        WM_NCMOUSELEAVE if this.custom => {
+            this.mouse_left(state);
+            return unsafe { DefWindowProcW(window, message, wparam, lparam) };
         }
         _ if is_keyboard_message(message) => {
             let mut send = |key| state.dispatch(Event::Key(key));
@@ -1835,6 +2389,18 @@ unsafe extern "system" fn window_proc(
             }
         }
         _ => {
+            match message {
+                // The pointer is over the client area for Windows, or the
+                // window has the mouse.
+                WM_MOUSEMOVE => {
+                    this.hit.set(HTCLIENT);
+                    this.retracked.set(false);
+                    this.rearm();
+                }
+                WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONDOWN | WM_MBUTTONUP | WM_RBUTTONDOWN
+                | WM_RBUTTONUP => this.hit.set(HTCLIENT),
+                _ => {}
+            }
             // The mouse messages do not say whether Alt is down. The high
             // bit of the state of the key says it, as the thread got the
             // message.
@@ -1872,7 +2438,10 @@ O ***window procedure***: a función que trata as mensaxes das xanelas de meiga.
 | `WM_DPICHANGED` | A xanela pasa a un monitor con outra escala (por exemplo, do 150 % ao 100 %), ou cambia a escala do monitor. | Desde a subfase 1.9, se hai *handler*, dálle primeiro o DPI novo (`DpiChanged`). Despois aplica o tamaño e a posición que suxire Windows, para que a xanela manteña o seu tamaño físico. |
 | `WM_ERASEBKGND` | Antes de pintar, Windows pide borrar o fondo. | Devolve 1, «xa está borrado», sen facer nada: o *handler* pinta todos os píxeles. |
 | `WM_DESTROY` | A xanela estase destruíndo, por exemplo porque o usuario a pechou. | `PostQuitMessage(0)` publica `WM_QUIT`, e o bucle de mensaxes remata. |
+| `WM_NCCALCSIZE`, coa barra de título de meiga | Windows calcula a área cliente: ao crear a xanela, cada vez que cambia de tamaño, e cando se pide outra vez con `SWP_FRAMECHANGED`. | Desde a subfase 2.9, a área cliente chega ata o bordo de arriba da xanela ([máis abaixo](#wm_nccalcsize-a-área-cliente-ata-o-bordo-de-arriba)). |
+| `WM_GETMINMAXINFO`, coa barra de título de meiga | Antes de que a xanela cambie de tamaño, tamén mentres o usuario a redimensiona: Windows pregunta o tamaño máis pequeno e o máis grande. | Desde a 2.9, a xanela máis pequena ten sitio para a barra de título de meiga máis estreita ([máis abaixo](#wm_getminmaxinfo-a-xanela-máis-pequena)). |
 
+- **A marca, e non o estado.** As dúas ramas da 2.9 levan a garda `if custom_frame(window)`: chegan tamén antes de `run`, mentres `CreateWindowExW` e [`own_title_bar`](#o-marco-propio-own_title_bar-e-custom_frame) calculan o marco, e a marca vai nos bytes extra da xanela. Sen ela, van a `DefWindowProcW`, coma ata a 2.8.
 - **Sen estado**, fóra de `run`, as demais mensaxes van a `DefWindowProcW`.
 - **As mensaxes que van ao *handler*:**
 
@@ -1881,13 +2450,18 @@ O ***window procedure***: a función que trata as mensaxes das xanelas de meiga.
 | `WM_PAINT` | [`paint`](#wm_paint-paint): o *handler* pinta a zona que pide Windows. |
 | `WM_TIMER` co número `FRAME_TIMER_ID` | O temporizador de xanela dun bucle modal: [`frame_timer_due`](#o-temporizador-dos-fotogramas). `if wparam == …` é unha **garda** do `match`: a rama só se escolle se, ademais, se cumpre a condición. Os outros temporizadores irían a `DefWindowProcW`. |
 | `WM_ENTERSIZEMOVE` e `WM_EXITSIZEMOVE` | Empeza ou remata un [bucle modal](#os-bucles-modais-de-windows), e o *handler* recibe `SizeMoveStarted` ou `SizeMoveEnded`. |
-| `WM_ENTERMENULOOP` e `WM_EXITMENULOOP` | Empeza ou remata o bucle modal do menú. |
-| `WM_SETCURSOR`, na área cliente | Desde a subfase 1.8. Pon o punteiro que escolleu o *handler* ([`set_pointer`](#windowset_pointer-e-pointer)), e devolve 1, «xa está posto». Nos bordos e na barra de título, a mensaxe vai a `DefWindowProcW`. |
-| As do teclado (`is_keyboard_message`) | Desde a subfase 1.7. O [teclado da xanela](#cratesmeiga-winsrckeyboardrs) xúntaas en eventos de tecla, e o *closure* `send` envía cada un ao *handler* coma `Event::Key`. As de Alt+F4 e Alt+Espazo van a `DefWindowProcW`, que pecha a xanela ou abre o seu menú. `_ if …` é unha garda sen patrón: a rama colle calquera mensaxe que cumpra a condición. |
-| As de [`decode`](#decode) | O *handler* recibe o evento. Desde a subfase 1.6, tamén os cambios do foco e os avisos doutros fíos (`WM_WAKE`), que desde a 2.2 levan o seu número. Desde a 1.8, os eventos do rato levan tamén Alt, e o punto da roda pásase á área cliente. Desde a 1.9, tamén a saída do punteiro (`WM_MOUSELEAVE`), se se pediu con [`track_mouse_leave`](#windowtrack_mouse_leave). |
-| Calquera outra | `DefWindowProcW`, o comportamento por defecto de Windows: mover, redimensionar, minimizar, maximizar, pechar (`WM_CLOSE` destrúe a xanela, tamén o que publica [`close`](#windowclose)), cambiar o título (`WM_SETTEXT`, ver [`set_title`](#windowset_title))… |
+| `WM_ENTERMENULOOP` e `WM_EXITMENULOOP` | Empeza ou remata o bucle modal dun menú: o da xanela, que abren Alt+Espazo e, desde a subfase 2.9, o botón dereito nas partes libres da barra ([`system_menu`](#o-menú-da-xanela-system_menu)). O *handler* non recibe nada: o menú non lle quita o foco á xanela. |
+| `WM_SYSCOMMAND` de Alt+Espazo (`is_alt_space`) | Desde a subfase 2.9. Windows pídelle á xanela o seu menú co teclado. Coa barra de título de meiga, ábreo a xanela ela mesma, debaixo da barra ([`keyboard_menu`](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)); sen ela, ou minimizada, a mensaxe vai a `DefWindowProcW`, que o abre coma ata a 2.8. As outras ordes do menú da xanela van a `DefWindowProcW` (última fila). |
+| `WM_SETCURSOR`, na área cliente | Desde a subfase 1.8. Pon o punteiro que escolleu o *handler* ([`set_pointer`](#windowset_pointer-e-pointer)), e devolve 1, «xa está posto». No marco, na barra de título de Windows e, desde a 2.9, nas partes da barra de título de meiga que non son área cliente para Windows, a mensaxe vai a `DefWindowProcW`. |
+| `WM_NCHITTEST`, coa barra de título de meiga | Desde a subfase 2.9. Dille a Windows que é cada punto da área cliente: a banda, as partes libres da barra, os botóns da xanela ou a área cliente; o marco dío `DefWindowProcW`, coma sempre ([máis abaixo](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows)). Coa barra que lle deu o *handler*, sen chamalo. |
+| As do rato no marco, de `WM_NCMOUSEMOVE` a `WM_NCMBUTTONDBLCLK`, coa barra de título de meiga | Desde a 2.9. O *handler* recibe os movementos por riba da barra e os botóns que se premen e se soltan nos botóns da xanela, e o botón dereito nas partes libres da barra abre o menú da xanela ([máis abaixo](#o-rato-no-marco-nonclient_mouse)). O resto vai tamén a `DefWindowProcW`, que move, redimensiona e maximiza a xanela. |
+| `WM_MOUSELEAVE` e, coa barra de título de meiga, `WM_NCMOUSELEAVE` | Desde a 2.9. O punteiro saíu da parte da xanela que se seguía: [`mouse_left`](#leave-rearm-e-mouse_left) dá `MouseLeft` se saíu da xanela, e se non, pide outro aviso. `WM_NCMOUSELEAVE` vai despois a `DefWindowProcW`. |
+| As do teclado (`is_keyboard_message`) | Desde a subfase 1.7. O [teclado da xanela](#cratesmeiga-winsrckeyboardrs) xúntaas en eventos de tecla, e o *closure* `send` envía cada un ao *handler* coma `Event::Key`. As de Alt+F4 e Alt+Espazo van a `DefWindowProcW`, que pecha a xanela ou lle pide o seu menú (fila de `WM_SYSCOMMAND`). `_ if …` é unha garda sen patrón: a rama colle calquera mensaxe que cumpra a condición. |
+| As de [`decode`](#decode) | O *handler* recibe o evento. Desde a subfase 1.6, tamén os cambios do foco e os avisos doutros fíos (`WM_WAKE`), que desde a 2.2 levan o seu número. Desde a 1.8, os eventos do rato levan tamén Alt, e o punto da roda pásase á área cliente. Desde a 1.9 ata a 2.8, tamén a saída do punteiro (`WM_MOUSELEAVE`), que desde a 2.9 trata a xanela (fila de enriba). Desde a 2.9, as mensaxes do rato da área cliente gardan antes onde está o punteiro para Windows (máis abaixo). |
+| Calquera outra | `DefWindowProcW`, o comportamento por defecto de Windows: mover, redimensionar, minimizar, maximizar, pechar (`WM_CLOSE` destrúe a xanela, tamén o que publica [`close`](#windowclose)), as ordes do menú da xanela (`WM_SYSCOMMAND`, tamén as que publican desde a 2.9 [`minimize`, `toggle_maximize`](#windowminimize-windowtoggle_maximize-e-command) e o [menú da xanela](#o-menú-da-xanela-system_menu), salvo a de Alt+Espazo coa barra de título de meiga), cambiar o título (`WM_SETTEXT`, ver [`set_title`](#windowset_title))… Sen a barra de título de meiga, tamén `WM_NCHITTEST` e as mensaxes do rato no marco. |
 
 - Devolver 0 indica que a mensaxe está tratada.
+- As ramas da 2.9 que deixan facer a Windows o seu devolven o que dá `DefWindowProcW`.
 
 ```rust
 // The window moved to a monitor with another scale, or the scale of
@@ -1921,14 +2495,20 @@ WM_DPICHANGED => {
 - **O DPI** vai dúas veces no `wParam`: o horizontal nos 16 bits baixos e o vertical nos 16 seguintes, que son iguais. `wparam as u16` colle os 16 bits baixos, e `u32::from` convérteos no `u32` do evento.
 - En `WM_DPICHANGED`, `lparam` é a dirección dun `RECT` (as coordenadas dos catro lados) co rectángulo que suxire Windows. `lparam as *const RECT` converte o número nun punteiro, e `&*` convérteo nunha referencia de Rust. É seguro porque Windows garante que o rectángulo existe mentres se trata a mensaxe.
 - `SetWindowPos` move e redimensiona a xanela: `SWP_NOZORDER` non a pon diante nin detrás doutras, e `SWP_NOACTIVATE` non lle dá o foco. Envía `WM_SIZE`, que chega ao *handler* como `Resized` antes de que volte. Chámaa o *window procedure* cando o *handler* xa rematou co `DpiChanged`: por iso o `Resized` non se perde, como pasaría se a chamase o propio *handler* (ver [`State`](#state-e-installed-o-handler-dentro-do-window-procedure)).
-- Coa escala por monitor (ver [Tecnoloxías › Manifesto](../tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)), Windows axusta só a barra de título e os bordos. O contido da xanela é cousa de meiga: desde a subfase 1.3, o tamaño das letras sae do DPI da xanela ao arrancar (ver [`Window::dpi`](#windowdpi)) e, desde a 1.9, tamén do que chega con `DpiChanged`.
+- Coa escala por monitor (ver [Tecnoloxías › Manifesto](../tecnoloxias.md#23-manifesto-da-aplicación-e-dpi)), Windows axusta só o seu marco e, se a xanela a ten, a barra de título de Windows. O contido da xanela é cousa de meiga: desde a subfase 1.3, o tamaño das letras sae do DPI da xanela ao arrancar (ver [`Window::dpi`](#windowdpi)) e, desde a 1.9, tamén do que chega con `DpiChanged`. Desde a 2.9, tamén a barra de título de meiga, que o programa fai para a escala nova ao recibir `DpiChanged`, coa banda do marco a ese DPI ([`resize_band`](#windowhas_title_bar-e-windowresize_band)).
 - **A orde compróbaa unha proba** (ver as probas de `window.rs`, máis abaixo): envíalle `WM_DPICHANGED` á xanela desde o seu propio fío, e mira que o DPI chega ao *handler* antes ca o tamaño. É a única comprobación automática da orde: `WM_DPICHANGED` leva un punteiro, e non se pode publicar desde outro programa. O resto dun cambio de escala compróbase a man.
 
 Desde a subfase 1.8, o segundo `match` pon tamén o punteiro e completa os eventos do rato ([Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows)):
 
-- **O punteiro.** Windows envía `WM_SETCURSOR` cada vez que o rato se move por riba da xanela, antes de `WM_MOUSEMOVE`, para que escolla o punteiro; mentres a xanela ten o rato capturado, non a envía, e o punteiro non cambia. Os 16 bits baixos do `lParam` din onde está o punteiro: `HTCLIENT`, na área cliente. Alí, `SetCursor` pon o cursor de `pointer`, e devolver 1 (`TRUE`) di que xa está: `DefWindowProcW` poría o da clase, a frecha. Nos bordos e na barra de título, `DefWindowProcW` pon os de Windows, coma as frechas de redimensionar.
+- **O punteiro.** Windows envía `WM_SETCURSOR` cada vez que o rato se move por riba da xanela, antes de `WM_MOUSEMOVE`, para que escolla o punteiro; mentres a xanela ten o rato capturado, non a envía, e o punteiro non cambia. Os 16 bits baixos do `lParam` din onde está o punteiro, a resposta de `WM_NCHITTEST`: `HTCLIENT`, na área cliente. Alí, `SetCursor` pon o cursor de `pointer`, e devolver 1 (`TRUE`) di que xa está: `DefWindowProcW` poría o da clase, a frecha. No resto, `DefWindowProcW` pon os de Windows, coma as frechas de redimensionar no marco e, desde a subfase 2.9, na banda, ou a frecha nas partes libres da barra e nos botóns da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 12).
 - **Alt.** As mensaxes do rato non din se Alt está premido, e `decode` pregúntao co *closure* `alt` ([`decode`](#decode)), só nas mensaxes do rato. `GetKeyState(VK_MENU)` dá o estado de Alt segundo as mensaxes que xa colleu o fío da súa cola, e non o de agora: o de cando chegou esta. O bit alto do resultado, un `i16`, di se a tecla está abaixo, así que abaixo é negativo. `i32::from` converte o código da tecla, un `u16`, no `i32` que recibe a función.
 - **A roda.** Windows envía `WM_MOUSEWHEEL` e `WM_MOUSEHWHEEL` á xanela que ten o foco ou, coa opción de Windows que despraza as xanelas inactivas ao pasar por riba delas, á que está debaixo do punteiro; e o seu punto vén en coordenadas da pantalla. O *window procedure* pásao á área cliente con `client_point` antes de entregar o evento, así que o *handler* recibe todos os puntos do rato igual, desde a esquina da área cliente. Coa xanela enfocada, o punteiro pode estar fóra dela, e o punto tamén: o programa usa a cela máis próxima ([Código › meiga-core › `mouse.rs`](meiga-core.md#cratesmeiga-coresrcmousers)).
+
+**Onde está o punteiro para Windows.** Desde a subfase 2.9, antes de `decode`, as mensaxes do rato da área cliente gardan en `hit` que o punteiro está nela para Windows (`HTCLIENT`): `WM_MOUSEMOVE` e as dos botóns. Coa barra de título de meiga, o punteiro pode pasar da área cliente a unha parte da barra que non o é para Windows, e voltar; [`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse) garda a parte nova cando chega alí, e [`track`](#windowtrack_mouse_leave) pide con ela o aviso da saída. Mentres a xanela ten o rato capturado, todas as mensaxes do rato son da área cliente, tamén fóra da xanela.
+
+- **`WM_MOUSEMOVE`** di ademais que o punteiro se moveu: `retracked` volta a `false`, e [`rearm`](#leave-rearm-e-mouse_left) pide outra vez o aviso da saída, se o deixou pendente `mouse_left`.
+- Os dobres clics da área cliente (`WM_LBUTTONDBLCLK`…) non chegan, porque a clase non ten `CS_DBLCLKS` ([axustes do rato](#mousesettings-e-mouse_settings)).
+- **A roda non cambia `hit`.** As súas mensaxes chegan á xanela enfocada, co punteiro en calquera sitio.
 
 ```rust
 fn client_point(&self, on_screen: Point) -> Point {
@@ -1942,7 +2522,323 @@ fn client_point(&self, on_screen: Point) -> Point {
 ```
 
 - `ScreenToClient` réstalle ao punto a posición na pantalla da esquina superior esquerda da área cliente: o mesmo punto, visto desde a xanela. Cambia no sitio un `POINT` de Windows; `Point` é o de `meiga-core`. Se falla, o punto queda como estaba.
-- É un método privado da `Window`: só o usa o *window procedure*.
+- É un método privado da `Window`. Úsao o *window procedure*, co punto da roda e, desde a subfase 2.9, coas mensaxes do rato no marco ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)) e o punto de `WM_NCHITTEST` ([`hit_test`](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows)), que son da pantalla; e [`pointer_inside`](#pointer_inside-e-in_client_area), co punto do punteiro.
+
+### `WM_NCCALCSIZE`: a área cliente ata o bordo de arriba
+
+```rust
+// With the title bar of meiga, the client area goes up to the top of
+// the window, and Windows keeps its frame on the other sides.
+WM_NCCALCSIZE if custom_frame(window) => {
+    // For WM_NCCALCSIZE, `lparam` points to the rectangle of the
+    // window, alone or as the first member of a NCCALCSIZE_PARAMS,
+    // and DefWindowProcW leaves the client area in it.
+    let rect = lparam as *mut RECT;
+    let top = unsafe { (*rect).top };
+    let result = unsafe { DefWindowProcW(window, message, wparam, lparam) };
+    let mut client = unsafe { *rect };
+    client.top = top;
+    // Maximized, the window goes beyond its monitor as far as its
+    // frame on each side: its client area starts below the frame, at
+    // the top of the monitor, as with the title bar of Windows.
+    if unsafe { IsZoomed(window) } != 0 {
+        client.top += frame(window_dpi(window)) as i32;
+        leave_room_for_hidden_taskbars(&mut client);
+    }
+    unsafe { *rect = client };
+    return result;
+}
+```
+
+Desde a subfase 2.9, coa barra de título de meiga. Windows envía [`WM_NCCALCSIZE`](https://learn.microsoft.com/windows/win32/winmsg/wm-nccalcsize) para saber onde vai a área cliente dentro da xanela: ao creala, cada vez que cambia de tamaño, e cando se pide con `SWP_FRAMECHANGED` ([`own_title_bar`](#o-marco-propio-own_title_bar-e-custom_frame)). O `lParam` apunta ao rectángulo da xanela, só ou coma primeiro membro dunha `NCCALCSIZE_PARAMS`, segundo o `wParam`; e a resposta é a área cliente, no mesmo rectángulo ([Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)).
+
+- **O bordo de arriba.** meiga garda o lado de arriba do rectángulo, `top`, deixa que `DefWindowProcW` calcule a área cliente co marco de Windows, que lle quita o marco en cada lado e a barra de título de Windows arriba, e volta poñer `top`. A área cliente chega así ao bordo de arriba da xanela, e Windows mantén o seu marco nos lados e abaixo, coma o Windows Terminal e Chrome ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 1). Atende a mensaxe con calquera `wParam`, coma Chrome, e devolve o que devolveu `DefWindowProcW`.
+- **Os punteiros.** `lparam as *mut RECT` converte o número nun punteiro ao rectángulo, que vale nas dúas formas, porque o `RECT` vai primeiro en `NCCALCSIZE_PARAMS`. `(*rect).top` le un campo; `*rect` copia o rectángulo enteiro, que é `Copy`; e `*rect = client` escribe o novo. É seguro porque Windows garante que o rectángulo existe mentres se trata a mensaxe.
+- **Maximizada**, Windows pon a xanela máis alá do seu monitor, o grosor do marco por cada lado, para que o marco quede fóra. Co bordo de arriba no seu sitio, a área cliente empezaría ese grosor por riba do monitor: meiga báixao o grosor do marco ([`frame`](#window_dpi-e-frame)), e a área cliente empeza arriba do monitor, coma coa barra de título de Windows (decisión 2). Despois deixa sitio para a barra de tarefas que se oculta, se a hai ([`leave_room_for_hidden_taskbars`](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)). `IsZoomed` e `window_dpi` usan o *handle*: a mensaxe chega tamén antes de `run`.
+- **Coa marca.** A garda `if custom_frame(window)` mira a marca da xanela ([`CUSTOM_FRAME`](#custom_frame-top_left_corner-e-autohide_taskbar)): sen ela, a mensaxe vai a `DefWindowProcW`, que deixa a barra de título de Windows.
+
+Unha copia de meiga que non volta poñer o bordo de arriba falla [a proba de `window.rs`](#probas-1) e o paso 1 de `check-titlebar.ps1`; e outra que non baixa a área cliente da xanela maximizada, o paso 4, que mira que esa área cliente é a área de traballo do monitor ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
+
+### `WM_GETMINMAXINFO`: a xanela máis pequena
+
+```rust
+// The smallest window has room for the narrowest title bar of meiga,
+// with the frame of Windows on its sides and below it.
+WM_GETMINMAXINFO if custom_frame(window) => {
+    let dpi = window_dpi(window);
+    let band = frame(dpi);
+    let min = min_client(dpi, band);
+    let pixels = |value: u32| i32::try_from(value).unwrap_or(i32::MAX);
+    let info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
+    info.ptMinTrackSize.x = info
+        .ptMinTrackSize
+        .x
+        .max(pixels(min.width.saturating_add(band.saturating_mul(2))));
+    info.ptMinTrackSize.y = info
+        .ptMinTrackSize
+        .y
+        .max(pixels(min.height.saturating_add(band)));
+    return 0;
+}
+```
+
+Desde a subfase 2.9, coa barra de título de meiga. Windows envía [`WM_GETMINMAXINFO`](https://learn.microsoft.com/windows/win32/winmsg/wm-getminmaxinfo) antes de cambiar o tamaño da xanela, tamén mentres o usuario arrastra o seu bordo, cunha `MINMAXINFO` cos tamaños que permite, que xa trae os de Windows. `ptMinTrackSize` é o tamaño máis pequeno da xanela enteira, co marco, ao que a pode levar o usuario.
+
+- **O que necesita a barra.** [`min_client`](meiga-core.md#cratesmeiga-coresrcuititlebarrs), de `meiga-core`, dá a área cliente máis pequena a ese DPI, coa banda: o ancho da barra máis estreita, cos tres botóns da xanela, o sitio para arrastrala, o + e o ▾, os ocos, os dous botóns de desprazamento e unha tab de 100 píxeles, 395 píxeles á escala do 100 %; e o alto da barra, sen terminal ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 9). A xanela suma o marco de Windows nos dous lados e embaixo, e arriba nada, coma en `WM_NCCALCSIZE`.
+- **Só sobe.** `max` deixa o tamaño de Windows se é máis grande: o mínimo de Windows segue valendo.
+- **Sen desbordar.** `saturating_add` e `saturating_mul` suman e multiplican sen pasar do máximo dun `u32`, e o *closure* `pixels` converte ao `i32` dos campos, co máximo se non cabe.
+- **O DPI da xanela**, o que ten cando Windows pregunta ([`window_dpi`](#window_dpi-e-frame)): o marco e a barra miden segundo a escala.
+- **Tamén maximizada.** `frame` dá o grosor do marco tamén coa xanela maximizada, que non ten banda: o mínimo é sempre o da xanela restaurada. É inofensivo: o usuario só cambia o tamaño dunha xanela restaurada, e unha maximizada mide coma o monitor.
+- **Coa marca**, coma `WM_NCCALCSIZE`: chega tamén antes de `run`, e sen a barra de título de meiga quedan os tamaños de Windows. Nos modos `--bench`, que non teñen barra de tabs, non importa. Cunha barra de tabs sen a barra de título de meiga, que só pasa se falla o `SetWindowPos` de [`own_title_bar`](#o-marco-propio-own_title_bar-e-custom_frame), unha xanela estreita deixaría fóra o + e o ▾: a barra garda sempre o sitio dos botóns da xanela, que entón queda baleiro.
+
+Unha copia de meiga sen `WM_GETMINMAXINFO`, outra que non lle suma o marco ao ancho e outra que non llo suma ao alto fallan [a proba de `window.rs`](#probas-1) e o paso 11 de `check-titlebar.ps1` ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
+
+### `WM_NCHITTEST` e `hit_test`: que é cada parte para Windows
+
+```rust
+// With the title bar of meiga, what a point of the client area is for
+// Windows: the title bar drags the window, its top edge resizes it,
+// and its buttons are the ones of the window, so that the one to
+// maximize opens the snap layouts of Windows 11.
+WM_NCHITTEST if this.custom => {
+    // The frame of Windows, on the sides and below. The answer stays
+    // a LRESULT, because HTERROR is negative.
+    let default = unsafe { DefWindowProcW(window, message, wparam, lparam) };
+    if default != HTCLIENT as LRESULT {
+        return default;
+    }
+    return this.hit_test(point(lparam)) as LRESULT;
+}
+
+fn hit_test(&self, on_screen: Point) -> u32 {
+    let Some(bar) = self.title_bar.get() else {
+        return HTCLIENT;
+    };
+    let at = self.client_point(on_screen);
+    // The frame on the left of the client area: the top edge resizes the
+    // window also to the left as far from the side of the window as on a
+    // window with the title bar of Windows.
+    let mut rect = RECT::default();
+    let left = if unsafe { GetWindowRect(self.handle, &mut rect) } == 0 {
+        0
+    } else {
+        on_screen.x - at.x - rect.left
+    };
+    match bar.hit(at, TOP_LEFT_CORNER - left) {
+        Hit::Client => HTCLIENT,
+        Hit::Caption => HTCAPTION,
+        Hit::Top => HTTOP,
+        Hit::TopLeft => HTTOPLEFT,
+        Hit::Minimize => HTMINBUTTON,
+        Hit::Maximize => HTMAXBUTTON,
+        Hit::Close => HTCLOSE,
+    }
+}
+```
+
+Desde a subfase 2.9, coa barra de título de meiga. Windows envía [`WM_NCHITTEST`](https://learn.microsoft.com/windows/win32/inputdev/wm-nchittest) para saber que hai debaixo do punteiro, cada vez que o rato se move ou se preme un botón, co punto da pantalla no `lParam`. A resposta decide o resto: na área cliente (`HTCLIENT`), as mensaxes do rato son as da área cliente, e van ao *handler*; e no resto, son as do marco (`WM_NCMOUSEMOVE`…), e Windows fai co que hai alí o que fai coa súa barra de título e co seu marco ([Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)).
+
+- **Primeiro, `DefWindowProcW`.** Co marco propio, dá o marco dos lados e de abaixo (`HTLEFT`, `HTBOTTOM`, as esquinas…), e `HTCLIENT` en toda a área cliente, tamén onde ía a barra de título de Windows. meiga só cambia esa resposta ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 12). A resposta de `DefWindowProcW` queda nun `LRESULT`, coma di o comentario: `HTERROR` é -2.
+- **Despois, a barra.** No resto, `hit_test` pásalle o punto, xa na área cliente ([`client_point`](#window_proc)), á barra que lle deu o *handler* despois do último evento ([`set_title_bar`](#windowset_title_bar)), sen chamalo: o *handler* pode estar ocupado con outro evento. Antes da primeira barra (`None`), todo é área cliente. Fóra de `run`, sen estado, responde só `DefWindowProcW`.
+- **A esquina.** O bordo de arriba redimensiona en diagonal ata [`TOP_LEFT_CORNER`](#custom_frame-top_left_corner-e-autohide_taskbar) píxeles desde o lado esquerdo da xanela, e a barra conta desde a área cliente: `hit_test` réstalle o marco da esquerda, a distancia entre o lado da xanela (`GetWindowRect`) e o da área cliente, que é `on_screen.x - at.x` na pantalla. Se `GetWindowRect` falla, 0.
+- **`Hit`**, de `meiga-core`, di que é o punto para a barra, sen saber de Windows ([Código › meiga-core › `ui/titlebar.rs`](meiga-core.md#cratesmeiga-coresrcuititlebarrs)); `hit_test` tradúceo á resposta de Windows:
+
+| `Hit` | Resposta | Onde | Que fai Windows |
+|---|---|---|---|
+| `Client` | `HTCLIENT` | As tabs, os seus botóns, o +, o ▾, os botóns de desprazamento e o terminal; e, cun menú de meiga aberto, tamén as partes libres da barra (decisión 10). | Nada: as mensaxes van ao *handler*. |
+| `Caption` | `HTCAPTION`, a barra de título | As partes libres da barra: os ocos entre as súas partes e o sitio para arrastrar a xanela (decisión 5). | Arrastra a xanela, tamén a un bordo da pantalla, e maximízaa ou restáuraa co dobre clic. O botón dereito abre o menú da xanela, que abre meiga ([`system_menu`](#o-menú-da-xanela-system_menu)). |
+| `Top` | `HTTOP` | A banda, coa xanela restaurada (decisión 2). | Redimensiona a xanela desde o bordo de arriba. |
+| `TopLeft` | `HTTOPLEFT` | A banda, nos seus primeiros píxeles desde o lado esquerdo da xanela. | Redimensiona a xanela en diagonal. |
+| `Minimize`, `Maximize` e `Close` | `HTMINBUTTON`, `HTMAXBUTTON` e `HTCLOSE` | Os botóns da xanela, en todo o seu alto, tamén por riba da banda (decisión 4). | Windows 11 mostra os *snap layouts* co punteiro no de maximizar. Os clics van ao *handler* ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)). |
+
+Unha copia de meiga que non lle resta o marco da esquerda á esquina, outra que non deixa as respostas do marco que dá `DefWindowProcW` e outra na que o botón de maximizar é a barra de título fallan [a proba de `window.rs`](#probas-1) e o paso 2 de `check-titlebar.ps1`, que mira o que é cada parte da xanela restaurada para Windows ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
+
+### O rato no marco: `nonclient_mouse`
+
+```rust
+WM_NCMOUSEMOVE..=WM_NCMBUTTONDBLCLK if this.custom => {
+    let down = |key: u16| unsafe { GetKeyState(i32::from(key)) } < 0;
+    let modifiers = || Modifiers {
+        shift: down(VK_SHIFT),
+        alt: down(VK_MENU),
+        ctrl: down(VK_CONTROL),
+    };
+    if let Some(mouse) = decode_nonclient(message, wparam, lparam, modifiers)
+        && !this.nonclient_mouse(state, mouse)
+    {
+        return 0;
+    }
+    return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+}
+
+fn nonclient_mouse(&self, state: &State<'_>, mouse: NonClient) -> bool {
+    self.hit.set(mouse.hit);
+    let button = matches!(mouse.hit, HTMINBUTTON | HTMAXBUTTON | HTCLOSE);
+    match mouse.event {
+        Event::MouseMoved { at, modifiers, .. } => {
+            self.retracked.set(false);
+            let at = self.client_point(at);
+            if self.in_client_area(at) {
+                self.rearm();
+                state.dispatch(Event::MouseMoved {
+                    at,
+                    button: None,
+                    modifiers,
+                });
+            } else if self.leave.get() != Leave::Off {
+                // The frame, which resizes the window, is not of the
+                // handler.
+                self.leave.set(Leave::Off);
+                state.dispatch(Event::MouseLeft);
+            }
+            // Over its buttons, Windows would draw its own ones: the
+            // handler draws them. Windows opens the snap layouts of
+            // Windows 11 below the button to maximize anyway, because
+            // of WM_NCHITTEST.
+            !button
+        }
+        Event::MouseDown {
+            button: pressed,
+            at,
+            modifiers,
+        } if button => {
+            state.dispatch(Event::MouseDown {
+                button: pressed,
+                at: self.client_point(at),
+                modifiers,
+            });
+            false
+        }
+        Event::MouseUp {
+            button: released,
+            at,
+            modifiers,
+        } if button => {
+            state.dispatch(Event::MouseUp {
+                button: released,
+                at: self.client_point(at),
+                modifiers,
+            });
+            false
+        }
+        // Windows does nothing with the right button on the title bar of
+        // meiga: the window opens its menu.
+        Event::MouseUp {
+            button: Button::Right,
+            at,
+            ..
+        } if mouse.hit == HTCAPTION => {
+            self.system_menu(at);
+            false
+        }
+        _ => true,
+    }
+}
+```
+
+Desde a subfase 2.9, coa barra de título de meiga. Nas partes da barra que non son área cliente para Windows, as mensaxes do rato son as do marco: de `WM_NCMOUSEMOVE` (`0x00A0`) a `WM_NCMBUTTONDBLCLK` (`0x00A9`), un rango (`..=`) que colle os movementos e os tres botóns. Levan o punto da pantalla, e no `wParam`, a resposta de `WM_NCHITTEST`. [`decode_nonclient`](#nonclient-decode_nonclient-e-point) tradúceas, e `nonclient_mouse` decide quen as trata: o *handler*, Windows, ou os dous.
+
+- **As teclas modificadoras.** Estas mensaxes non din que teclas están premidas, e o *closure* `modifiers` pregúntao a Windows con `GetKeyState`, coma Alt nas da área cliente: Maiús (`VK_SHIFT`), Alt (`VK_MENU`) e Ctrl (`VK_CONTROL`). `decode_nonclient` só o chama coas mensaxes do marco.
+- **`if let … && …`** é unha cadea de condicións (*let chain*): se a mensaxe é do rato no marco, e `nonclient_mouse` a trata enteira (`false`), o *window procedure* devolve 0. Se non, a mensaxe vai tamén a `DefWindowProcW`, que arrastra a xanela, redimensiona ou maximiza co dobre clic.
+- **Onde está o punteiro.** `nonclient_mouse` garda en `hit` a parte da xanela onde está o punteiro para Windows, para o aviso da saída ([`track_mouse_leave`](#windowtrack_mouse_leave)).
+
+| Mensaxe | Onde | Que fai meiga | A Windows? |
+|---|---|---|---|
+| Movemento | Na barra: as partes libres, a banda ou os botóns da xanela | O *handler* recibe `MouseMoved`, sen botón, na área cliente, e a xanela volta pedir o aviso da saída se fai falta ([`rearm`](#leave-rearm-e-mouse_left)): a barra resalta o que hai debaixo do punteiro. | Si, salvo nos botóns da xanela: Windows debuxaría os seus por riba dos de meiga. Os *snap layouts* ábreos igual, por `WM_NCHITTEST`. |
+| Movemento | No marco, que redimensiona a xanela | Se a xanela vixía a saída, o *handler* recibe `MouseLeft`: o marco non é del (decisión 12). | Si. |
+| Botón que baixa ou sobe | Nos botóns da xanela | O *handler* recibe `MouseDown` ou `MouseUp` na área cliente, coma se fose da área cliente: a barra debuxa o botón premido, e actúa ao soltalo ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4). | Non: actuaría coas métricas da barra de título de Windows, coma di o Windows Terminal. |
+| O botón dereito que sobe | Nas partes libres da barra (`HTCAPTION`) | Abre o menú da xanela no punteiro ([`system_menu`](#o-menú-da-xanela-system_menu)): Windows non fai nada co botón dereito na barra de título de meiga, coma di o comentario. | Non. |
+| Calquera outra | Nas partes libres da barra, na banda ou no marco | Nada. | Si: arrastra, redimensiona, ou maximiza e restaura co dobre clic. |
+
+- **`!button`** é a resposta dos movementos: `true`, que vaian tamén a Windows, salvo nos botóns da xanela.
+- **Sen botón.** Estas mensaxes non din que botóns están premidos, e os movementos do marco van sen botón ([`decode_nonclient`](#nonclient-decode_nonclient-e-point)). Cun botón premido nun botón da xanela, a barra captura o rato ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)), e o resto da pulsación chega coma mensaxes da área cliente, tamén fóra da xanela, que si o din.
+- **Os dobres clics** chegan coma un botón que baixa ([`decode_nonclient`](#nonclient-decode_nonclient-e-point)). Nas partes libres da barra van a Windows, que maximiza ou restaura a xanela; nos botóns da xanela, ao *handler*, coma un segundo clic.
+- **As gardas** dos brazos (`if button`, `if mouse.hit == HTCAPTION`) escollen polo sitio, e os patróns, pola mensaxe. Os brazos van en orde: o botón dereito nun botón da xanela é do primeiro.
+
+Unha copia de meiga que non abre o menú da xanela co botón dereito falla o paso 4 de `check-titlebar.ps1`; outra que lle pasa a Windows os botóns que se premen nos botóns da xanela, o paso 7, porque Windows segue a pulsación el mesmo, esperando polo botón de verdade; e outra que non lle pasa a Windows os botóns das partes libres da barra, o paso 9, porque o dobre clic xa non maximiza a xanela ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
+
+### O menú da xanela: `system_menu`
+
+```rust
+fn system_menu(&self, at: Point) {
+    let menu = unsafe { GetSystemMenu(self.handle, 0) };
+    if menu.is_null() {
+        return;
+    }
+    let maximized = self.is_maximized();
+    for (command, enabled) in [
+        (SC_RESTORE, maximized),
+        (SC_MOVE, !maximized),
+        (SC_SIZE, !maximized),
+        (SC_MINIMIZE, true),
+        (SC_MAXIMIZE, !maximized),
+        (SC_CLOSE, true),
+    ] {
+        let state = if enabled { MF_ENABLED } else { MF_GRAYED };
+        unsafe { EnableMenuItem(menu, command, MF_BYCOMMAND | state) };
+    }
+    unsafe { SetMenuDefaultItem(menu, SC_CLOSE, 0) };
+    let command = unsafe {
+        TrackPopupMenu(
+            menu,
+            TPM_RETURNCMD | TPM_RIGHTBUTTON,
+            at.x,
+            at.y,
+            0,
+            self.handle,
+            ptr::null(),
+        )
+    };
+    if command > 0 {
+        self.command(command as u32);
+    }
+}
+```
+
+Desde a subfase 2.9. O botón dereito nas partes libres da barra abre o menú da xanela, o de Windows, ao soltalo, no punteiro, coma no Windows Terminal ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 6). É o mesmo menú que abre Alt+Espazo, que coa barra de título de meiga tamén abre `system_menu`, debaixo da barra ([`keyboard_menu`](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)); a tecla segue sendo de Windows, que lle pide o menú á xanela ([ADR 0014](../adr/0014-o-teclado.md), decisión 5). Os seus nomes van na lingua de Windows ([Tecnoloxías › Os menús](../tecnoloxias.md#56-os-menús-windows-winui-e-chrome)).
+
+- **O menú.** [`GetSystemMenu`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getsystemmenu) dá o menú da xanela; co segundo argumento a 0 (`FALSE`), o da xanela, e non unha copia do de por defecto. Vive tanto coma a xanela. Se non hai, non se abre nada.
+- **Os elementos activos**, coma no que abre Windows con Alt+Espazo nunha xanela coa súa barra de título: *Restore*, só maximizada; *Move*, *Size* e *Maximize*, só restaurada; e *Minimize* e *Close*, sempre. Ese menú ábreo Windows, e pon el os elementos activos; este ábreo meiga, e ponos ela, cada vez, segundo estea agora a xanela. [`EnableMenuItem`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-enablemenuitem) busca cada elemento pola súa orde (`MF_BYCOMMAND`), e `MF_ENABLED` ou `MF_GRAYED` actívao ou apágao; devolve o estado de antes, ou -1 se non está, e non se usa.
+- ***Close* en negra**, coma no que abre Windows: [`SetMenuDefaultItem`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setmenudefaultitem) faino o elemento por defecto, pola orde (o último argumento, 0). Chromium pon en negra *Maximize* ou *Restore*, e o Windows Terminal ningún; meiga fai coma Windows.
+- **Abrilo.** [`TrackPopupMenu`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-trackpopupmenu) ábreo no punto `at`, que xa vén da pantalla: o do punteiro co botón dereito, e o de debaixo da barra con Alt+Espazo. A xanela é a súa dona. `TPM_RIGHTBUTTON` deixa escoller tamén co botón dereito; e `TPM_RETURNCMD` fai que devolva a orde escollida, ou 0, en vez de enviala. Non volta ata que se pecha o menú: entremedias corre un bucle modal de Windows, con `WM_ENTERMENULOOP` e `WM_EXITMENULOOP` ([os bucles modais](#os-bucles-modais-de-windows)), e as mensaxes chegan ao *window procedure* e ao *handler*, que non está a traballar: `system_menu` chámao o *window procedure*, e non o *handler*. Cando se pecha, a tecla seguinte chega á xanela, coma di o comentario do método: o menú que abre Windows con Alt+Espazo deixa o fío no seu modo do menú despois de Esc, e come a tecla seguinte ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), contexto).
+- **A orde.** Se o usuario escolleu algunha, `command` publica o seu `WM_SYSCOMMAND`, e `DefWindowProcW` faina cando volta o bucle de mensaxes ([`command`](#windowminimize-windowtoggle_maximize-e-command)). *Close* tamén: `DefWindowProcW` envía entón `WM_CLOSE`, coma Alt+F4.
+
+As copias de meiga que fallan o paso 4 de `check-titlebar.ps1`, que abre o menú coa xanela restaurada: unha que activa *Restore*; unha que non pon *Close* en negra, outra que pon en negra *Maximize*, coma Chromium, e outra que non pon ningún, coma o Windows Terminal; unha que abre o menú cando o botón dereito baixa, e non cando sobe; unha que o abre na esquina da xanela, e non no punteiro; unha que non fai a orde escollida; e unha que lle di ao *handler* que a xanela perdeu o foco cando empeza o bucle do menú (`WM_ENTERMENULOOP`), porque debuxa os botóns da xanela co menú aberto. E a que deixa *Maximize* activo coa xanela maximizada falla o paso 5. A primeira versión da comprobación non miraba o elemento en negra, e a copia sen `SetMenuDefaultItem` pasábaa enteira: desde entón, os pasos 4, 5 e 6 miran que *Close* vai en negra ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
+
+### O menú co teclado: `keyboard_menu`, `screen_point` e `is_alt_space`
+
+```rust
+fn keyboard_menu(&self) -> bool {
+    if !self.custom || self.is_minimized() {
+        return false;
+    }
+    let Some(bar) = self.title_bar.get() else {
+        return false;
+    };
+    self.system_menu(self.screen_point(bar.menu_corner()));
+    true
+}
+
+fn screen_point(&self, at: Point) -> Point {
+    let mut point = POINT { x: at.x, y: at.y };
+    unsafe { ClientToScreen(self.handle, &mut point) };
+    Point::new(point.x, point.y)
+}
+
+fn is_alt_space(wparam: WPARAM, lparam: LPARAM) -> bool {
+    (wparam & 0xfff0) as u32 == SC_KEYMENU && lparam == LPARAM::from(b' ')
+}
+```
+
+Desde a subfase 2.9. Alt+Espazo abre o menú da xanela debaixo da barra, desde o lado esquerdo da xanela, onde empeza o terminal, e sen nada resaltado ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 6). A tecla segue indo a Windows ([`for_windows`](#for_windows-e-control_keys)), que lle pide o menú á xanela cun `WM_SYSCOMMAND`; e a xanela ábreo ela mesma, con [`system_menu`](#o-menú-da-xanela-system_menu). O Windows Terminal tamén o abre el ([`OpenSystemMenu`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/WindowsTerminal/IslandWindow.cpp#L1741-L1788)), pero cun atallo seu, `alt+space` ([`defaults.json`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalSettingsModel/defaults.json#L733)), e a tecla non lle chega a Windows.
+
+- **Por que non o abre Windows.** Coa barra de título de meiga, Windows abriría o seu menú debaixo de onde estaría a súa barra de título, por riba da de meiga, tapando a parte de abaixo das tabs; e despois de Esc deixaría o fío no seu modo do menú, que come a tecla seguinte ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), contexto). O Windows Terminal ábreo na esquina de arriba á esquerda da xanela; meiga, debaixo da barra, coma os seus menús co teclado, que se abren debaixo da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 4).
+- **`is_alt_space`.** No `WM_SYSCOMMAND`, o `wParam` é a orde, e Windows usa os seus catro bits de abaixo: por iso a máscara `0xfff0`, coma pide a documentación de [`WM_SYSCOMMAND`](https://learn.microsoft.com/windows/win32/menurc/wm-syscommand). `SC_KEYMENU` é a orde do menú co teclado, e o `lParam`, o carácter: o espazo abre o menú da xanela; 0, con Alt só ou F10, e unha letra, con Alt, buscan na barra de menús, que meiga non ten. Esas teclas nunca chegan a Windows, porque van ao programa ([`for_windows`](#for_windows-e-control_keys)), pero a garda mira o espazo igual.
+- **`keyboard_menu`.** Sen a barra de título de meiga (`custom`), ou coa xanela minimizada, que non mostra a barra, devolve `false`, e o *window procedure* pásalle a mensaxe a `DefWindowProcW`: abre o menú Windows, coma ata a 2.8. Tamén se o programa aínda non lle deu a barra (`title_bar`). Se non, colle o punto da barra onde vai o menú, [`menu_corner`](meiga-core.md#onde-se-abre-o-menú-da-xanela-co-teclado-menu_corner), pásao á pantalla e abre o menú alí.
+- **`screen_point`** é a inversa de `client_point`: [`ClientToScreen`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-clienttoscreen) suma ao punto a posición da área cliente na pantalla. Se falla, o punto queda coma estaba.
+- **Sen nada resaltado.** `system_menu` abre o menú igual co botón dereito ca co teclado, e `TrackPopupMenu` ábreo sen ningún elemento resaltado: ↓ resalta o primeiro, tamén se está desactivado, coma *Restore* coa xanela restaurada. O menú que abre o propio Windows con Alt+Espazo ábrese co primeiro elemento resaltado, coma os menús de meiga co teclado ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 6); meiga ábreo sen resalte, coma co botón dereito e coma o Windows Terminal ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 6).
+
+As copias de meiga que fallan o paso 6 de `check-titlebar.ps1`, que abre o menú con Alt+Espazo: unha que deixa a mensaxe a `DefWindowProcW`, porque Windows abre o seu menú máis arriba, por riba da barra; unha que o abre e despois llo pasa igual a Windows, porque, cando Esc pecha o de meiga, Windows abre o seu; unha que manda Alt+Espazo ao programa ([`for_windows`](#for_windows-e-control_keys)), porque non se abre ningún menú; unha que o abre na esquina de arriba á esquerda da xanela, coma o Windows Terminal; unha que non pasa o punto á pantalla; unha que o abre debaixo da fila das tabs, sen contar a banda ([Código › meiga-core › `menu_corner`](meiga-core.md#onde-se-abre-o-menú-da-xanela-co-teclado-menu_corner)); e unha que resalta o primeiro elemento ao abrilo. A proba unitaria [`only_alt_and_the_space_open_the_menu_of_the_window_of_meiga`](#probas-1) mira `is_alt_space` ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
 
 ### Conversións
 
@@ -1968,8 +2864,11 @@ A conversión dos textos a UTF-16, `wide`, que estaba neste arquivo ata a subfas
 ### Probas
 
 ```rust
+use meiga_core::ui::tabbar::{CaptionButton, Layout};
 use windows_sys::Win32::Graphics::Gdi::HDC;
-use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowRect, SendMessageW};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    HTBOTTOM, HTLEFT, SendMessageW, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP,
+};
 
 use super::*;
 
@@ -1988,11 +2887,56 @@ impl Handler for Recorder {
     }
 }
 
-// The only test that creates a window: a process registers the window
-// class once.
+/// The rectangle of the window on the screen.
+fn window_rect(window: &Window) -> RECT {
+    let mut rect = RECT::default();
+    unsafe { GetWindowRect(window.handle(), &mut rect) };
+    rect
+}
+
+/// Gives the window `width` × `height` pixels, or as many as it can have.
+fn resize(window: &Window, width: i32, height: i32) {
+    unsafe {
+        SetWindowPos(
+            window.handle(),
+            ptr::null_mut(),
+            0,
+            0,
+            width,
+            height,
+            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+        )
+    };
+}
+
+/// Sends a mouse message of the frame to the window, at `at`, a point of
+/// its client area.
+fn send(window: &Window, message: u32, hit: u32, at: Point) -> LRESULT {
+    let mut point = POINT { x: at.x, y: at.y };
+    unsafe { ClientToScreen(window.handle(), &mut point) };
+    // The screen point in two signed words, as Windows sends it.
+    let lparam = (point.x as u16 as LPARAM) | ((point.y as u16 as LPARAM) << 16);
+    unsafe { SendMessageW(window.handle(), message, hit as WPARAM, lparam) }
+}
+
+fn center(rect: Rect) -> Point {
+    Point::new(
+        rect.left + (rect.right - rect.left) / 2,
+        rect.top + (rect.bottom - rect.top) / 2,
+    )
+}
+```
+
+```rust
+// Each test that creates a window registers the class, unless the other
+// one did.
 #[test]
 fn a_new_scale_reaches_the_handler_before_the_new_size() {
-    let window = Window::create(&WindowOptions { title: "meiga" }).unwrap();
+    let window = Window::create(&WindowOptions {
+        title: "meiga",
+        title_bar: false,
+    })
+    .unwrap();
     let mut recorder = Recorder::default();
     {
         let state = State {
@@ -2017,8 +2961,7 @@ fn a_new_scale_reaches_the_handler_before_the_new_size() {
             )
         };
     }
-    let mut rect = RECT::default();
-    unsafe { GetWindowRect(window.handle(), &mut rect) };
+    let rect = window_rect(&window);
     assert_eq!(
         (rect.left, rect.top, rect.right, rect.bottom),
         (40, 30, 817, 585)
@@ -2033,24 +2976,144 @@ fn a_new_scale_reaches_the_handler_before_the_new_size() {
 }
 ```
 
+```rust
+#[test]
+fn the_title_bar_of_meiga_tells_windows_what_each_of_its_parts_is() {
+    let window = Window::create(&WindowOptions {
+        title: "meiga",
+        title_bar: true,
+    })
+    .unwrap();
+    assert!(window.has_title_bar());
+    resize(&window, 800, 600);
+    // The test is not aware of the DPI: 96.
+    let dpi = window.dpi();
+    let band = frame(dpi);
+    let side = i32::try_from(band).unwrap();
+    assert!(side > 0);
+    assert_eq!(window.resize_band(dpi), band);
+
+    // The client area goes up to the top of the window, and the frame of
+    // Windows stays on the other sides.
+    let rect = window_rect(&window);
+    assert_eq!(
+        window.client_point(Point::new(rect.left, rect.top)),
+        Point::new(-side, 0)
+    );
+    let size = window.client_size().unwrap();
+    assert_eq!(
+        (
+            i32::try_from(size.width).unwrap() + 2 * side,
+            i32::try_from(size.height).unwrap() + side
+        ),
+        (rect.right - rect.left, rect.bottom - rect.top)
+    );
+
+    let mut recorder = Recorder::default();
+    let layout = Layout::new(dpi, size.width, 3, band);
+    let close = center(layout.caption(CaptionButton::Close));
+    let left_frame = Point::new(-side / 2, 100);
+    {
+        let state = State {
+            window: &window,
+            handler: RefCell::new(&mut recorder),
+            failure: RefCell::new(None),
+            keyboard: Keyboard::default(),
+        };
+        let _installed = Installed::new(window.handle(), &state);
+        window.set_title_bar(TitleBar::new(layout, false));
+        let captions = layout.captions();
+        let corner = TOP_LEFT_CORNER - side;
+        let bottom = i32::try_from(size.height).unwrap();
+        for (at, expected) in [
+            (center(layout.caption(CaptionButton::Minimize)), HTMINBUTTON),
+            (center(layout.caption(CaptionButton::Maximize)), HTMAXBUTTON),
+            (close, HTCLOSE),
+            (center(layout.tab(0)), HTCLIENT),
+            (Point::new(captions.left - 1, side + 5), HTCAPTION),
+            (Point::new(captions.left - 1, 0), HTTOP),
+            (Point::new(corner, 0), HTTOP),
+            (Point::new(corner - 1, 0), HTTOPLEFT),
+            (left_frame, HTLEFT),
+            (Point::new(100, bottom + side / 2), HTBOTTOM),
+        ] {
+            let hit = send(&window, WM_NCHITTEST, 0, at);
+            assert_eq!(hit, expected as LRESULT, "{at:?}");
+        }
+
+        // The handler draws the buttons of the window, and gets their
+        // clicks.
+        send(&window, WM_NCLBUTTONDOWN, HTCLOSE, close);
+        send(&window, WM_NCLBUTTONUP, HTCLOSE, close);
+        // The frame, which resizes the window, is not of the handler.
+        window.track_mouse_leave();
+        send(&window, WM_NCMOUSEMOVE, HTLEFT, left_frame);
+    }
+    let modifiers = Modifiers::default();
+    assert_eq!(
+        recorder.0,
+        [
+            Event::MouseDown {
+                button: Button::Left,
+                at: close,
+                modifiers,
+            },
+            Event::MouseUp {
+                button: Button::Left,
+                at: close,
+                modifiers,
+            },
+            Event::MouseLeft,
+        ]
+    );
+
+    // The smallest window has room for the narrowest title bar.
+    resize(&window, 100, 10);
+    let rect = window_rect(&window);
+    let min = min_client(dpi, band);
+    assert_eq!(
+        (rect.right - rect.left, rect.bottom - rect.top),
+        (
+            i32::try_from(min.width + 2 * band).unwrap(),
+            i32::try_from(min.height + band).unwrap()
+        )
+    );
+}
+```
+
 | Proba | Que comproba |
 |---|---|
-| `a_new_scale_reaches_the_handler_before_the_new_size` | Desde a subfase 1.9. Con `WM_DPICHANGED`, a xanela colle o rectángulo que suxire Windows, e o *handler* recibe o DPI novo antes ca o tamaño novo. |
+| `a_new_scale_reaches_the_handler_before_the_new_size` | Desde a subfase 1.9. Con `WM_DPICHANGED`, a xanela colle o rectángulo que suxire Windows, e o *handler* recibe o DPI novo antes ca o tamaño novo. Desde a 2.9, nunha xanela sen a barra de título de meiga. |
+| `the_title_bar_of_meiga_tells_windows_what_each_of_its_parts_is` | Desde a subfase 2.9. Unha xanela coa barra de título de meiga ten a área cliente ata o bordo de arriba, a banda, o que lle di a Windows de cada parte da barra e do marco, os eventos dos botóns da xanela e do marco, e o seu tamaño máis pequeno. |
+| `only_alt_and_the_space_open_the_menu_of_the_window_of_meiga` | Desde a subfase 2.9. `is_alt_space` recoñece `SC_KEYMENU` co espazo, tamén cos catro bits de abaixo, os de Windows, postos; e non `SC_KEYMENU` sen carácter, o de Alt só, nin cunha letra, nin outra orde co espazo ([O menú co teclado](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)). |
 | `waitable_timers_count_in_hundreds_of_nanoseconds_from_now` | 33 334 µs son -333 340 unidades de 100 ns; 150 ns redondean a -2; e cero dá -1. |
 | `window_timers_round_up_within_their_limits` | 33 334 µs son 34 ms; 2 ms suben ao mínimo de 10; e o máximo de `Duration` queda no máximo de `SetTimer`. |
 
-Desde a subfase 1.9, unha das probas crea unha xanela de verdade, para comprobar a orde dos eventos dun cambio de escala ([`window_proc`](#window_proc)):
+Desde a subfase 1.9, unha das probas crea unha xanela de verdade, para comprobar a orde dos eventos dun cambio de escala ([`window_proc`](#window_proc)); e desde a 2.9, outra, para comprobar a barra de título de meiga ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)):
 
-- **O módulo das probas** importa `HDC`, para a firma de `paint`, e as dúas funcións que só usa esta proba, `SendMessageW` e `GetWindowRect`. `use super::*` trae o resto do arquivo, tamén o privado, coma `State` e `Installed`: un módulo ve os elementos privados dos módulos que o conteñen.
+- **O módulo das probas** importa `HDC`, para a firma de `paint`, e o que só usan as probas: `SendMessageW`; e, desde a 2.9, as respostas de `WM_NCHITTEST` do marco que mira a proba nova (`HTLEFT` e `HTBOTTOM`), as mensaxes do botón esquerdo no marco, e `CaptionButton` e `Layout`, de `meiga-core`, coas que fai unha barra de tabs. `GetWindowRect` xa non: desde a 2.9 úsao tamén `hit_test`; nin `ClientToScreen`, que usa tamén `screen_point`. `use super::*` trae o resto do arquivo, tamén o privado, coma `State`, `Installed`, `frame` e `TOP_LEFT_CORNER`, e o que importa, coma `GetWindowRect` e `ClientToScreen`: un módulo ve os elementos privados dos módulos que o conteñen.
 - **`Recorder`** é o *handler* da proba: garda os eventos que lle chegan, na orde na que chegan, e non pinta nada. `#[derive(Default)]` dálle un vector baleiro.
-- **Sen `run`.** A proba crea a xanela, que queda oculta, e instala ela mesma o estado co `Recorder`, como fai [`run`](#windowrun), pero sen bucle de mensaxes. `SendMessageW`, desde o fío da xanela, chama directamente ao *window procedure*, e non volta ata que este remata. Envía `WM_DPICHANGED` con 144 DPI, o 150 %, no horizontal e no vertical (`144 | (144 << 16)`), e coa dirección do rectángulo suxerido no `lParam`: o rectángulo vive ata despois da chamada.
+- **As funcións das probas**, desde a 2.9: `window_rect`, o rectángulo da xanela enteira, co marco, en coordenadas da pantalla; `resize`, que lle pide un tamaño á xanela, sen movela, e que Windows axusta ao máis pequeno que permite `WM_GETMINMAXINFO`; `send`, que lle envía á xanela unha mensaxe do rato no marco, coa resposta de `WM_NCHITTEST` no `wParam`, e co punto, que se dá na área cliente, pasado á pantalla (`ClientToScreen`) e metido no `lParam` en dúas palabras con signo, coma o envía Windows; e `center`, o centro dun rectángulo, para apuntar a unha parte da barra.
+- **Sen `run`.** As dúas probas crean a xanela, que queda oculta, e instalan elas mesmas o estado co `Recorder`, como fai [`run`](#windowrun), pero sen bucle de mensaxes. `SendMessageW`, desde o fío da xanela, chama directamente ao *window procedure*, e non volta ata que este remata; as mensaxes que publica Windows quedan na cola, e ninguén as trata. A primeira envía `WM_DPICHANGED` con 144 DPI, o 150 %, no horizontal e no vertical (`144 | (144 << 16)`), e coa dirección do rectángulo suxerido no `lParam`: o rectángulo vive ata despois da chamada.
 - **O bloque entre chaves** destrúe `_installed` e `state` antes de mirar os eventos: a xanela deixa de gardar o punteiro ao estado, e `state` solta o `recorder`, que tiña prestado (`&mut`) e que Rust non deixa ler mentres tanto.
-- **O que comproba:** que a xanela colleu o rectángulo suxerido (`GetWindowRect` dá o da xanela enteira, cos bordos, en coordenadas da pantalla); que o primeiro evento é `DpiChanged { dpi: 144 }`; e que despois chega un `Resized` co tamaño da área cliente, que se le con `client_size` porque depende dos bordos que lle pon Windows á xanela.
+- **O que comproba a primeira:** que a xanela colleu o rectángulo suxerido (`window_rect`); que o primeiro evento é `DpiChanged { dpi: 144 }`; e que despois chega un `Resized` co tamaño da área cliente, que se le con `client_size` porque depende dos bordos que lle pon Windows á xanela, sen minimizar.
 - **Falla coa orde ao revés.** Comprobouse cambiando a orde en `window_proc`, primeiro `SetWindowPos` e despois o evento: o primeiro evento é entón o `Resized`, e a proba falla.
-- **A única que crea unha xanela.** Cargo compila as probas unitarias dun crate nun só programa, que as corre en varios fíos, e a clase de xanela só se pode rexistrar unha vez por proceso ([`create`](#windowcreate)): unha segunda xanela fallaría en `RegisterClassExW`.
+- **Dúas xanelas.** Cargo compila as probas unitarias dun crate nun só programa, que as corre en varios fíos. Ata a 2.8, só unha proba podía crear unha xanela: unha clase só se pode rexistrar unha vez por proceso, e unha segunda xanela fallaría en `RegisterClassExW`. Desde a 2.9, `create` toma a clase xa rexistrada por boa ([`create`](#windowcreate)), coma di o comentario: cada proba crea a súa xanela, no seu fío, e a que chega segunda usa a clase da primeira.
 - **A única comprobación automática da orde.** As comprobacións de `tools/` publican as mensaxes das teclas e do rato na xanela de meiga desde outro programa, pero `WM_DPICHANGED` leva un punteiro, e non se pode publicar. O resto dun cambio de escala, a fonte, a barra e o cursor novos e a grella coas súas celas, compróbase a man ([Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged)).
 
-O resto deste arquivo necesita a xanela de meiga funcionando, co seu bucle de mensaxes. Compróbano `tools/check-window.ps1` e `tools/check-present.ps1` co `meiga.exe` de *release* (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Desde a subfase 1.6, [`check-window.ps1`](ferramentas.md#toolscheck-windowps1) comproba tamén que o título da xanela pasa a ser o que pon `cmd` no terminal, o que proba o `Waker` e `set_title`; e `check-present.ps1` cambia a pantalla escribindo no terminal, así que eses cambios chegan á xanela cun `Wake`. `caret_settings` depende da configuración de cada Windows, e non ten probas eiquí: as decisións que se toman cos seus valores próbanse no programa, con axustes escritos a man ([Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a 1.7, [`check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) publica as mensaxes das teclas na xanela, e comproba que as do teclado chegan ao *handler* e, a través del, ao programa do terminal. Desde a 1.8, [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) publica tamén as do rato, algunhas coa caixa de [`confirm`](#windowconfirm) aberta, e comproba o que len os programas do terminal e o que queda no portapapeis: os clics, os movementos, os arrastres e a roda, cun punto da pantalla que ten que chegar á cela debaixo del; a captura que se perde, por outra xanela ou pola caixa; as liñas por parte da roda, as das preferencias do rato; e o primeiro plano: se a xanela o está, un programa pode copiar ao portapapeis, e se non, non. `mouse_settings`, coma `caret_settings`, depende da configuración de cada Windows, e non ten probas eiquí. Desde a 1.9, [`check-resize.ps1`](ferramentas.md#toolscheck-resizeps1) cambia o tamaño da xanela e comproba que o programa do terminal recibe a grella que a enche, sen a franxa da barra de desprazamento, e que a pantalla de meiga ten as mesmas filas ca a consola do ConPTY, o que proba `Resized` e o cambio de tamaño da pseudoconsola, tamén cando o tamaño cambia coa caixa de [`confirm`](#windowconfirm) aberta; e despois, que a roda, as teclas e a barra de desprazamento moven a vista do historial, e que o zoom cambia a grella. A saída do punteiro ([`track_mouse_leave`](#windowtrack_mouse_leave)) compróbase a man, coma o resto do cambio de escala. Desde a 2.2, `tools/check-tabs.ps1` abre, mostra e pecha tabs cos seus atallos, e comproba que a saída dunha tab que non se ve non debuxa nada, para o que cada aviso ten que levar o número da súa tab, e que pechar a última tab pecha a xanela e meiga remata co código 0, o que proba [`close`](#windowclose). Desde a 2.5, [`check-profiles.ps1`](ferramentas.md#toolscheck-profilesps1) comproba [`Shown`](#event-e-mousebutton) e [`alert`](#windowalert): cun `config.toml` con erros, cando a xanela xa está na pantalla e pintada, aparece unha caixa de mensaxe diante dela, coa xanela como dona, co título «meiga» e un só botón, mentres o programa da primeira tab xa corre; e, ao pecharse a caixa, a xanela pinta todo outra vez.
+A proba da barra de título de meiga, `the_title_bar_of_meiga_tells_windows_what_each_of_its_parts_is`, crea unha xanela coa barra (`title_bar: true`), e mira:
+
+- **Que a ten** (`has_title_bar`), e que a banda mide coma o marco de Windows (`resize_band` e `frame`). O programa das probas non declara que sabe do DPI, coma di o comentario, e a xanela ten 96: o marco son 8 píxeles.
+- **A área cliente.** A esquina de arriba á esquerda da xanela está, desde a área cliente, á esquerda o grosor do marco, e á mesma altura: `WM_NCCALCSIZE` levou a área cliente ata o bordo de arriba, e deixou o marco no lado ([`WM_NCCALCSIZE`](#wm_nccalcsize-a-área-cliente-ata-o-bordo-de-arriba)). E a xanela mide o que a área cliente, máis o marco nos dous lados e embaixo, e nada arriba.
+- **Que é cada parte para Windows.** Coa barra dunha barra de tabs de tres tabs, que lle dá a proba coma faría o *handler* (`set_title_bar`), envíalle `WM_NCHITTEST` en dez puntos, e mira as respostas: os tres botóns da xanela; a área cliente nunha tab; a barra de título (`HTCAPTION`) xusto á esquerda dos botóns, por debaixo da banda; a banda (`HTTOP`) no mesmo sitio, arriba de todo, e no primeiro píxel que xa non é a esquina, `TOP_LEFT_CORNER` píxeles á dereita do lado da xanela; a esquina (`HTTOPLEFT`) no píxel anterior; e o marco da esquerda (`HTLEFT`) e o de abaixo (`HTBOTTOM`), que dá `DefWindowProcW` ([`WM_NCHITTEST`](#wm_nchittest-e-hit_test-que-é-cada-parte-para-windows)). `{at:?}` di na mensaxe da aserción o punto que falla.
+- **Os eventos do rato no marco.** Preme e solta o botón esquerdo no botón de pechar, coma o envía Windows (`WM_NCLBUTTONDOWN` e `WM_NCLBUTTONUP` con `HTCLOSE`): o *handler* recibe `MouseDown` e `MouseUp` no centro do botón, en coordenadas da área cliente ([`nonclient_mouse`](#o-rato-no-marco-nonclient_mouse)). Despois pide o aviso da saída (`track_mouse_leave`) e move o punteiro ao marco da esquerda: o *handler* recibe `MouseLeft`, porque o marco, que redimensiona a xanela, non é del. O aviso que Windows publica no momento, porque o punteiro do sistema está noutro sitio, queda na cola: o `MouseLeft` vén do movemento. Ningún dos `WM_NCHITTEST` deu un evento. Os eventos levan `Modifiers::default()`, ningunha tecla: a proba supón que ninguén ten premida Maiús, Alt nin Ctrl mentres corre, porque a xanela as pregunta a Windows.
+- **A xanela máis pequena.** Pide unha xanela de 100 × 10 píxeles, e Windows dálle a máis pequena que permite `WM_GETMINMAXINFO`: a área cliente máis pequena da barra (`min_client`), máis o marco nos dous lados e embaixo ([`WM_GETMINMAXINFO`](#wm_getminmaxinfo-a-xanela-máis-pequena)). Xa sen o estado instalado: esa rama do *window procedure* non o necesita.
+
+As copias rotas de `window.rs` que fallan esta proba: unha sen banda, na aserción de `resize_band`; unha na que `WM_NCCALCSIZE` non volta poñer o bordo de arriba, na da esquina da xanela; unha que non lle resta o marco da esquerda á esquina, outra que non deixa as respostas do marco que dá `DefWindowProcW`, e outra na que o botón de maximizar é a barra de título (`HTCAPTION`), nas de `WM_NCHITTEST`; e unha sen `WM_GETMINMAXINFO`, outra que non lle suma o marco ao ancho e outra que non llo suma ao alto, na do tamaño máis pequeno. Non comproba a xanela maximizada, o botón dereito, que abre o menú da xanela nun bucle modal, nin o punteiro: diso encárgase `check-titlebar.ps1` ([Código › ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
+
+A de Alt+Espazo, `only_alt_and_the_space_open_the_menu_of_the_window_of_meiga`, fállana dúas copias de `is_alt_space`: unha que acepta con `SC_KEYMENU` calquera carácter, e non só o espazo, na aserción da letra; e outra que non quita os catro bits de abaixo, os de Windows, na do espazo con eles postos.
+
+O resto deste arquivo necesita a xanela de meiga funcionando, co seu bucle de mensaxes. Compróbano `tools/check-window.ps1` e `tools/check-present.ps1` co `meiga.exe` de *release* (ver [Código › ferramentas](ferramentas.md#toolscheck-presentps1)). Desde a subfase 1.6, [`check-window.ps1`](ferramentas.md#toolscheck-windowps1) comproba tamén que o título da xanela pasa a ser o que pon `cmd` no terminal, o que proba o `Waker` e `set_title`; e `check-present.ps1` cambia a pantalla escribindo no terminal, así que eses cambios chegan á xanela cun `Wake`. `caret_settings` depende da configuración de cada Windows, e non ten probas eiquí: as decisións que se toman cos seus valores próbanse no programa, con axustes escritos a man ([Código › meiga](meiga.md#cratesmeigasrcviewrs)). Desde a 1.7, [`check-keyboard.ps1`](ferramentas.md#toolscheck-keyboardps1) publica as mensaxes das teclas na xanela, e comproba que as do teclado chegan ao *handler* e, a través del, ao programa do terminal. Desde a 1.8, [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1) publica tamén as do rato, algunhas coa caixa de [`confirm`](#windowconfirm) aberta, e comproba o que len os programas do terminal e o que queda no portapapeis: os clics, os movementos, os arrastres e a roda, cun punto da pantalla que ten que chegar á cela debaixo del; a captura que se perde, por outra xanela ou pola caixa; as liñas por parte da roda, as das preferencias do rato; e o primeiro plano: se a xanela o está, un programa pode copiar ao portapapeis, e se non, non. `mouse_settings`, coma `caret_settings`, depende da configuración de cada Windows, e non ten probas eiquí. Desde a 1.9, [`check-resize.ps1`](ferramentas.md#toolscheck-resizeps1) cambia o tamaño da xanela e comproba que o programa do terminal recibe a grella que a enche, sen a franxa da barra de desprazamento, e que a pantalla de meiga ten as mesmas filas ca a consola do ConPTY, o que proba `Resized` e o cambio de tamaño da pseudoconsola, tamén cando o tamaño cambia coa caixa de [`confirm`](#windowconfirm) aberta; e despois, que a roda, as teclas e a barra de desprazamento moven a vista do historial, e que o zoom cambia a grella. A saída do punteiro ([`track_mouse_leave`](#windowtrack_mouse_leave)), cando o punteiro do sistema sae de verdade, compróbase a man, coma o resto do cambio de escala. Desde a 2.2, `tools/check-tabs.ps1` abre, mostra e pecha tabs cos seus atallos, e comproba que a saída dunha tab que non se ve non debuxa nada, para o que cada aviso ten que levar o número da súa tab, e que pechar a última tab pecha a xanela e meiga remata co código 0, o que proba [`close`](#windowclose). Desde a 2.5, [`check-profiles.ps1`](ferramentas.md#toolscheck-profilesps1) comproba [`Shown`](#event-e-mousebutton) e [`alert`](#windowalert): cun `config.toml` con erros, cando a xanela xa está na pantalla e pintada, aparece unha caixa de mensaxe diante dela, coa xanela como dona, co título «meiga» e un só botón, mentres o programa da primeira tab xa corre; e, ao pecharse a caixa, a xanela pinta todo outra vez. Desde a 2.9, [`check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1) comproba a barra de título de meiga en catorce pasos: que a área cliente chega ata o bordo de arriba (paso 1); o que é cada parte da xanela para Windows, restaurada (2) e maximizada (7); que o punteiro nun botón da xanela debuxa só ese botón, cando chega e cando sae, porque, co punteiro do sistema noutro sitio, Windows avisa no momento de que saíu (3); o menú da xanela, restaurada (4), maximizada (5) e con Alt+Espazo (6); os botóns de maximizar e de restaurar (7 e 8); o dobre clic nas partes libres da barra (9); as partes libres cun menú de meiga aberto (10); a xanela máis pequena (11); o foco (12); e os botóns de minimizar (13) e de pechar (14). Con cada parte de `window.rs`, máis arriba, van as copias rotas que falla cada paso.
 
 ## `crates/meiga-win/src/clipboard.rs`
 

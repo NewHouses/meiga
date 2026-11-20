@@ -1,6 +1,6 @@
 # ADR 0025 · Moitas tabs e os indicadores
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md)
 - **Data:** 2026-11-18
 - **Relacionados:** [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0008](0008-temporizador-dos-fotogramas.md), [ADR 0016](0016-o-historial-o-tamano-e-o-zoom.md), [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [ADR 0020](0020-a-barra-de-tabs.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md)
 
