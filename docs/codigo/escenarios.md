@@ -1,6 +1,6 @@
 # Código › escenarios de carga (`tools/perf/`)
 
-> Estado: mantemento M2, despois da subfase 2.8. No M2, `run-scenario.ps1 -Start` agarda ata 15 s, e non 5, a que remate o terminal despois de pechar a súa xanela, tamén se xa non a ten, porque meiga agarda antes de saír a que rematen as sesións das súas tabs; os escenarios non cambiaron. Na 2.6, na 2.7 e na 2.8 non cambiaron nin os scripts nin os escenarios. Na 2.5, `run-scenario.ps1 -Start` arranca o terminal cun `APPDATA` baleiro, para que meiga non lea o `config.toml` de quen mide; os escenarios non cambiaron. Na 1.10 chegou a opción `-Maximized` de `run-scenario.ps1`; os escenarios non cambiaron.
+> Estado: subfase 2.10. Na 2.10, `test-scenarios.ps1` acepta no *spinner* de 5 a 12 fotogramas por segundo, e non de 7 a 12, e no bigfile 0 segundos en `finished-<n>`: dúas execucións da CI fallaran sen que os escenarios estivesen mal. Os escenarios non cambiaron, e na 2.9 tampouco os scripts. No M2, `run-scenario.ps1 -Start` agarda ata 15 s, e non 5, a que remate o terminal despois de pechar a súa xanela, tamén se xa non a ten, porque meiga agarda antes de saír a que rematen as sesións das súas tabs; os escenarios non cambiaron. Na 2.6, na 2.7 e na 2.8 non cambiaron nin os scripts nin os escenarios. Na 2.5, `run-scenario.ps1 -Start` arranca o terminal cun `APPDATA` baleiro, para que meiga non lea o `config.toml` de quen mide; os escenarios non cambiaron. Na 1.10 chegou a opción `-Maximized` de `run-scenario.ps1`; os escenarios non cambiaron.
 
 Cargas de traballo reproducíbeis para medir os terminais con [`measure.ps1`](perf.md#toolsperfmeasureps1). Imitan o que fai un terminal cada día: unha IA que pensa e responde, un indicador de progreso que xira e a saída dun arquivo grande. Cada escenario existe en PowerShell e en bash, para medir a mesma carga nunha tab de pwsh e nunha de WSL, e as dúas versións debuxan exactamente o mesmo: os mesmos textos, coas mesmas cores e as mesmas secuencias de escape.
 
@@ -547,9 +547,9 @@ Executa cada escenario como o faría `run-scenario.ps1`, cun cartafol de coordin
 | Escenario | Comprobacións |
 |---|---|
 | Todos | Crea o seu marcador; remata co código 0 cando aparece `stop`; borra o marcador; non escribe erros. |
-| spinner | Entre 7 e 12 fotogramas por segundo; oculta o cursor ao empezar e móstrao ao final; escribe o glifo braille en UTF-8. |
+| spinner | Entre 5 e 12 fotogramas por segundo: o escenario debuxa 10, pero un *runner* lento debuxa menos, e a conta inclúe tamén o que tarda o escenario en rematar (na CI da 2.4, unha vez, 6,2; ata a 2.10, o mínimo era 7); oculta o cursor ao empezar e móstrao ao final; escribe o glifo braille en UTF-8. |
 | ai-stream | A 1000 palabras por segundo e sen pensar, o texto que queda na pantalla é exactamente a conversa de `ai-stream.txt` e, despois, a primeira pregunta outra vez; a zona de estado desaparece ao final. |
-| bigfile | Só: imprime o arquivo e o tempo. Con `run-scenario.ps1`: imprime o arquivo enteiro, byte a byte, por cada `go-<n>`, e escribe en `finished-<n>` os mesmos segundos que mostra. Usa un arquivo de 1 MiB creado con `gen-bigfile.ps1`. |
+| bigfile | Só: imprime o arquivo e o tempo. Con `run-scenario.ps1`: imprime o arquivo enteiro, byte a byte, por cada `go-<n>`, e escribe en `finished-<n>` os mesmos segundos que mostra, un número con tres decimais que pode ser 0: un *runner* rápido imprime o arquivo en menos dun milisegundo (na CI do PR [#29](https://github.com/NewHouses/meiga/pull/29), unha vez, `0.000`; ata a 2.10, tiña que ser maior ca 0). Usa un arquivo de 1 MiB creado con `gen-bigfile.ps1`. |
 
 ```powershell
 function Invoke-Screen([string]$Text) {

@@ -1,6 +1,6 @@
 # Código › `.github/` (integración continua e Dependabot)
 
-> Estado: subfase 2.9. Na 2.9 chegou ao *workflow* o paso *Check the title bar*, con `check-titlebar.ps1`, e as comprobacións que calculan a barra de tabs, ou as celas do terminal desde a área cliente, contan coa barra de título de meiga. No M2, o *workflow* non cambiou: `check-exit.ps1` comproba tamén que meiga agarda antes de saír por unha sesión que se bloqueou ao pecharse a xanela; `check-profiles.ps1` e `check-tabs.ps1` agardan a que se calmen as shells das tabs novas, e os programas que arrancan, e `check-profiles.ps1` dálle a meiga máis tempo para saír; e `measure-startup.ps1` agarda 10 s máis a que remate meiga. Na 2.8 chegou ao *workflow* o paso *Check many tabs*, con `check-manytabs.ps1`; na 2.7, o paso *Check the end of the programs*, con `check-exit.ps1`; na 2.6, o paso *Check the keyboard shortcuts*, con `check-shortcuts.ps1`; na 2.5, o paso *Check the profiles and the configuration*, con `check-profiles.ps1`; na 2.4, o paso *Check the menu of a tab*, con `check-menu.ps1`; na 2.3, o paso *Check the tab bar with the mouse*, con `check-tabbar.ps1`; na 2.2, o paso *Check the tabs*, con `check-tabs.ps1`; e no mantemento M1, a regra de `dependabot.yml` para `windows-core`.
+> Estado: subfase 2.10. Na 2.10, `taiki-e/install-action` pasa da v2.90.2 á v2.90.3 nos dous jobs que a usan: a versión nova só cambia as versións `@latest` doutras ferramentas, e meiga fixa as súas, `cargo-about` 0.9.3 e `cargo-deny` 0.20.2. Na 2.9 chegou ao *workflow* o paso *Check the title bar*, con `check-titlebar.ps1`, e as comprobacións que calculan a barra de tabs, ou as celas do terminal desde a área cliente, contan coa barra de título de meiga. No M2, o *workflow* non cambiou: `check-exit.ps1` comproba tamén que meiga agarda antes de saír por unha sesión que se bloqueou ao pecharse a xanela; `check-profiles.ps1` e `check-tabs.ps1` agardan a que se calmen as shells das tabs novas, e os programas que arrancan, e `check-profiles.ps1` dálle a meiga máis tempo para saír; e `measure-startup.ps1` agarda 10 s máis a que remate meiga. Na 2.8 chegou ao *workflow* o paso *Check many tabs*, con `check-manytabs.ps1`; na 2.7, o paso *Check the end of the programs*, con `check-exit.ps1`; na 2.6, o paso *Check the keyboard shortcuts*, con `check-shortcuts.ps1`; na 2.5, o paso *Check the profiles and the configuration*, con `check-profiles.ps1`; na 2.4, o paso *Check the menu of a tab*, con `check-menu.ps1`; na 2.3, o paso *Check the tab bar with the mouse*, con `check-tabbar.ps1`; na 2.2, o paso *Check the tabs*, con `check-tabs.ps1`; e no mantemento M1, a regra de `dependabot.yml` para `windows-core`.
 
 O cartafol `.github/` contén a configuración que usa GitHub: o *workflow* de integración continua e a configuración de Dependabot. Os conceptos (*workflow*, *job*, *runner*…) explícanse en [Tecnoloxías › GitHub Actions](../tecnoloxias.md#15-github-actions).
 
@@ -148,7 +148,7 @@ Executa os escenarios de PowerShell e comproba o que debuxan e como se coordinan
 #### Instalar cargo-about
 
 ```yaml
-      - uses: taiki-e/install-action@3a3daafd3b7f23b8f65d9f5ba2db203fb59b79e2 # v2.90.2
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-about@0.9.3
 ```
@@ -325,7 +325,7 @@ Desde a subfase 1.4, as probas de `meiga-win` lanzan programas no ConPTY que vai
       - name: Install the Rust toolchain from rust-toolchain.toml
         run: rustup toolchain install
 
-      - uses: taiki-e/install-action@3a3daafd3b7f23b8f65d9f5ba2db203fb59b79e2 # v2.90.2
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-deny@0.20.2
 
