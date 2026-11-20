@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.8. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato.
+> Estado: subfase 2.9. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, e o que é cada parte dela para Windows, coma barra de título da xanela, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato. Na 2.9, para as tabs na barra de título, a disposición da barra leva, coa xanela restaurada, unha banda enriba das tabs, onde se redimensiona a xanela, e, á dereita da barra, os botóns da xanela, minimizar, maximizar ou restaurar e pechar, cun sitio para arrastrar a xanela sempre antes deles, e di o ancho da barra máis estreita; e chegou o módulo `ui::titlebar`, que di que é cada parte da barra para Windows, a barra de título, o bordo de arriba e a súa esquina, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto, e o tamaño mínimo da área cliente.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato, e, desde a subfase 2.6, os atallos de teclado; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -33,8 +33,9 @@
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
-| [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: a barra de tabs e os menús; e `scale`, que leva as súas medidas ao DPI da xanela. |
-| [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e os botóns que abren unha tab e o menú dos perfís, ao DPI da xanela; desde a 2.8, o ancho mínimo das tabs e, cando nin así caben, a franxa entre os dous botóns que as desprazan, e o seu desprazamento; e `Part`, a parte da barra que hai debaixo dun punto. |
+| [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: a barra de tabs e os menús, e, desde a 2.9, o que é a barra de tabs para Windows, coma barra de título; e `scale`, que leva as súas medidas ao DPI da xanela. |
+| [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e os botóns que abren unha tab e o menú dos perfís, ao DPI da xanela; desde a 2.8, o ancho mínimo das tabs e, cando nin así caben, a franxa entre os dous botóns que as desprazan, e o seu desprazamento; desde a 2.9, a banda enriba das tabs, os botóns da xanela e os seus glifos, o sitio para arrastrar a xanela e o ancho da barra máis estreita; e `Part`, a parte da barra que hai debaixo dun punto. |
+| [`src/ui/titlebar.rs`](#cratesmeiga-coresrcuititlebarrs) | `TitleBar`: a barra de tabs coma barra de título da xanela, e `Hit`, o que é para Windows cada punto dela: a barra de título, que arrastra a xanela, o bordo de arriba e a súa esquina, que a redimensionan, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto; onde se abre con Alt+Espazo o menú da xanela, `menu_corner`; e `min_client`, o tamaño mínimo da área cliente. |
 | [`src/ui/menu.rs`](#cratesmeiga-coresrcuimenurs) | `Menu`: as entradas dun menú, elementos, tamén en negra, e liñas, e o resalte, que moven o teclado e o punteiro; e `Layout`: onde van o menú e as súas entradas, ao DPI da xanela, e a entrada que hai debaixo dun punto. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
 | [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
@@ -3000,8 +3001,9 @@ pub fn parse(text: &str) -> Result<Self, ChordError> {
         }
     }
     let key = key.ok_or(ChordError::NoKey)?;
-    // Windows closes the window with Alt+F4, and opens its menu with
-    // Alt+Space: meiga never gets them (ADR 0014).
+    // Windows closes the window with Alt+F4 and, with Alt+Space, asks
+    // the window for its menu, which meiga opens below the bar: they
+    // never reach meiga as keys (ADR 0014 and ADR 0027).
     if modifiers & (Self::ALT | Self::CTRL) == Self::ALT && matches!(key, VK_F4 | VK_SPACE) {
         return Err(ChordError::ForWindows);
     }
@@ -3017,7 +3019,7 @@ pub fn parse(text: &str) -> Result<Self, ChordError> {
 4. **`win`** é un erro, `Windows`: as teclas Windows son de Windows (decisión 2).
 5. **A tecla.** Calquera outra parte é a tecla: [`key_code`](#o-código-dunha-tecla-key_code-strip_prefix_ignore_case-e-number) dá o seu código, ou é un erro, `Unknown`, coa parte. Unha segunda tecla é outro erro, `TwoKeys`: `replace` garda a nova en `key`, e devolve a que había.
 6. **Sen tecla**, só con modificadores, é un erro, `NoKey`.
-7. **Alt+F4 e Alt+Espazo**, con Maiús ou sen el, son un erro, `ForWindows`: Windows pecha a xanela con Alt+F4 e abre o seu menú con Alt+Espazo, e meiga non os recibe nunca, coma di o comentario ([ADR 0014](../adr/0014-o-teclado.md), decisión 5). A condición, Alt sen Ctrl, é a mesma coa que o teclado da xanela llos deixa a Windows ([Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)). Con Ctrl, son outras combinacións: `ctrl+alt+f4` vale.
+7. **Alt+F4 e Alt+Espazo**, con Maiús ou sen el, son un erro, `ForWindows`: Windows pecha a xanela con Alt+F4 e, con Alt+Espazo, pídelle á xanela o seu menú, que desde a 2.9 abre meiga debaixo da barra ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 6); nunca lle chegan a meiga coma teclas, coma di o comentario ([ADR 0014](../adr/0014-o-teclado.md), decisión 5). A condición, Alt sen Ctrl, é a mesma coa que o teclado da xanela llos deixa a Windows ([Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)). Con Ctrl, son outras combinacións: `ctrl+alt+f4` vale.
 8. **A combinación**, con `new`.
 
 - O erro é o da primeira parte mal, de esquerda a dereita: `return` e `?` devólveno no momento.
@@ -5601,7 +5603,7 @@ As trinta e nove probas do terminal, nun arquivo aparte para que `mod.rs` sexa m
 
 ## `crates/meiga-core/src/ui/mod.rs`
 
-Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disposicións sen Windows: onde vai cada parte, á escala da xanela, e que parte hai debaixo dun punto ([ADR 0020](../adr/0020-a-barra-de-tabs.md) e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md)). Debuxalas e seguir o rato é traballo do programa, con `meiga-render`; eiquí só se calculan rectángulos, así que se proban con coordenadas exactas, sen xanela nin fontes (ADR 0020, decisión 2). Hai dúas: a barra de tabs e, desde a 2.4, os menús, que escalan as súas medidas coas mesmas funcións.
+Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disposicións sen Windows: onde vai cada parte, á escala da xanela, e que parte hai debaixo dun punto ([ADR 0020](../adr/0020-a-barra-de-tabs.md) e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md)). Debuxalas e seguir o rato é traballo do programa, con `meiga-render`; eiquí só se calculan rectángulos, así que se proban con coordenadas exactas, sen xanela nin fontes (ADR 0020, decisión 2). Hai dúas: a barra de tabs e, desde a 2.4, os menús, que escalan as súas medidas coas mesmas funcións. Desde a 2.9, a barra de tabs é a barra de título da xanela, e `titlebar` di que é para Windows cada punto dela, coa súa disposición ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)): non ten medidas propias nin debuxa nada.
 
 ```rust
 //! The parts of the interface that meiga draws itself, as layouts without
@@ -5610,14 +5612,15 @@ Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disp
 
 pub mod menu;
 pub mod tabbar;
+pub mod titlebar;
 ```
 
 - O comentario do módulo (`//!`) di para que é, coma o parágrafo de enriba.
-- `pub mod menu;` e `pub mod tabbar;` declaran os submódulos, que están en `src/ui/menu.rs`, desde a 2.4, e en `src/ui/tabbar.rs`, e fanos públicos: fóra do crate, os seus tipos úsanse co seu camiño, coma `meiga_core::ui::tabbar::Layout`. Ao contrario ca `model`, `ui` non reexporta nada con `pub use`: as dúas disposicións chámanse `Layout`, e lense co nome do seu módulo diante, `tabbar::Layout` e `menu::Layout`.
+- `pub mod menu;`, `pub mod tabbar;` e, desde a 2.9, `pub mod titlebar;` declaran os submódulos, que están en `src/ui/menu.rs`, desde a 2.4, en `src/ui/tabbar.rs` e en `src/ui/titlebar.rs`, e fanos públicos: fóra do crate, os seus tipos úsanse co seu camiño, coma `meiga_core::ui::tabbar::Layout` ou `meiga_core::ui::titlebar::TitleBar`. Ao contrario ca `model`, `ui` non reexporta nada con `pub use`: as dúas disposicións chámanse `Layout`, e lense co nome do seu módulo diante, `tabbar::Layout` e `menu::Layout`. `titlebar` usa a da barra, con `use super::tabbar::…`.
 
 ### Os axudantes: `BASE_DPI`, `scale` e `coord`
 
-Desde a subfase 2.4 están eiquí, e non en `tabbar.rs`, porque os usan a barra e os menús: cada submódulo tráeos con `use super::{coord, scale};`. Son privados, pero os submódulos de `ui` venos, porque en Rust un módulo ve o que é privado nos seus antepasados; fóra de `ui`, non se ven.
+Desde a subfase 2.4 están eiquí, e non en `tabbar.rs`, porque os usan a barra e os menús: os dous submódulos tráenos con `use super::{coord, scale};`. `titlebar`, desde a 2.9, non os usa: as medidas que necesita xa veñen escaladas na disposición da barra. Son privados, pero os submódulos de `ui` venos, porque en Rust un módulo ve o que é privado nos seus antepasados; fóra de `ui`, non se ven.
 
 ```rust
 const BASE_DPI: u32 = 96;
@@ -5632,29 +5635,31 @@ fn coord(value: u64) -> i32 {
 ```
 
 - **`BASE_DPI`**: os puntos por polgada da escala 100 %, 96, na que están en píxeles as medidas das partes.
-- **`scale`**: `pixels` a escala 100 %, a `dpi`: multiplicado por `dpi` e dividido entre 96, redondeado ao máis próximo, e polo menos 1 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2, e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). Sumar a metade de 96 antes de dividir redondea, coma en [`Rgb::mix`](#rgb): a división de enteiros só corta os decimais, e unha metade sobe. Con `max(1)`, ningunha medida desaparece, nin sequera a un DPI moi baixo; e `saturating_mul` e `saturating_add` quedan no máximo dun `u32` en vez de desbordar. A 120 DPI (125 %), os 32 do alto da barra son 40, e o trazo, 1,25, queda en 1; a 144 DPI (150 %), o trazo, 1,5, sobe a 2, e os 11 píxeles entre o resalte e o texto dun menú, 16,5, a 17.
+- **`scale`**: `pixels` a escala 100 %, a `dpi`: multiplicado por `dpi` e dividido entre 96, redondeado ao máis próximo, e polo menos 1 ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 2, e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 3). Sumar a metade de 96 antes de dividir redondea, coma en [`Rgb::mix`](#rgb): a división de enteiros só corta os decimais, e unha metade sobe. Con `max(1)`, ningunha medida desaparece, nin sequera a un DPI moi baixo; e `saturating_mul` e `saturating_add` quedan no máximo dun `u32` en vez de desbordar. A 120 DPI (125 %), os 32 do alto da fila das tabs son 40, e o trazo, 1,25, queda en 1; a 144 DPI (150 %), o trazo, 1,5, sobe a 2, e os 11 píxeles entre o resalte e o texto dun menú, 16,5, a 17.
 - **`coord`**: un número de píxeles coma unha coordenada, un `i32`, ou `i32::MAX` se non cabe. Ningunha parte da xanela chega tan lonxe, pero así as contas non desbordan: as da barra, con calquera índice de tab, e as dos menús, con calquera número de entradas. Desde a 2.8, as posicións das tabs, que mentres a franxa as despraza poden ser negativas, convérteas [`clamped`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size), en `tabbar.rs`, que queda tamén no mínimo dun `i32`.
 
 ## `crates/meiga-core/src/ui/tabbar.rs`
 
-Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), [Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)). Para un número de tabs, un ancho e un DPI, di onde van as tabs, os seus títulos, os seus botóns de pechar (×) e os separadores entre elas, o botón que abre unha tab (+) e, desde a 2.5, xunto a el, o que abre o menú dos perfís (▾) ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6); e que parte da barra hai debaixo dun punto. Desde a 2.8, as tabs teñen un ancho mínimo e, cando nin así caben, van nunha franxa entre dous botóns de desprazamento (‹ e ›): a disposición garda canto está desprazada a franxa, e desprázaa unha tab, uns píxeles ou o mínimo para que se vexa enteira unha tab ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). A barra do programa debúxaa con estes rectángulos, segue con eles o rato e marca as zonas que cambian ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-barra-de-tabs.md), [Arquitectura › A barra de tabs](../arquitectura.md#a-barra-de-tabs)). Para un número de tabs, un ancho e un DPI, di onde van as tabs, os seus títulos, os seus botóns de pechar (×) e os separadores entre elas, o botón que abre unha tab (+) e, desde a 2.5, xunto a el, o que abre o menú dos perfís (▾) ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 6); e que parte da barra hai debaixo dun punto. Desde a 2.8, as tabs teñen un ancho mínimo e, cando nin así caben, van nunha franxa entre dous botóns de desprazamento (‹ e ›): a disposición garda canto está desprazada a franxa, e desprázaa unha tab, uns píxeles ou o mínimo para que se vexa enteira unha tab ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), [Arquitectura › Moitas tabs e os indicadores](../arquitectura.md#moitas-tabs-e-os-indicadores)). Desde a 2.9, a barra é a barra de título da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), [Arquitectura › As tabs na barra de título](../arquitectura.md#as-tabs-na-barra-de-título)): a disposición ten tamén o alto da banda que vai enriba das tabs coa xanela restaurada, e di onde van os botóns da xanela, minimizar, maximizar ou restaurar e pechar, e os seus glifos, cun sitio para arrastrar a xanela sempre antes deles; o que é cada parte da barra para Windows dío [`ui/titlebar.rs`](#cratesmeiga-coresrcuititlebarrs), con esta disposición. A barra do programa debúxaa con estes rectángulos, segue con eles o rato e marca as zonas que cambian ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
 
-**A forma da barra**, coas medidas do Windows Terminal en píxeles a escala 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisións 1, 2 e 3; [ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisións 1 e 2; [Tecnoloxías › As barras de tabs](../tecnoloxias.md#55-as-barras-de-tabs-chrome-e-o-windows-terminal)):
+**A forma da barra**, coas medidas do Windows Terminal en píxeles a escala 100 % ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisións 1, 2 e 3; [ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisións 1 e 2; [ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 2, 3 e 5; [Tecnoloxías › As barras de tabs](../tecnoloxias.md#55-as-barras-de-tabs-chrome-e-o-windows-terminal)):
 
-- unha franxa de 32 píxeles de alto, de todo o ancho da xanela, enriba do terminal e sempre visíbel, tamén cunha soa tab;
+- unha fila de tabs de 32 píxeles de alto, de todo o ancho da xanela, enriba do terminal e sempre visíbel, tamén cunha soa tab. Desde a 2.9, a barra vai no sitio da barra de título de Windows, e coa xanela restaurada leva enriba da fila unha banda do grosor do marco da xanela, onde Windows a redimensiona: a 96 DPI, de 8 píxeles, e a barra mide 40. Maximizada, non hai banda, e a barra é a fila, coma ata a 2.8, cando ía debaixo da barra de título de Windows;
 - as tabs, unha tras outra desde a esquerda, todas do mesmo ancho, ata 240. Se non caben, encóllense todas por igual, ata 100, coma no Windows Terminal; ata a 2.7, sen mínimo;
 - o +, un cadrado de 28, xusto despois da última tab e, desde a 2.5, unido a el, o ▾, de 24 de ancho e tan alto coma el, coma o botón dividido do Windows Terminal;
-- desde a 2.8, se nin de 100 caben, a barra desprázaas: as tabs van nunha franxa entre dous botóns de desprazamento, o ‹ á esquerda e o › á dereita, de 24 de ancho e tan altos coma o +, que só aparecen entón; a franxa mostra a parte da fila das tabs que di o seu desprazamento, e corta as dos seus lados; e o + e o ▾ van á dereita da barra, despois do ›, sempre no mesmo sitio;
-- 4 píxeles de separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +); mentres as tabs non caben, á esquerda do ‹ e entre o › e o +, no canto de á esquerda da primeira tab e despois da última;
-- cada tab debúxase desde esa separación de enriba ata o bordo de abaixo da barra, para que a activa, coa cor do fondo do terminal, se vexa unida a el; pero, para o rato, ocupa todo o alto da barra;
+- desde a 2.8, se nin de 100 caben, a barra desprázaas: as tabs van nunha franxa entre dous botóns de desprazamento, o ‹ á esquerda e o › á dereita, de 24 de ancho e tan altos coma o +, que só aparecen entón; a franxa mostra a parte da fila das tabs que di o seu desprazamento, e corta as dos seus lados; e o + e o ▾ van despois do ›, sempre no mesmo sitio: na 2.8, ao final da barra, e desde a 2.9, antes do sitio para arrastrar a xanela;
+- desde a 2.9, á dereita da barra, os tres botóns da xanela, minimizar, maximizar ou restaurar e pechar, de 46 de ancho, coma no Windows 11 e no Windows Terminal, e do alto da barra enteira, tamén por riba da banda; no medio de cada un, o seu glifo, nun cadrado de 10, co trazo do × e do +;
+- desde a 2.9, entre a separación da dereita do ▾ e os botóns da xanela, un sitio para arrastrar a xanela de polo menos 45, coma no Windows Terminal: mentres as tabs caben, o que non usan queda tamén alí, e mentres non, a franxa deixa xusto ese sitio;
+- 4 píxeles de separación por riba das tabs, debaixo da banda, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +); mentres as tabs non caben, á esquerda do ‹ e entre o › e o +, no canto de á esquerda da primeira tab e despois da última;
+- cada tab debúxase desde esa separación de enriba ata o bordo de abaixo da barra, para que a activa, coa cor do fondo do terminal, se vexa unida a el; pero, para o rato, ocupa todo o alto da fila das tabs: desde a 2.9, a banda non é da tab, nin dos botóns da barra;
 - o ×, un cadrado de 24 á dereita da tab, a 4 píxeles do seu bordo dereito e centrado no seu alto, se cabe, e desde a 2.8 cabe sempre; e o título, desde 8 píxeles do bordo esquerdo da tab ata o ×;
-- e todas as medidas, escaladas co DPI da xanela, redondeadas e de polo menos un píxel.
+- e todas as medidas, escaladas co DPI da xanela, redondeadas e de polo menos un píxel; desde a 2.9, menos a banda, que chega xa en píxeles á escala da xanela, coma a mide Windows.
 
-**Un exemplo**, o das probas: tres tabs nunha xanela de 800 píxeles a 96 DPI, a escala 100 %. As tabs caben enteiras, de 240 píxeles:
+**Un exemplo**, o das probas: tres tabs nunha xanela de 983 píxeles a 96 DPI, a escala 100 %, maximizada: sen banda, a barra é a fila das tabs. Os 983 son os 800 deste exemplo ata a 2.8 e os 183 do sitio para arrastrar a xanela e dos seus botóns, así que as tabs e os botóns da barra quedan onde estaban. As tabs caben enteiras, de 240 píxeles:
 
 | Parte | Método | Rectángulo |
 |---|---|---|
-| A barra | `bar()` | (0, 0, 800, 32) |
+| A barra | `bar()` | (0, 0, 983, 32) |
 | A primeira tab, como se debuxa | `tab(0)` | (4, 4, 244, 32) |
 | A terceira | `tab(2)` | (484, 4, 724, 32) |
 | O título da primeira | `title(0)` | (12, 4, 216, 32) |
@@ -5669,10 +5674,32 @@ Desde a subfase 2.3: a disposición da barra de tabs ([ADR 0020](../adr/0020-a-b
 | O ▾ | `profiles()` | (756, 4, 780, 32) |
 | O que resalta nel o punteiro | `profiles_highlight()` | (758, 6, 778, 30) |
 | A súa frecha | `chevron()` | (764, 16, 772, 20) |
+| O botón de minimizar a xanela | `caption(CaptionButton::Minimize)` | (845, 0, 891, 32) |
+| O seu glifo | `glyph(CaptionButton::Minimize)` | (863, 11, 873, 21) |
+| O de maximizar ou restaurar | `caption(CaptionButton::Maximize)` | (891, 0, 937, 32) |
+| O de pechar | `caption(CaptionButton::Close)` | (937, 0, 983, 32) |
+| O seu glifo | `glyph(CaptionButton::Close)` | (955, 11, 965, 21) |
+| Os tres botóns da xanela | `captions()` | (845, 0, 983, 32) |
 
-Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `top`, `right`, `bottom`), e os dous últimos non se inclúen: a primeira tab remata no píxel 243, e a segunda empeza no 244. Á dereita do ▾, de 780 a 800, a barra está baleira.
+Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `top`, `right`, `bottom`), e os dous últimos non se inclúen: a primeira tab remata no píxel 243, e a segunda empeza no 244. Á dereita do ▾, de 780 a 845, a barra está baleira: a separación de 4, e 61 píxeles para arrastrar a xanela, os 45 do mínimo e os 16 que as tabs, xa co seu ancho máximo, non usan. Ata a 2.8, de 780 a 800, ao final da barra.
 
-**Un exemplo con moitas tabs**, desde a 2.8, tamén o das probas: na mesma xanela, as tabs teñen un sitio de 736 píxeles, 800 − 3 × 4 − 28 − 24 ([`room`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)). Sete caben, de 105. Oito, de 92, xa non: miden 100, e van na franxa, de 736 − 2 × 24 = 688 píxeles ([`viewport`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)), onde caben seis tabs enteiras e 88 píxeles da sétima. A fila das oito mide 800, así que a franxa se despraza ata 112, 800 − 688; con trinta, a fila mide 3000, e a franxa desprázase ata 2312 ([`max_scroll`](#canto-se-despraza-max_scroll-e-can_scroll)). Oito tabs, coa franxa sen desprazar:
+**Restaurada**, desde a 2.9, coa banda de 8 píxeles que ten a xanela a 96 DPI, a mesma barra mide 40 de alto: todo o que vai debaixo da banda baixa 8, e os botóns da xanela chegan ata arriba:
+
+| Parte | Método | Rectángulo |
+|---|---|---|
+| A barra | `bar()` | (0, 0, 983, 40) |
+| A primeira tab | `tab(0)` | (4, 12, 244, 40) |
+| O seu × | `close(0)` | (216, 14, 240, 38) |
+| O separador entre a primeira e a segunda | `separator(1)` | (244, 18, 245, 34) |
+| O que cambia co aspecto da primeira | `tab_area(0)` | (4, 8, 245, 40) |
+| O + | `new_tab()` | (728, 12, 756, 40) |
+| O ▾ | `profiles()` | (756, 12, 780, 40) |
+| O botón de pechar a xanela | `caption(CaptionButton::Close)` | (937, 0, 983, 40) |
+| O seu glifo | `glyph(CaptionButton::Close)` | (955, 15, 965, 25) |
+
+O que cambia co aspecto dunha tab empeza debaixo da banda, que non cambia con ela; e o glifo vai no medio do botón, que agora mide 40 de alto.
+
+**Un exemplo con moitas tabs**, desde a 2.8, tamén o das probas: na mesma xanela maximizada, as tabs teñen un sitio de 736 píxeles, 983 − 3 × 4 − 28 − 24 − 45 − 3 × 46 ([`room`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)); ata a 2.8, nunha xanela de 800, 800 − 3 × 4 − 28 − 24. Sete caben, de 105. Oito, de 92, xa non: miden 100, e van na franxa, de 736 − 2 × 24 = 688 píxeles ([`viewport`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)), onde caben seis tabs enteiras e 88 píxeles da sétima. A fila das oito mide 800, así que a franxa se despraza ata 112, 800 − 688; con trinta, a fila mide 3000, e a franxa desprázase ata 2312 ([`max_scroll`](#canto-se-despraza-max_scroll-e-can_scroll)). Oito tabs, coa franxa sen desprazar:
 
 | Parte | Método | Rectángulo |
 |---|---|---|
@@ -5689,12 +5716,12 @@ Os rectángulos van coma en [`Rect`](#cratesmeiga-coresrcgeometryrs), (`left`, `
 | O + | `new_tab()` | (744, 4, 772, 32) |
 | O ▾ | `profiles()` | (772, 4, 796, 32) |
 
-Os botóns quedan aí sexan oito tabs ou cen, e estea a franxa onde estea; de 796 a 800 vai a separación da dereita. Coa franxa desprazada 50 píxeles, a primeira tab vai de 28 − 50 = −22 a 78 ([`tab`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)): só se debuxan, e só reciben o rato, os seus 50 píxeles da dereita, desde o 28.
+Os botóns quedan aí sexan oito tabs ou cen, e estea a franxa onde estea; de 796 a 800 vai a separación da dereita, e de 800 a 845, o sitio para arrastrar a xanela, xusto os 45 do mínimo; ata a 2.8, a barra remataba no 800. Coa franxa desprazada 50 píxeles, a primeira tab vai de 28 − 50 = −22 a 78 ([`tab`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)): só se debuxan, e só reciben o rato, os seus 50 píxeles da dereita, desde o 28.
 
 ### As medidas
 
 ```rust
-const HEIGHT: u32 = 32;
+const ROW: u32 = 32;
 const MAX_TAB: u32 = 240;
 const MIN_TAB: u32 = 100;
 const GAP: u32 = 4;
@@ -5710,34 +5737,42 @@ const PROFILES_HIGHLIGHT: u32 = 20;
 const CHEVRON: u32 = 4;
 const SCROLL: u32 = 24;
 const SCROLL_HIGHLIGHT: u32 = 20;
+const CAPTION: u32 = 46;
+const GLYPH: u32 = 10;
+const GLYPH_OFFSET: u32 = 2;
+const DRAG: u32 = 45;
 const SEPARATOR: u32 = 16;
 const STROKE: u32 = 1;
 ```
 
-As medidas, en píxeles a escala 100 %, que é 96 DPI ([`BASE_DPI`](#os-axudantes-base_dpi-scale-e-coord), que desde a subfase 2.4 está en `ui/mod.rs`). [`Layout::new`](#crear-e-cambiar-new-height_at-e-resize) escálaas ao DPI da xanela.
+As medidas, en píxeles a escala 100 %, que é 96 DPI ([`BASE_DPI`](#os-axudantes-base_dpi-scale-e-coord), que desde a subfase 2.4 está en `ui/mod.rs`). [`Layout::new`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize) escálaas ao DPI da xanela.
 
 | Constante | A 100 % | Que é |
 |---|---|---|
-| `HEIGHT` | 32 | O alto da barra, o da fila de tabs do Windows Terminal. |
+| `ROW` | 32 | O alto da fila das tabs, o da fila de tabs do Windows Terminal: coa xanela maximizada, a barra enteira, e restaurada, a barra sen a banda de enriba. Ata a 2.8 chamábase `HEIGHT`, e era o alto da barra, que non tiña banda. |
 | `MAX_TAB` | 240 | O ancho máximo dunha tab: o `TabViewItemMaxWidth` do `TabView` de WinUI, que usa o Windows Terminal. |
 | `MIN_TAB` | 100 | Desde a 2.8: o ancho mínimo dunha tab, o `TabViewItemMinWidth` do mesmo `TabView` ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 1). Ten sitio para o × e para uns 8 ou 9 caracteres do título, segundo a escala. Se as tabs non caben nin así, a barra desprázaas. |
-| `GAP` | 4 | A separación por riba das tabs, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +). Desde a 2.8, mentres as tabs non caben, á esquerda do ‹ e entre o › e o +, no canto de á esquerda da primeira tab e despois da última. Tamén a que queda á dereita do ×. |
+| `GAP` | 4 | A separación por riba das tabs, debaixo da banda, á esquerda da primeira, entre a última e o +, e á dereita do ▾ (ata a 2.4, do +). Desde a 2.8, mentres as tabs non caben, á esquerda do ‹ e entre o › e o +, no canto de á esquerda da primeira tab e despois da última. Tamén a que queda á dereita do ×. |
 | `PADDING` | 8 | Desde o bordo esquerdo dunha tab ata o seu título. Nunha tab sen ×, que desde a 2.8 non hai a ningunha escala de Windows, tamén desde o título ata o bordo dereito. |
 | `CLOSE` | 24 | O lado do ×, un cadrado á dereita da tab: todo el recibe o rato. |
 | `CLOSE_HIGHLIGHT` | 20 | O lado do cadrado que resalta o punteiro, no medio do ×. |
 | `CROSS` | 8 | O lado do cadrado da cruz, tamén no medio do ×. |
 | `NEW` | 28 | O lado do +, un cadrado tan alto coma as tabs. |
 | `NEW_HIGHLIGHT` | 24 | O lado do cadrado que resalta o punteiro, no medio do +. |
-| `PLUS` | 10 | O lado do signo +, no medio do botón. Medra un píxel se non ten a paridade do trazo ([`new`](#crear-e-cambiar-new-height_at-e-resize)). |
+| `PLUS` | 10 | O lado do signo +, no medio do botón. Medra un píxel se non ten a paridade do trazo ([`new`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize)). |
 | `PROFILES` | 24 | Desde a 2.5: o ancho do ▾, que abre o menú dos perfís, á dereita do + e tan alto coma el. Todo el recibe o rato. |
 | `PROFILES_HIGHLIGHT` | 20 | O ancho do rectángulo que resalta o punteiro, no medio do ▾. O seu alto é o do resalte do +, `NEW_HIGHLIGHT`. |
 | `CHEVRON` | 4 | O alto da frecha do ▾, que mide o dobre de ancho, 8, para que as súas dúas liñas se xunten a calquera escala ([`chevron`](#o-botón-dos-perfís-profiles-profiles_highlight-e-chevron)). Desde a 2.8, tamén o ancho das frechas do ‹ e do ›, que miden o dobre de alto ([`scroll_chevron`](#os-botóns-de-desprazamento-scroll_button-scroll_highlight-e-scroll_chevron)). |
 | `SCROLL` | 24 | Desde a 2.8: o ancho do ‹ e do ›, os botóns de desprazamento, que son coma o ▾: tan altos coma o +, e todo o botón recibe o rato ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2). |
 | `SCROLL_HIGHLIGHT` | 20 | O ancho do rectángulo que resalta o punteiro, no medio do ‹ e do ›. O seu alto, coma no ▾, é o do resalte do +, `NEW_HIGHLIGHT`. |
+| `CAPTION` | 46 | Desde a 2.9: o ancho de cada botón da xanela, coma no Windows Terminal; o seu alto é o da barra enteira, tamén por riba da banda ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 3). Todo o botón recibe o rato ([`caption`](#os-botóns-da-xanela-captionbutton-caption-captions-glyph-e-glyph_offset)). |
+| `GLYPH` | 10 | Desde a 2.9: o lado do cadrado do glifo de cada botón da xanela, no seu medio, coma os glifos de 10 × 10 da fonte Segoe Fluent Icons, que usan o Windows 11 e o Windows Terminal. |
+| `GLYPH_OFFSET` | 2 | Desde a 2.9: o glifo de restaurar son dous cadrados, e o de atrás vai estes píxeles máis arriba e máis á dereita ca o de diante. |
+| `DRAG` | 45 | Desde a 2.9: o sitio mínimo para arrastrar a xanela, entre a separación da dereita do ▾ e os botóns da xanela, coma no Windows Terminal ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 5). |
 | `SEPARATOR` | 16 | O alto das liñas que separan dúas tabs inactivas, no medio do alto das tabs. Teñen un píxel de ancho a calquera escala. |
-| `STROKE` | 1 | O grosor das liñas da cruz e do signo + e, desde a 2.5, da frecha do ▾; desde a 2.8, tamén das do ‹ e do ›. |
+| `STROKE` | 1 | O grosor das liñas da cruz e do signo + e, desde a 2.5, da frecha do ▾; desde a 2.8, tamén das do ‹ e do ›; e, desde a 2.9, das dos glifos dos botóns da xanela. |
 
-Son privadas: fóra do módulo só se ven escaladas, a través de `Layout`.
+Son privadas: fóra do módulo só se ven escaladas, a través de `Layout`. A 150 % (144 DPI), os botóns da xanela miden 69 de ancho, os seus glifos 15, cun trazo de 2, o cadrado de atrás do de restaurar vai 3 píxeles máis arriba e á dereita, e o sitio para arrastrar a xanela mide 68.
 
 ### `Part` e `Side`
 
@@ -5749,6 +5784,7 @@ pub enum Part {
     New,
     Profiles,
     Scroll(Side),
+    Caption(CaptionButton),
     Empty,
 }
 ```
@@ -5757,12 +5793,13 @@ A parte da barra que hai nun punto, a resposta de [`part_at`](#o-que-hai-debaixo
 
 | Variante | Que é |
 |---|---|
-| `Tab(índice)` | A tab nesa posición, desde 0 e na orde da barra, fóra do seu ×: tamén na separación de enriba, por riba do que se debuxa. Desde a 2.8, mentres as tabs non caben, só a súa parte dentro da franxa. |
+| `Tab(índice)` | A tab nesa posición, desde 0 e na orde da barra, fóra do seu ×: tamén na separación de enriba, por riba do que se debuxa, pero, desde a 2.9, non na banda. Desde a 2.8, mentres as tabs non caben, só a súa parte dentro da franxa. |
 | `Close(índice)` | O × da tab nesa posición. |
-| `New` | O +, en todo o alto da barra. |
-| `Profiles` | Desde a 2.5: o ▾, tamén en todo o alto da barra. |
-| `Scroll(lado)` | Desde a 2.8: o botón de desprazamento dese lado, o ‹ ou o ›, tamén en todo o alto da barra. Só os hai mentres as tabs non caben. |
-| `Empty` | A barra fóra das tabs e dos botóns: á esquerda da primeira tab, entre a última e o +, e á dereita do ▾. Desde a 2.8, mentres as tabs non caben, á esquerda do ‹ e entre o › e o +; e, mentres as tabs manteñen o seu ancho despois dun peche co rato, na franxa despois da última. |
+| `New` | O +, en todo o alto da fila das tabs: ata a 2.8, a barra enteira, e desde a 2.9, debaixo da banda. |
+| `Profiles` | Desde a 2.5: o ▾, tamén en todo o alto da fila das tabs. |
+| `Scroll(lado)` | Desde a 2.8: o botón de desprazamento dese lado, o ‹ ou o ›, tamén en todo o alto da fila das tabs. Só os hai mentres as tabs non caben. |
+| `Caption(botón)` | Desde a 2.9: o botón da xanela dese tipo, minimizar, maximizar ou restaurar, ou pechar ([`CaptionButton`](#os-botóns-da-xanela-captionbutton-caption-captions-glyph-e-glyph_offset)), en todo o alto da barra, tamén na banda. |
+| `Empty` | A barra fóra das tabs e dos botóns: á esquerda da primeira tab, entre a última e o +, e á dereita do ▾. Desde a 2.8, mentres as tabs non caben, á esquerda do ‹ e entre o › e o +; e, mentres as tabs manteñen o seu ancho despois dun peche co rato, na franxa despois da última. Desde a 2.9, tamén a banda, fóra dos botóns da xanela, e o sitio para arrastrar a xanela, entre o ▾ e eles: para Windows, a banda é o bordo de arriba da xanela, e o resto, a barra de título ([`ui/titlebar.rs`](#cratesmeiga-coresrcuititlebarrs)). |
 
 ```rust
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -5779,7 +5816,7 @@ Desde a 2.8, **`Side`** é un lado da franxa, cara ao que a despraza un botón:
 | `Left` | Cara á primeira tab: o ‹, á esquerda da franxa. |
 | `Right` | Cara á última: o ›, á dereita. |
 
-- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6): desde a subfase 2.4, o dereito abre o menú da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5); desde a 2.5, o esquerdo, ao soltarse enriba do ▾ no que se premeu, o menú dos perfís; e, desde a 2.8, o esquerdo nun botón de desprazamento despraza a franxa unha tab, e outra mentres segue premido ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 4).
+- As tabs van pola súa posición, e non polo seu identificador: a disposición non coñece o modelo, só cantas tabs hai. A barra do programa busca a tab desa posición na xanela ([`Window::tabs`](#window-os-datos-e-as-consultas)), e cos botóns do rato decide que facer ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 6): desde a subfase 2.4, o dereito abre o menú da tab ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 5); desde a 2.5, o esquerdo, ao soltarse enriba do ▾ no que se premeu, o menú dos perfís; desde a 2.8, o esquerdo nun botón de desprazamento despraza a franxa unha tab, e outra mentres segue premido ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 4); e, desde a 2.9, o esquerdo, ao soltarse enriba do botón da xanela no que se premeu, minimiza, maximiza ou restaura, ou pecha a xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4).
 - Os dous son `Copy`, coma os tipos de [`mouse.rs`](#button-modifiers-wheel-e-mouseaction): uns poucos bytes, que van por valor.
 - Non é o `Side` da selección, unha metade dunha cela ([`term/selection.rs`](#word_delimiters-selectionkind-e-side)), aínda que teña as mesmas variantes: cada un úsase co seu módulo, `tabbar::Side` e `term::Side`.
 
@@ -5788,7 +5825,7 @@ Desde a 2.8, **`Side`** é un lado da franxa, cara ao que a despraza un botón:
 ```rust
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Layout {
-    height: u32,
+    row: u32,
     max_tab: u32,
     min_tab: u32,
     gap: u32,
@@ -5804,8 +5841,13 @@ pub struct Layout {
     chevron: u32,
     scroll_button: u32,
     scroll_highlight: u32,
+    caption: u32,
+    glyph: u32,
+    glyph_offset: u32,
+    drag: u32,
     separator: u32,
     stroke: u32,
+    band: u32,
     width: u32,
     tabs: usize,
     tab_width: u32,
@@ -5814,11 +5856,12 @@ pub struct Layout {
 }
 ```
 
-Onde van as partes da barra, para un número de tabs, un ancho e unha escala:
+Onde van as partes da barra, para un número de tabs, un ancho, unha escala e, desde a 2.9, a banda enriba das tabs:
 
 | Campo | Que é |
 |---|---|
-| De `height` a `stroke` | As medidas, unha por constante, xa escaladas ao DPI da xanela. A de `SCROLL` chámase `scroll_button`, porque `scroll` é o desprazamento; e `chevron`, desde a 2.8, é o lado curto das tres frechas. |
+| De `row` a `stroke` | As medidas, unha por constante, xa escaladas ao DPI da xanela. A de `SCROLL` chámase `scroll_button`, porque `scroll` é o desprazamento; `chevron`, desde a 2.8, é o lado curto das tres frechas; e `caption`, `glyph`, `glyph_offset` e `drag`, desde a 2.9, as dos botóns da xanela e do sitio para arrastrala. Ata a 2.8, `row` chamábase `height`. |
+| `band` | Desde a 2.9: o alto da banda enriba da fila das tabs, onde o punteiro redimensiona a xanela, en píxeles á escala da xanela, sen escalar eiquí ([`new`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize)). 0 coa xanela maximizada, e tamén sen a barra de título de meiga. |
 | `width` | O ancho da barra: o da área cliente da xanela. |
 | `tabs` | Cantas tabs hai. |
 | `tab_width` | O ancho de cada tab, que sae dos outros ([`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)). |
@@ -5827,7 +5870,11 @@ Onde van as partes da barra, para un número de tabs, un ancho e unha escala:
 
 ```rust
 pub const fn height(&self) -> u32 {
-    self.height
+    self.band.saturating_add(self.row)
+}
+
+pub const fn band(&self) -> u32 {
+    self.band
 }
 
 pub const fn width(&self) -> u32 {
@@ -5855,19 +5902,21 @@ pub const fn stroke(&self) -> u32 {
 }
 ```
 
-- **As medidas escálanse unha vez**, ao facer a disposición, e non en cada consulta. Cambiar o ancho ou o número de tabs só volta calcular o ancho das tabs e, desde a 2.8, se caben e ata onde chega o desprazamento ([`resize`](#crear-e-cambiar-new-height_at-e-resize)), e cambiar o DPI fai outra disposición.
-- Os campos son privados: ningún método deixa o ancho das tabs sen corresponder ao ancho da barra e ao número de tabs, salvo, desde a 2.8, [`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths), que o fai a propósito mentres se pechan tabs co rato. Lense con `height`, `width`, `tabs`, `tab_width`, `stroke` e, desde a 2.8, `overflows` e `scroll`, que son `const fn`. O alto da barra é tamén onde empeza o terminal.
-- Deriva o mesmo ca `Part`. É `Copy`: vinte e un números de 32 bits, dezasete ata a 2.7 e catorce ata a 2.4, un `usize` e, desde a 2.8, un `bool`, que a barra do programa copia ao debuxar cada tab.
+- **As medidas escálanse unha vez**, ao facer a disposición, e non en cada consulta. Cambiar o ancho ou o número de tabs só volta calcular o ancho das tabs e, desde a 2.8, se caben e ata onde chega o desprazamento ([`resize`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize)); desde a 2.9, cambiar a banda non calcula nada ([`set_band`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize)); e cambiar o DPI fai outra disposición.
+- Os campos son privados: ningún método deixa o ancho das tabs sen corresponder ao ancho da barra e ao número de tabs, salvo, desde a 2.8, [`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths), que o fai a propósito mentres se pechan tabs co rato. Lense con `height`, `width`, `tabs`, `tab_width`, `stroke`, desde a 2.8, `overflows` e `scroll`, e, desde a 2.9, `band`, que son `const fn`. O alto da barra é tamén onde empeza o terminal.
+- **`height`**, desde a 2.9, é o alto da barra enteira, a banda máis a fila das tabs: 32 a 96 DPI coa xanela maximizada, e 40 restaurada, coa banda de 8. `saturating_add` non desborda con ningunha banda. Ata a 2.8 lía o campo `height`, que era o alto da fila.
+- **`band`**, desde a 2.9: o alto da banda. `ui/titlebar.rs` mira con el se un punto libre da barra está na banda ([`hit`](#o-que-é-cada-punto-hit)), e a barra do programa, ao facer outra disposición co DPI novo, cóllea para a nova.
+- Deriva o mesmo ca `Part`. É `Copy`: vinte e seis números de 32 bits, vinte e un ata a 2.8, dezasete ata a 2.7 e catorce ata a 2.4, un `usize` e, desde a 2.8, un `bool`, que a barra do programa copia ao debuxar cada tab. Desde a 2.9, o programa cópiaa tamén para a xanela despois de cada evento, nun [`TitleBar`](#cratesmeiga-coresrcuititlebarrs). `PartialEq` compara dúas disposicións enteiras, coma fai unha proba coa banda e sen ela ([Probas](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size)).
 
-### Crear e cambiar: `new`, `height_at` e `resize`
+### Crear e cambiar: `new`, `row_at`, `min_width`, `set_band` e `resize`
 
 ```rust
-pub fn new(dpi: u32, width: u32, tabs: usize) -> Self {
+pub fn new(dpi: u32, width: u32, tabs: usize, band: u32) -> Self {
     let size = |pixels| scale(pixels, dpi);
     let stroke = size(STROKE);
     let plus = size(PLUS);
     let mut layout = Self {
-        height: size(HEIGHT),
+        row: size(ROW),
         max_tab: size(MAX_TAB),
         min_tab: size(MIN_TAB),
         gap: size(GAP),
@@ -5883,8 +5932,13 @@ pub fn new(dpi: u32, width: u32, tabs: usize) -> Self {
         chevron: size(CHEVRON),
         scroll_button: size(SCROLL),
         scroll_highlight: size(SCROLL_HIGHLIGHT),
+        caption: size(CAPTION),
+        glyph: size(GLYPH),
+        glyph_offset: size(GLYPH_OFFSET),
+        drag: size(DRAG),
         separator: size(SEPARATOR),
         stroke,
+        band,
         width,
         tabs,
         tab_width: 0,
@@ -5895,8 +5949,20 @@ pub fn new(dpi: u32, width: u32, tabs: usize) -> Self {
     layout
 }
 
-pub fn height_at(dpi: u32) -> u32 {
-    scale(HEIGHT, dpi)
+pub fn row_at(dpi: u32) -> u32 {
+    scale(ROW, dpi)
+}
+
+pub fn min_width(dpi: u32) -> u32 {
+    let layout = Self::new(dpi, 0, 0, 0);
+    layout
+        .fixed()
+        .saturating_add(layout.scroll_button.saturating_mul(2))
+        .saturating_add(layout.min_tab)
+}
+
+pub const fn set_band(&mut self, band: u32) {
+    self.band = band;
 }
 
 pub fn resize(&mut self, width: u32, tabs: usize) {
@@ -5906,23 +5972,32 @@ pub fn resize(&mut self, width: u32, tabs: usize) {
 }
 ```
 
-- **`new`** fai a barra de `tabs` tabs nunha xanela de `width` píxeles de ancho, a `dpi`. Escala cada medida con [`scale`](#os-axudantes-base_dpi-scale-e-coord), a través da *closure* `size`, e despois dálles ás tabs o seu ancho, que necesita as medidas xa escaladas: por iso `tab_width` empeza en 0, `overflow` en `false` e `scroll` en 0, e [`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit) chámase cando a disposición xa existe. Ata a 2.7, `fit_tabs` daba o ancho, e `new` gardábao en `tab_width`.
+- **`new`** fai a barra de `tabs` tabs nunha xanela de `width` píxeles de ancho, a `dpi`, e, desde a 2.9, cunha banda de `band` píxeles enriba da fila das tabs. Escala cada medida con [`scale`](#os-axudantes-base_dpi-scale-e-coord), a través da *closure* `size`, e despois dálles ás tabs o seu ancho, que necesita as medidas xa escaladas: por iso `tab_width` empeza en 0, `overflow` en `false` e `scroll` en 0, e [`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit) chámase cando a disposición xa existe. Ata a 2.7, `fit_tabs` daba o ancho, e `new` gardábao en `tab_width`.
+- **A banda non se escala.** É o grosor do marco que Windows lle dá á xanela, `SM_CXPADDEDBORDER` máis `SM_CYSIZEFRAME`, que meiga-win xa pide ao DPI da xanela, e que non é unha medida de 100 % escalada: 8 píxeles a 96 DPI, e 11 a 144, onde 8 escalado darían 12 ([`Window::resize_band`](meiga-win.md#cratesmeiga-winsrcwindowrs)). Por iso `new` a garda tal cal, e a barra do programa pásalla así, 0 coa xanela maximizada ou sen a barra de título de meiga. Ata a 2.8, `new` recibía tres argumentos, sen a banda.
 - **O signo + ten os brazos iguais.** A barra do programa debúxao cunha liña horizontal e outra vertical de `stroke` píxeles, que se cruzan no medio dun cadrado de `plus` de lado. Os brazos, o que sobresae cada liña a cada lado da outra, miden `(plus - stroke) / 2` se esa resta é par; se é impar, un brazo tería un píxel máis ca o outro, así que o lado medra un píxel: `abs_diff` dá a diferenza sen signo, e `% 2`, 1 se é impar. A 100 %, o trazo ten 1 e o lado 10, que medra a 11, con brazos de 5; a 150 % (144 DPI), o trazo ten 2 e o lado 15, que medra a 16, con brazos de 7; e a 125 % (120 DPI), o trazo ten 1 e o lado 13, que queda.
-- **`height_at`** dá o alto da barra a un DPI sen facer a disposición: 32 a 96 DPI e 40 a 120. Polo de agora só o usan as probas.
+- **`row_at`** dá o alto da fila das tabs a un DPI sen facer a disposición: 32 a 96 DPI e 40 a 120. Ata a 2.8 chamábase `height_at`, e daba o alto da barra, que era o mesmo, e só o usaban as probas; desde a 2.9 úsao tamén [`min_client`](#o-tamaño-mínimo-min_client), para o alto mínimo da área cliente, coa banda.
+- **`min_width`**, desde a 2.9: o ancho da barra máis estreita a `dpi`: o que non é das tabs ([`fixed`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)), cos botóns da xanela e o sitio para arrastrala, máis unha franxa que mostra enteira unha tab das máis estreitas entre os dous botóns de desprazamento: a 100 %, 3 × 4 + 28 + 24 + 45 + 3 × 46 + 2 × 24 + 100 = 395; a 125 % (120 DPI), 495; e a 150 % (144 DPI), 593. Fai unha disposición de ancho 0, sen tabs nin banda, só para ler as súas medidas escaladas, e suma sen desbordar (`saturating_add` e `saturating_mul`). Nesa barra, con dúas tabs ou máis, que non caben, a franxa mide xusto unha tab das máis estreitas, 100 a 100 %; e unha soa tab cabe sen franxa, de 148. `min_client` dálle este ancho á área cliente, e a xanela non pode ser máis estreita ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 9).
+- **`set_band`**, desde a 2.9: a banda mide agora `band` píxeles. Só cambia ese campo: o ancho das tabs, o seu desprazamento e todo o que vai á dereita e á esquerda quedan coma estaban, e o que vai debaixo da banda, as tabs, o +, o ▾ e os botóns de desprazamento, baixa ou sobe con ela, porque se mide desde `band` en cada consulta ([`top`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)). Sen banda, a disposición é igual á que fai `new` sen ela. A barra do programa chámao cando cambia a banda: ao maximizar e restaurar a xanela, e ao cambiar de escala, despois de facer a disposición nova co DPI novo e a banda vella ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)). É `const fn`, coma os lectores.
 - **`resize`**: a barra ten agora `width` píxeles de ancho e `tabs` tabs. As medidas quedan, e só cambian o ancho das tabs e, desde a 2.8, se caben e o desprazamento, que queda onde estaba se a franxa aínda chega alí ([`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)). A barra do programa chámao cando cambia o ancho da xanela e cando se abren ou se pechan tabs; desde a 2.8, salvo cando unha tab se pecha co rato e as outras manteñen o seu ancho ([`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths)), que `resize` lles dá outra vez despois. Cando cambia o DPI, a barra do programa fai outra disposición con `new`, que empeza sen desprazamento, e no seguinte fotograma a franxa móvese ata a tab que se mostra ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 5).
 
 ### A barra e o ancho das tabs: `bar`, `room`, `viewport` e `fit`
 
 ```rust
 pub fn bar(&self) -> Rect {
-    Rect::new(0, 0, coord(self.width.into()), coord(self.height.into()))
+    Rect::new(0, 0, coord(self.width.into()), coord(self.height().into()))
+}
+
+const fn fixed(&self) -> u32 {
+    self.gap
+        .saturating_mul(3)
+        .saturating_add(self.new)
+        .saturating_add(self.profiles)
+        .saturating_add(self.drag)
+        .saturating_add(self.caption.saturating_mul(3))
 }
 
 const fn room(&self) -> u32 {
-    self.width
-        .saturating_sub(3 * self.gap)
-        .saturating_sub(self.new)
-        .saturating_sub(self.profiles)
+    self.width.saturating_sub(self.fixed())
 }
 
 const fn viewport(&self) -> u32 {
@@ -5938,15 +6013,18 @@ fn fit(&mut self) {
 }
 ```
 
-- **`bar`**: a barra enteira, desde (0, 0), co ancho da xanela e o alto da barra. A barra do programa mira con ela se un punto está na barra ([`contains_point`](#cratesmeiga-coresrcgeometryrs)), e márcaa enteira cando cambia a disposición.
-- **`room`**, privada, desde a 2.8: o sitio das tabs mentres caben, o ancho da barra menos tres separacións, á esquerda da primeira tab, entre a última e o + e á dereita do ▾, e menos os dous botóns: a 100 %, en 800 píxeles, 800 − 3 × 4 − 28 − 24 = 736. Ata a 2.7 calculábao `fit_tabs`, e ata a 2.4, sen o ▾, eran 760. É `const fn`, coma `saturating_sub`.
-- **`viewport`**, privada, desde a 2.8: o ancho da franxa mentres as tabs non caben, o sitio menos o ‹ e o ›: 736 − 2 × 24 = 688, seis tabs enteiras e 88 píxeles da sétima. As tres separacións seguen, pero noutros sitios: á esquerda do ‹, entre o › e o +, e á dereita do ▾. Nunha xanela máis estreita ca os botóns, 0.
+- **`bar`**: a barra enteira, desde (0, 0), co ancho da xanela e o alto da barra: desde a 2.9, desde o bordo de arriba da banda, co alto de [`height`](#layout-os-campos), a banda máis a fila. No exemplo, (0, 0, 983, 32), e coa banda de 8, (0, 0, 983, 40). A barra do programa mira con ela se un punto está na barra ([`contains_point`](#cratesmeiga-coresrcgeometryrs)), e márcaa enteira cando cambia a disposición.
+- **`fixed`**, privada, desde a 2.9: o ancho da barra que non é das tabs: as tres separacións, á esquerda da primeira tab, despois da última e á dereita do ▾, o + e o ▾, o sitio mínimo para arrastrar a xanela e os tres botóns da xanela. A 100 %, 3 × 4 + 28 + 24 + 45 + 3 × 46 = 247; a 150 %, 3 × 6 + 42 + 36 + 68 + 3 × 69 = 371. Úsano `room` e [`min_width`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize). As contas saturan, en vez de desbordar, e son `const fn`, coma `saturating_mul` e `saturating_add`.
+- **`room`**, privada, desde a 2.8: o sitio das tabs mentres caben, o ancho da barra menos `fixed`: a 100 %, en 983 píxeles, 983 − 247 = 736. Ata a 2.8 restaba só as tres separacións e os dous botóns, sen o sitio para arrastrar a xanela nin os seus botóns: en 800 píxeles, 800 − 3 × 4 − 28 − 24 = 736. Ata a 2.7 calculábao `fit_tabs`, e ata a 2.4, sen o ▾, eran 760. É `const fn`, coma `saturating_sub`. Desde a 2.9, as tabs teñen 183 píxeles menos ca na 2.8 nunha xanela do mesmo ancho, a 100 %, pero a xanela xa non ten a barra de título de Windows, cos mesmos botóns ([ADR 0027 › Consecuencias](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md#consecuencias)).
+- **`viewport`**, privada, desde a 2.8: o ancho da franxa mentres as tabs non caben, o sitio menos o ‹ e o ›: 736 − 2 × 24 = 688, seis tabs enteiras e 88 píxeles da sétima. As tres separacións seguen, pero noutros sitios: á esquerda do ‹, entre o › e o +, e á dereita do ▾. Nunha xanela máis estreita ca `fixed` e os dous botóns de desprazamento, 295 píxeles a 100 %, 0.
 - **`fit`**, privada, que desde a 2.8 substitúe a `fit_tabs`: dálles ás tabs o seu ancho, e di se caben ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3, e [ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 1):
   1. O sitio repártese entre as tabs, e cada unha ten como moito `max_tab`: con tres, 245, que quedan en 240; con sete, 105.
-  2. Se así medisen menos de `min_tab`, non caben (`overflow`), e todas miden `min_tab`, 100: con oito, que medirían 92, e con trinta, que medirían 24. Así, a escala 100 %, nunha xanela de 800 píxeles caben sete tabs, e oito xa non: a súa fila mide 800, e a franxa, 688. Unhas tabs que medirían xusto `min_tab` caben, porque a comparación é `<`.
+  2. Se así medisen menos de `min_tab`, non caben (`overflow`), e todas miden `min_tab`, 100: con oito, que medirían 92, e con trinta, que medirían 24. Así, a escala 100 %, nunha xanela de 983 píxeles caben sete tabs, e oito xa non: a súa fila mide 800, e a franxa, 688; ata a 2.8, o mesmo nunha de 800. Unhas tabs que medirían xusto `min_tab` caben, porque a comparación é `<`.
   3. O desprazamento queda, ata onde pode chegar a franxa coas tabs e o ancho novos ([`max_scroll`](#canto-se-despraza-max_scroll-e-can_scroll)): se agora caben, 0.
 
-  Mentres caben, o que sobra da división queda á dereita do ▾, coa barra baleira; mentres non, os botóns van ao final da barra, e non sobra nada. Ata a 2.7, sen mínimo: con moitas tabs, estreitábanse ata quedar sen × e sen título, e, nunha xanela máis estreita ca os dous botóns e as súas separacións, ata 0 ([ADR 0020 › Consecuencias](../adr/0020-a-barra-de-tabs.md#consecuencias)). `saturating_sub` deixa o sitio en 0 en vez de desbordar, e `max(1)` evita dividir entre 0 sen tabs. Nunha xanela así, a división dá 0: as tabs miden `min_tab` e van nunha franxa de 0 píxeles. Cun número de tabs que non cabe nun `u32`, `try_from` dá `u32::MAX`, e a división tamén 0: non caben. Ao contrario ca `fit_tabs`, que só daba o ancho, `fit` cambia tres campos: recibe `&mut self`, e non dá nada.
+  Mentres caben, o que sobra da división queda á dereita do ▾, e o sitio para arrastrar a xanela mide máis ca o mínimo; mentres non, o + e o ▾ van ao final da franxa, e o sitio para arrastrar a xanela mide xusto `drag`, 45 a 100 % ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 5). Ata a 2.8, o que sobraba quedaba coa barra baleira, e, mentres as tabs non cabían, o + e o ▾ ían ao final da barra. Ata a 2.7, sen mínimo: con moitas tabs, estreitábanse ata quedar sen × e sen título, e, nunha xanela máis estreita ca os dous botóns e as súas separacións, ata 0 ([ADR 0020 › Consecuencias](../adr/0020-a-barra-de-tabs.md#consecuencias)). `saturating_sub` deixa o sitio en 0 en vez de desbordar, e `max(1)` evita dividir entre 0 sen tabs. Nunha xanela máis estreita ca `fixed`, a división dá 0: as tabs miden `min_tab` e van nunha franxa de 0 píxeles. Cun número de tabs que non cabe nun `u32`, `try_from` dá `u32::MAX`, e a división tamén 0: non caben. Ao contrario ca `fit_tabs`, que só daba o ancho, `fit` cambia tres campos: recibe `&mut self`, e non dá nada.
+
+  Desde a 2.9, coa barra de título de meiga, Windows non deixa a área cliente máis estreita ca [`min_width`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize), 395 a 100 %. Só sen ela, se Windows non deixa poñela, pode selo: entón, por debaixo dos 295 de `fixed` e os botóns de desprazamento, a franxa queda en 0, o + e o ▾ quedan quietos, e o sitio para arrastrar encolle co ancho da xanela, ata que os botóns da xanela, que entón non se debuxan, quedan enriba do ▾, por debaixo de 246, e do +, por debaixo de 222: alí `part_at` dá un botón da xanela, e o + e o ▾ non reciben o rato.
 
 ### A franxa e as tabs: `strip`, `start`, `tab` e `tab_area`
 
@@ -5960,7 +6038,7 @@ pub fn strip(&self) -> Rect {
         coord(left),
         0,
         coord(left + u64::from(self.viewport())),
-        coord(self.height.into()),
+        coord(self.height().into()),
     )
 }
 
@@ -5973,7 +6051,7 @@ fn start(&self) -> i64 {
 }
 ```
 
-- **`strip`**, desde a 2.8: a parte da barra onde van as tabs. Mentres caben, toda a barra; mentres non, a franxa entre o ‹ e o ›, tan alta coma a barra, desde `gap` + `scroll_button`, 28 a 100 %, e co ancho de `viewport`: en 800 píxeles, (28, 0, 716, 32). A barra do programa recorta a ela o que debuxa das tabs e as zonas que marca, caiban ou non: mentres caben, recortar á barra non corta nada.
+- **`strip`**, desde a 2.8: a parte da barra onde van as tabs. Mentres caben, toda a barra; mentres non, a franxa entre o ‹ e o ›, tan alta coma a barra, desde `gap` + `scroll_button`, 28 a 100 %, e co ancho de `viewport`: en 983 píxeles, (28, 0, 716, 32), e coa banda de 8, (28, 0, 716, 40), que cobre tamén a banda. A barra do programa recorta a ela o que debuxa das tabs e as zonas que marca, caiban ou non: mentres caben, recortar á barra non corta nada.
 - **`start`**, privada, desde a 2.8: onde empeza a primeira tab, ou onde empezaría: a `gap` píxeles do bordo esquerdo da barra mentres caben e, mentres non, no bordo esquerdo da franxa, menos o desprazamento. É un `i64`, porque pode ser negativo: cun desprazamento de 50, 28 − 50 = −22. `tab` e `part_at` miden desde el.
 
 ```rust
@@ -5983,27 +6061,34 @@ pub fn tab(&self, index: usize) -> Rect {
     ));
     Rect::new(
         clamped(left),
-        coord(self.gap.into()),
+        coord(self.top().into()),
         clamped(left.saturating_add(self.tab_width.into())),
-        coord(self.height.into()),
+        coord(self.height().into()),
     )
 }
 
 pub fn tab_area(&self, index: usize) -> Rect {
     let tab = self.tab(index);
-    Rect::new(tab.left, 0, tab.right.saturating_add(1), tab.bottom).intersection(self.strip())
+    let band = coord(self.band.into());
+    Rect::new(tab.left, band, tab.right.saturating_add(1), tab.bottom)
+        .intersection(self.strip())
+}
+
+const fn top(&self) -> u32 {
+    self.band.saturating_add(self.gap)
 }
 
 const fn tab_height(&self) -> u32 {
-    self.height.saturating_sub(self.gap)
+    self.row.saturating_sub(self.gap)
 }
 ```
 
-- **`tab`**: a tab en `index` como se debuxa: desde onde empeza a primeira, máis `index` × `tab_width`, co ancho dunha tab, e desde `gap` píxeles por debaixo do bordo de arriba da barra ata o de abaixo. Para o rato, a tab ocupa tamén a separación de enriba ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)). Desde a 2.8, mentres as tabs se desprazan, pode quedar fóra da franxa, en parte ou enteira: con oito tabs, a oitava vai de 728 a 828, máis alá da franxa, que remata no 716, e da barra; e, co desprazamento de 50, a primeira vai de −22 a 78. A barra do programa só debuxa a súa parte na franxa.
+- **`tab`**: a tab en `index` como se debuxa: desde onde empeza a primeira, máis `index` × `tab_width`, co ancho dunha tab, e desde `gap` píxeles por debaixo do bordo de arriba da fila das tabs (`top`) ata o bordo de abaixo da barra. Ata a 2.8, desde `gap` píxeles por debaixo do bordo de arriba da barra, que era o da fila. Coa banda de 8, a primeira tab do exemplo vai en (4, 12, 244, 40). Para o rato, a tab ocupa tamén a separación de enriba, pero non a banda ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)). Desde a 2.8, mentres as tabs se desprazan, pode quedar fóra da franxa, en parte ou enteira: con oito tabs, a oitava vai de 728 a 828, máis alá da franxa, que remata no 716; e, co desprazamento de 50, a primeira vai de −22 a 78. A barra do programa só debuxa a súa parte na franxa.
   - As contas fanse en `u64`, saturando, e desde a 2.8 en `i64`, porque `start` pode ser negativo: [`signed`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size) converte o produto, e [`clamped`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size) converte o resultado nunha coordenada, tamén cara aos negativos. Ata a 2.7, as tabs empezaban sempre en `gap`, e convertíaas [`coord`](#os-axudantes-base_dpi-scale-e-coord). `tab` acepta calquera índice, tamén o da tab despois da última, onde empeza o + mentres as tabs caben ([`new_tab`](#o-botón-que-abre-unha-tab-new_tab-new_highlight-e-plus)).
   - Desde a 2.4, o menú que abre o teclado vai debaixo da tab que se mostra, coma a dá `tab` ([`Anchor::Below`](#onde-se-abre-anchor-e-place)). Desde a 2.8, a barra do programa despraza antes a franxa ata ela ([`reveal`](#desprazar-a-franxa-scroll_by-step-reveal-e-scroll_to)), e o menú vai debaixo da súa parte na franxa ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 5).
-- **`tab_area`**: o que cambia cando a tab en `index` cambia de aspecto, porque pasa a estar activa ou resaltada, ou deixa de estalo: toda a súa columna da barra, desde o bordo de arriba, e un píxel máis á dereita, a primeira columna da tab seguinte, onde vai o separador entre as dúas, que depende tamén do aspecto desta. Recórtase á barra e, desde a 2.8, á franxa: na primeira tab do exemplo, (4, 0, 245, 32); con oito tabs, na sétima, que a franxa corta no 716, (628, 0, 716, 32), e na oitava, fóra da franxa, un rectángulo baleiro, que a barra do programa non marca ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 10). A barra do programa marca así as tabs que gañan ou perden o resalte do punteiro (decisión 8 do [ADR 0020](../adr/0020-a-barra-de-tabs.md)).
-- **`tab_height`**, privada: o alto das tabs como se debuxan, o da barra menos a separación de enriba, 28 a 100 %. O × e os separadores céntranse nel.
+- **`tab_area`**: o que cambia cando a tab en `index` cambia de aspecto, porque pasa a estar activa ou resaltada, ou deixa de estalo: toda a súa columna da fila das tabs, desde o bordo de arriba da fila, e un píxel máis á dereita, a primeira columna da tab seguinte, onde vai o separador entre as dúas, que depende tamén do aspecto desta. Recórtase á barra e, desde a 2.8, á franxa: na primeira tab do exemplo, (4, 0, 245, 32); con oito tabs, na sétima, que a franxa corta no 716, (628, 0, 716, 32), e na oitava, fóra da franxa, un rectángulo baleiro, que a barra do programa non marca ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 10). A barra do programa marca así as tabs que gañan ou perden o resalte do punteiro (decisión 8 do [ADR 0020](../adr/0020-a-barra-de-tabs.md)). Desde a 2.9, empeza debaixo da banda, que non cambia co aspecto da tab: coa banda de 8, (4, 8, 245, 40) na primeira, e (628, 8, 716, 40) na sétima de oito; ata a 2.8, desde o bordo de arriba da barra.
+- **`top`**, privada, desde a 2.9: onde empezan as tabs como se debuxan, o +, o ▾ e os botóns de desprazamento: a separación debaixo da banda, `band` + `gap`, 4 sen banda e 12 coa de 8. Ata a 2.8, todos empezaban en `gap`. Como todos a miden desde `band`, [`set_band`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize) móveos sen cambiar ningún outro campo.
+- **`tab_height`**, privada: o alto das tabs como se debuxan, o da fila menos a separación de enriba, 28 a 100 %, coa banda ou sen ela; ata a 2.8, o da barra, que era a fila. O × e os separadores céntranse nel.
 
 ### O botón de pechar: `close`, `close_highlight` e `cross`
 
@@ -6034,7 +6119,7 @@ pub fn cross(&self, index: usize) -> Option<Rect> {
 
 1. Remata `gap` píxeles antes do bordo dereito da tab, e mide `close` de ancho.
 2. Se así empezase a menos de `gap` píxeles do bordo esquerdo, non cabe: a tab é máis estreita ca o × e as dúas separacións dos seus lados, 32 píxeles a 100 %, e queda sen el ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 3). Ata a 2.7, as tabs que se encollían tanto pechábanse co botón do medio. Desde a 2.8, a máis estreita mide 100 ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 1), e o × cabe sempre: `None` só sae a 1 e a 2 DPI, onde o redondeo de `scale` deixa a tab máis estreita en 1 e 2 píxeles, e o × coas súas separacións en 3.
-3. Vai centrado no alto da tab que se debuxa ([`tab_height`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)): na primeira tab do exemplo, (216, 6, 240, 30), con 2 píxeles por riba e 2 por debaixo.
+3. Vai centrado no alto da tab que se debuxa ([`tab_height`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)): na primeira tab do exemplo, (216, 6, 240, 30), con 2 píxeles por riba e 2 por debaixo; desde a 2.9, coa banda de 8, baixa con ela, a (216, 14, 240, 38).
 
 - **`close_highlight`** e **`cross`**: o cadrado que resalta o punteiro, de 20 a 100 %, e o da cruz, de 8, no medio do × ([`centered`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size)); `None` se a tab non ten ×. A barra do programa debuxa a cruz coma dúas diagonais de `stroke` píxeles de grosor, en chanzos dun píxel, coma, desde a 2.5, a frecha do ▾.
 - Para o rato, o × é todo o seu cadrado, aínda que o punteiro só resalte o do medio ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)); desde a 2.8, só a parte del que está na franxa. O × dunha tab cortada pode quedar fóra da franxa, en parte ou enteiro: `close` dá o seu cadrado enteiro, e a barra do programa recórtao á franxa ao debuxalo e ao marcalo.
@@ -6068,7 +6153,7 @@ pub fn separator(&self, index: usize) -> Option<Rect> {
 
 - **`title`**: o sitio do título da tab en `index`: desde `padding` píxeles do seu bordo esquerdo ata o ×, ou, se a tab non ten ×, ata `padding` píxeles do bordo dereito; e o alto da tab que se debuxa. Nunca vai ao revés: se non hai sitio, `right.max(left)` deixa un rectángulo baleiro. No exemplo, (12, 4, 216, 32); con sete tabs de 105, o da última, (642, 4, 711, 32); e nunha tab de 100, 64 píxeles, entre os 8 da esquerda e o ×. Ata a 2.7, con trinta tabs de 24, sen ×, era (12, 4, 20, 32), e con tabs de ancho 0, (12, 4, 12, 32), baleiro.
   - A barra do programa corta o título ás columnas que caben neste rectángulo ([`text::fit`](#cratesmeiga-coresrctextrs)) e debúxao centrado no alto da tab, recortado a el. Cando un título cambia, só redebuxa este rectángulo (decisión 8 do [ADR 0020](../adr/0020-a-barra-de-tabs.md)). Desde a 2.8, as primeiras columnas poden ser dun indicador, coa cela baleira que o separa do título ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 7); e o rectángulo que se redebuxa recórtase á franxa: o dunha tab fóra dela non debuxa nada (decisión 10).
-- **`separator`**: a liña á esquerda da tab en `index`, entre ela e a anterior: un píxel de ancho, na primeira columna da tab, e `separator` de alto, centrada no alto da tab que se debuxa. No exemplo, a da segunda tab é (244, 10, 245, 26). A primeira tab non ten ningunha, nin hai ningunha despois da última: `None`. A barra do programa só a debuxa entre dúas tabs que non están activas nin resaltadas.
+- **`separator`**: a liña á esquerda da tab en `index`, entre ela e a anterior: un píxel de ancho, na primeira columna da tab, e `separator` de alto, centrada no alto da tab que se debuxa. No exemplo, a da segunda tab é (244, 10, 245, 26), e coa banda de 8, (244, 18, 245, 34). A primeira tab non ten ningunha, nin hai ningunha despois da última: `None`. A barra do programa só a debuxa entre dúas tabs que non están activas nin resaltadas.
 
 ### O botón que abre unha tab: `new_tab`, `new_highlight` e `plus`
 
@@ -6080,7 +6165,7 @@ pub fn new_tab(&self) -> Rect {
     } else {
         self.tab(self.tabs).left + gap
     };
-    let top = gap;
+    let top = coord(self.top().into());
     Rect::new(
         left,
         top,
@@ -6098,7 +6183,7 @@ pub fn plus(&self) -> Rect {
 }
 ```
 
-- **`new_tab`**: o +, un cadrado de `new` píxeles. Mentres as tabs caben, `gap` píxeles despois da última: onde empezaría unha tab máis (`tab(self.tabs)`), máis a separación. Desde a 2.8, mentres non caben, `gap` píxeles despois do ›, á dereita da barra, sempre no mesmo sitio, sexan as tabs que sexan e estea a franxa onde estea ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2): en 800 píxeles, (744, 4, 772, 32). Vai á altura das tabs, desde `gap` por debaixo do bordo de arriba: a 100 %, de 4 a 32. No exemplo, (728, 4, 756, 32); con sete tabs de 105, (743, 4, 771, 32), co ▾ en (771, 4, 795, 32), e os 5 píxeles que quedan ata o 800 son a separación da dereita e o que sobra da división. Ata a 2.7, dez tabs de 73 cabían, e o + ía en (738, 4, 766, 32).
+- **`new_tab`**: o +, un cadrado de `new` píxeles. Mentres as tabs caben, `gap` píxeles despois da última: onde empezaría unha tab máis (`tab(self.tabs)`), máis a separación. Desde a 2.8, mentres non caben, `gap` píxeles despois do ›, á dereita da franxa, sempre no mesmo sitio, sexan as tabs que sexan e estea a franxa onde estea ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2): en 983 píxeles, (744, 4, 772, 32). Na 2.8, a franxa chegaba ata el, e o + e o ▾ ían ao final da barra; desde a 2.9, despois deles van o sitio para arrastrar a xanela e os seus botóns. Vai á altura das tabs, desde `gap` por debaixo do bordo de arriba da fila ([`top`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)): a 100 %, de 4 a 32, e coa banda de 8, de 12 a 40; ata a 2.8, sempre desde `gap`. No exemplo, (728, 4, 756, 32); con sete tabs de 105, (743, 4, 771, 32), co ▾ en (771, 4, 795, 32), e dos 50 píxeles que quedan ata o 845, onde empezan os botóns da xanela, 4 son a separación da dereita, 45 o sitio mínimo para arrastrar a xanela, e 1 o que sobra da división; ata a 2.8, ata o 800, só a separación e ese píxel. Ata a 2.7, dez tabs de 73 cabían, e o + ía en (738, 4, 766, 32).
 - **`new_highlight`** e **`plus`**: o cadrado que resalta o punteiro, de 24 a 100 %, e o do signo +, de 11, no medio do botón: no exemplo, (730, 6, 754, 30) e (736, 12, 747, 23).
 
 ### O botón dos perfís: `profiles`, `profiles_highlight` e `chevron`
@@ -6125,7 +6210,7 @@ pub fn chevron(&self) -> Rect {
 }
 ```
 
-- **`profiles`**: o ▾, unido ao +, sen separación: empeza no seu bordo dereito, co seu alto, e mide `profiles` de ancho, 24 a 100 %. No exemplo, (756, 4, 780, 32); desde a 2.8, mentres as tabs non caben, vai co + á dereita da barra: en 800 píxeles, (772, 4, 796, 32). Os dous vense coma un botón dividido, pero cada un ten o seu resalte e a súa acción: o + abre unha tab co perfil por defecto, e o ▾, o menú dos perfís, que se abre debaixo dos dous ([`Anchor::Below`](#onde-se-abre-anchor-e-place); [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
+- **`profiles`**: o ▾, unido ao +, sen separación: empeza no seu bordo dereito, co seu alto, e mide `profiles` de ancho, 24 a 100 %. No exemplo, (756, 4, 780, 32), e coa banda de 8, (756, 12, 780, 40); desde a 2.8, mentres as tabs non caben, vai co + despois do ›: en 983 píxeles, (772, 4, 796, 32), e na 2.8, en 800, ao final da barra. Os dous vense coma un botón dividido, pero cada un ten o seu resalte e a súa acción: o + abre unha tab co perfil por defecto, e o ▾, o menú dos perfís, que se abre debaixo dos dous ([`Anchor::Below`](#onde-se-abre-anchor-e-place); [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
 - **`profiles_highlight`**: o rectángulo que resalta o punteiro, no medio do ▾: `profiles_highlight` de ancho, 20 a 100 %, e tan alto coma o resalte do +, 24, para que os dous queden á mesma altura. Entre os dous resaltes quedan 4 píxeles sen resaltar, 2 de cada botón. No exemplo, (758, 6, 778, 30).
 - **`chevron`**: o rectángulo da frecha, que apunta abaixo: `chevron` de alto, 4 a 100 %, e o dobre de ancho, no medio do botón. No exemplo, (764, 16, 772, 20). A barra do programa debúxaa coma a cruz do ×: dúas liñas de `stroke` píxeles, en chanzos dun píxel, desde as dúas esquinas de arriba, a 45 graos, ata o bordo de abaixo. Nun cadrado, crúzanse; nun rectángulo dúas veces máis ancho ca alto, xúntanse no medio do bordo de abaixo, a calquera escala: 10 × 5 a 125 % (120 DPI), e 12 × 6 a 150 % (144 DPI).
 
@@ -6144,7 +6229,7 @@ pub fn scroll_button(&self, side: Side) -> Option<Rect> {
         Side::Left => strip.left - width,
         Side::Right => strip.right,
     };
-    let top = coord(self.gap.into());
+    let top = coord(self.top().into());
     Some(Rect::new(
         left,
         top,
@@ -6164,10 +6249,80 @@ pub fn scroll_chevron(&self, side: Side) -> Option<Rect> {
 }
 ```
 
-- **`scroll_button`**: o botón que despraza as tabs cara a `side`, ou `None` mentres caben. Vai pegado á franxa, sen separación, o ‹ á súa esquerda e o › á súa dereita, e mide `scroll_button` de ancho, 24 a 100 %; coma o +, empeza `gap` píxeles por debaixo do bordo de arriba, e mide `new` de alto. En 800 píxeles, (4, 4, 28, 32) e (716, 4, 740, 32). Para o rato, coma os outros botóns, ocupa todo o alto da barra ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)).
+- **`scroll_button`**: o botón que despraza as tabs cara a `side`, ou `None` mentres caben. Vai pegado á franxa, sen separación, o ‹ á súa esquerda e o › á súa dereita, e mide `scroll_button` de ancho, 24 a 100 %; coma o +, empeza `gap` píxeles por debaixo do bordo de arriba da fila das tabs ([`top`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)), e mide `new` de alto. En 983 píxeles, (4, 4, 28, 32) e (716, 4, 740, 32); coa banda de 8, o ‹ en (4, 12, 28, 40). Ata a 2.8, sempre desde `gap`. Para o rato, coma os outros botóns da barra, ocupa todo o alto da fila das tabs, e desde a 2.9 non a banda ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)).
 - **`scroll_highlight`**: o rectángulo que resalta o punteiro, no medio do botón, coma o do ▾: `scroll_highlight` de ancho, 20 a 100 %, e tan alto coma o resalte do +, 24. No ‹, (6, 6, 26, 30). A barra do programa non o debuxa mentres a franxa non se pode desprazar cara a ese lado ([`can_scroll`](#canto-se-despraza-max_scroll-e-can_scroll)): o botón é entón máis escuro, e o punteiro non o resalta.
 - **`scroll_chevron`**: o rectángulo da frecha, `chevron` de ancho, 4 a 100 %, e o dobre de alto, no medio do botón: (14, 14, 18, 22) no ‹ e (726, 14, 730, 22) no ›. É a frecha do ▾ xirada: a barra do programa debuxa dúas liñas de `stroke` píxeles, en chanzos dun píxel, desde as dúas esquinas do lado contrario ata o medio do lado do botón, onde se xuntan a calquera escala: 5 × 10 a 125 % e 6 × 12 a 150 %.
 - Os tres dan `None` mentres as tabs caben: a barra do programa non os debuxa nin os marca.
+
+### Os botóns da xanela: `CaptionButton`, `caption`, `captions`, `glyph` e `glyph_offset`
+
+Desde a subfase 2.9: os botóns da xanela, minimizar, maximizar ou restaurar e pechar, á dereita da barra, coma no Windows 11 e no Windows Terminal ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 3). Debúxaos a barra do programa, que os fai actuar cando o botón esquerdo sobe enriba do mesmo no que baixou, coma o + e o × (decisión 4; [Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)); para Windows, son os botóns da súa xanela ([`ui/titlebar.rs`](#cratesmeiga-coresrcuititlebarrs)). Ata a 2.8, os botóns da xanela eran os da barra de título de Windows, enriba da barra de tabs.
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CaptionButton {
+    Minimize,
+    Maximize,
+    Close,
+}
+
+impl CaptionButton {
+    pub const ALL: [Self; 3] = [Self::Minimize, Self::Maximize, Self::Close];
+
+    const fn on_the_right(self) -> u32 {
+        match self {
+            Self::Minimize => 2,
+            Self::Maximize => 1,
+            Self::Close => 0,
+        }
+    }
+}
+```
+
+**`CaptionButton`** é un botón da xanela:
+
+| Variante | Que é |
+|---|---|
+| `Minimize` | Minimiza a xanela. |
+| `Maximize` | Maximiza a xanela ou, se xa está maximizada, restáuraa: un só botón, co glifo dun cadrado ou, maximizada, dos dous do de restaurar. |
+| `Close` | Pecha a xanela. |
+
+- **`ALL`**: os tres, de esquerda a dereita. `part_at` percórreos para ver se un punto está nun, e a barra do programa, para debuxalos.
+- **`on_the_right`**, privada: cantos botóns da xanela van á dereita deste, 2, 1 ou 0. `caption` mide desde o bordo dereito da barra.
+- É `Copy`, coma `Part` e `Side`: un byte. `Part::Caption` leva un. O programa convérteos nas súas accións, `TabAction::Minimize`, `TabAction::ToggleMaximize` e `TabAction::CloseWindow`, que lle piden a Windows que minimice, maximice ou restaure a xanela (`WM_SYSCOMMAND`), ou que a peche (`WM_CLOSE`), coma os seus botóns ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)).
+
+```rust
+pub fn caption(&self, button: CaptionButton) -> Rect {
+    let width = i64::from(self.caption);
+    let right = i64::from(self.width) - i64::from(button.on_the_right()) * width;
+    Rect::new(
+        clamped(right - width),
+        0,
+        clamped(right),
+        coord(self.height().into()),
+    )
+}
+
+pub fn captions(&self) -> Rect {
+    self.caption(CaptionButton::Minimize)
+        .union(self.caption(CaptionButton::Close))
+}
+
+pub fn glyph(&self, button: CaptionButton) -> Rect {
+    centered(self.caption(button), self.glyph)
+}
+
+pub const fn glyph_offset(&self) -> u32 {
+    self.glyph_offset
+}
+```
+
+- **`caption`**: o botón `button` da xanela, de `caption` píxeles de ancho, 46 a 100 %, contados desde o bordo dereito da barra, con tantos botóns á súa dereita coma di `on_the_right`; e do alto da barra enteira, desde o seu bordo de arriba, tamén por riba da banda, ata o de abaixo (decisión 3). No exemplo, o de minimizar en (845, 0, 891, 32), o de maximizar en (891, 0, 937, 32) e o de pechar en (937, 0, 983, 32); coa banda de 8, o de pechar en (937, 0, 983, 40); e a 150 % (144 DPI), nunha xanela de 2195 píxeles, de 69 × 48: o de minimizar en (1988, 0, 2057, 48) e o de pechar en (2126, 0, 2195, 48).
+  - Non dependen das tabs nin da franxa: sempre no mesmo sitio, contra o bordo dereito da barra e o de arriba. Maximizada, o último píxel da dereita na fila de arriba da pantalla é o botón de pechar, coma no Windows 11: o punteiro levado contra a esquina cae nel.
+  - As contas fanse en `i64`, e [`clamped`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size) convérteas en coordenadas: nunha xanela máis estreita ca os tres botóns, que coa barra de título de meiga Windows non deixa, os da esquerda empezan en negativo.
+- **`captions`**: os tres xuntos, desde o de minimizar ata o de pechar (`union`): no exemplo, (845, 0, 983, 32). A barra do programa marca este rectángulo cando a xanela gaña ou perde o foco, que só cambia a cor dos tres glifos (decisión 8).
+- **`glyph`**: o cadrado do glifo do botón, de `glyph` píxeles, 10 a 100 %, no seu medio ([`centered`](#os-axudantes-scale-coord-signed-clamped-centered-e-centered_size)): no exemplo, o de minimizar en (863, 11, 873, 21) e o de pechar en (955, 11, 965, 21); coa banda de 8, o de pechar baixa á metade da barra máis alta, (955, 15, 965, 25); e a 150 %, de 15, en (2153, 16, 2168, 31). A barra do programa debuxa nel, con liñas de `stroke` píxeles e as esquinas cadradas, unha liña horizontal no medio para minimizar, o contorno do cadrado para maximizar, dous cadrados para restaurar, e as dúas diagonais da × para pechar, coma a cruz do × das tabs.
+- **`glyph_offset`**: canto vai o cadrado de atrás do glifo de restaurar desde o de diante, tantos píxeles cara arriba coma cara á dereita: 2 a 100 %, e 3 a 150 %. O de diante vai na esquina de abaixo á esquerda do cadrado do glifo.
 
 ### Canto se despraza: `max_scroll` e `can_scroll`
 
@@ -6188,7 +6343,7 @@ pub fn can_scroll(&self, side: Side) -> bool {
 }
 ```
 
-- **`max_scroll`**, desde a 2.8: ata onde se pode desprazar a franxa, o que mide a fila das tabs, `tabs` × `tab_width`, menos o ancho da franxa. Con oito tabs en 800 píxeles, 800 − 688 = 112; con trinta, 3000 − 688 = 2312, e entón a última tab vai de 616 a 716, e remata onde empeza o ›. Mentres caben, 0. As contas fanse en `u64`, saturando, e un resultado que non cabe nun `u32` queda en `u32::MAX`. Nunha xanela máis estreita ca os botóns, a franxa mide 0, e o máximo é a fila enteira: con dúas tabs, 200.
+- **`max_scroll`**, desde a 2.8: ata onde se pode desprazar a franxa, o que mide a fila das tabs, `tabs` × `tab_width`, menos o ancho da franxa. Con oito tabs en 983 píxeles (ata a 2.8, en 800), a fila mide 800, e 800 − 688 = 112; con trinta, 3000 − 688 = 2312, e entón a última tab vai de 616 a 716, e remata onde empeza o ›. Mentres caben, 0. As contas fanse en `u64`, saturando, e un resultado que non cabe nun `u32` queda en `u32::MAX`. Nunha xanela máis estreita ca os botóns, a franxa mide 0, e o máximo é a fila enteira: con dúas tabs, 200.
 - **`can_scroll`**, desde a 2.8: se a franxa se pode desprazar cara a `side`: cara á esquerda mentres oculta algo á súa esquerda, e cara á dereita mentres non chega ao máximo. Mentres as tabs caben, cara a ningún. Con oito tabs sen desprazar, só cara á dereita. A barra do programa debuxa así cada botón, máis escuro e sen resalte cando non pode ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md), decisión 2), e deixa de repetir o clic ao chegar ao final (decisión 4).
 - O desprazamento queda sempre entre 0 e `max_scroll`, porque só o cambian `scroll_to`, que o limita, e `fit`, que o recorta; salvo mentres as tabs manteñen o seu ancho despois dun peche co rato, cando pode quedar por riba ([`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths)), e `can_scroll(Side::Right)` é falso.
 
@@ -6284,7 +6439,7 @@ pub fn keep_widths(&mut self, tabs: usize) {
 ```
 
 - **`keep_widths`**: a barra ten agora `tabs` tabs, menos, porque se pecharon co punteiro nela. Só cambia o número de tabs: sen `fit`, `tab_width`, `overflow` e `scroll` quedan coma estaban, e o que as tabs deixan baleiro á dereita queda así ata que `resize` lles dá outra vez o seu ancho.
-- **Mentres caben**, o + segue a última tab: con cinco tabs de 147 en 800 píxeles, e unha pechada, as catro quedan de 147, e o + vai en (596, 4, 624, 32), onde ía a quinta; `resize` dálles despois 184.
+- **Mentres caben**, o + segue a última tab: con cinco tabs de 147 en 983 píxeles, e unha pechada, as catro quedan de 147, e o + vai en (596, 4, 624, 32), onde ía a quinta; `resize` dálles despois 184.
 - **Mentres non caben**, a franxa queda co seu desprazamento, aínda que coas tabs que quedan non puidese chegar tan lonxe: con dez tabs e a franxa ao final, 312, e unha pechada, a franxa queda no 312, aínda que o máximo para nove é 212, e xa non se pode desprazar cara á dereita. O sitio da última queda baleiro: no 715, `part_at` dá `Empty`, e no 615, `Tab(8)`, a nova última, que quedou onde estaba. `resize` leva despois a franxa ao 212.
 - A barra do programa chámao cando se pecha unha tab que non era a última, co punteiro na barra, se a pechou o × ou o botón do medio ou se as tabs xa mantiñan o seu ancho. Chama a `resize`, e as tabs recuperan o seu ancho, cando o punteiro sae da barra ou da xanela, cando un menú colle o rato, ao desprazar a franxa, ao cambiar o tamaño ou a escala da xanela, ao abrir tabs e ao pechar a última; e mentres tanto, a tab que se mostra non vai á vista ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)).
 - O seu comentario di que as tabs son menos, pero non o comproba: con máis, pasarían do sitio da barra. A barra do programa só o chama cando se pecha unha.
@@ -6297,6 +6452,14 @@ pub fn part_at(&self, at: Point) -> Option<Part> {
         return None;
     }
     let across = |rect: Rect| (rect.left..rect.right).contains(&at.x);
+    for button in CaptionButton::ALL {
+        if across(self.caption(button)) {
+            return Some(Part::Caption(button));
+        }
+    }
+    if at.y < coord(self.band.into()) {
+        return Some(Part::Empty);
+    }
     if across(self.new_tab()) {
         return Some(Part::New);
     }
@@ -6329,33 +6492,42 @@ pub fn part_at(&self, at: Point) -> Option<Part> {
 }
 ```
 
-**`part_at`** dá a parte da barra no píxel `at`, en coordenadas da área cliente, ou `None` fóra da barra. As tabs e os botóns ocupan todo o alto da barra:
+**`part_at`** dá a parte da barra no píxel `at`, en coordenadas da área cliente, ou `None` fóra da barra. Desde a 2.9, os botóns da xanela ocupan todo o alto da barra, tamén a banda, e as tabs e os outros botóns, todo o alto da fila das tabs, debaixo da banda; ata a 2.8, as tabs e os botóns ocupaban todo o alto da barra, que era a fila:
 
 1. Fóra da barra, `None`.
-2. Nas columnas do +, `New`; desde a 2.5, nas do ▾, `Profiles`; e, desde a 2.8, nas dos botóns de desprazamento, se os hai, `Scroll` co seu lado. A *closure* `across` mira só a columna, cun rango de enteiros que inclúe `left` e non `right`, coma os rectángulos: a columna 756, a primeira do ▾, xa non é do +. `is_some_and(across)` só a mira se o botón existe.
-3. Fóra da franxa, ou á esquerda da primeira tab, `Empty`. Mentres as tabs caben, a franxa é a barra enteira; mentres non, quedan fóra a separación á esquerda do ‹, a que vai entre o › e o +, e a da dereita do ▾. Con `tab_width` 0, tamén `Empty`, pero desde a 2.8 ningunha tab mide 0 ([`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)).
-4. A tab sae dunha división: a distancia desde onde empeza a primeira tab ([`start`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)), entre o ancho dunha. Mentres a franxa está desprazada, a primeira empeza á esquerda dela, e a este paso só chegan os puntos dentro da franxa: das tabs cortadas, só conta a súa parte nela. Despois da última, entre ela e o + ou á dereita do ▾, `Empty`; e, mentres as tabs manteñen o seu ancho despois dun peche co rato, tamén no sitio que quedou baleiro.
-5. Na tab, `Close` se o punto está no seu × (`contains_point`); se non, `Tab`, tamén por riba e por debaixo do × e na separación de enriba.
+2. Desde a 2.9, nas columnas dun botón da xanela, `Caption` co botón, a calquera altura da barra, tamén na banda.
+3. Desde a 2.9, na banda, fóra deles, `Empty`: tamén por riba das tabs e dos outros botóns, que non chegan a ela.
+4. Nas columnas do +, `New`; desde a 2.5, nas do ▾, `Profiles`; e, desde a 2.8, nas dos botóns de desprazamento, se os hai, `Scroll` co seu lado. A *closure* `across` mira só a columna, cun rango de enteiros que inclúe `left` e non `right`, coma os rectángulos: a columna 756, a primeira do ▾, xa non é do +. `is_some_and(across)` só a mira se o botón existe.
+5. Fóra da franxa, ou á esquerda da primeira tab, `Empty`. Mentres as tabs caben, a franxa é a barra enteira; mentres non, quedan fóra a separación á esquerda do ‹, a que vai entre o › e o +, e, á dereita do ▾, a separación e, desde a 2.9, o sitio para arrastrar a xanela. Con `tab_width` 0, tamén `Empty`, pero desde a 2.8 ningunha tab mide 0 ([`fit`](#a-barra-e-o-ancho-das-tabs-bar-room-viewport-e-fit)).
+6. A tab sae dunha división: a distancia desde onde empeza a primeira tab ([`start`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)), entre o ancho dunha. Mentres a franxa está desprazada, a primeira empeza á esquerda dela, e a este paso só chegan os puntos dentro da franxa: das tabs cortadas, só conta a súa parte nela. Despois da última, entre ela e o + ou á dereita do ▾, `Empty`; e, mentres as tabs manteñen o seu ancho despois dun peche co rato, tamén no sitio que quedou baleiro.
+7. Na tab, `Close` se o punto está no seu × (`contains_point`); se non, `Tab`, tamén por riba e por debaixo do × e na separación de enriba.
 
 - **Unha división, e non unha busca:** as tabs son todas iguais, así que a tab dun punto sae dunha conta, sexan dez ou cen.
-- O comentario lembra por que `from_start` non é negativo: o paso 3 xa descartou os puntos á esquerda da primeira tab, así que o `as u64` non perde nada. Ata a 2.7, a distancia era `at.x - gap`. O cociente cabe nun `usize` nos sistemas de 64 bits; se non coubese, `usize::MAX` daría `Empty`.
+- O comentario lembra por que `from_start` non é negativo: o paso 5 xa descartou os puntos á esquerda da primeira tab, así que o `as u64` non perde nada. Ata a 2.7, a distancia era `at.x - gap`. O cociente cabe nun `usize` nos sistemas de 64 bits; se non coubese, `usize::MAX` daría `Empty`.
+- **Os botóns da xanela, antes ca a banda:** chegan ata o bordo de arriba da barra, e alí gañan á banda ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 2). Se a banda se mirase antes, as filas de arriba dos botóns serían `Empty`, e para Windows o bordo de arriba, que redimensiona a xanela. Os outros botóns míranse despois da banda, só pola súa columna: debaixo dela, toda a fila das tabs é súa.
 - Os botóns de desprazamento míranse antes ca a franxa: as tabs cortadas seguen por debaixo deles, pero alí o punteiro está no botón.
-- A barra do programa converte a resposta no que resalta o punteiro, coa tab desa posición ([`Part`](#part-e-side)); fóra da barra, `None` non resalta nada. Se cada evento do rato vai á barra ou ao terminal, decídeo antes o programa ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7).
+- A barra do programa converte a resposta no que resalta o punteiro, coa tab desa posición ([`Part`](#part-e-side)); fóra da barra, `None` non resalta nada. Desde a 2.9, os botóns da xanela só se resaltan se a xanela ten a barra de título de meiga: sen ela, o seu sitio queda baleiro. Se cada evento do rato vai á barra ou ao terminal, decídeo antes o programa ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 7).
+- Desde a 2.9, [`TitleBar::hit`](#o-que-é-cada-punto-hit) dálle a Windows a mesma resposta noutros termos: un botón da xanela é ese botón; `Empty`, na banda, o bordo de arriba, e fóra dela, a barra de título, que arrastra a xanela; e o resto, a área cliente.
 
 No exemplo, `the_part_under_the_pointer` comproba:
 
 | Punto | Parte | Por que |
 |---|---|---|
 | (4, 20) | `Tab(0)` | O primeiro píxel da primeira tab. |
-| (100, 1) | `Tab(0)` | Na separación de enriba, por riba da tab que se debuxa: para o rato, a tab ocupa todo o alto. |
+| (100, 1) | `Tab(0)` | Na separación de enriba, por riba da tab que se debuxa: para o rato, a tab ocupa todo o alto da fila. |
 | (220, 10) | `Close(0)` | No ×. |
 | (220, 5) e (220, 30) | `Tab(0)` | Por riba e por debaixo do ×, que ocupa as filas de 6 a 29. |
 | (243, 20) e (244, 20) | `Tab(0)` e `Tab(1)` | O último píxel da primeira tab e o primeiro da segunda. |
 | (723, 20) e (725, 20) | `Tab(2)` e `Empty` | O último píxel da terceira, e a separación entre ela e o +. |
 | (728, 0) e (755, 31) | `New` | As esquinas do +, tamén por riba do cadrado que se debuxa. |
 | (756, 20) e (779, 0) | `Profiles` | O primeiro píxel do ▾, xusto despois do último do +, e a súa esquina de arriba á dereita, tamén por riba do que se debuxa. |
-| (780, 20) e (2, 20) | `Empty` | Á dereita do ▾ e á esquerda da primeira tab. |
-| (100, 32), (−1, 10) e (800, 10) | `None` | Debaixo da barra, á esquerda e á dereita dela. |
+| (780, 20) | `Empty` | Á dereita do ▾. |
+| (844, 0) | `Empty` | Desde a 2.9: o último píxel do sitio para arrastrar a xanela, na fila de arriba. |
+| (845, 0) e (890, 31) | `Caption(CaptionButton::Minimize)` | Desde a 2.9: as esquinas do botón de minimizar, de arriba á esquerda e de abaixo á dereita. |
+| (891, 20) e (936, 20) | `Caption(CaptionButton::Maximize)` | O primeiro e o último píxel do de maximizar. |
+| (937, 20) e (982, 31) | `Caption(CaptionButton::Close)` | O primeiro píxel do de pechar, e o último da barra, abaixo á dereita. |
+| (2, 20) | `Empty` | Á esquerda da primeira tab. |
+| (100, 32), (−1, 10) e (983, 10) | `None` | Debaixo da barra, á esquerda e á dereita dela. Ata a 2.8, á dereita era (800, 10). |
 
 E, desde a 2.8, con oito tabs e a franxa desprazada 50 píxeles, `the_part_under_the_pointer_while_the_tabs_scroll` comproba:
 
@@ -6369,8 +6541,21 @@ E, desde a 2.8, con oito tabs e a franxa desprazada 50 píxeles, `the_part_under
 | (715, 31) | `Tab(7)` | O último píxel da franxa, na oitava tab, que vai de 678 a 778, e que a franxa corta. |
 | (716, 20) e (739, 31) | `Scroll(Side::Right)` | O primeiro e o último píxel do ›. |
 | (740, 20) | `Empty` | A separación entre o › e o +. |
-| (744, 20) | `New` | O primeiro píxel do +, á dereita da barra. |
+| (744, 20) | `New` | O primeiro píxel do +, despois do ›. |
 | (795, 20) e (796, 20) | `Profiles` e `Empty` | O último píxel do ▾, e a separación á súa dereita. |
+| (844, 31) | `Empty` | Desde a 2.9: o último píxel do sitio para arrastrar a xanela, que vai de 800 a 845, xusto os 45 do mínimo. |
+| (845, 20) | `Caption(CaptionButton::Minimize)` | Desde a 2.9: o primeiro píxel dos botóns da xanela, que non se moven coa franxa. |
+
+E, desde a 2.9, coa banda de 8 e tres tabs, `a_band_above_the_tabs_moves_them_down_and_the_buttons_of_the_window_cover_it` comproba:
+
+| Punto | Parte | Por que |
+|---|---|---|
+| (100, 7) | `Empty` | A última fila da banda, por riba da primeira tab: a banda non é da tab. |
+| (100, 8) | `Tab(0)` | A primeira fila debaixo da banda, na separación de enriba da tab, que xa é dela. |
+| (730, 7) e (730, 8) | `Empty` e `New` | O mesmo no +: a última fila da banda, e a primeira debaixo dela. |
+| (960, 0) | `Caption(CaptionButton::Close)` | O botón de pechar a xanela, na fila de arriba da banda: gaña a ela. |
+| (845, 7) | `Caption(CaptionButton::Minimize)` | O primeiro píxel do de minimizar, na última fila da banda. |
+| (100, 40) | `None` | Debaixo da barra, que coa banda mide 40. |
 
 ### Os axudantes: `scale`, `coord`, `signed`, `clamped`, `centered` e `centered_size`
 
@@ -6399,25 +6584,253 @@ fn centered_size(rect: Rect, width: u32, height: u32) -> Rect {
 }
 ```
 
-- **`scale`** e **`coord`** chegan do módulo pai, `ui`, con `use super::{coord, scale};`: ata a 2.3 estaban neste arquivo, e desde a 2.4 están en `ui/mod.rs`, porque os usan tamén os menús ([Os axudantes](#os-axudantes-base_dpi-scale-e-coord)). `scale` dá as medidas da barra ao DPI da xanela, en [`new`](#crear-e-cambiar-new-height_at-e-resize) e en `height_at`; e `coord` converte en coordenadas os números de píxeles das súas contas, que así non desbordan con ningún índice de tab, agás as sumas e as restas de [`close`](#o-botón-de-pechar-close-close_highlight-e-cross), que non saturan (ver `clamped`).
+- **`scale`** e **`coord`** chegan do módulo pai, `ui`, con `use super::{coord, scale};`: ata a 2.3 estaban neste arquivo, e desde a 2.4 están en `ui/mod.rs`, porque os usan tamén os menús ([Os axudantes](#os-axudantes-base_dpi-scale-e-coord)). `scale` dá as medidas da barra ao DPI da xanela, en [`new`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize) e en `row_at`, ata a 2.8 `height_at`; e `coord` converte en coordenadas os números de píxeles das súas contas, que así non desbordan con ningún índice de tab, agás as sumas e as restas de [`close`](#o-botón-de-pechar-close-close_highlight-e-cross), que non saturan (ver `clamped`).
 - **`signed`**, desde a 2.8: unha distancia na fila das tabs, en `u64`, coma un `i64`, ou `i64::MAX` se non cabe, para sumala a onde empeza a primeira tab, que pode ser negativo ([`tab`](#a-franxa-e-as-tabs-strip-start-tab-e-tab_area)).
-- **`clamped`**, desde a 2.8: unha posición na fila das tabs, en `i64`, coma unha coordenada da xanela, un `i32`, ou, se non cabe, `i32::MIN` ou `i32::MAX`, segundo o seu signo: unha tab oculta moi lonxe da franxa queda moi lonxe, polo seu lado. `coord`, que só coñece os positivos, levaría á dereita unha tab oculta á esquerda. Ningunha tab chega tan lonxe: faría falta unha fila de máis de 2 147 483 647 píxeles, uns 21 millóns de tabs de 100. Cunha tab así, ou cun índice así, as sumas e as restas de [`close`](#o-botón-de-pechar-close-close_highlight-e-cross) (`tab.left + gap` e `tab.right - gap`), que non saturan, desbordarían, coma xa pasaba ata a 2.7 cun índice tan grande que `coord` deixase a tab en `i32::MAX`.
+- **`clamped`**, desde a 2.8: unha posición na fila das tabs, en `i64`, coma unha coordenada da xanela, un `i32`, ou, se non cabe, `i32::MIN` ou `i32::MAX`, segundo o seu signo: unha tab oculta moi lonxe da franxa queda moi lonxe, polo seu lado. `coord`, que só coñece os positivos, levaría á dereita unha tab oculta á esquerda. Ningunha tab chega tan lonxe: faría falta unha fila de máis de 2 147 483 647 píxeles, uns 21 millóns de tabs de 100. Cunha tab así, ou cun índice así, as sumas e as restas de [`close`](#o-botón-de-pechar-close-close_highlight-e-cross) (`tab.left + gap` e `tab.right - gap`), que non saturan, desbordarían, coma xa pasaba ata a 2.7 cun índice tan grande que `coord` deixase a tab en `i32::MAX`. Desde a 2.9, converte tamén os bordos dos botóns da xanela, que [`caption`](#os-botóns-da-xanela-captionbutton-caption-captions-glyph-e-glyph_offset) calcula en `i64` desde o ancho da barra, e que nunha xanela máis estreita ca eles son negativos.
 - **`centered_size`**, desde a 2.5: o rectángulo de `width` por `height` píxeles no medio de `rect`. Se o que sobra é impar, o píxel de máis queda á dereita e debaixo: o signo + de 11 no + de 28 deixa 8 píxeles á esquerda e por riba, e 9 á dereita e por debaixo. Úsano `profiles_highlight` e `chevron` e, desde a 2.8, `scroll_highlight` e `scroll_chevron`, que non son cadrados.
-- **`centered`**: o cadrado de `side` píxeles no medio de `rect`, coma un `centered_size` cos dous lados iguais; ata a 2.4 facía as contas el. Úsano `close_highlight`, `cross`, `new_highlight` e `plus`.
+- **`centered`**: o cadrado de `side` píxeles no medio de `rect`, coma un `centered_size` cos dous lados iguais; ata a 2.4 facía as contas el. Úsano `close_highlight`, `cross`, `new_highlight` e `plus` e, desde a 2.9, `glyph`: o glifo de 10 no botón de 46 × 32 deixa 18 píxeles a cada lado, 11 por riba e 11 por debaixo.
 
-**Probas.** Nove, con coordenadas exactas, catro delas desde a 2.8. `three` fai a barra do exemplo: tres tabs en 800 píxeles a 96 DPI. Desde a 2.8, varias usan a mesma xanela con máis tabs: cinco ou sete, que caben, e oito ou dez, que non.
+**Probas.** Trece, con coordenadas exactas, catro delas desde a 2.8 e catro desde a 2.9. `three` fai a barra do exemplo: tres tabs en 983 píxeles a 96 DPI, sen banda, coma nunha xanela maximizada; ata a 2.8, en 800 píxeles. Os 183 píxeles de máis son os do sitio para arrastrar a xanela e os dos seus botóns, así que nas probas que viñan de antes as tabs e os botóns da barra quedan onde estaban, e só cambian os anchos das xanelas. Desde a 2.8, varias usan a mesma xanela con máis tabs: cinco ou sete, que caben, e oito ou dez, que non; e, desde a 2.9, unha usa a mesma barra coa banda de 8.
 
 | Proba | Que comproba |
 |---|---|
-| `tabs_are_as_wide_as_in_windows_terminal_and_the_buttons_follow_them` | A barra do exemplo, de 32 de alto, tamén con `height_at(96)`, en (0, 0, 800, 32); as tabs de 240, a primeira en (4, 4, 244, 32) e a terceira en (484, 4, 724, 32); o + en (728, 4, 756, 32), co resalte en (730, 6, 754, 30) e o signo de 11 píxeles en (736, 12, 747, 23), para que os dous brazos dunha liña de 1 teñan 5; e, desde a 2.5, unido a el, o ▾ en (756, 4, 780, 32), co resalte en (758, 6, 778, 30) e a frecha en (764, 16, 772, 20). Ata a 2.4 chamábase `tabs_are_as_wide_as_in_windows_terminal_and_the_button_follows_them`. |
+| `tabs_are_as_wide_as_in_windows_terminal_and_the_buttons_follow_them` | A barra do exemplo, de 32 de alto, sen banda, coa fila de 32 tamén con `row_at(96)` (ata a 2.8, `height_at(96)`), en (0, 0, 983, 32) (ata a 2.8, (0, 0, 800, 32)); as tabs de 240, a primeira en (4, 4, 244, 32) e a terceira en (484, 4, 724, 32); o + en (728, 4, 756, 32), co resalte en (730, 6, 754, 30) e o signo de 11 píxeles en (736, 12, 747, 23), para que os dous brazos dunha liña de 1 teñan 5; e, desde a 2.5, unido a el, o ▾ en (756, 4, 780, 32), co resalte en (758, 6, 778, 30) e a frecha en (764, 16, 772, 20). Ata a 2.4 chamábase `tabs_are_as_wide_as_in_windows_terminal_and_the_button_follows_them`. |
+| `the_buttons_of_the_window_are_on_its_right_as_high_as_the_bar` | Desde a 2.9. Na barra do exemplo, os botóns da xanela, de 46 e do alto da barra: minimizar en (845, 0, 891, 32), maximizar en (891, 0, 937, 32) e pechar en (937, 0, 983, 32), os tres en (845, 0, 983, 32); os glifos, de 10, no seu medio, o de pechar en (955, 11, 965, 21) e o de minimizar en (863, 11, 873, 21), cun desprazamento de 2 para o de restaurar e liñas de 1; e, entre o ▾ e o botón de minimizar, 65 píxeles: a separación de 4 e 61 para arrastrar a xanela. A 150 % (144 DPI), nunha xanela de 2195 píxeles con dúas tabs, os botóns miden 69 × 48: pechar en (2126, 0, 2195, 48) e minimizar en (1988, 0, 2057, 48); o glifo de pechar, de 15, en (2153, 16, 2168, 31); e o desprazamento do de restaurar, 3. |
 | `a_tab_has_its_title_and_then_its_close_button` | O × da primeira tab en (216, 6, 240, 30), o seu resalte en (218, 8, 238, 28) e a cruz en (224, 14, 232, 22); o título, (12, 4, 216, 32), ata o ×; o separador da segunda tab, na súa primeira columna, (244, 10, 245, 26), e ningún na primeira nin despois da última; e o que cambia co aspecto da primeira, (4, 0, 245, 32). |
-| `tabs_that_do_not_fit_shrink_alike_down_to_100_and_keep_their_close_button` | Na mesma barra, sete tabs miden 105 (800 − 3 × 4 − 28 − 24 = 736, entre 7) e caben: a franxa é a barra enteira, sen botóns de desprazamento, e non se despraza; o + vai en (743, 4, 771, 32), e o ▾, en (771, 4, 795, 32); e a última tab ten o seu ×, en (711, 6, 735, 30), co título en (642, 4, 711, 32). E o límite: nunha xanela de 764 píxeles, as sete miden 100, 700 entre 7, e caben; nunha de 763, xa non. Ata a 2.7 chamábase `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button`, e comprobaba dez tabs de 73, co + en (738, 4, 766, 32), trinta de 24, sen ×, e tabs de 0 nunha xanela de 20 píxeles. |
-| `the_narrowest_tabs_that_do_not_fit_go_in_a_strip_between_two_buttons` | Desde a 2.8. Na mesma barra, oito tabs non caben: miden 100, e van na franxa, de 736 − 2 × 24 = 688, en (28, 0, 716, 32), entre o ‹, en (4, 4, 28, 32), e o ›, en (716, 4, 740, 32); o resalte do ‹ en (6, 6, 26, 30), e as frechas, de 4 × 8, no medio dos botóns, en (14, 14, 18, 22) e (726, 14, 730, 22). O + e o ▾ van á dereita da barra, en (744, 4, 772, 32) e (772, 4, 796, 32). A primeira tab vai en (28, 4, 128, 32), e a oitava en (728, 4, 828, 32); o que cambia co aspecto da sétima é (628, 0, 716, 32), cortado pola franxa, e co da oitava, nada. A franxa pode desprazarse ata 112, 800 − 688: sen desprazar, só cara á dereita. E nunha xanela de 20 píxeles, máis estreita ca os botóns, a franxa está baleira, e o máximo é a fila enteira, 200. |
-| `the_strip_scrolls_by_tabs_by_pixels_and_to_show_a_tab` | Desde a 2.8, con oito tabs en 800 píxeles. Cara á dereita, unha tab leva a franxa ao 12, coa sétima, que cortaba, enteira en (616, 4, 716, 32), e outra ao 112, o final, onde xa non pode; cara á esquerda, ao 100, coa segunda, que cortaba, e ao 0, onde xa non pode. En píxeles, +50 deixa a primeira tab en (−22, 4, 78, 32); −80, a franxa en 0; −1 xa non a move; e +1000 lévaa ao 112. Para mostrar unha tab, o mínimo: a primeira, ao 0; a sétima, ao 12; a sexta, que xa está enteira, nada; e a oitava, ao 112. Unha xanela de 700 píxeles deixa o desprazamento no 112, e unha de 850, no 62, o seu máximo: 850 − 64 − 48 = 738, dos 800 da fila. E nunha de 1000, as oito caben, de 117, e a franxa non se despraza, nin para mostrar a oitava. Nunha de 150, a franxa mide 150 − 64 − 48 = 38, menos ca unha tab: para mostrar a segunda, vai ao 100, co lado esquerdo da tab, e non ao 162, co dereito. |
-| `tabs_keep_their_width_and_the_strip_its_scroll_when_some_close_in_place` | Desde a 2.8. Cinco tabs, de 147 en 800 píxeles: con `keep_widths(4)`, as catro seguen de 147, e o + vai despois da última, en (596, 4, 624, 32); con `resize`, miden 184. Dez tabs, coa franxa ao final, no 312: con `keep_widths(9)`, seguen sen caber, a franxa queda no 312, e non se pode desprazar cara á dereita; no 715, onde estaba a última tab, `Empty`, e no 615, na novena, `Tab(8)`. Con `resize`, a franxa vai ao 212. |
-| `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 1920 píxeles con dúas tabs: a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o ▾ en (774, 6, 810, 48), co resalte en (777, 9, 807, 45) e a frecha en (786, 24, 798, 30), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, a frecha de 10 × 5, o dobre de ancha ca alta coma a calquera escala, e a barra de 40. Desde a 2.8, a 150 %, a tab máis estreita mide 150 e os botóns de desprazamento, 36: o sitio das tabs é 1920 − 3 × 6 − 42 − 36 = 1824 píxeles, onde caben doce, de 152, e trece non: miden 150, e van na franxa, de 1824 − 2 × 36, en (42, 0, 1794, 48), co ‹ en (6, 6, 42, 48). |
-| `the_part_under_the_pointer_while_the_tabs_scroll` | Desde a 2.8: os puntos da segunda táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at), con oito tabs e a franxa desprazada 50 píxeles. |
-| `the_part_under_the_pointer` | Os puntos da primeira táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at). |
+| `a_band_above_the_tabs_moves_them_down_and_the_buttons_of_the_window_cover_it` | Desde a 2.9. A mesma barra coa banda de 8, coma unha xanela restaurada a 96 DPI: `band()` dá 8, e `height()`, 40; a barra en (0, 0, 983, 40), coas tabs de 240. O que vai debaixo da banda baixa 8, coma no [exemplo restaurado](#cratesmeiga-coresrcuitabbarrs): a primeira tab en (4, 12, 244, 40), o + en (728, 12, 756, 40), o ▾ en (756, 12, 780, 40), o × da primeira en (216, 14, 240, 38) e o separador da segunda en (244, 18, 245, 34); o que cambia co aspecto da primeira, (4, 8, 245, 40), non colle a banda; e o botón de pechar a xanela chega ata arriba, (937, 0, 983, 40), co glifo en (955, 15, 965, 25). Os puntos da terceira táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at). Con oito tabs, o ‹ baixa a (4, 12, 28, 40), a franxa, (28, 0, 716, 40), cobre a banda, e o que cambia co aspecto da sétima é (628, 8, 716, 40). E `set_band(0)` deixa a disposición igual ca a de `three`, sen banda. |
+| `there_is_always_room_to_drag_the_window_between_the_buttons` | Desde a 2.9. A 96, 120, 144, 168 e 192 DPI, en anchos desde o da barra máis estreita (`min_width`) ata 600 píxeles máis, de 7 en 7, e en 1920, 2560, 3840 e 7680, con 1 a 40 tabs, sen banda: dezaoito mil disposicións. En todas, entre a separación da dereita do ▾ e o botón de minimizar quedan polo menos os 45 píxeles de `DRAG`, escalados ao DPI ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 5). E na xanela do exemplo, sete tabs, que caben, deixan 46, un píxel máis, o que sobra do seu ancho; e oito, que non caben, xusto 45. |
+| `the_narrowest_bar_shows_a_whole_tab_between_the_buttons_that_scroll` | Desde a 2.9. A barra máis estreita, `min_width`, mide 395 a 96 DPI, 3 × 4 + 28 + 24 + 45 + 3 × 46 + 2 × 24 + 100; 495 a 120; e 593 a 144. Nela, dúas tabs non caben, e a franxa mide xusto 100, unha tab enteira das máis estreitas; nunha píxel máis estreita, menos. E unha soa tab cabe, sen franxa, de 148. |
+| `tabs_that_do_not_fit_shrink_alike_down_to_100_and_keep_their_close_button` | Na mesma barra, sete tabs miden 105 (983 − 3 × 4 − 28 − 24 − 45 − 3 × 46 = 736, entre 7; ata a 2.8, 800 − 3 × 4 − 28 − 24) e caben: a franxa é a barra enteira, sen botóns de desprazamento, e non se despraza; o + vai en (743, 4, 771, 32), e o ▾, en (771, 4, 795, 32); e a última tab ten o seu ×, en (711, 6, 735, 30), co título en (642, 4, 711, 32). E o límite: nunha xanela de 947 píxeles, as sete miden 100, 700 entre 7, e caben; nunha de 946, xa non. Ata a 2.8, 764 e 763. Ata a 2.7 chamábase `tabs_that_do_not_fit_shrink_alike_and_narrow_ones_have_no_close_button`, e comprobaba dez tabs de 73, co + en (738, 4, 766, 32), trinta de 24, sen ×, e tabs de 0 nunha xanela de 20 píxeles. |
+| `the_narrowest_tabs_that_do_not_fit_go_in_a_strip_between_two_buttons` | Desde a 2.8. Na mesma barra, oito tabs non caben: miden 100, e van na franxa, de 736 − 2 × 24 = 688, en (28, 0, 716, 32), entre o ‹, en (4, 4, 28, 32), e o ›, en (716, 4, 740, 32); o resalte do ‹ en (6, 6, 26, 30), e as frechas, de 4 × 8, no medio dos botóns, en (14, 14, 18, 22) e (726, 14, 730, 22). O + e o ▾ van despois do ›, en (744, 4, 772, 32) e (772, 4, 796, 32): na 2.8, ao final da barra. A primeira tab vai en (28, 4, 128, 32), e a oitava en (728, 4, 828, 32); o que cambia co aspecto da sétima é (628, 0, 716, 32), cortado pola franxa, e co da oitava, nada. A franxa pode desprazarse ata 112, 800 − 688: sen desprazar, só cara á dereita. E nunha xanela de 20 píxeles, máis estreita ca os botóns, a franxa está baleira, e o máximo é a fila enteira, 200. |
+| `the_strip_scrolls_by_tabs_by_pixels_and_to_show_a_tab` | Desde a 2.8, con oito tabs en 983 píxeles (ata a 2.8, en 800). Cara á dereita, unha tab leva a franxa ao 12, coa sétima, que cortaba, enteira en (616, 4, 716, 32), e outra ao 112, o final, onde xa non pode; cara á esquerda, ao 100, coa segunda, que cortaba, e ao 0, onde xa non pode. En píxeles, +50 deixa a primeira tab en (−22, 4, 78, 32); −80, a franxa en 0; −1 xa non a move; e +1000 lévaa ao 112. Para mostrar unha tab, o mínimo: a primeira, ao 0; a sétima, ao 12; a sexta, que xa está enteira, nada; e a oitava, ao 112. Unha xanela de 883 píxeles deixa o desprazamento no 112, e unha de 1033, no 62, o seu máximo: 1033 − 247 − 48 = 738, dos 800 da fila. E nunha de 1183, as oito caben, de 117, (1183 − 247) / 8, e a franxa non se despraza, nin para mostrar a oitava. Nunha de 333, a franxa mide 333 − 247 − 48 = 38, menos ca unha tab: para mostrar a segunda, vai ao 100, co lado esquerdo da tab, e non ao 162, co dereito. Ata a 2.8, as xanelas medían 183 píxeles menos, 700, 850, 1000 e 150, e o que non é das tabs, 64. |
+| `tabs_keep_their_width_and_the_strip_its_scroll_when_some_close_in_place` | Desde a 2.8. Cinco tabs, de 147 en 983 píxeles (ata a 2.8, en 800): con `keep_widths(4)`, as catro seguen de 147, e o + vai despois da última, en (596, 4, 624, 32); con `resize`, miden 184. Dez tabs, coa franxa ao final, no 312: con `keep_widths(9)`, seguen sen caber, a franxa queda no 312, e non se pode desprazar cara á dereita; no 715, onde estaba a última tab, `Empty`, e no 615, na novena, `Tab(8)`. Con `resize`, a franxa vai ao 212. |
+| `the_sizes_follow_the_scale` | A 144 DPI (150 %), nunha xanela de 2195 píxeles con dúas tabs (ata a 2.8, de 1920): a barra de 48 de alto, as tabs de 360, a segunda en (366, 6, 726, 48), o seu × en (684, 9, 720, 45), o + en (732, 6, 774, 48), o ▾ en (774, 6, 810, 48), co resalte en (777, 9, 807, 45) e a frecha en (786, 24, 798, 30), o trazo de 2 e o signo + de 16: 15, e un máis para brazos de 7 aos dous lados dunha liña de 2. A 120 DPI (125 %), o signo de 13, a frecha de 10 × 5, o dobre de ancha ca alta coma a calquera escala, e a fila das tabs de 40, con `row_at(120)`. Desde a 2.8, a 150 %, a tab máis estreita mide 150 e os botóns de desprazamento, 36: o sitio das tabs é 2195 − 3 × 6 − 42 − 36 − 68 − 3 × 69 = 1824 píxeles, desde a 2.9 co sitio para arrastrar a xanela, de 68, e os seus botóns, de 69 (ata a 2.8, 1920 − 3 × 6 − 42 − 36); caben doce, de 152, e trece non: miden 150, e van na franxa, de 1824 − 2 × 36, en (42, 0, 1794, 48), co ‹ en (6, 6, 42, 48). |
+| `the_part_under_the_pointer_while_the_tabs_scroll` | Desde a 2.8: os puntos da segunda táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at), con oito tabs e a franxa desprazada 50 píxeles; desde a 2.9, tamén o sitio para arrastrar a xanela e o botón de minimizar. |
+| `the_part_under_the_pointer` | Os puntos da primeira táboa de [`part_at`](#o-que-hai-debaixo-dun-punto-part_at); desde a 2.9, tamén os dos botóns da xanela. |
+
+Desde a 2.9, catro copias do código cun erro feito a propósito cada unha fallan estas probas, cada unha coma se esperaba:
+
+| Copia | O que estraga | Onde falla |
+|---|---|---|
+| `u-captions-below-band` | `part_at` mira a banda antes ca os botóns da xanela. | En `a_band_above_…`: no botón de pechar, en (960, 0), dentro da banda, dá `Empty`. |
+| `u-caption-row-only` | Os botóns da xanela só ocupan a fila das tabs, debaixo da banda. | En `a_band_above_…`: o botón de pechar empeza no 8, e non no 0. |
+| `u-min-width-no-scroll` | `min_width` non conta os botóns de desprazamento. | En `the_narrowest_bar_…`: 347, e non 395. |
+| `u-drag-narrower` | O sitio para arrastrar a xanela mide 44 a 100 %. | En varias, porque o sitio entra en todas as contas do ancho das tabs: entre elas `a_band_above_…`, coa franxa un píxel máis ancha, (28, 0, 717, 40); `tabs_keep_their_width_…`, co desprazamento máximo no 311; `there_is_always_room_…`, con 44 píxeles para arrastrar con oito tabs; e `the_narrowest_bar_…`, con 394. |
+
+## `crates/meiga-core/src/ui/titlebar.rs`
+
+Desde a subfase 2.9: a barra de tabs coma barra de título da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), [Arquitectura › As tabs na barra de título](../arquitectura.md#as-tabs-na-barra-de-título), [Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título)). Windows pregúntalle á xanela que hai en cada punto dela (`WM_NCHITTEST`), e fai el o que fai esa parte. Este módulo dá a resposta para a barra de meiga, coa disposición da barra ([`ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs)) e sabendo se hai un menú de meiga aberto; di onde se abre o menú da xanela con Alt+Espazo; e canto pode encoller a xanela. Coma o resto de `ui`, non usa Windows: só fai contas, e próbase con coordenadas exactas.
+
+**Quen o usa:**
+
+- **O programa**, ao crear as tabs e despois de cada evento da xanela, fai un `TitleBar` coa disposición da súa barra e se hai un menú aberto, e dállo á xanela, se esta ten a barra de título de meiga (`Tabs::title_bar`; [Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)): calquera evento pode mover as partes da barra, ou abrir ou pechar un menú.
+- **meiga-win** gárdao (`Window::set_title_bar`), e responde con el `WM_NCHITTEST` (`hit_test`) sen chamar ao programa, que pode estar ocupado con outro evento: primeiro pregúntalle a `DefWindowProcW`, que di onde está o marco de Windows, nos lados e abaixo, e só onde este di que é área cliente pregunta a `hit`, e converte o `Hit` na constante de Windows. En `WM_GETMINMAXINFO` pídelle a `min_client` o tamaño mínimo da área cliente ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisións 9 e 12). E, cando Windows lle pide á xanela o seu menú con Alt+Espazo, pídelle a `menu_corner` onde abrilo (decisión 6; [Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs)).
+- Sen a barra de título de meiga, nos modos `--bench` ou se Windows non deixa poñela, a xanela non atende `WM_NCHITTEST` nin `WM_GETMINMAXINFO`, deixa a Windows o menú de Alt+Espazo, e o programa non lle dá ningún `TitleBar`.
+
+```rust
+//! The bar of tabs as the title bar of the window (ADR 0027): what each
+//! point of it is for Windows, which drags the window from it, resizes the
+//! window from its top edge, and knows where its buttons are; how small the
+//! window can be; and where Alt+Space opens the menu of the window.
+//!
+//! Windows asks a window what is at a point with `WM_NCHITTEST`, and does
+//! what that part does by itself: the title bar drags the window and, with a
+//! double click, maximizes or restores it; the top edge resizes it; and the
+//! button to maximize opens the snap layouts of Windows 11 under the
+//! pointer. meiga answers for its bar with a [`Hit`]; it draws the bar and
+//! its buttons itself, and the clicks on them go to the bar, and not to
+//! Windows.
+
+use super::tabbar::{CaptionButton, Layout, Part};
+use crate::geometry::{Point, Size};
+```
+
+- O comentario do módulo (`//!`) di para que é, coma o parágrafo de enriba, e o que fai Windows con cada resposta: a barra de título arrastra a xanela, e un dobre clic maximízaa ou restáuraa; o bordo de arriba redimensiona a xanela; e, co punteiro parado no botón de maximizar, Windows 11 mostra os seus *snap layouts*. Os botóns da xanela son para Windows os seus botóns, pero, coma di o final do comentario, os seus clics non os fai Windows: meiga-win pásallos á barra do programa, que os debuxa e os fai actuar ao soltar o botón esquerdo enriba do mesmo ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 4).
+- `use` trae de `tabbar` a disposición, as partes da barra e os botóns da xanela, e de `geometry`, `Point` e `Size`. Non trae `scale` nin `coord`: o módulo non ten medidas propias.
+
+### `Hit`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Hit {
+    Client,
+    Caption,
+    Top,
+    TopLeft,
+    Minimize,
+    Maximize,
+    Close,
+}
+```
+
+O que é un punto da xanela para Windows: a resposta de `WM_NCHITTEST` para el, sen os números de Windows. meiga-core non usa as APIs de Windows: `hit_test`, en meiga-win, dálle a cada variante a súa constante, cun `match` que o compilador obriga a cubrir enteiro.
+
+| Variante | Que é | Para Windows | Que fai Windows |
+|---|---|---|---|
+| `Client` | Unha parte de meiga: as tabs, os seus ×, o +, o ▾, os botóns de desprazamento e o terminal; e, cun menú de meiga aberto, tamén as partes libres da barra. | `HTCLIENT` | Nada: as mensaxes do rato van á xanela, coma sempre. |
+| `Caption` | As partes libres da barra, sen un menú aberto: os ocos e o sitio para arrastrar a xanela. | `HTCAPTION` | Arrastra a xanela, levala a un bordo da pantalla colócaa alí, e un dobre clic maximízaa ou restáuraa (decisión 5). O botón dereito non abre nada: o menú da xanela ábreo meiga-win (decisión 6). |
+| `Top` | A banda enriba das tabs, coa xanela restaurada. | `HTTOP` | Redimensiona a xanela desde o seu bordo de arriba (decisión 2). |
+| `TopLeft` | O principio da banda, xunto ao lado esquerdo da xanela. | `HTTOPLEFT` | Redimensiona a xanela en diagonal, desde a esquina de arriba á esquerda. |
+| `Minimize`, `Maximize` e `Close` | Os botóns da xanela. | `HTMINBUTTON`, `HTMAXBUTTON` e `HTCLOSE` | Co punteiro parado no de maximizar, mostra os *snap layouts* de Windows 11. Os clics neles non os fai Windows: van á barra do programa (decisión 4). |
+
+- Non hai ningunha variante para o marco dos lados e de abaixo: dío `DefWindowProcW`, antes de preguntar a `hit`. Tampouco unha esquina de arriba á dereita: alí van os botóns da xanela, que chegan ata o bordo de arriba e gañan á banda.
+- É `Copy`, coma `Part`: un byte, que vai por valor.
+
+### `TitleBar` e `new`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TitleBar {
+    layout: Layout,
+    menu: bool,
+}
+```
+
+| Campo | Que é |
+|---|---|
+| `layout` | A disposición da barra de tabs ([`Layout`](#layout-os-campos)) despois do último evento: onde van as tabs, os botóns da barra, a franxa e os botóns da xanela, e a banda, se a xanela está restaurada. |
+| `menu` | Se hai un menú de meiga aberto, o dunha tab ou o dos perfís: entón un clic en calquera sitio só o pecha, así que a barra non arrastra a xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 10, que concreta a decisión 8 do [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md)). |
+
+```rust
+pub const fn new(layout: Layout, menu: bool) -> Self {
+    Self { layout, menu }
+}
+```
+
+- **`new`**: a barra de título da barra de tabs `layout`, cun menú de meiga aberto ou non. Só garda os dous valores: as contas fanse en `hit`, cando Windows pregunta. É `const fn`.
+- **Unha copia, e non unha referencia.** `TitleBar` é `Copy`: a disposición, que xa o é, e un `bool`. A xanela gárdao nunha `Cell<Option<TitleBar>>`, que o programa cambia cunha referencia compartida á xanela, e cópiao cada vez que Windows pregunta.
+- **Por que despois de cada evento.** Windows pregunta con cada movemento do punteiro, tamén mentres o programa atende outro evento, e entón a xanela non pode preguntarlle ao programa. Pero a barra só cambia cando o programa atende un evento, así que, ao acabar cada un, a xanela xa ten a de agora ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 12).
+
+### O que é cada punto: `hit`
+
+```rust
+pub fn hit(&self, at: Point, corner: i32) -> Hit {
+    match self.layout.part_at(at) {
+        Some(Part::Caption(button)) => match button {
+            CaptionButton::Minimize => Hit::Minimize,
+            CaptionButton::Maximize => Hit::Maximize,
+            CaptionButton::Close => Hit::Close,
+        },
+        Some(Part::Empty) if at.y < i32::try_from(self.layout.band()).unwrap_or(i32::MAX) => {
+            if at.x < corner {
+                Hit::TopLeft
+            } else {
+                Hit::Top
+            }
+        }
+        Some(Part::Empty) if !self.menu => Hit::Caption,
+        _ => Hit::Client,
+    }
+}
+```
+
+**`hit`** dá o que é para Windows o punto `at`, en coordenadas da área cliente, sendo os primeiros `corner` píxeles desde o seu lado esquerdo a esquina do bordo de arriba, que redimensiona a xanela tamén cara á esquerda. Pregúntalle á disposición que parte da barra hai alí ([`part_at`](#o-que-hai-debaixo-dun-punto-part_at)), e o `match` mira os casos nesta orde:
+
+1. **Un botón da xanela** (`Part::Caption`): ese botón, a calquera altura da barra, tamén na banda, e tamén cun menú aberto.
+2. **A banda** (`Part::Empty` por riba de `band`): `TopLeft` nos primeiros `corner` píxeles, e `Top` no resto, tamén cun menú aberto. `part_at` dá `Empty` en toda a banda fóra dos botóns da xanela, tamén por riba das tabs e dos outros botóns. A comparación é `<`: a fila `band`, a primeira debaixo da banda, xa non é dela. Coa xanela maximizada, a banda mide 0, e ningún punto está nela.
+3. **As partes libres da barra** (o resto de `Part::Empty`), sen un menú aberto: `Caption`, a barra de título. Son os ocos, á esquerda da primeira tab ou do ‹, entre a última e o + ou entre o › e o +, e á dereita do ▾, onde empeza o sitio para arrastrar a xanela; e o sitio que deixan as tabs pechadas co rato mentres as outras manteñen o seu ancho ([`keep_widths`](#as-tabs-no-seu-sitio-ao-pechar-co-rato-keep_widths)).
+4. **O resto**, `Client`: as tabs, os seus ×, o +, o ▾ e os botóns de desprazamento; as partes libres, cun menú aberto; e, fóra da barra (`None`), o terminal.
+
+**Por que esta orde.** Cada garda (`if`) do `match` só se mira se os casos de antes non casaron, e cada caso vai antes ca o que lle podería quitar os seus puntos:
+
+- **Os botóns da xanela, primeiro**, porque son sempre os seus botóns: chegan ata o bordo de arriba e gañan á banda ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 2), e cun menú aberto seguen sendo botóns, cos *snap layouts* (decisión 10). Coa xanela maximizada, a fila de arriba da pantalla é tamén a dos botóns, e o último píxel da dereita é o de pechar: o punteiro levado contra a esquina da pantalla cae nel, coma di a lei de Fitts, coma no Windows 11.
+- **A banda, antes ca o menú**, porque redimensiona a xanela tamén cun menú aberto, e empezar a redimensionar pecha o menú ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 9).
+- **As partes libres, despois do menú**: cun menú aberto, un clic nelas é un clic fóra del, que só o pecha, e non empeza a arrastrar nin maximiza a xanela.
+
+- **A esquina** non escala: son 19 píxeles desde o lado esquerdo da xanela a calquera DPI, coma co marco de Windows (decisión 2). Pero `hit` mide desde o lado esquerdo da área cliente, e entre os dous está o marco da esquerda, así que meiga-win pásalle 19 menos o grosor dese marco: a 96 DPI, cun marco de 8, 11. As probas usan 10.
+- `i32::try_from(…).unwrap_or(i32::MAX)` converte a banda nunha coordenada, coma faría [`coord`](#os-axudantes-base_dpi-scale-e-coord), que este módulo non trae: ningunha banda chega a `i32::MAX`.
+
+Coa barra do [exemplo de `tabbar.rs`](#cratesmeiga-coresrcuitabbarrs), tres tabs en 983 píxeles a 96 DPI, e a esquina en 10, `maximized_the_bar_drags_the_window_and_its_top_row_belongs_to_what_is_below` comproba, sen banda:
+
+| Punto | Para Windows | Por que |
+|---|---|---|
+| (845, 0) | `Minimize` | O primeiro píxel do botón de minimizar, na fila de arriba. |
+| (891, 31) | `Maximize` | A esquina de abaixo á esquerda do de maximizar. |
+| (982, 0) | `Close` | O último píxel da dereita, na fila de arriba: coa xanela maximizada, a esquina da pantalla. |
+| (800, 10) e (844, 0) | `Caption` | O sitio para arrastrar a xanela, tamén na fila de arriba, ata o botón de minimizar. |
+| (2, 20) | `Caption` | A separación á esquerda da primeira tab. |
+| (5, 0), (100, 0) e (220, 10) | `Client` | A primeira tab, tamén na fila de arriba, e o seu ×. |
+| (730, 0) e (760, 20) | `Client` | O +, tamén na fila de arriba, e o ▾. |
+| (100, 32) e (983, 10) | `Client` | Debaixo da barra, o terminal, e á súa dereita, fóra dela. |
+
+Coa banda de 8, coma coa xanela restaurada a 96 DPI, `restored_the_band_resizes_the_window_but_not_under_its_buttons` comproba:
+
+| Punto | Para Windows | Por que |
+|---|---|---|
+| (0, 0) e (9, 7) | `TopLeft` | A esquina da banda: os seus primeiros 10 píxeles, ata a súa última fila. |
+| (10, 0), (100, 7) e (800, 0) | `Top` | O resto da banda, tamén por riba da primeira tab e do sitio para arrastrar a xanela. |
+| (845, 0) e (982, 0) | `Minimize` e `Close` | Os botóns da xanela, na fila de arriba, dentro da banda. |
+| (100, 8) | `Client` | A primeira tab, na primeira fila debaixo da banda. |
+| (800, 8) e (2, 8) | `Caption` | As partes libres, na primeira fila debaixo da banda. |
+| (100, 40) | `Client` | O terminal, debaixo da barra, que coa banda mide 40. |
+
+E coa banda e un menú de meiga aberto, `with_a_menu_open_the_bar_is_for_meiga_but_the_edge_and_the_buttons_are_not` comproba:
+
+| Punto | Para Windows | Por que |
+|---|---|---|
+| (800, 10) e (2, 20) | `Client` | As partes libres: un clic nelas só pecha o menú. |
+| (100, 7) e (0, 0) | `Top` e `TopLeft` | A banda e a súa esquina seguen redimensionando a xanela. |
+| (960, 0) | `Close` | O botón de pechar segue sendo o seu botón. |
+| (100, 20) | `Client` | A primeira tab, coma sempre. |
+
+### Onde se abre o menú da xanela co teclado: `menu_corner`
+
+```rust
+pub fn menu_corner(&self) -> Point {
+    Point::new(0, i32::try_from(self.layout.height()).unwrap_or(i32::MAX))
+}
+```
+
+**`menu_corner`** dá onde vai a esquina de arriba á esquerda do menú da xanela cando o abre o teclado, con Alt+Espazo, en coordenadas da área cliente: debaixo da barra enteira, a banda máis a fila das tabs ([`height`](#layout-os-campos)), e no lado esquerdo da área cliente, onde empeza o terminal ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 6). É onde se abren os menús de meiga co teclado, debaixo do que os abre ([ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md), decisión 4).
+
+- **Quen o usa:** meiga-win, cando Windows lle pide á xanela o seu menú con Alt+Espazo (`WM_SYSCOMMAND`, con `SC_KEYMENU` e o espazo). Pasa o punto a coordenadas da pantalla (`ClientToScreen`), e abre alí o menú de Windows, sen ningún elemento resaltado (`keyboard_menu`; [Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs)).
+- **Debaixo da barra enteira, coa banda.** Coa xanela restaurada, a banda vai enriba das tabs, así que un menú que empezase debaixo só da fila das tabs, á altura da fila, taparía a parte de abaixo delas. Maximizada, a banda mide 0, e o menú vai debaixo da fila.
+- **E non onde o abriría Windows,** debaixo de onde estaría a súa barra de título, enriba das tabs, e no seu modo menú, no que a tecla seguinte a Esc non lle chega ao programa da tab; nin na esquina de arriba á esquerda da xanela, coma o Windows Terminal ([ADR 0027 › Contexto](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md#contexto)).
+- **O lado esquerdo da área cliente**, coma no resto do módulo: o marco da esquerda queda fóra, e o menú empeza na primeira columna do terminal.
+- `i32::try_from(…).unwrap_or(i32::MAX)` converte o alto nunha coordenada, coma a banda en [`hit`](#o-que-é-cada-punto-hit): ningunha barra chega a `i32::MAX`.
+
+### O tamaño mínimo: `min_client`
+
+```rust
+pub fn min_client(dpi: u32, band: u32) -> Size {
+    Size::new(
+        Layout::min_width(dpi),
+        band.saturating_add(Layout::row_at(dpi)),
+    )
+}
+```
+
+**`min_client`** dá o tamaño mínimo da área cliente, a parte da xanela que debuxa meiga, a `dpi` e cunha banda de `band` píxeles enriba das tabs ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 9):
+
+- **De ancho, a barra máis estreita** ([`min_width`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize)): os botóns da xanela, o sitio para arrastrala, o + e o ▾, as tres separacións, os dous botóns de desprazamento e, entre eles, unha tab enteira das máis estreitas: 395 píxeles a 96 DPI, 495 a 120 e 593 a 144. Nunha xanela máis estreita, con tabs que non caben, a franxa non mostraría enteira ningunha. É menos ca os 460 do Windows Terminal e ca os 500 que pide como moito Microsoft Learn para os *snap layouts* ([ADR 0027 › Contexto](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md#contexto)).
+- **De alto, só a barra**, sen o terminal, coma no Windows Terminal: a banda máis a fila das tabs ([`row_at`](#crear-e-cambiar-new-row_at-min_width-set_band-e-resize)). Nunha xanela tan baixa, o terminal non ten ningunha fila.
+- `saturating_add` non desborda con ningunha banda. O tamaño é un [`Size`](#cratesmeiga-coresrcgeometryrs), en píxeles á escala da xanela.
+- **Quen o usa:** `WM_GETMINMAXINFO`, en meiga-win, pídeo co DPI da xanela e cunha banda do grosor do seu marco, e súmalle o marco de Windows: dúas veces de ancho, polos dous lados, e unha de alto, polo de abaixo; arriba, a banda xa vai dentro da área cliente. Con ese tamaño, Windows non deixa a xanela máis pequena, nin co rato nin con `SetWindowPos` ([Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs)).
+
+**Probas.** Cinco, con coordenadas exactas. `bar` fai a barra de título das probas coa barra do [exemplo de `tabbar.rs`](#cratesmeiga-coresrcuitabbarrs), tres tabs en 983 píxeles a 96 DPI, coa banda que se lle pida, e cun menú aberto ou non. As tres de `hit` usan unha esquina de 10 píxeles.
+
+| Proba | Que comproba |
+|---|---|
+| `maximized_the_bar_drags_the_window_and_its_top_row_belongs_to_what_is_below` | Sen banda, coma coa xanela maximizada, a primeira táboa de [`hit`](#o-que-é-cada-punto-hit): os botóns da xanela, tamén na fila de arriba, ata o último píxel da dereita; as partes libres, a barra de título, tamén na fila de arriba; e as tabs, os seus botóns, o terminal e o que queda fóra da barra, a área cliente. Ningún punto é o bordo de arriba: a fila de arriba da pantalla é do que hai debaixo dela (decisión 2). |
+| `restored_the_band_resizes_the_window_but_not_under_its_buttons` | Coa banda de 8, coma coa xanela restaurada a 96 DPI, a segunda táboa: a banda é o bordo de arriba, e os seus primeiros 10 píxeles, a súa esquina, ata a súa última fila; os botóns da xanela, tamén na banda; e, desde a fila 8, a tab é a área cliente, e as partes libres, a barra de título. |
+| `with_a_menu_open_the_bar_is_for_meiga_but_the_edge_and_the_buttons_are_not` | Coa banda e un menú aberto, a terceira táboa: as partes libres son a área cliente, pero a banda segue sendo o bordo de arriba, coa súa esquina, e o botón de pechar, o seu botón. |
+| `the_keyboard_opens_the_menu_of_the_window_below_the_bar` | `menu_corner`: (0, 40) coa banda de 8, debaixo da barra enteira, e non (0, 32), debaixo só da fila; (0, 32) sen banda, coma maximizada; e (0, 59) a 144 DPI, cunha tab en 1475 píxeles, coa banda de 11 e a fila de 48. |
+| `the_window_is_at_least_as_big_as_the_narrowest_bar` | `min_client`: 395 × 40 a 96 DPI, coa banda de 8; 495 × 40 a 120 DPI, sen banda, coa fila de 40; e 593 × 59 a 144 DPI, coa banda de 11 e a fila de 48. |
+
+Oito copias do código cun erro feito a propósito cada unha fallan estas probas, cada unha coma se esperaba:
+
+| Copia | O que estraga | Onde falla |
+|---|---|---|
+| `u-no-top-left` | A esquina da banda é `Top`. | En `restored_…` e en `with_a_menu_open_…`, no punto (0, 0). |
+| `u-empty-is-client` | As partes libres da barra son `Client`, tamén sen menú. | En `maximized_…`, en (800, 10), e en `restored_…`, en (800, 8). |
+| `u-menu-ignored` | Un menú aberto non cambia nada: as partes libres seguen sendo `Caption`. | En `with_a_menu_open_…`, en (800, 10). |
+| `u-menu-takes-band` | Cun menú aberto, tamén a banda é `Client`. | En `with_a_menu_open_…`, en (100, 7). |
+| `u-band-inclusive` | A banda colle tamén a fila de debaixo dela (`<=`). | En `maximized_…`, en (844, 0): sen banda, a copia fai da fila de arriba o bordo de arriba; e en `restored_…`, en (800, 8). |
+| `u-maximize-hit` | O botón de maximizar é `Minimize`, e Windows non mostraría os *snap layouts*. | En `maximized_…`, en (891, 31). |
+| `u-min-client-no-band` | `min_client` non suma a banda. | En `the_window_is_at_least_as_big_as_the_narrowest_bar`: 395 × 32, e non 395 × 40. |
+| `u-menu-corner-row-only` | `menu_corner` dá o alto da fila das tabs, sen a banda. | En `the_keyboard_opens_the_menu_of_the_window_below_the_bar`: (0, 32), e non (0, 40). |
+
+Que meiga-win lle dá a Windows a constante de cada `Hit`, coa esquina medida desde o lado da xanela, e o tamaño mínimo co marco, compróbao `the_title_bar_of_meiga_tells_windows_what_each_of_its_parts_is`, en [Código › meiga-win › `window.rs`](meiga-win.md#cratesmeiga-winsrcwindowrs); e, coa xanela de meiga na pantalla, restaurada, maximizada e cun menú aberto, `check-titlebar.ps1` ([Ferramentas › `check-titlebar.ps1`](ferramentas.md#toolscheck-titlebarps1)).
 
 ## `crates/meiga-core/src/ui/menu.rs`
 

@@ -28,19 +28,20 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado; concretado polos [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0026](0026-o-peche-das-sesions-ao-sair.md) |
 | [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) e [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
 | [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
-| [0014](0014-o-teclado.md) | O teclado | Aceptado; concretado polo [0023](0023-os-atallos-de-teclado.md) |
+| [0014](0014-o-teclado.md) | O teclado | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0023](0023-os-atallos-de-teclado.md) |
 | [0016](0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0023](0023-os-atallos-de-teclado.md) |
 | [0017](0017-os-fotogramas-por-escritorio-remoto.md) | 30 fotogramas por segundo por Escritorio remoto e 60 en local | Aceptado |
 | [0018](0018-o-modelo-das-tabs.md) | O modelo das tabs | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md), [0021](0021-os-menus-e-o-menu-da-tab.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) | Varias sesións e as tabs en segundo plano | Aceptado; concretado polos [0020](0020-a-barra-de-tabs.md), [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
-| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado; concretado polos [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
-| [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
+| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado; concretado polos [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
+| [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0022](0022-os-perfis-e-a-configuracion.md) | Os perfís e a configuración | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0023](0023-os-atallos-de-teclado.md) | Os atallos de teclado | Aceptado; concretado polo [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polo [0025](0025-moitas-tabs-e-os-indicadores.md) |
-| [0025](0025-moitas-tabs-e-os-indicadores.md) | Moitas tabs: o ancho mínimo, o desprazamento da barra e os indicadores | Aceptado |
+| [0025](0025-moitas-tabs-e-os-indicadores.md) | Moitas tabs: o ancho mínimo, o desprazamento da barra e os indicadores | Aceptado; concretado polo [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0026](0026-o-peche-das-sesions-ao-sair.md) | O peche das sesións ao saír | Aceptado |
+| [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) | A barra de tabs coma barra de título | Aceptado |
 
 ## Como se relacionan
 
@@ -140,6 +141,14 @@ graph TD
     A11 --> A26
     A19 --> A26
     A24 --> A26
+    A2 --> A27["0027 A barra de tabs coma barra de título"]
+    A5 --> A27
+    A8 --> A27
+    A14 --> A27
+    A20 --> A27
+    A21 --> A27
+    A23 --> A27
+    A25 --> A27
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.

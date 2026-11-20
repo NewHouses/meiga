@@ -1,6 +1,6 @@
 # ADR 0020 · A barra de tabs
 
-- **Estado:** Aceptado; concretado polos [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0022](0022-os-perfis-e-a-configuracion.md) e [ADR 0025](0025-moitas-tabs-e-os-indicadores.md)
+- **Estado:** Aceptado; concretado polos [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0022](0022-os-perfis-e-a-configuracion.md), [ADR 0025](0025-moitas-tabs-e-os-indicadores.md) e [ADR 0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md)
 - **Data:** 2026-11-15
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0010](0010-texto-con-directwrite.md), [ADR 0013](0013-da-saida-a-pantalla.md), [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [ADR 0018](0018-o-modelo-das-tabs.md), [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md)
 

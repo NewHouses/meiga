@@ -1,6 +1,6 @@
 # ADR 0014 · O teclado
 
-- **Estado:** Aceptado; concretado polo [ADR 0023](0023-os-atallos-de-teclado.md)
+- **Estado:** Aceptado; concretado polos [ADR 0023](0023-os-atallos-de-teclado.md) e [ADR 0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md)
 - **Data:** 2026-11-09
 - **Relacionados:** [ADR 0004](0004-conpty-empaquetado.md), [ADR 0012](0012-fachada-do-terminal.md), [ADR 0013](0013-da-saida-a-pantalla.md)
 
