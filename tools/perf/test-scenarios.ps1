@@ -286,7 +286,9 @@ function Test-Spinner([string]$ShellName) {
         $output = Complete-Scenario $scenario $label $run
         $seconds = $clock.Elapsed.TotalSeconds
         $rate = [math]::Round(([regex]::Matches($output, "`r")).Count / $seconds, 1)
-        Add-Check "${label}: frames per second" '7-12' $rate ($rate -ge 7 -and $rate -le 12)
+        # 10 frames per second, but a slow runner draws fewer in the window,
+        # which also counts the time that the scenario takes to end.
+        Add-Check "${label}: frames per second" '5-12' $rate ($rate -ge 5 -and $rate -le 12)
         Add-Check "${label}: cursor" 'hidden, then shown' $output.Length `
             ($output.StartsWith("`e[?25l") -and $output.EndsWith("`e[?25h"))
         Add-Check "${label}: UTF-8 spinner" "`u{280B} Thinking" $output.Length `
@@ -376,7 +378,8 @@ function Test-BigFile([string]$ShellName, [string]$File, [string]$Text) {
             $done = Wait-Condition { Test-Path -LiteralPath $finished } 30
             $seconds = if ($done) { (Get-Content -LiteralPath $finished -Raw).Trim() } else { 'missing' }
             $value = 0.0
-            $valid = [double]::TryParse($seconds, [Globalization.NumberStyles]::Float, $invariant, [ref]$value) -and $value -gt 0
+            # Three decimals, and a fast runner prints 1 MiB in less than a millisecond: 0.000.
+            $valid = [double]::TryParse($seconds, [Globalization.NumberStyles]::Float, $invariant, [ref]$value) -and $value -ge 0
             Add-Check "${label}: finished-$number" 'seconds' $seconds $valid
             [void]$expected.Append($Text).Append([string]::Format($invariant, "Run {0}: printed {1:0.0} MB in {2} s.`n", $number, $megabytes, $seconds))
         }

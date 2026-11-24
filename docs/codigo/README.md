@@ -1,6 +1,6 @@
 # Código
 
-> Estado: subfase 2.9. Na 2.9 chegaron as tabs na barra de título, en `meiga-core`, `meiga-win` e `meiga`, e a súa comprobación; no M2, o peche das sesións ao saír, en `meiga-win` e `meiga`, e a súa comprobación; na 2.8, moitas tabs e os indicadores, en `meiga-core` e `meiga`, e a súa comprobación; na 2.7, o fin do programa e o reinicio, en `meiga-core` e `meiga`, e a súa comprobación; na 2.6, os atallos de teclado, en `meiga-core` e `meiga`, e a súa comprobación; na 2.5, os perfís e a configuración, en `meiga-core`, `meiga-win` e `meiga`, e a súa comprobación.
+> Estado: subfase 2.10. Na 2.10 cambiaron o *workflow* da CI e dúas comprobacións dos escenarios; na 2.9 chegaron as tabs na barra de título, en `meiga-core`, `meiga-win` e `meiga`, e a súa comprobación; no M2, o peche das sesións ao saír, en `meiga-win` e `meiga`, e a súa comprobación; na 2.8, moitas tabs e os indicadores, en `meiga-core` e `meiga`, e a súa comprobación; na 2.7, o fin do programa e o reinicio, en `meiga-core` e `meiga`, e a súa comprobación; na 2.6, os atallos de teclado, en `meiga-core` e `meiga`, e a súa comprobación; na 2.5, os perfís e a configuración, en `meiga-core`, `meiga-win` e `meiga`, e a súa comprobación.
 
 Explicación detallada do código, arquivo por arquivo. Para o *porqué* das decisións xerais, ver [Arquitectura](../arquitectura.md) e [Tecnoloxías](../tecnoloxias.md).
 

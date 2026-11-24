@@ -38,6 +38,7 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 2.7 | Fin do proceso e peche | [PR #26](https://github.com/NewHouses/meiga/pull/26) | [2.7-peche.md](2.7-peche.md) |
 | 2.8 | Moitas tabs | [PR #27](https://github.com/NewHouses/meiga/pull/27) | [2.8-moitas.md](2.8-moitas.md) |
 | 2.9 | Tabs na barra de título | [PR #30](https://github.com/NewHouses/meiga/pull/30) | [2.9-titulo.md](2.9-titulo.md) |
+| 2.10 | Porta de tabs | [PR #31](https://github.com/NewHouses/meiga/pull/31) | [2.10-porta.md](2.10-porta.md) |
 
 ## Mantemento
 
