@@ -7,10 +7,12 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::env;
+use std::fs;
 use std::io::{self, BufRead, BufReader, Write};
 use std::mem;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 use std::os::windows::process::CommandExt;
+use std::path::{Path, PathBuf};
 use std::process::{self, Child, Stdio};
 use std::ptr;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -18,8 +20,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use meiga_core::geometry::GridSize;
-use meiga_win::conpty::{Command, Conpty, Input, Output, Priority, Pty, Source};
-use meiga_win::profiles;
+use meiga_win::conpty::{self, Command, Conpty, Input, Output, Priority, Pty, Source};
+use meiga_win::{Error, profiles};
 use windows_sys::Win32::Foundation::TRUE;
 use windows_sys::Win32::System::Console::{CTRL_CLOSE_EVENT, SetConsoleCtrlHandler};
 use windows_sys::Win32::System::JobObjects::{
@@ -29,7 +31,9 @@ use windows_sys::Win32::System::JobObjects::{
     QueryInformationJobObject, SetInformationJobObject,
 };
 use windows_sys::Win32::System::Threading::{
-    GetCurrentThread, GetThreadPriority, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL,
+    GetCurrentThread, GetThreadPriority, OpenProcess, PROCESS_NAME_WIN32,
+    PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW, THREAD_PRIORITY_BELOW_NORMAL,
+    THREAD_PRIORITY_NORMAL,
 };
 use windows_sys::core::BOOL;
 
@@ -49,6 +53,12 @@ const KILLED: u32 = 1;
 /// console ends before the program has connected to it.
 const NOT_CONNECTED: u32 = 0xC000_0142;
 
+/// `ERROR_FILE_NOT_FOUND` and `ERROR_DIRECTORY`: the errors of
+/// CreateProcessW when the program, or the folder where it starts, are not
+/// there.
+const FILE_NOT_FOUND: i32 = 2;
+const NOT_A_FOLDER: i32 = 267;
+
 /// The ConPTY that tools\fetch-conpty.ps1 extracts to <target>\conpty: a
 /// folder above this test program, which runs from <target>\debug\deps.
 fn bundled() -> Conpty {
@@ -64,6 +74,16 @@ fn bundled() -> Conpty {
 enum Event {
     Received(Vec<u8>),
     Ended(Option<u32>),
+    Failed(Error),
+}
+
+/// How a session ended.
+#[derive(Debug)]
+enum End {
+    /// The program ended, with this exit code, if there is one.
+    Ended(Option<u32>),
+    /// The program could not start.
+    Failed(Error),
 }
 
 /// Sends what the session shows to the test.
@@ -76,6 +96,10 @@ impl Output for Channel {
 
     fn ended(&mut self, exit_code: Option<u32>) {
         let _ = self.0.send(Event::Ended(exit_code));
+    }
+
+    fn failed(&mut self, error: Error) {
+        let _ = self.0.send(Event::Failed(error));
     }
 }
 
@@ -97,6 +121,10 @@ impl Output for Answering {
     fn ended(&mut self, exit_code: Option<u32>) {
         self.channel.ended(exit_code);
     }
+
+    fn failed(&mut self, error: Error) {
+        self.channel.failed(error);
+    }
 }
 
 /// What a session has shown.
@@ -106,16 +134,17 @@ struct Transcript {
 }
 
 impl Transcript {
-    /// Waits for the next event and keeps its output. Returns the exit code
-    /// when the session ends.
-    fn next(&mut self, deadline: Instant) -> Option<Option<u32>> {
+    /// Waits for the next event and keeps its output. Returns how the
+    /// session ended, when it ends.
+    fn next(&mut self, deadline: Instant) -> Option<End> {
         let timeout = deadline.saturating_duration_since(Instant::now());
         match self.events.recv_timeout(timeout) {
             Ok(Event::Received(bytes)) => {
                 self.output.extend(bytes);
                 None
             }
-            Ok(Event::Ended(exit_code)) => Some(exit_code),
+            Ok(Event::Ended(exit_code)) => Some(End::Ended(exit_code)),
+            Ok(Event::Failed(error)) => Some(End::Failed(error)),
             Err(error) => panic!("{error} after {TIMEOUT:?}; it showed {:?}", self.text()),
         }
     }
@@ -124,11 +153,21 @@ impl Transcript {
     fn wait_for(&mut self, text: &str) {
         let deadline = Instant::now() + TIMEOUT;
         while !self.text().contains(text) {
-            if let Some(exit_code) = self.next(deadline) {
+            if let Some(end) = self.next(deadline) {
                 panic!(
-                    "it ended ({exit_code:?}) before showing {text:?}: {:?}",
+                    "it ended ({end:?}) before showing {text:?}: {:?}",
                     self.text()
                 );
+            }
+        }
+    }
+
+    /// Waits until the session ends.
+    fn wait_for_any_end(&mut self) -> End {
+        let deadline = Instant::now() + TIMEOUT;
+        loop {
+            if let Some(end) = self.next(deadline) {
+                return end;
             }
         }
     }
@@ -136,16 +175,36 @@ impl Transcript {
     /// Waits until the session ends, and returns the exit code of the
     /// program.
     fn wait_for_end(&mut self) -> Option<u32> {
-        let deadline = Instant::now() + TIMEOUT;
-        loop {
-            if let Some(exit_code) = self.next(deadline) {
-                return exit_code;
-            }
+        match self.wait_for_any_end() {
+            End::Ended(exit_code) => exit_code,
+            End::Failed(error) => panic!("the program could not start: {error}"),
+        }
+    }
+
+    /// Waits until the session tells that its program could not start, and
+    /// returns why.
+    fn wait_for_failure(&mut self) -> Error {
+        match self.wait_for_any_end() {
+            End::Failed(error) => error,
+            End::Ended(exit_code) => panic!(
+                "the program started and ended ({exit_code:?}): {:?}",
+                self.text()
+            ),
         }
     }
 
     fn text(&self) -> String {
         String::from_utf8_lossy(&self.output).into_owned()
+    }
+}
+
+/// Waits until the writer of the session of `pty` has started its program,
+/// without sleeping, so that the test can close the session right after.
+fn wait_for_program(pty: &Pty) {
+    let deadline = Instant::now() + TIMEOUT;
+    while pty.process_id().is_none() {
+        assert!(Instant::now() < deadline, "the program did not start");
+        thread::yield_now();
     }
 }
 
@@ -221,16 +280,183 @@ fn a_program_does_not_start_in_a_folder_that_is_not_there() {
         folder: Some(r"C:\meiga\no such folder"),
         ..Command::new("cmd /c exit")
     };
-    let (sender, _events) = mpsc::channel();
-    let Err(error) = bundled().spawn(&command, GridSize::new(80, 25), Channel(sender)) else {
-        panic!("it started in a folder that is not there");
-    };
-    // ERROR_DIRECTORY: the directory name is invalid.
+    // The session starts at once, and its writer tells, through the reader,
+    // why the program did not start.
+    let (pty, mut transcript) = spawn_command(&bundled(), &command);
+    let error = transcript.wait_for_failure();
     assert_eq!(
         error.os_error().and_then(io::Error::raw_os_error),
-        Some(267),
+        Some(NOT_A_FOLDER),
         "{error}"
     );
+    assert!(
+        error.to_string().starts_with("CreateProcessW failed: "),
+        "{error}"
+    );
+    assert_eq!(pty.process_id(), None);
+    // What is written to it, and its size, do nothing.
+    pty.write(b"ola\r");
+    pty.resize(GridSize::new(100, 30)).unwrap();
+}
+
+#[test]
+fn a_program_that_is_not_there_does_not_start() {
+    let (pty, mut transcript) = spawn(&bundled(), "meiga-there-is-no-such-program-ola");
+    let error = transcript.wait_for_failure();
+    assert_eq!(
+        error.os_error().and_then(io::Error::raw_os_error),
+        Some(FILE_NOT_FOUND),
+        "{error}"
+    );
+    assert_eq!(pty.process_id(), None);
+}
+
+#[test]
+fn what_is_written_before_the_program_starts_reaches_it() {
+    // The writer creates the program after spawn returns: the line waits for
+    // it, as what the user types in a tab that opens. cmd reads it and shows
+    // it twice: "olaola" only comes from cmd.
+    let (pty, mut transcript) = spawn(&bundled(), "cmd /d /v:on /c \"set /p M=& echo !M!!M!\"");
+    pty.write(b"ola\r");
+    assert_eq!(transcript.wait_for_end(), Some(0));
+    assert!(
+        transcript.text().contains("olaola"),
+        "{:?}",
+        transcript.text()
+    );
+}
+
+#[test]
+fn the_size_given_before_the_program_starts_is_the_one_that_it_gets() {
+    // As when the window changes size while a tab opens.
+    let (pty, mut transcript) = spawn(
+        &bundled(),
+        "powershell -NoProfile -Command \"'size=' + [Console]::WindowWidth + 'x' + [Console]::WindowHeight\"",
+    );
+    pty.resize(GridSize::new(123, 37)).unwrap();
+    assert_eq!(transcript.wait_for_end(), Some(0));
+    assert!(
+        transcript.text().contains("size=123x37"),
+        "{:?}",
+        transcript.text()
+    );
+}
+
+#[test]
+fn the_process_of_the_program_is_known_once_it_starts() {
+    let (pty, mut transcript) = spawn(&bundled(), "cmd /k");
+    transcript.wait_for(">");
+    let id = pty.process_id().expect("the program has started");
+    assert_eq!(image_name(id).as_deref(), Some("cmd.exe"));
+    drop(pty);
+    assert_eq!(transcript.wait_for_end(), Some(CONSOLE_CLOSED));
+}
+
+#[test]
+fn the_conpty_next_to_the_executable_runs_programs() {
+    // This test program has no conpty.dll next to it: the writer of the first
+    // session loads the ConPTY of Windows.
+    let (sender, events) = mpsc::channel();
+    let _pty = conpty::spawn(
+        &Command::new("cmd /c echo ola"),
+        GridSize::new(80, 25),
+        Channel(sender),
+    )
+    .unwrap();
+    let mut transcript = Transcript {
+        events,
+        output: Vec::new(),
+    };
+    assert_eq!(transcript.wait_for_end(), Some(0));
+    assert!(
+        transcript.text().contains("ola\r\n"),
+        "{:?}",
+        transcript.text()
+    );
+}
+
+#[test]
+fn a_bundled_conpty_needs_its_two_files_and_its_functions() {
+    // In the temporary folder of the target, which cargo gives integration
+    // tests: a library that this process loads stays there until it exits.
+    let folder =
+        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("conpty-files-{}", process::id()));
+    let _ = fs::remove_dir_all(&folder);
+    fs::create_dir_all(&folder).unwrap();
+    let error_of = |folder: &Path| match Conpty::bundled(folder) {
+        Ok(_) => panic!("{} has a ConPTY", folder.display()),
+        Err(error) => error,
+    };
+    // Without conpty.dll, and then without OpenConsole.exe.
+    for missing in ["conpty.dll", "OpenConsole.exe"] {
+        let error = error_of(&folder);
+        assert_eq!(
+            error.os_error().map(io::Error::kind),
+            Some(io::ErrorKind::NotFound),
+            "{error}"
+        );
+        assert!(
+            error
+                .to_string()
+                .contains(&format!("{missing} does not exist")),
+            "{error}"
+        );
+        fs::write(folder.join(missing), b"not a program").unwrap();
+    }
+    // Both are there, but conpty.dll is not a library: ERROR_BAD_EXE_FORMAT.
+    let error = error_of(&folder);
+    assert!(
+        error.to_string().starts_with("LoadLibraryExW failed: "),
+        "{error}"
+    );
+    assert_eq!(
+        error.os_error().and_then(io::Error::raw_os_error),
+        Some(193),
+        "{error}"
+    );
+    // A library of Windows, without the functions of ConPTY:
+    // ERROR_PROC_NOT_FOUND.
+    let library = PathBuf::from(profiles::system_folder().unwrap()).join("version.dll");
+    fs::copy(library, folder.join("conpty.dll")).unwrap();
+    let error = error_of(&folder);
+    assert!(
+        error.to_string().starts_with("GetProcAddress failed: "),
+        "{error}"
+    );
+    assert_eq!(
+        error.os_error().and_then(io::Error::raw_os_error),
+        Some(127),
+        "{error}"
+    );
+}
+
+/// The file name of the program of the process `id`, if it is still there.
+fn image_name(id: u32) -> Option<String> {
+    // SAFETY: it asks only for the right to read the name, and does not let
+    // new processes inherit the handle. It returns null if it fails.
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, id) };
+    if handle.is_null() {
+        return None;
+    }
+    // SAFETY: OpenProcess has just opened it, and nothing else owns it.
+    let process = unsafe { OwnedHandle::from_raw_handle(handle) };
+    let mut name = vec![0_u16; 32_768];
+    let mut length = name.len() as u32;
+    // SAFETY: the buffer has `length` characters, and the handle has the
+    // right to read the name.
+    let read = unsafe {
+        QueryFullProcessImageNameW(
+            process.as_raw_handle(),
+            PROCESS_NAME_WIN32,
+            name.as_mut_ptr(),
+            &mut length,
+        )
+    };
+    if read == 0 {
+        return None;
+    }
+    let path = String::from_utf16_lossy(name.get(..length as usize)?);
+    path.rsplit('\\').next().map(str::to_lowercase)
 }
 
 #[test]
@@ -313,6 +539,39 @@ impl Output for Priorities {
     }
 
     fn ended(&mut self, _exit_code: Option<u32>) {}
+
+    fn failed(&mut self, error: Error) {
+        panic!("the program could not start: {error}");
+    }
+}
+
+#[test]
+fn the_priority_given_before_the_program_starts_is_the_one_of_its_output() {
+    // The reader starts with the session, before the writer starts the
+    // program: a tab that is hidden at once, as one that restarts while it
+    // is hidden, gets the lower priority from its first output.
+    let (sender, blocks) = mpsc::channel();
+    let pty = bundled()
+        .spawn(
+            &Command::new("cmd /d /c echo priority-0"),
+            GridSize::new(80, 25),
+            Priorities(sender),
+        )
+        .unwrap();
+    pty.set_reader_priority(Priority::BelowNormal).unwrap();
+    let mut output = Vec::new();
+    let mut priorities = Vec::new();
+    while !String::from_utf8_lossy(&output).contains("priority-0") {
+        let (priority, block) = blocks.recv_timeout(TIMEOUT).unwrap();
+        priorities.push(priority);
+        output.extend(block);
+    }
+    assert!(
+        priorities
+            .iter()
+            .all(|&priority| priority == THREAD_PRIORITY_BELOW_NORMAL),
+        "{priorities:?}"
+    );
 }
 
 #[test]
@@ -378,9 +637,11 @@ fn dropping_a_session_closes_it_without_waiting() {
 fn a_session_dropped_while_its_program_starts_ends_too() {
     // When the pseudoconsole closes while the program is still connecting
     // to it, the program can wait for ever, and the session ends it, or it
-    // can fail by itself.
+    // can fail by itself. The session closes as soon as the writer has
+    // created the program.
     let started = Instant::now();
     let (pty, mut transcript) = spawn(&bundled(), "cmd /k");
+    wait_for_program(&pty);
     drop(pty);
     let exit_code = transcript.wait_for_end();
     assert!(
@@ -391,11 +652,42 @@ fn a_session_dropped_while_its_program_starts_ends_too() {
 }
 
 #[test]
+fn sessions_dropped_as_soon_as_they_start_end_too() {
+    // Closed before the writer creates the pseudoconsole, while it creates it,
+    // or while the program starts: the session ends in each case, without a
+    // program, or with the program that started and ended. As many tabs that
+    // open and close at once, the sessions start at the same time.
+    let conpty = bundled();
+    let sessions: Vec<_> = (0..20_u64)
+        .map(|index| {
+            let conpty = conpty.clone();
+            thread::spawn(move || {
+                let (pty, mut transcript) = spawn(&conpty, "cmd /k");
+                thread::sleep(Duration::from_millis(index % 4));
+                drop(pty);
+                transcript.wait_for_any_end()
+            })
+        })
+        .collect();
+    for session in sessions {
+        let end = session.join().unwrap();
+        assert!(
+            matches!(
+                end,
+                End::Ended(None | Some(CONSOLE_CLOSED | KILLED | NOT_CONNECTED))
+            ),
+            "{end:?}"
+        );
+    }
+}
+
+#[test]
 fn sessions_dropped_while_the_shell_of_a_launcher_starts_end_too() {
     // The same can happen to a program that the program of the session has
     // just started, here the cmd /k of cmd /c: the session has to end it
     // too. The moment is narrow, so many sessions close, each at a different
-    // moment after it starts. One that gets stuck ends after some seconds.
+    // moment after its program starts. One that gets stuck ends after some
+    // seconds.
     let conpty = bundled();
     let sessions: Vec<_> = (0..20)
         .map(|index| {
@@ -403,6 +695,7 @@ fn sessions_dropped_while_the_shell_of_a_launcher_starts_end_too() {
             thread::spawn(move || {
                 let started = Instant::now();
                 let (pty, mut transcript) = spawn(&conpty, "cmd /c cmd /k");
+                wait_for_program(&pty);
                 thread::sleep(Duration::from_millis(10 + 2 * index));
                 drop(pty);
                 (transcript.wait_for_end(), started.elapsed())
@@ -438,10 +731,11 @@ fn a_session_whose_programs_keep_ending_is_not_ended_by_the_writer() {
 
 #[test]
 fn the_sessions_that_were_closed_end_before_the_process_exits() {
-    // Another process closes a session that gets stuck and another one,
-    // waits for them, and exits. The job of the test counts its programs,
-    // and those of its sessions, which are in it too: it ends the ones left
-    // only when it is dropped, after the test has counted them.
+    // Another process closes a session that gets stuck, another one, and two
+    // that are starting, waits for them, and exits. The job of the test
+    // counts its programs, and those of its sessions, which are in it too:
+    // it ends the ones left only when it is dropped, after the test has
+    // counted them.
     let job = Job::new();
     let mut exiter = process::Command::new(env::current_exe().unwrap())
         .args(HELPER_ARGUMENTS)
@@ -602,8 +896,9 @@ unsafe extern "system" fn wait_on_close(event: u32) -> BOOL {
     TRUE
 }
 
-/// A process that closes a session that gets stuck, and then one that ends
-/// at once, waits for them, tells how long it waited, and exits.
+/// A process that closes a session that gets stuck, one that ends at once,
+/// and two that are starting, waits for them, tells how long it waited, and
+/// exits.
 fn exiter() {
     // The test says go once this process is in its job.
     let mut go = String::new();
@@ -613,11 +908,19 @@ fn exiter() {
     transcript.wait_for("closer-ready");
     let (quick, mut transcript) = spawn(&conpty, "cmd /k");
     transcript.wait_for(">");
+    // The program of one has just started, and connects to its console; the
+    // writer of the other one may not even have created its pseudoconsole.
+    // The process waits for both, as for the others (ADR 0026 and ADR 0028).
+    let (starting, _) = spawn(&conpty, "cmd /k");
+    wait_for_program(&starting);
+    let (unborn, _) = spawn(&conpty, "cmd /k");
     let closing = Instant::now();
     // The writer of the quick one comes after the one of the stuck one,
     // which has to stay while it runs.
     drop(stuck);
     drop(quick);
+    drop(starting);
+    drop(unborn);
     meiga_win::conpty::wait_for_closed_sessions();
     println!("waited {} ms", closing.elapsed().as_millis());
 }

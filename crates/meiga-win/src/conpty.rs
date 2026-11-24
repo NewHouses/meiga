@@ -9,14 +9,18 @@
 //! - the reader, blocked in `ReadFile` on the output pipe, gives each block
 //!   that it reads to an [`Output`], which can answer the program at once
 //!   with an [`Input`];
-//! - the writer waits at the same time for input to send, for the session to
-//!   be closed and for the program to end. Then it closes the pseudoconsole,
-//!   and makes sure that the session ends.
+//! - the writer creates the pseudoconsole and starts the program in it, so
+//!   that the thread that starts a session never waits for Windows to
+//!   create their processes (ADR 0028). Then it waits at the same time for
+//!   input to send, for the session to be closed and for the program to
+//!   end. Then it closes the pseudoconsole, and makes sure that the session
+//!   ends.
 //!
 //! The program, and the programs that it starts, run in a job of the
 //! session, so that they can all be ended if the session gets stuck. A
-//! process that exits while it closes sessions ends their writers with it:
-//! [`wait_for_closed_sessions`] waits for them before.
+//! process that exits while it closes sessions, or while it starts them,
+//! ends their writers with it: [`wait_for_closed_sessions`] waits for them
+//! before.
 
 use std::ffi::{CStr, c_void};
 use std::io;
@@ -26,7 +30,7 @@ use std::os::windows::ffi::OsStrExt;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 use std::path::{Path, PathBuf};
 use std::ptr;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
@@ -48,12 +52,12 @@ use windows_sys::Win32::System::LibraryLoader::{
 use windows_sys::Win32::System::Pipes::CreatePipe;
 use windows_sys::Win32::System::Threading::{
     CREATE_UNICODE_ENVIRONMENT, CreateEventW, CreateProcessW, DeleteProcThreadAttributeList,
-    EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess, INFINITE, InitializeProcThreadAttributeList,
-    LPPROC_THREAD_ATTRIBUTE_LIST, OpenProcess, PROC_THREAD_ATTRIBUTE_JOB_LIST,
-    PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, PROCESS_INFORMATION, PROCESS_SYNCHRONIZE,
-    STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, SetEvent, SetThreadPriority,
-    THREAD_PRIORITY, THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL,
-    UpdateProcThreadAttribute, WaitForMultipleObjects, WaitForSingleObject,
+    EXTENDED_STARTUPINFO_PRESENT, GetCurrentThread, GetExitCodeProcess, INFINITE,
+    InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST, OpenProcess,
+    PROC_THREAD_ATTRIBUTE_JOB_LIST, PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, PROCESS_INFORMATION,
+    PROCESS_SYNCHRONIZE, STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, SetEvent,
+    SetThreadDescription, SetThreadPriority, THREAD_PRIORITY, THREAD_PRIORITY_BELOW_NORMAL,
+    THREAD_PRIORITY_NORMAL, UpdateProcThreadAttribute, WaitForMultipleObjects, WaitForSingleObject,
 };
 use windows_sys::core::HRESULT;
 
@@ -232,109 +236,16 @@ impl Conpty {
         &self.source
     }
 
-    /// Runs `command` in a new pseudoconsole of `size`, and gives what it
-    /// shows to `output`, on a thread of the session.
-    ///
-    /// The program runs in a job of the session, as the programs that it
-    /// starts, unless they ask to leave it.
-    ///
-    /// If it fails, `output` is never called.
+    /// Runs `command` in a new pseudoconsole of `size` of this ConPTY, and
+    /// gives what it shows to `output`, on a thread of the session: see
+    /// [`spawn`], which uses the ConPTY next to the executable.
     pub fn spawn<O: Output>(
         &self,
         command: &Command<'_>,
         size: GridSize,
         output: O,
     ) -> Result<Pty, Error> {
-        let size = coord(size, "CreatePseudoConsole")?;
-        let mut command_line = null_terminated(command.line, "the command line")?;
-        let folder = command
-            .folder
-            .map(|folder| null_terminated(folder, "the folder"))
-            .transpose()?;
-        let environment = command.environment.map(environment_block).transpose()?;
-        let wake = event(false)?;
-        let output_closed = event(true)?;
-        let job = job()?;
-        let (input_read, input_write) = pipe(0)?;
-        let (output_read, output_write) = pipe(READ_SIZE)?;
-        let console = self.create(size, &input_read, &output_write)?;
-        // ConPTY keeps copies of its ends of the pipes. Without ours, the
-        // pipes break when ConPTY ends, so the reader and the writer do not
-        // wait for ever.
-        drop((input_read, output_write));
-        let program = Program {
-            command_line: &mut command_line,
-            folder: folder.as_deref(),
-            environment,
-        };
-        let (process, process_id) = match start(program, &console, &job) {
-            Ok(started) => started,
-            Err(error) => {
-                // Before Windows 11 24H2, ClosePseudoConsole waits until
-                // ConPTY ends, and ConPTY may be waiting to write its
-                // output: close the output pipe first.
-                drop(output_read);
-                drop(console);
-                return Err(error);
-            }
-        };
-        // The pseudoconsole stays here until the writer takes it: if the
-        // writer does not start, it is closed below, after the programs end.
-        let shared = Arc::new(Shared {
-            event: wake,
-            output_closed,
-            process,
-            job,
-            state: Mutex::new(State {
-                console: Some(console),
-                ..State::default()
-            }),
-        });
-
-        let writer = {
-            let shared = Arc::clone(&shared);
-            thread::Builder::new()
-                .name(format!("conpty writer {process_id}"))
-                .spawn(move || write_input(&shared, input_write))
-        };
-        let writer = match writer {
-            Ok(writer) => writer,
-            Err(error) => {
-                // End the programs before their pseudoconsole closes, which must
-                // not happen while a program connects to it, and close the
-                // output first, as above.
-                shared.terminate();
-                drop(output_read);
-                let console = shared.lock().console.take();
-                drop(console);
-                return Err(Error::new("CreateThread", error));
-            }
-        };
-        let input = Input { shared };
-        let reader = {
-            let shared = Arc::clone(&input.shared);
-            thread::Builder::new()
-                .name(format!("conpty reader {process_id}"))
-                .spawn(move || read_output(output_read, shared, output))
-        };
-        match reader {
-            Ok(reader) => Ok(Pty {
-                input,
-                process_id,
-                reader,
-                writer: Some(writer),
-            }),
-            Err(error) => {
-                // Nobody reads the output: end the programs, tell the writer
-                // not to wait for the output, and close the session, as
-                // dropping a `Pty` does. `output` is never called.
-                input.shared.terminate();
-                input.shared.close_output();
-                input.close();
-                keep_closing(writer);
-                Err(Error::new("CreateThread", error))
-            }
-        }
+        spawn_in(Choice::Given(self.clone()), command, size, output)
     }
 
     /// Creates a pseudoconsole that reads its input from `input` and writes
@@ -374,6 +285,153 @@ impl Conpty {
     }
 }
 
+/// The ConPTY that [`spawn`] uses: [`Conpty::load`] gives it to the writer
+/// of the first session that needs it, which loads its library, if it is
+/// the bundled one, on its own thread (ADR 0028). Then it stays for the
+/// rest of the process.
+static NEXT_TO_EXE: OnceLock<Conpty> = OnceLock::new();
+
+/// The ConPTY of a session: one that the caller gave, or the one next to
+/// the executable, which the writer loads the first time.
+enum Choice {
+    Given(Conpty),
+    NextToExe,
+}
+
+impl Choice {
+    /// The ConPTY, which the first call with [`Choice::NextToExe`] loads,
+    /// on the thread that calls it. If two threads call it at the same
+    /// time, the second one waits until the first one has loaded it.
+    fn get(&self) -> &Conpty {
+        match self {
+            Self::Given(conpty) => conpty,
+            Self::NextToExe => NEXT_TO_EXE.get_or_init(Conpty::load),
+        }
+    }
+}
+
+/// Runs `command` in a new pseudoconsole of `size`, and gives what it shows
+/// to `output`, on a thread of the session. The pseudoconsole is the one of
+/// the ConPTY next to the executable, or else the one of Windows, as
+/// [`Conpty::load`] says: the writer of the first session loads it.
+///
+/// It returns at once, with the session that starts, and the program starts
+/// on the writer thread of the session (ADR 0028): what is written to it
+/// meanwhile waits for it, and the size that it is given is the one that it
+/// starts with. If the program cannot start, [`Output::failed`] tells why,
+/// instead of [`Output::ended`]. If the session is closed before the
+/// program starts, the program does not start, and `output` gets
+/// [`Output::ended`], without an exit code.
+///
+/// The program runs in a job of the session, as the programs that it
+/// starts, unless they ask to leave it.
+///
+/// It fails at once only if `command` or `size` are not valid, or if
+/// Windows cannot give what the session needs before it starts: its pipes,
+/// its job, its events and its threads. Then `output` is never called.
+pub fn spawn<O: Output>(command: &Command<'_>, size: GridSize, output: O) -> Result<Pty, Error> {
+    spawn_in(Choice::NextToExe, command, size, output)
+}
+
+/// [`spawn`], with the ConPTY of `conpty`.
+fn spawn_in<O: Output>(
+    conpty: Choice,
+    command: &Command<'_>,
+    size: GridSize,
+    output: O,
+) -> Result<Pty, Error> {
+    let size = coord(size, "CreatePseudoConsole")?;
+    let command_line = null_terminated(command.line, "the command line")?;
+    let folder = command
+        .folder
+        .map(|folder| null_terminated(folder, "the folder"))
+        .transpose()?;
+    let environment = command
+        .environment
+        .map(|block| environment_block(block).map(<[u16]>::to_vec))
+        .transpose()?;
+    let wake = event(false)?;
+    let output_closed = event(true)?;
+    let job = job()?;
+    let (input_read, input_write) = pipe(0)?;
+    let (output_read, output_write) = pipe(READ_SIZE)?;
+    let shared = Arc::new(Shared {
+        event: wake,
+        output_closed,
+        process: OnceLock::new(),
+        reader: OnceLock::new(),
+        job,
+        state: Mutex::new(State {
+            size,
+            ..State::default()
+        }),
+    });
+    let creation = Creation {
+        conpty,
+        command_line,
+        folder,
+        environment,
+        input: input_read,
+        output: output_write,
+    };
+    // Until the program starts, the threads have no number: the writer
+    // gives them the one of its process then.
+    let writer = {
+        let shared = Arc::clone(&shared);
+        thread::Builder::new()
+            .name("conpty writer".to_owned())
+            .spawn(move || write_input(&shared, input_write, creation))
+            // Nothing has been created yet: the pipes close with the
+            // closure, and `output` is never called.
+            .map_err(|error| Error::new("CreateThread", error))?
+    };
+    let input = Input { shared };
+    let reader = {
+        let shared = Arc::clone(&input.shared);
+        thread::Builder::new()
+            .name("conpty reader".to_owned())
+            .spawn(move || read_output(output_read, shared, output))
+    };
+    match reader {
+        Ok(reader) => {
+            input.shared.keep_reader(reader);
+            Ok(Pty {
+                input,
+                writer: Some(writer),
+            })
+        }
+        Err(error) => {
+            // Nobody reads the output, and `output` is never called: the
+            // writer does not start the program, or the session closes as
+            // when a `Pty` is dropped, without waiting for the output, and
+            // its programs end now if they are already running.
+            input.shared.terminate();
+            input.shared.close_output();
+            input.close();
+            keep_closing(writer);
+            Err(Error::new("CreateThread", error))
+        }
+    }
+}
+
+/// What the writer needs to create the pseudoconsole and to start the
+/// program in it.
+struct Creation {
+    conpty: Choice,
+    /// The command line, null-terminated and writable, as CreateProcessW
+    /// takes it.
+    command_line: Vec<u16>,
+    /// The folder, null-terminated, if it is not the one of meiga.
+    folder: Option<Vec<u16>>,
+    /// The environment block, which ends with two null characters, if it is
+    /// not the one of meiga.
+    environment: Option<Vec<u16>>,
+    /// The ends of the pipes that ConPTY uses: it reads the input from one,
+    /// and writes the output to the other.
+    input: OwnedHandle,
+    output: OwnedHandle,
+}
+
 /// Where a pseudoconsole sends what the program shows.
 ///
 /// Its methods run on the reader thread of the session, one after the
@@ -391,8 +449,15 @@ pub trait Output: Send + 'static {
     /// The session ended: the pseudoconsole closed its output, after the
     /// last [`Output::received`]. `exit_code` is the exit code of the
     /// program, or `None` if it is still running some seconds later, which
-    /// only happens if ConPTY itself fails.
+    /// only happens if ConPTY itself fails, or if the session was closed
+    /// before the program started.
     fn ended(&mut self, exit_code: Option<u32>);
+
+    /// The program could not start, because of `error`: the pseudoconsole
+    /// or the program could not be created, for example because the
+    /// program or its folder are not there. It comes instead of
+    /// [`Output::ended`], and also last.
+    fn failed(&mut self, error: Error);
 }
 
 /// The priority of the reader thread of a session, which gives the output of
@@ -408,20 +473,19 @@ pub enum Priority {
     BelowNormal,
 }
 
-/// A program running in a pseudoconsole.
+/// A program running in a pseudoconsole, or starting in it: the writer
+/// thread of the session creates the pseudoconsole and the program (ADR
+/// 0028).
 ///
 /// Dropping it closes the session without waiting. Its writer thread closes
 /// the pseudoconsole, which asks the program to end, and its reader thread
-/// calls [`Output::ended`] after the last output. If the session gets stuck,
-/// the writer ends the programs of its job. Before the process exits,
+/// calls [`Output::ended`] after the last output. If the program has not
+/// started yet, it does not start. If the session gets stuck, the writer
+/// ends the programs of its job. Before the process exits,
 /// [`wait_for_closed_sessions`] waits for the writers of the sessions that
-/// were closed.
+/// were closed, also of the ones that were starting.
 pub struct Pty {
     input: Input,
-    process_id: u32,
-    /// The reader thread, whose priority can change. Dropping it does not
-    /// wait for the thread: it goes on until the output ends.
-    reader: JoinHandle<()>,
     /// The writer thread, until the `Pty` is dropped: then it goes to
     /// [`CLOSING`].
     writer: Option<JoinHandle<()>>,
@@ -441,12 +505,13 @@ fn keep_closing(writer: JoinHandle<()>) {
 
 /// Waits until the sessions that were closed have ended: until the writer of
 /// each one has seen ConPTY close the output and the program end or, if the
-/// session got stuck, has ended the programs of its job. If a session ended
-/// on its own, its programs that are not in its console, such as a window
-/// that its shell opened, go on. Call it before the process exits, once no
-/// thread closes more sessions: when a process exits, its threads end with
-/// it, and a session that got stuck would stay so for ever, with its
-/// programs and its ConPTY (ADR 0026).
+/// session got stuck, has ended the programs of its job, or, if it was
+/// closed while its program started, has started it and closed it, or has
+/// not started it. If a session ended on its own, its programs that are not
+/// in its console, such as a window that its shell opened, go on. Call it
+/// before the process exits, once no thread closes more sessions: when a
+/// process exits, its threads end with it, and a session that got stuck
+/// would stay so for ever, with its programs and its ConPTY (ADR 0026).
 ///
 /// It waits as long as the sessions take: a session ends at once, or when
 /// its programs handle `CTRL_CLOSE_EVENT`, or [`CLOSE_TIMEOUT_MS`] after the
@@ -473,9 +538,10 @@ impl Pty {
         self.input.clone()
     }
 
-    /// The identifier of the process of the program.
-    pub fn process_id(&self) -> u32 {
-        self.process_id
+    /// The identifier of the process of the program, once the writer has
+    /// started it, or `None` until then, and for ever if it did not start.
+    pub fn process_id(&self) -> Option<u32> {
+        self.input.shared.process.get().map(|process| process.id)
     }
 
     /// Changes the size of the pseudoconsole: see [`Input::resize`].
@@ -485,16 +551,22 @@ impl Pty {
 
     /// Changes the priority of the reader thread, from any thread. It takes
     /// effect at once, also while the reader is giving output to its
-    /// [`Output`]. Once the reader has ended, it does nothing.
+    /// [`Output`], and before the program starts: the reader starts with
+    /// the session, and waits for the output. Once the reader has ended, it
+    /// does nothing.
     pub fn set_reader_priority(&self, priority: Priority) -> Result<(), Error> {
         let value: THREAD_PRIORITY = match priority {
             Priority::Normal => THREAD_PRIORITY_NORMAL,
             Priority::BelowNormal => THREAD_PRIORITY_BELOW_NORMAL,
         };
+        // The session gives it its reader before it gives the `Pty`.
+        let Some(reader) = self.input.shared.reader.get() else {
+            return Ok(());
+        };
         // SAFETY: the handle is the one of the reader thread, which the
         // JoinHandle keeps open, also after the thread ends; it has every
         // access right, THREAD_SET_INFORMATION among them.
-        if unsafe { SetThreadPriority(self.reader.as_raw_handle(), value) } == FALSE {
+        if unsafe { SetThreadPriority(reader.as_raw_handle(), value) } == FALSE {
             return Err(Error::last("SetThreadPriority"));
         }
         Ok(())
@@ -519,8 +591,9 @@ pub struct Input {
 
 impl Input {
     /// Sends `bytes` to the program, as if they were typed. It does not
-    /// wait: the writer thread sends them. Once the session has been closed
-    /// or has ended, it does nothing.
+    /// wait: the writer thread sends them, once the program has started if
+    /// it is still starting. Once the session has been closed or has ended,
+    /// or if the program did not start, it does nothing.
     pub fn write(&self, bytes: &[u8]) {
         let wake = {
             let mut state = self.shared.lock();
@@ -541,12 +614,17 @@ impl Input {
     /// tells the program, which may show itself again for the new size; to
     /// the terminal it writes nothing, but it asks for the position of its
     /// cursor (`CSI 6n`) when the program asks for its own. It does not
-    /// wait for ConPTY. Once the session has been closed or has ended, it
-    /// does nothing.
+    /// wait for ConPTY. While the writer creates the pseudoconsole, it keeps
+    /// the size, which the pseudoconsole gets once it is there. Once the
+    /// session has been closed or has ended, it does nothing.
     pub fn resize(&self, size: GridSize) -> Result<(), Error> {
         let size = coord(size, "ResizePseudoConsole")?;
-        let state = self.shared.lock();
-        let Some(console) = state.console.as_ref().filter(|_| !state.closing) else {
+        let mut state = self.shared.lock();
+        if state.closing || state.finished {
+            return Ok(());
+        }
+        state.size = size;
+        let Some(console) = state.console.as_ref() else {
             return Ok(());
         };
         // SAFETY: the handle comes from the create function of the same
@@ -576,12 +654,22 @@ struct Shared {
     /// A manual-reset event that the reader sets when the output closes:
     /// ConPTY has ended.
     output_closed: OwnedHandle,
-    /// The program.
-    process: OwnedHandle,
+    /// The program, once the writer has started it.
+    process: OnceLock<Process>,
+    /// The reader thread, whose priority can change, from the moment that
+    /// the session starts. Dropping it does not wait for the thread: it goes
+    /// on until the output ends.
+    reader: OnceLock<JoinHandle<()>>,
     /// The job of the program and of the programs that it starts. They may
     /// leave it if they ask to, with `CREATE_BREAKAWAY_FROM_JOB`.
     job: OwnedHandle,
     state: Mutex<State>,
+}
+
+/// The program of a session.
+struct Process {
+    handle: OwnedHandle,
+    id: u32,
 }
 
 impl Shared {
@@ -602,15 +690,52 @@ impl Shared {
         unsafe { SetEvent(self.output_closed.as_raw_handle()) };
     }
 
+    /// Keeps the reader thread, which the thread that started the session
+    /// created after the writer. If the program has already started, it
+    /// gives the reader the number of its process, as [`Shared::started`]
+    /// does: under the lock, one of them always sees the other.
+    fn keep_reader(&self, reader: JoinHandle<()>) {
+        let reader = self.reader.get_or_init(|| reader);
+        let _state = self.lock();
+        if let Some(process) = self.process.get() {
+            name_reader(reader, process.id);
+        }
+    }
+
+    /// Notes, on the writer thread, that the program started, and gives the
+    /// writer and the reader the number of its process in their names,
+    /// which only had the kind of the thread until now: the checks and the
+    /// profiles of Windows find them by it. The names come before the
+    /// program, so whoever sees the program sees them too.
+    fn started(&self, process: Process) -> &Process {
+        let _state = self.lock();
+        name_thread(
+            // SAFETY: the pseudo handle of the calling thread, the writer,
+            // which needs no closing.
+            unsafe { GetCurrentThread() },
+            &format!("conpty writer {}", process.id),
+        );
+        if let Some(reader) = self.reader.get() {
+            name_reader(reader, process.id);
+        }
+        self.process.get_or_init(|| process)
+    }
+
+    /// Notes, on the writer thread, why the program could not start: the
+    /// reader tells it, once the output closes.
+    fn fail(&self, error: Error) {
+        self.lock().failure = Some(error);
+    }
+
     /// Waits, once the pseudoconsole has closed, for the session to end: for
-    /// ConPTY to close the output and for the program to end. Meanwhile, the
-    /// programs that the session had must keep ending: Windows asks them to
-    /// end one at a time. If none of them ends for [`CLOSE_TIMEOUT_MS`],
-    /// something keeps the pseudoconsole open: usually a program that was
-    /// connecting to it when it closed, and that waits for ConPTY, while
-    /// ConPTY waits for it (ADR 0011). Then every program of the session
-    /// ends.
-    fn wait_for_end(&self) {
+    /// ConPTY to close the output and for `process`, the program, to end.
+    /// Meanwhile, the programs that the session had must keep ending:
+    /// Windows asks them to end one at a time. If none of them ends for
+    /// [`CLOSE_TIMEOUT_MS`], something keeps the pseudoconsole open: usually
+    /// a program that was connecting to it when it closed, and that waits
+    /// for ConPTY, while ConPTY waits for it (ADR 0011). Then every program
+    /// of the session ends.
+    fn wait_for_end(&self, process: &Process) {
         // Only these count: a program that starts later could hide that
         // others end, or, starting others, keep the session waiting.
         let programs = self.programs();
@@ -621,7 +746,7 @@ impl Shared {
         let mut watched: Vec<HANDLE> = watched.iter().map(AsRawHandle::as_raw_handle).collect();
         let mut others_ended = 0;
         let output_closed = self.output_closed.as_raw_handle();
-        let process = self.process.as_raw_handle();
+        let process = process.handle.as_raw_handle();
         let (mut closed, mut ended) = (false, false);
         let mut deadline = Instant::now() + CLOSE_TIMEOUT;
         let mut handles = Vec::with_capacity(WATCHED + 2);
@@ -717,14 +842,22 @@ impl Shared {
 
 #[derive(Default)]
 struct State {
-    /// Input that the writer has not taken yet.
+    /// Input that the writer has not taken yet: also what was written while
+    /// the program started.
     input: Vec<u8>,
     /// The session was closed.
     closing: bool,
-    /// The writer has closed the pseudoconsole: input is no longer sent.
+    /// The writer has closed the pseudoconsole, or the program did not
+    /// start: input is no longer sent.
     finished: bool,
-    /// The pseudoconsole, until the writer takes it to close it.
+    /// The pseudoconsole, from the moment that the writer creates it until
+    /// it takes it to close it.
     console: Option<PseudoConsole>,
+    /// The size of the pseudoconsole: the last one that it was given, which
+    /// is also the one that it is created with.
+    size: COORD,
+    /// Why the program could not start, until the reader tells it.
+    failure: Option<Error>,
 }
 
 /// A pseudoconsole, closed when it is dropped.
@@ -745,11 +878,107 @@ impl Drop for PseudoConsole {
     }
 }
 
-/// The writer thread: sends the input to the program, closes the
-/// pseudoconsole when the program ends or the session is closed, and makes
-/// sure that the session ends.
-fn write_input(shared: &Shared, pipe: OwnedHandle) {
-    let handles = [shared.event.as_raw_handle(), shared.process.as_raw_handle()];
+/// The writer thread: creates the pseudoconsole and starts the program in
+/// it, sends the input to the program, closes the pseudoconsole when the
+/// program ends or the session is closed, and makes sure that the session
+/// ends. Creating them here, and not on the thread that starts the session,
+/// means that the thread of the window never waits for Windows to create a
+/// process, which sometimes takes some hundreds of milliseconds (ADR 0028).
+fn write_input(shared: &Shared, pipe: OwnedHandle, creation: Creation) {
+    let process = create(shared, creation);
+    if let Some(process) = process {
+        send_input(shared, process, &pipe);
+    }
+    let console = {
+        let mut state = shared.lock();
+        state.finished = true;
+        state.console.take()
+    };
+    drop(pipe);
+    // Without a program, the pseudoconsole closes at once, and ConPTY ends:
+    // the reader reads its output until then.
+    if let Some(console) = console {
+        close_console(console);
+    }
+    if let Some(process) = process {
+        shared.wait_for_end(process);
+    }
+}
+
+/// Creates the pseudoconsole, with the last size that the session was
+/// given, and starts the program in it, unless the session is closed before.
+/// Returns the program, or `None` if it did not start: then, if creating
+/// them failed, the reader tells why, once the output closes. The
+/// pseudoconsole, if there is one, stays in the state, for the writer to
+/// close it.
+fn create(shared: &Shared, creation: Creation) -> Option<&Process> {
+    let Creation {
+        conpty,
+        mut command_line,
+        folder,
+        environment,
+        input,
+        output,
+    } = creation;
+    let conpty = conpty.get();
+    let size = {
+        let state = shared.lock();
+        if state.closing {
+            return None;
+        }
+        state.size
+    };
+    let console = match conpty.create(size, &input, &output) {
+        Ok(console) => console,
+        Err(error) => {
+            // The output closes when `output` does, right after this.
+            shared.fail(error);
+            return None;
+        }
+    };
+    // ConPTY keeps copies of its ends of the pipes. Without ours, the pipes
+    // break when ConPTY ends, so the reader and the writer do not wait for
+    // ever.
+    drop((input, output));
+    let handle = console.handle;
+    {
+        let mut state = shared.lock();
+        // The session may have been given another size meanwhile: from now
+        // on, `Input::resize` gives it to the pseudoconsole itself.
+        if (state.size.X, state.size.Y) != (size.X, size.Y) {
+            // SAFETY: the handle has just been created by the same ConPTY.
+            // If it fails, the pseudoconsole keeps the size that it was
+            // created with, as when `Input::resize` fails.
+            let _ = unsafe { (console.resize)(console.handle, state.size) };
+        }
+        state.console = Some(console);
+        // Closed while the pseudoconsole was created: the program does not
+        // start, and the writer closes the pseudoconsole, which has no
+        // program yet.
+        if state.closing {
+            return None;
+        }
+    }
+    let program = Program {
+        command_line: &mut command_line,
+        folder: folder.as_deref(),
+        environment: environment.as_deref(),
+    };
+    // The pseudoconsole stays open meanwhile: only this thread closes it.
+    match start(program, handle, &shared.job) {
+        Ok(process) => Some(shared.started(process)),
+        Err(error) => {
+            // The output closes when the writer closes the pseudoconsole.
+            shared.fail(error);
+            None
+        }
+    }
+}
+
+/// Sends the input to `process`, the program, until it ends or the session
+/// is closed.
+fn send_input(shared: &Shared, process: &Process, pipe: &OwnedHandle) {
+    let handles = [shared.event.as_raw_handle(), process.handle.as_raw_handle()];
     let mut pending = Vec::new();
     loop {
         // SAFETY: both handles are valid while this thread runs, because it
@@ -768,36 +997,26 @@ fn write_input(shared: &Shared, pipe: OwnedHandle) {
         if closing {
             break;
         }
-        if !write_all(&pipe, &pending) {
+        if !write_all(pipe, &pending) {
             // ConPTY closed its end of the input pipe: it has ended.
             break;
         }
         pending.clear();
     }
-    let console = {
-        let mut state = shared.lock();
-        state.finished = true;
-        state.console.take()
-    };
-    drop(pipe);
-    if let Some(console) = console {
-        close_console(console);
-    }
-    shared.wait_for_end();
 }
 
 /// Closes a pseudoconsole, which asks its programs to end, without waiting
 /// for ConPTY to end. The bundled ConPTY, and the one of Windows since
 /// Windows 11 24H2, return at once. Before 24H2, ClosePseudoConsole of
 /// Windows waits until ConPTY ends, which can take a while: that is why
-/// closing a session never calls it on the thread of the window. Only
-/// `Conpty::spawn` does, on the thread that calls it, when it fails: by then
-/// the session has no programs, and its output is closed, so nothing keeps
-/// ConPTY waiting. And ConPTY does not end while a program that was
-/// connecting to it when it closed waits for it: the writer would wait for
-/// ever, and never end the programs of the session (ADR 0026). So a
-/// pseudoconsole that may wait closes on a thread of its own, which ends once
-/// ConPTY ends, and nobody waits for it.
+/// closing a session never calls it on the thread of the window, and only
+/// the writer does. A pseudoconsole whose program did not start has no
+/// programs, and its output is read, so nothing keeps ConPTY waiting. But
+/// ConPTY does not end while a program that was connecting to it when it
+/// closed waits for it: the writer would wait for ever, and never end the
+/// programs of the session (ADR 0026). So a pseudoconsole that may wait
+/// closes on a thread of its own, which ends once ConPTY ends, and nobody
+/// waits for it.
 fn close_console(console: PseudoConsole) {
     if !console.may_wait {
         drop(console);
@@ -838,8 +1057,25 @@ fn write_all(pipe: &OwnedHandle, mut bytes: &[u8]) -> bool {
 }
 
 /// The reader thread: gives what the program shows to `output`, until
-/// ConPTY ends and closes its end of the output pipe.
+/// ConPTY ends and closes its end of the output pipe, or until the writer
+/// closes its own end, if it did not create the pseudoconsole. Then it tells
+/// `output` how the session ended: why the program could not start, or how
+/// it ended.
 fn read_output<O: Output>(pipe: OwnedHandle, shared: Arc<Shared>, mut output: O) {
+    // The standard library gives this thread its name as it starts, after
+    // the writer may have given it the number of the program: then it goes
+    // in it again. Under the lock, as the writer gives it.
+    {
+        let _state = shared.lock();
+        if let Some(process) = shared.process.get() {
+            name_thread(
+                // SAFETY: the pseudo handle of this thread, which needs no
+                // closing.
+                unsafe { GetCurrentThread() },
+                &format!("conpty reader {}", process.id),
+            );
+        }
+    }
     let input = Input { shared };
     let mut buffer = vec![0; READ_SIZE as usize];
     loop {
@@ -870,7 +1106,16 @@ fn read_output<O: Output>(pipe: OwnedHandle, shared: Arc<Shared>, mut output: O)
     }
     drop(pipe);
     input.shared.close_output();
-    output.ended(exit_code(&input.shared.process));
+    // The writer notes a failure before the output can close: before it
+    // closes its end of the pipe, or the pseudoconsole.
+    let failure = input.shared.lock().failure.take();
+    match failure {
+        Some(error) => output.failed(error),
+        None => {
+            let process = input.shared.process.get();
+            output.ended(process.and_then(|process| exit_code(&process.handle)));
+        }
+    }
 }
 
 /// The exit code of `process`, or `None` if it is still running after
@@ -899,6 +1144,22 @@ fn open_to_wait(id: usize) -> Option<OwnedHandle> {
     let handle = unsafe { OpenProcess(PROCESS_SYNCHRONIZE, FALSE, id) };
     // SAFETY: OpenProcess has just opened it, and nothing else owns it.
     (!handle.is_null()).then(|| unsafe { OwnedHandle::from_raw_handle(handle) })
+}
+
+/// Gives `thread` the name `name`, which debuggers, the profiles of Windows
+/// and the checks of meiga show. If it fails, the thread keeps the name that
+/// it had.
+fn name_thread(thread: HANDLE, name: &str) {
+    let name = wide(name);
+    // SAFETY: the handle is valid during the call, with every access right,
+    // and the name is null-terminated.
+    unsafe { SetThreadDescription(thread, name.as_ptr()) };
+}
+
+/// Gives `reader`, the reader thread of a session, the number of the process
+/// of its program.
+fn name_reader(reader: &JoinHandle<()>, id: u32) {
+    name_thread(reader.as_raw_handle(), &format!("conpty reader {id}"));
 }
 
 /// What a session runs: a program, and where and with what it starts.
@@ -939,13 +1200,9 @@ struct Program<'a> {
     environment: Option<&'a [u16]>,
 }
 
-/// Starts `program` in `console`, in `job`. Returns the handle and the
-/// identifier of its process.
-fn start(
-    program: Program<'_>,
-    console: &PseudoConsole,
-    job: &OwnedHandle,
-) -> Result<(OwnedHandle, u32), Error> {
+/// Starts `program` in the pseudoconsole `console`, which stays open
+/// meanwhile, in `job`. Returns its process.
+fn start(program: Program<'_>, console: HPCON, job: &OwnedHandle) -> Result<Process, Error> {
     let jobs = [job.as_raw_handle()];
     let mut attributes = Attributes::new(console, &jobs)?;
     let mut startup = STARTUPINFOEXW::default();
@@ -994,7 +1251,10 @@ fn start(
         )
     };
     drop(thread);
-    Ok((handle, process.dwProcessId))
+    Ok(Process {
+        handle,
+        id: process.dwProcessId,
+    })
 }
 
 /// The attributes of a new process: the pseudoconsole that it uses, and the
@@ -1008,7 +1268,7 @@ struct Attributes<'a> {
 }
 
 impl<'a> Attributes<'a> {
-    fn new(console: &PseudoConsole, jobs: &'a [HANDLE]) -> Result<Self, Error> {
+    fn new(console: HPCON, jobs: &'a [HANDLE]) -> Result<Self, Error> {
         let mut size = 0;
         // SAFETY: without a list, it only writes the size that it needs to
         // `size`, and fails with ERROR_INSUFFICIENT_BUFFER.
@@ -1028,7 +1288,7 @@ impl<'a> Attributes<'a> {
         // itself, not a pointer to it, as Microsoft documents.
         attributes.update(
             PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
-            ptr::without_provenance(console.handle as usize),
+            ptr::without_provenance(console as usize),
             mem::size_of::<HPCON>(),
         )?;
         attributes.update(
@@ -1188,7 +1448,13 @@ fn pipe(size: u32) -> Result<(OwnedHandle, OwnedHandle), Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Condvar;
+    use std::collections::BTreeMap;
+    use std::sync::{Condvar, mpsc};
+    use std::{env, fs, process, slice};
+
+    use windows_sys::Win32::Foundation::LocalFree;
+    use windows_sys::Win32::System::Threading::GetThreadDescription;
+    use windows_sys::core::PWSTR;
 
     use super::*;
 
@@ -1295,5 +1561,545 @@ mod tests {
         // the writer.
         close_console(console(2, false));
         assert_eq!(closer_of(2), Some(this));
+    }
+
+    // The sessions that the writer creates (ADR 0028), with fake ConPTYs:
+    // ones of Windows whose create function waits at a gate until the test
+    // opens it, so that the test can act while the writer creates the
+    // pseudoconsole.
+
+    /// `E_INVALIDARG`, as a fake function fails.
+    const INVALID_ARGUMENT: HRESULT = 0x8007_0057_u32 as HRESULT;
+
+    /// In the flags of a fake ConPTY: its create function fails, once its
+    /// gate opens.
+    const FAILS: u32 = 0x8000_0000;
+
+    /// What the fake ConPTYs of the tests did, and the gates of their create
+    /// functions: by the flags of each one, which tell the tests apart, the
+    /// sizes that it created pseudoconsoles with, and whether its gate is
+    /// open; and the sizes that pseudoconsoles were given.
+    struct Fakes {
+        created: BTreeMap<u32, Vec<(i16, i16)>>,
+        open: BTreeMap<u32, bool>,
+        resized: Vec<(i16, i16)>,
+    }
+
+    static FAKES: (Mutex<Fakes>, Condvar) = (
+        Mutex::new(Fakes {
+            created: BTreeMap::new(),
+            open: BTreeMap::new(),
+            resized: Vec::new(),
+        }),
+        Condvar::new(),
+    );
+
+    fn fakes() -> MutexGuard<'static, Fakes> {
+        FAKES.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Notes the size, waits until the gate of `flags` opens, or 30 s at
+    /// most, and then creates a pseudoconsole of Windows, or fails if the
+    /// flags have [`FAILS`].
+    extern "system" fn gated_create(
+        size: COORD,
+        input: HANDLE,
+        output: HANDLE,
+        flags: u32,
+        console: *mut HPCON,
+    ) -> HRESULT {
+        let (fakes, changed) = &FAKES;
+        let mut noted = fakes.lock().unwrap_or_else(PoisonError::into_inner);
+        noted
+            .created
+            .entry(flags)
+            .or_default()
+            .push((size.X, size.Y));
+        changed.notify_all();
+        let (opened, _) = changed
+            .wait_timeout_while(noted, Duration::from_secs(30), |fakes| {
+                !fakes.open.get(&flags).copied().unwrap_or(false)
+            })
+            .unwrap_or_else(PoisonError::into_inner);
+        drop(opened);
+        if flags & FAILS != 0 {
+            return INVALID_ARGUMENT;
+        }
+        // SAFETY: the arguments are the ones that `Conpty::create` gives,
+        // for the same function of Windows.
+        unsafe { CreatePseudoConsole(size, input, output, 0, console) }
+    }
+
+    /// Gives a pseudoconsole of Windows another size, and notes it.
+    extern "system" fn noted_resize(console: HPCON, size: COORD) -> HRESULT {
+        fakes().resized.push((size.X, size.Y));
+        // SAFETY: `gated_create` created it with the function of Windows.
+        unsafe { ResizePseudoConsole(console, size) }
+    }
+
+    extern "system" fn failing_resize(_: HPCON, _: COORD) -> HRESULT {
+        INVALID_ARGUMENT
+    }
+
+    extern "system" fn no_close(_: HPCON) {}
+
+    /// The ConPTY of Windows, with the create function that waits at the
+    /// gate of `flags`.
+    fn gated(flags: u32) -> Conpty {
+        Conpty {
+            source: Source::System,
+            create: gated_create,
+            close: ClosePseudoConsole,
+            resize: noted_resize,
+            flags,
+        }
+    }
+
+    /// Opens the gate of `flags`.
+    fn open(flags: u32) {
+        fakes().open.insert(flags, true);
+        FAKES.1.notify_all();
+    }
+
+    /// Waits until the create function of `flags` is called, and returns the
+    /// sizes that it got.
+    fn wait_created(flags: u32) -> Vec<(i16, i16)> {
+        let (fakes, changed) = &FAKES;
+        let fakes = fakes.lock().unwrap_or_else(PoisonError::into_inner);
+        let (fakes, _) = changed
+            .wait_timeout_while(fakes, Duration::from_secs(30), |fakes| {
+                !fakes.created.contains_key(&flags)
+            })
+            .unwrap_or_else(PoisonError::into_inner);
+        fakes.created.get(&flags).cloned().unwrap_or_default()
+    }
+
+    /// What a session of a test tells.
+    enum Told {
+        Received(Vec<u8>),
+        Ended(Option<u32>),
+        Failed(Error),
+    }
+
+    struct Teller(mpsc::Sender<Told>);
+
+    impl Output for Teller {
+        fn received(&mut self, bytes: &[u8], _input: &Input) {
+            let _ = self.0.send(Told::Received(bytes.to_vec()));
+        }
+
+        fn ended(&mut self, exit_code: Option<u32>) {
+            let _ = self.0.send(Told::Ended(exit_code));
+        }
+
+        fn failed(&mut self, error: Error) {
+            let _ = self.0.send(Told::Failed(error));
+        }
+    }
+
+    /// Waits until a session tells how it ended, and returns it, with all
+    /// that the session showed.
+    fn end_of(told: &mpsc::Receiver<Told>) -> (Told, String) {
+        let mut shown = Vec::new();
+        loop {
+            match told.recv_timeout(Duration::from_secs(60)) {
+                Ok(Told::Received(bytes)) => shown.extend(bytes),
+                Ok(end) => return (end, String::from_utf8_lossy(&shown).into_owned()),
+                Err(error) => panic!("{error}: the session did not end"),
+            }
+        }
+    }
+
+    /// A session as `spawn_in` prepares it, before its writer creates it:
+    /// what its threads share, with a grid of 80 x 25, what its writer
+    /// creates it with, and the ends of the pipes that meiga uses, to write
+    /// the input and to read the output.
+    fn session(
+        conpty: Conpty,
+        line: &str,
+        folder: Option<&str>,
+    ) -> (Shared, Creation, OwnedHandle, OwnedHandle) {
+        let (input_read, input_write) = pipe(0).unwrap();
+        let (output_read, output_write) = pipe(READ_SIZE).unwrap();
+        let shared = Shared {
+            event: event(false).unwrap(),
+            output_closed: event(true).unwrap(),
+            process: OnceLock::new(),
+            reader: OnceLock::new(),
+            job: job().unwrap(),
+            state: Mutex::new(State {
+                size: COORD { X: 80, Y: 25 },
+                ..State::default()
+            }),
+        };
+        let creation = Creation {
+            conpty: Choice::Given(conpty),
+            command_line: wide(line),
+            folder: folder.map(wide),
+            environment: None,
+            input: input_read,
+            output: output_write,
+        };
+        (shared, creation, input_write, output_read)
+    }
+
+    /// The name of `thread`, as Windows has it.
+    fn description(thread: HANDLE) -> String {
+        let mut text: PWSTR = ptr::null_mut();
+        // SAFETY: the handle is valid, and `text` is valid for it to fill
+        // in.
+        let result = unsafe { GetThreadDescription(thread, &mut text) };
+        assert!(result >= 0, "GetThreadDescription failed: {result:#x}");
+        let mut length = 0;
+        // SAFETY: Windows gives a null-terminated string, which this reads
+        // up to the null character, and then frees.
+        unsafe {
+            while *text.add(length) != 0 {
+                length += 1;
+            }
+            let name = String::from_utf16_lossy(slice::from_raw_parts(text, length));
+            LocalFree(text.cast());
+            name
+        }
+    }
+
+    #[test]
+    fn the_writer_creates_the_session_with_what_it_was_given_meanwhile() {
+        const FLAGS: u32 = 0x0001_0000;
+        let (sender, told) = mpsc::channel();
+        // cmd reads a line and shows it twice: "olaola" only comes from cmd.
+        let pty = gated(FLAGS)
+            .spawn(
+                &Command::new("cmd /d /v:on /c \"set /p M=& echo !M!!M!\""),
+                GridSize::new(80, 25),
+                Teller(sender),
+            )
+            .unwrap();
+        // spawn has returned, and the writer creates the pseudoconsole, with
+        // the size that the session started with.
+        assert_eq!(wait_created(FLAGS), [(80, 25)]);
+        assert_eq!(pty.process_id(), None);
+        assert!(pty.input.shared.lock().console.is_none());
+        // What the window gives meanwhile waits for the pseudoconsole and
+        // for the program, as in a tab that opens.
+        pty.input().write(b"ola\r");
+        pty.resize(GridSize::new(101, 31)).unwrap();
+        open(FLAGS);
+        let (end, shown) = end_of(&told);
+        assert!(matches!(end, Told::Ended(Some(0))), "{shown:?}");
+        assert!(shown.contains("olaola"), "{shown:?}");
+        assert!(pty.process_id().is_some());
+        // The writer gave the new size to the pseudoconsole once it had it.
+        assert!(fakes().resized.contains(&(101, 31)));
+    }
+
+    #[test]
+    fn a_session_closed_while_its_pseudoconsole_is_created_does_not_start_its_program() {
+        const FLAGS: u32 = 0x0002_0000;
+        // The program would write this file, if it started.
+        let file = env::temp_dir().join(format!("meiga-conpty-closed-{}.txt", process::id()));
+        let _ = fs::remove_file(&file);
+        let line = format!("cmd /d /c echo started>\"{}\"", file.display());
+        let (sender, told) = mpsc::channel();
+        let pty = gated(FLAGS)
+            .spawn(&Command::new(&line), GridSize::new(80, 25), Teller(sender))
+            .unwrap();
+        assert_eq!(wait_created(FLAGS).len(), 1);
+        // The tab closes while the writer creates the pseudoconsole.
+        drop(pty);
+        open(FLAGS);
+        // The writer closes the pseudoconsole without a program: ConPTY ends,
+        // and the session ends without an exit code.
+        let (end, shown) = end_of(&told);
+        assert!(matches!(end, Told::Ended(None)), "{shown:?}");
+        assert!(!file.exists());
+    }
+
+    #[test]
+    fn a_session_closed_before_its_writer_creates_it_creates_nothing() {
+        const FLAGS: u32 = 0x0003_0000;
+        open(FLAGS);
+        let (shared, creation, _input, _output) = session(gated(FLAGS), "cmd /c exit", None);
+        shared.lock().closing = true;
+        assert!(create(&shared, creation).is_none());
+        assert!(!fakes().created.contains_key(&FLAGS));
+        let state = shared.lock();
+        assert!(state.console.is_none() && state.failure.is_none());
+        assert!(shared.process.get().is_none());
+    }
+
+    #[test]
+    fn a_pseudoconsole_that_cannot_be_created_tells_why() {
+        const FLAGS: u32 = FAILS | 0x0004_0000;
+        open(FLAGS);
+        let (sender, told) = mpsc::channel();
+        let pty = gated(FLAGS)
+            .spawn(
+                &Command::new("cmd /c exit"),
+                GridSize::new(80, 25),
+                Teller(sender),
+            )
+            .unwrap();
+        // The reader tells it, once the writer closes its end of the output.
+        let (end, shown) = end_of(&told);
+        let Told::Failed(error) = end else {
+            panic!("the session did not fail: {shown:?}");
+        };
+        assert_eq!(
+            error.os_error().and_then(io::Error::raw_os_error),
+            Some(87),
+            "{error}"
+        );
+        assert!(
+            error
+                .to_string()
+                .starts_with("CreatePseudoConsole failed: "),
+            "{error}"
+        );
+        assert!(shown.is_empty(), "{shown:?}");
+        assert_eq!(pty.process_id(), None);
+    }
+
+    #[test]
+    fn a_program_that_cannot_start_leaves_its_pseudoconsole_to_the_writer() {
+        const FLAGS: u32 = 0x0005_0000;
+        open(FLAGS);
+        let (shared, creation, _input, _output) = session(
+            gated(FLAGS),
+            "cmd /c exit",
+            Some(r"C:\meiga\no such folder"),
+        );
+        assert!(create(&shared, creation).is_none());
+        let mut state = shared.lock();
+        let failure = state.failure.take().expect("the writer notes why");
+        // ERROR_DIRECTORY.
+        assert_eq!(
+            failure.os_error().and_then(io::Error::raw_os_error),
+            Some(267),
+            "{failure}"
+        );
+        // The writer closes it: it is there, without a program.
+        assert!(state.console.is_some());
+        assert!(shared.process.get().is_none());
+    }
+
+    #[test]
+    fn the_writer_and_the_reader_get_the_number_of_the_program_when_it_starts() {
+        const FLAGS: u32 = 0x0006_0000;
+        let (sender, told) = mpsc::channel();
+        let pty = gated(FLAGS)
+            .spawn(
+                &Command::new("cmd /k"),
+                GridSize::new(80, 25),
+                Teller(sender),
+            )
+            .unwrap();
+        assert_eq!(wait_created(FLAGS).len(), 1);
+        let reader = pty
+            .input
+            .shared
+            .reader
+            .get()
+            .expect("the reader starts with the session")
+            .as_raw_handle();
+        let writer = pty
+            .writer
+            .as_ref()
+            .expect("the session is open")
+            .as_raw_handle();
+        // Each thread gets its first name as it starts.
+        let named = |thread: HANDLE, name: &str| {
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while description(thread) != name {
+                assert!(
+                    Instant::now() < deadline,
+                    "{name:?}: {:?}",
+                    description(thread)
+                );
+                thread::sleep(Duration::from_millis(1));
+            }
+        };
+        named(reader, "conpty reader");
+        named(writer, "conpty writer");
+        open(FLAGS);
+        let deadline = Instant::now() + Duration::from_secs(30);
+        let id = loop {
+            if let Some(id) = pty.process_id() {
+                break id;
+            }
+            assert!(Instant::now() < deadline, "the program did not start");
+            thread::sleep(Duration::from_millis(1));
+        };
+        assert_eq!(description(reader), format!("conpty reader {id}"));
+        assert_eq!(description(writer), format!("conpty writer {id}"));
+        drop(pty);
+        let (end, shown) = end_of(&told);
+        assert!(matches!(end, Told::Ended(Some(_))), "{shown:?}");
+    }
+
+    #[test]
+    fn the_reader_gets_the_number_of_the_program_whichever_comes_first() {
+        // The writer may start the program before the thread that starts the
+        // session keeps the reader, or after.
+        for program_first in [true, false] {
+            let (shared, _creation, _input, _output) =
+                session(Conpty::system(), "cmd /c exit", None);
+            let shared = Arc::new(shared);
+            let reader = thread::Builder::new()
+                .name("conpty reader".to_owned())
+                .spawn(thread::park)
+                .unwrap();
+            // Once it has its first name, which it gets as it starts.
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while description(reader.as_raw_handle()) != "conpty reader" {
+                assert!(Instant::now() < deadline, "the thread got no name");
+                thread::sleep(Duration::from_millis(1));
+            }
+            let process = Process {
+                handle: event(false).unwrap(),
+                id: 4242,
+            };
+            // On another thread, as the writer: it names the thread that
+            // calls it.
+            let writer = {
+                let shared = Arc::clone(&shared);
+                move || {
+                    shared.started(process);
+                }
+            };
+            if program_first {
+                thread::spawn(writer).join().unwrap();
+                shared.keep_reader(reader);
+            } else {
+                shared.keep_reader(reader);
+                thread::spawn(writer).join().unwrap();
+            }
+            let reader = shared.reader.get().unwrap();
+            assert_eq!(
+                description(reader.as_raw_handle()),
+                "conpty reader 4242",
+                "program first: {program_first}"
+            );
+            reader.thread().unpark();
+        }
+    }
+
+    #[test]
+    fn a_reader_that_starts_after_the_program_takes_its_number() {
+        let (shared, creation, _input, output) = session(Conpty::system(), "cmd /c exit", None);
+        let shared = Arc::new(shared);
+        // A program that has ended: an event that is set, so that the reader
+        // does not wait for it when the output closes.
+        let process = Process {
+            handle: event(true).unwrap(),
+            id: 4343,
+        };
+        // SAFETY: the event is valid.
+        unsafe { SetEvent(process.handle.as_raw_handle()) };
+        {
+            let shared = Arc::clone(&shared);
+            thread::spawn(move || {
+                shared.started(process);
+            })
+            .join()
+            .unwrap();
+        }
+        let (sender, told) = mpsc::channel();
+        let reader = {
+            let shared = Arc::clone(&shared);
+            thread::Builder::new()
+                .name("conpty reader".to_owned())
+                .spawn(move || read_output(output, shared, Teller(sender)))
+                .unwrap()
+        };
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while description(reader.as_raw_handle()) != "conpty reader 4343" {
+            assert!(
+                Instant::now() < deadline,
+                "{:?}",
+                description(reader.as_raw_handle())
+            );
+            thread::sleep(Duration::from_millis(1));
+        }
+        // Without the end that ConPTY would write to, the output closes.
+        drop(creation);
+        let (end, shown) = end_of(&told);
+        // The program is not a real one: its exit code means nothing.
+        assert!(matches!(end, Told::Ended(_)), "{shown:?}");
+        reader.join().unwrap();
+    }
+
+    #[test]
+    fn the_input_waits_for_the_program_and_stops_with_the_session() {
+        let (shared, _creation, _input, _output) = session(Conpty::system(), "cmd /c exit", None);
+        let input = Input {
+            shared: Arc::new(shared),
+        };
+        let woken = || {
+            // SAFETY: the event is valid while `input` exists. Seeing it
+            // resets it.
+            unsafe { WaitForSingleObject(input.shared.event.as_raw_handle(), 0) == WAIT_OBJECT_0 }
+        };
+        // Nothing to send wakes nobody up.
+        input.write(b"");
+        assert!(input.shared.lock().input.is_empty());
+        assert!(!woken());
+        // Until the writer takes them, the input waits, which wakes the writer
+        // up once, and the size, which the pseudoconsole is created with.
+        input.write(b"ola");
+        input.write(b" meiga");
+        assert!(woken());
+        assert!(!woken());
+        input.resize(GridSize::new(120, 40)).unwrap();
+        {
+            let state = input.shared.lock();
+            assert_eq!(state.input, b"ola meiga");
+            assert_eq!((state.size.X, state.size.Y), (120, 40));
+        }
+        // A size that a pseudoconsole cannot have is an error.
+        assert!(input.resize(GridSize::new(0, 40)).is_err());
+        // Once the program did not start, or the session closed, nothing
+        // more.
+        input.shared.lock().finished = true;
+        input.write(b"!");
+        input.resize(GridSize::new(10, 10)).unwrap();
+        input.shared.lock().finished = false;
+        input.close();
+        assert!(woken());
+        input.write(b"!");
+        input.resize(GridSize::new(10, 10)).unwrap();
+        let state = input.shared.lock();
+        assert_eq!(state.input, b"ola meiga");
+        assert_eq!((state.size.X, state.size.Y), (120, 40));
+    }
+
+    #[test]
+    fn a_size_that_the_pseudoconsole_does_not_take_is_an_error() {
+        let (shared, _creation, _input, _output) = session(Conpty::system(), "cmd /c exit", None);
+        shared.lock().console = Some(PseudoConsole {
+            handle: 1,
+            close: no_close,
+            resize: failing_resize,
+            may_wait: false,
+        });
+        let input = Input {
+            shared: Arc::new(shared),
+        };
+        let error = input.resize(GridSize::new(90, 30)).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with("ResizePseudoConsole failed: "),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn the_conpty_next_to_the_executable_is_loaded_once() {
+        let first = Choice::NextToExe.get();
+        let second = Choice::NextToExe.get();
+        assert!(ptr::eq(first, second));
+        // The tests have no conpty.dll next to them.
+        assert_eq!(first.source(), &Source::System);
     }
 }

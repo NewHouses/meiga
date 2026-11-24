@@ -9,9 +9,9 @@
 //! It uses the ConPTY that tools\fetch-conpty.ps1 extracts to the target
 //! folder or, with `--system`, the one of Windows. Without a command line, it
 //! runs `cmd`. The arguments are joined with spaces. It ends when the session
-//! ends, with the exit code of the program. Ctrl+Z and Enter close the
-//! session, and then, before it ends, it waits for the session to end, as
-//! meiga does before it exits.
+//! ends, with the exit code of the program, or with 2 if the program cannot
+//! start. Ctrl+Z and Enter close the session, and then, before it ends, it
+//! waits for the session to end, as meiga does before it exits.
 //!
 //! With `--record`, it also writes what the session sends to a recording
 //! (`meiga_core::term::recording`), which the replay example of meiga-core
@@ -66,6 +66,20 @@ impl Output for Printer {
             }
             None => println!("{ms:>9.1} ms  The session ended; the program is still running."),
         }
+        self.finish(exit_code.map_or(1, |code| code as i32));
+    }
+
+    fn failed(&mut self, error: meiga_win::Error) {
+        let ms = self.start.elapsed().as_secs_f64() * 1000.0;
+        eprintln!("{ms:>9.1} ms  The program could not start: {error}");
+        self.finish(2);
+    }
+}
+
+impl Printer {
+    /// Finishes the recording, waits for the sessions that were closed, and
+    /// ends the example with `code`.
+    fn finish(&mut self, code: i32) -> ! {
         // process::exit does not drop the recorder: it has to be finished.
         if let Some((path, recorder)) = self.recording.take() {
             let (blocks, bytes) = (recorder.blocks(), recorder.bytes());
@@ -81,7 +95,7 @@ impl Output for Printer {
         // session was closed, its writer may still be ending it: the output
         // has closed, so it does not wait for this thread.
         conpty::wait_for_closed_sessions();
-        std::process::exit(exit_code.map_or(1, |code| code as i32));
+        std::process::exit(code);
     }
 }
 
@@ -194,8 +208,7 @@ fn main() -> ExitCode {
         }
     };
     println!(
-        "Running `{command_line}` (process {}). Type a line and Enter to send it; Ctrl+Z and Enter close the session.",
-        pty.process_id()
+        "Running `{command_line}`. Type a line and Enter to send it; Ctrl+Z and Enter close the session."
     );
     for line in io::stdin().lock().lines() {
         let Ok(line) = line else { break };

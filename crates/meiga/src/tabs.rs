@@ -47,6 +47,12 @@
 //! the window. Otherwise, or if it could not start, the tab stays, and its
 //! terminal tells how the program ended; then, without a program, Enter
 //! starts it again in the same tab, and Ctrl+D closes the tab (ADR 0024).
+//!
+//! A tab is shown as soon as it opens, at the start too: the writer thread
+//! of its session creates the pseudoconsole and the program, and the window
+//! never waits for Windows to create them (ADR 0028). Meanwhile, the tab
+//! runs its program as far as the window knows: what the user types and
+//! the size of the terminal wait for it, in the session.
 
 use std::convert::Infallible;
 use std::mem;
@@ -148,7 +154,9 @@ pub enum TabAction {
 /// of it.
 struct Tab {
     shared: Arc<Mutex<Shared>>,
-    /// It closes when the tab closes. `None` if its program could not
+    /// It closes when the tab closes. It is there from the moment that the
+    /// tab opens, also while its writer creates the program, which counts
+    /// as running. `None` once the window learns that its program could not
     /// start, or ended without a clean end: then the tab can start it
     /// again.
     session: Option<Pty>,
@@ -177,8 +185,9 @@ struct Tab {
 impl Tab {
     /// The tab `id`: a terminal of `grid`, with cells of `cell` pixels, and
     /// its session, which runs what `launch` says, with the variables of
-    /// `environment`, an environment block, and wakes `waker` up. If the
-    /// program cannot start, the terminal shows why.
+    /// `environment`, an environment block, and wakes `waker` up. The
+    /// session starts at once, and its writer creates the program (ADR
+    /// 0028): if the program cannot start, the terminal shows why.
     fn start(
         launch: Launch,
         environment: &[u16],
@@ -206,14 +215,15 @@ impl Tab {
 
     /// Starts its session, which runs what its `launch` says in a terminal
     /// of `grid`, with the variables of `environment`, and wakes `waker` up
-    /// with `id`, its identifier. If the program cannot start, the terminal
-    /// shows why.
+    /// with `id`, its identifier. It does not wait for the program, which
+    /// the writer of the session creates (ADR 0028): if it cannot start, the
+    /// reader tells it, as the end of a program, and the terminal shows why.
+    /// If the session itself cannot start, the terminal shows it now, and
+    /// the tab has no program.
     fn run(&mut self, environment: &[u16], grid: GridSize, waker: &Waker, id: TabId) {
         match session::start(&self.launch, environment, grid, &self.shared, waker, id) {
             Ok(pty) => self.session = Some(pty),
-            Err(message) => {
-                lock(&self.shared).terminal.feed(message.as_bytes());
-            }
+            Err(failure) => lock(&self.shared).not_started(&failure),
         }
     }
 
@@ -593,13 +603,13 @@ impl Tabs {
         changed
     }
 
-    /// The program of the tab `id` ended at `now`, with `exit`. A clean end
-    /// closes the tab, and the last one the window (ADR 0024). Otherwise
-    /// the tab forgets its session, and its terminal, which tells how the
-    /// program ended, stays: if the tab is shown, its keys no longer go to
-    /// a program. Its tab in the bar tells it, also while it is shown (ADR
-    /// 0025). Returns whether a frame has to show it: the tab closed, or
-    /// its tab tells it.
+    /// The program of the tab `id` ended at `now`, with `exit`, or could not
+    /// start. A clean end closes the tab, and the last one the window (ADR
+    /// 0024). Otherwise the tab forgets its session, and its terminal, which
+    /// tells how the program ended, or why it did not start (ADR 0028),
+    /// stays: if the tab is shown, its keys no longer go to a program. Its
+    /// tab in the bar tells it, also while it is shown (ADR 0025). Returns
+    /// whether a frame has to show it: the tab closed, or its tab tells it.
     fn ended(&mut self, window: &Window, id: TabId, exit: Exit, now: Instant) -> bool {
         if exit.is_clean() {
             return self.close(window, id, now);

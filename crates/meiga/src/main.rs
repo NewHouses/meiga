@@ -52,7 +52,8 @@ fn main() -> ExitCode {
         }
     };
     // The window is gone, but the sessions of its tabs may still be ending,
-    // and they would stay stuck if meiga exited first (ADR 0026).
+    // or starting, and they would stay stuck if meiga exited first (ADR 0026
+    // and ADR 0028).
     conpty::wait_for_closed_sessions();
     code
 }
