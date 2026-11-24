@@ -848,6 +848,51 @@ mod tests {
         assert!(woken.only_for_7());
     }
 
+    /// An output that drops what the session sends.
+    struct Dropped;
+
+    impl Output for Dropped {
+        fn received(&mut self, _bytes: &[u8], _input: &Input) {}
+        fn ended(&mut self, _exit_code: Option<u32>) {}
+        fn failed(&mut self, _error: Error) {}
+    }
+
+    #[test]
+    fn the_reader_answers_the_program_and_wakes_the_window_once_for_the_screen() {
+        // What another session sends, given to the reader by hand, with the
+        // input of a session whose program waits for a line.
+        let size = GridSize::new(80, 5);
+        let pty = conpty::spawn(&Command::new("cmd /d /c set /p M="), size, Dropped).unwrap();
+        let input = pty.input();
+        let shared = Arc::new(Mutex::new(Shared::new(Terminal::new(size))));
+        let woken = Woken::default();
+        let mut reader = Reader {
+            shared: Arc::clone(&shared),
+            waker: woken.clone(),
+            tab: TabId::from_raw(7),
+            answers: Vec::new(),
+            launch: Launch::command_line("cmd /d /c set /p M="),
+        };
+        // A question, the attributes of the terminal, which the reader
+        // answers at once, and then more text, which does not wake the
+        // window up again until it copies the screen.
+        reader.received(b"ola\x1b[c", &input);
+        assert!(reader.answers.is_empty());
+        reader.received(b" meiga", &input);
+        assert!(woken.only_for_7());
+        assert_eq!(
+            woken.0.lock().unwrap_or_else(PoisonError::into_inner).len(),
+            1
+        );
+        let mut screen = Screen::new();
+        lock(&shared).terminal.copy_damage(&mut screen);
+        assert_eq!(screen.row_text(0), "ola meiga");
+        // Nothing waits for an answer any more.
+        let mut answers = Vec::new();
+        lock(&shared).terminal.take_responses(&mut answers);
+        assert!(answers.is_empty());
+    }
+
     #[test]
     fn a_program_that_cannot_start_is_told_by_the_reader_with_its_folder() {
         let woken = Woken::default();

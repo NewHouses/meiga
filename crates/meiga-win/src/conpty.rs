@@ -1858,6 +1858,58 @@ mod tests {
         );
         assert!(shown.is_empty(), "{shown:?}");
         assert_eq!(pty.process_id(), None);
+        // The function of the bundled ConPTY has another name.
+        let bundled = Conpty {
+            source: Source::Bundled(PathBuf::from(r"C:\meiga")),
+            ..gated(FLAGS)
+        };
+        let (input, input_write) = pipe(0).unwrap();
+        let (output_read, output) = pipe(0).unwrap();
+        let Err(error) = bundled.create(COORD { X: 80, Y: 25 }, &input, &output) else {
+            panic!("the fake ConPTY created a pseudoconsole");
+        };
+        assert!(
+            error
+                .to_string()
+                .starts_with("ConptyCreatePseudoConsole failed: "),
+            "{error}"
+        );
+        drop((input_write, output_read));
+    }
+
+    #[test]
+    fn what_is_not_valid_fails_before_the_session_starts() {
+        let conpty = Conpty::system();
+        let spawned = |command: Command<'_>, size: GridSize| {
+            let (sender, told) = mpsc::channel();
+            let result = conpty.spawn(&command, size, Teller(sender));
+            // `output` is never called: it goes with the session that did
+            // not start.
+            assert!(told.recv().is_err());
+            result.err().map(|error| error.to_string())
+        };
+        let folder = Command {
+            folder: Some("C:\\x\0y"),
+            ..Command::new("cmd /c exit")
+        };
+        assert_eq!(
+            spawned(folder, GridSize::new(80, 25)).as_deref(),
+            Some("CreateProcessW failed: the folder has a null character")
+        );
+        let environment = Command {
+            environment: Some(&[65, 61, 49, 0]),
+            ..Command::new("cmd /c exit")
+        };
+        assert_eq!(
+            spawned(environment, GridSize::new(80, 25)).as_deref(),
+            Some(
+                "CreateProcessW failed: the environment block does not end with two null characters"
+            )
+        );
+        let line = spawned(Command::new("cmd\0"), GridSize::new(80, 25));
+        assert!(line.is_some_and(|error| error.contains("the command line has a null character")));
+        let size = spawned(Command::new("cmd /c exit"), GridSize::new(0, 25));
+        assert!(size.is_some_and(|error| error.starts_with("CreatePseudoConsole failed: ")));
     }
 
     #[test]

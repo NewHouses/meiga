@@ -64,7 +64,9 @@ impl Output for Printer {
             Some(code) => {
                 println!("{ms:>9.1} ms  The session ended: exit code {code} (0x{code:08X}).")
             }
-            None => println!("{ms:>9.1} ms  The session ended; the program is still running."),
+            None => println!(
+                "{ms:>9.1} ms  The session ended without an exit code: the program is still running, or never started."
+            ),
         }
         self.finish(exit_code.map_or(1, |code| code as i32));
     }
