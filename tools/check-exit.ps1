@@ -57,21 +57,24 @@ It checks that:
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
-  its program could not start, and what can be done then; Enter tries
-  again, with one full frame, and once the folder is there, starts it there;
+  its program could not start, that its folder is not there, and what can be
+  done then; Enter tries again, with one full frame, and once the folder is
+  there, starts it there;
 - while a message box is open, the programs of a hidden tab and of the tab
   that is shown end with exit code 0, and once the box closes, both tabs
   close, and the last one closes the window: meiga.exe ends with exit code
   0, and the consoles end too;
 - when the program of the command line of meiga.exe ends with exit code 0,
   meiga.exe ends with exit code 0 too;
-- when the window closes, and the program of the first tab, as its console
-  closes, starts another one in it, which connects to the console while
-  ConPTY closes it, the session of that tab does not end: meiga waits for
-  it, also once the session of the second tab has ended, and 10 s after the
-  program of the first tab ended, the session ends the programs left in it
-  (ADR 0011); then meiga.exe ends with exit code 0, less than 17 s after its
-  window closed, and leaves nothing of its tabs (ADR 0026).
+- when the window closes, right after a third tab opens, in the same batch
+  of messages, and the program of the first tab, as its console closes,
+  starts another one in it, which connects to the console while ConPTY
+  closes it, the session of that tab does not end: meiga waits for it, also
+  once the sessions of the second tab and of the third one, which was
+  starting (ADR 0028), have ended, and 10 s after the program of the first
+  tab ended, the session ends the programs left in it (ADR 0011); then
+  meiga.exe ends with exit code 0, less than 17 s after its window closed,
+  and leaves nothing of its tabs (ADR 0026).
 
 The last run starts meiga.exe in a job of the check, with the script of
 Probe, with -Closer, as the program of its first tab: when its console
@@ -1780,10 +1783,14 @@ try {
     $failure = Assert-Line 0 ('[could not start `' + $probeLine + '` in `' + $later + '`: ') ']' 'The tab of Later'
     # The line wraps into the rows that its characters take, two columns for
     # a wide one, as in an error of Windows in Chinese: a triple click on any
-    # of them copies the whole line. The hint follows it, on the first row
-    # that does not.
-    $hintRow = 1
-    while ((Assert-Line $hintRow $hint -What 'The tab of Later' -Or $failure) -cne $hint) { $hintRow++ }
+    # of them copies the whole line. The line that tells that the folder is
+    # not there follows it, as in Windows Terminal, and may wrap too; and the
+    # hint follows that one, on the first row that does not.
+    $folderLine = 'Could not access starting directory "' + $later + '"'
+    $folderRow = 1
+    while ((Assert-Line $folderRow $folderLine -What 'The tab of Later' -Or $failure) -cne $folderLine) { $folderRow++ }
+    $hintRow = $folderRow + 1
+    while ((Assert-Line $hintRow $hint -What 'The tab of Later' -Or $folderLine) -cne $hint) { $hintRow++ }
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Enter'
@@ -1804,7 +1811,7 @@ try {
     }
     Assert-Folder $ninth $later 'Later'
     Wait-OneFull $start 'Enter, which started Later,'
-    Write-Host 'OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.'
+    Write-Host 'OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, that its folder is not there, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.'
 
     # 12. Ctrl+V, with two lines in the clipboard, opens the message box that
     # asks before pasting. While it is open, the programs of both tabs end
@@ -1862,12 +1869,13 @@ try {
     # console closes, starts another one in it, as the shell of a tab can,
     # such as the git of its prompt: the new program connects to the console
     # while ConPTY closes it, and the session of the tab does not end. meiga
-    # waits for it before it ends, also once the session of the second tab,
-    # which it closes after the first one, has ended; and the writer thread
-    # of the session ends the programs left in it 10 s after the last of its
-    # programs ended (ADR 0011 and ADR 0026). meiga runs in a job of the
-    # check, where the check sees what it leaves, and which ends it if the
-    # check fails.
+    # waits for it before it ends, also once the sessions of the second tab,
+    # which it closes after the first one, and of a third one, which opens
+    # right before the window closes, have ended; and the writer thread of
+    # the session ends the programs left in it 10 s after the last of its
+    # programs ended (ADR 0011, ADR 0026 and ADR 0028). meiga runs in a job
+    # of the check, where the check sees what it leaves, and which ends it if
+    # the check fails.
     $process.Dispose()
     $process = $null
     $log = Join-Path $work 'frames-close.csv'
@@ -1906,9 +1914,14 @@ try {
         $null = $console.Handle
     }
     $closing = [DateTime]::UtcNow
-    if (-not $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)) {
-        throw "Could not close the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
-    }
+    # A third tab opens right before the window closes, in the same batch of
+    # messages: its session is starting when the window closes, and its
+    # writer may not even have created its program yet (ADR 0028). meiga
+    # waits for it too, and it leaves nothing either.
+    Join-Input
+    $typed = Get-Chord 'Ctrl+Shift+T'
+    Send-Keys ($typed.Messages + @($WM_CLOSE, 0, 0)) $typed.Down
+    Split-Input
     if (-not $process.WaitForExit((17 + $TimeoutSeconds) * 1000)) {
         throw "$exe was still running $(17 + $TimeoutSeconds) s after its window closed."
     }
@@ -1955,7 +1968,7 @@ try {
         }
         Start-Sleep -Milliseconds 20
     }
-    Write-Host "OK: when its window closes, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the session of the second tab has ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, $(Format-Seconds $waited) s after its window closed, and leaves nothing of its tabs."
+    Write-Host "OK: when its window closes, right after a third tab opens, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the sessions of the second tab and of the third one, which was starting, have ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, $(Format-Seconds $waited) s after its window closed, and leaves nothing of its tabs."
     $passed = $true
 }
 finally {
