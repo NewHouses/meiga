@@ -925,16 +925,19 @@ function Get-Priority([int]$Program) {
     $api::PriorityOf($process.Id, "conpty reader $Program")
 }
 
-# Waits until the reader thread of a program starts, while meiga has no
-# other one, and checks that it gets the lower priority of a hidden tab
-# from the start, and not once a wake-up of the window lowers it: a title of
-# the program wakes the window up, which then lowers the priority anyway
-# (Tab::learn), and PowerShell gives one as it starts as administrator, as
-# in the CI. So the check reads it from the moment it starts, until it is
-# the lower one, for 50 ms: meiga starts it with the normal priority, as
-# any thread, and lowers it right after, and the window raises it to the
-# normal one again only while it holds the lock of its terminal. $What, what
-# starts the program, is the subject of its messages, as in Wait-NewShell.
+# Waits until the reader thread of a program has the number of the program
+# in its name, while meiga has no other one, and checks that it has the
+# lower priority of a hidden tab from then on, and not once a wake-up of the
+# window lowers it: a title of the program wakes the window up, which then
+# lowers the priority anyway (Tab::learn), and PowerShell gives one as it
+# starts as administrator, as in the CI. The reader starts with the session,
+# before the program, and gets the number once the program starts (ADR
+# 0028): meiga starts it with the normal priority, as any thread, and lowers
+# it right after it starts the session, and the window raises it to the
+# normal one again only while it holds the lock of its terminal. So the
+# check reads it from the moment that it finds it, until it is the lower
+# one, for 50 ms. $What, what starts the program, is the subject of its
+# messages, as in Wait-NewShell.
 function Assert-LowerReader([string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     $readings = [Collections.Generic.List[int]]::new()
@@ -1770,8 +1773,9 @@ try {
     Write-Host 'OK: Ctrl+D closes the tab that is shown, whose program ended, and shows the next one, with one full frame; its program gets neither D nor Ctrl going up.'
 
     # 11. Ctrl+Shift+2 opens Later, whose folder is not there: its tab
-    # tells why its program could not start, and below it what can be done
-    # then. Enter tries again, and once the folder is there, starts it.
+    # tells why its program could not start, that its folder is not there,
+    # and below that what can be done then. Enter tries again, and once the
+    # folder is there, starts it.
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Ctrl+Shift+2'
@@ -1917,14 +1921,17 @@ try {
     # A third tab opens right before the window closes, in the same batch of
     # messages: its session is starting when the window closes, and its
     # writer may not even have created its program yet (ADR 0028). meiga
-    # waits for it too, and it leaves nothing either.
+    # waits for it too, and it leaves nothing either. Ctrl and Shift stay
+    # down in the state of the keys that the check shares with the thread
+    # of the window until meiga ends: the thread reads it only when it takes
+    # the key, after the check has posted it.
     Join-Input
     $typed = Get-Chord 'Ctrl+Shift+T'
     Send-Keys ($typed.Messages + @($WM_CLOSE, 0, 0)) $typed.Down
-    Split-Input
     if (-not $process.WaitForExit((17 + $TimeoutSeconds) * 1000)) {
         throw "$exe was still running $(17 + $TimeoutSeconds) s after its window closed."
     }
+    Split-Input
     if (-not $closerProgram.WaitForExit($TimeoutSeconds * 1000)) {
         throw "The program of the first tab was still running $TimeoutSeconds s after $exe ended."
     }
