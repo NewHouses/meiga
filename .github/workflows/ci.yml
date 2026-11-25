@@ -177,7 +177,8 @@ jobs:
       - name: Report the coverage of each file
         run: |
           cargo llvm-cov report --html --output-dir target/coverage
-          $summary = cargo llvm-cov report --summary-only
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $summary = cargo llvm-cov report
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $summary
           @('## Coverage of the tests', '', '```text') + $summary + '```' |
