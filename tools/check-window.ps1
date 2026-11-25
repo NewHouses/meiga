@@ -199,7 +199,9 @@ try {
 }
 finally {
     if (-not $process.HasExited) {
-        $process.Kill()
+        # With the programs of its tab, and their console.
+        try { $process.Kill($true) }
+        catch { Write-Host "Could not end $exe and the programs of its tab: $($_.Exception.Message)" }
     }
     $process.Dispose()
     Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
@@ -257,7 +259,9 @@ try {
 }
 finally {
     if (-not $process.HasExited) {
-        $process.Kill()
+        # With the programs of its tab, and their console.
+        try { $process.Kill($true) }
+        catch { Write-Host "Could not end $exe and the programs of its tab: $($_.Exception.Message)" }
     }
     $process.Dispose()
     Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
