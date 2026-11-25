@@ -1,6 +1,6 @@
 # ADR 0011 · Fin e peche das sesións de ConPTY
 
-- **Estado:** Aceptado; concretado polos [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md) e [ADR 0026](0026-o-peche-das-sesions-ao-sair.md)
+- **Estado:** Aceptado; concretado polos [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md), [ADR 0026](0026-o-peche-das-sesions-ao-sair.md) e [ADR 0028](0028-as-sesions-fora-do-fio-da-xanela.md)
 - **Data:** 2026-11-08
 - **Relacionados:** [ADR 0004](0004-conpty-empaquetado.md), [ADR 0005](0005-fios-e-fotogramas.md)
 

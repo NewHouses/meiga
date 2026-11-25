@@ -57,21 +57,24 @@ It checks that:
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
-  its program could not start, and what can be done then; Enter tries
-  again, with one full frame, and once the folder is there, starts it there;
+  its program could not start, that its folder is not there, and what can be
+  done then; Enter tries again, with one full frame, and once the folder is
+  there, starts it there;
 - while a message box is open, the programs of a hidden tab and of the tab
   that is shown end with exit code 0, and once the box closes, both tabs
   close, and the last one closes the window: meiga.exe ends with exit code
   0, and the consoles end too;
 - when the program of the command line of meiga.exe ends with exit code 0,
   meiga.exe ends with exit code 0 too;
-- when the window closes, and the program of the first tab, as its console
-  closes, starts another one in it, which connects to the console while
-  ConPTY closes it, the session of that tab does not end: meiga waits for
-  it, also once the session of the second tab has ended, and 10 s after the
-  program of the first tab ended, the session ends the programs left in it
-  (ADR 0011); then meiga.exe ends with exit code 0, less than 17 s after its
-  window closed, and leaves nothing of its tabs (ADR 0026).
+- when the window closes, right after a third tab opens, in the same batch
+  of messages, and the program of the first tab, as its console closes,
+  starts another one in it, which connects to the console while ConPTY
+  closes it, the session of that tab does not end: meiga waits for it, also
+  once the sessions of the second tab and of the third one, which was
+  starting (ADR 0028), have ended, and 10 s after the program of the first
+  tab ended, the session ends the programs left in it (ADR 0011); then
+  meiga.exe ends with exit code 0, less than 17 s after its window closed,
+  and leaves nothing of its tabs (ADR 0026).
 
 The last run starts meiga.exe in a job of the check, with the script of
 Probe, with -Closer, as the program of its first tab: when its console
@@ -243,6 +246,19 @@ static extern uint GetLongPathNameW(string path, System.Text.StringBuilder longP
 [DllImport("kernel32.dll", SetLastError = true)]
 static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
 
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
+
+// The next thread of a process, after `thread`, or the first one if it is
+// null: a handle to it with `access`. It returns STATUS_NO_MORE_ENTRIES
+// after the last one.
+[DllImport("ntdll.dll")]
+static extern int NtGetNextThread(IntPtr process, IntPtr thread, uint access, uint attributes, uint flags, out IntPtr next);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetExitCodeThread(IntPtr thread, out uint code);
+
 [DllImport("kernel32.dll")]
 static extern int GetThreadPriority(IntPtr thread);
 
@@ -308,36 +324,44 @@ public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] s
 }
 
 // The priorities of the threads of a process whose names start with
-// `prefix`, by name, or null if the process has ended.
+// `prefix`, by name, or null if the process cannot be opened. It walks the
+// threads of that process only (NtGetNextThread), in a fraction of a
+// millisecond, while a snapshot of all the processes (Process.Threads) takes
+// tens of milliseconds on a busy machine. It leaves out the threads that
+// have ended: they stay in their process while a handle to them is open, as
+// the ones of the writers of closed sessions that meiga keeps (ADR 0026).
 public static System.Collections.Generic.Dictionary<string, int> PrioritiesOf(int process, string prefix)
 {
-    System.Diagnostics.Process target;
-    try { target = System.Diagnostics.Process.GetProcessById(process); }
-    catch (ArgumentException) { return null; }
+    // PROCESS_QUERY_INFORMATION: NtGetNextThread needs more than the
+    // limited one.
+    IntPtr target = OpenProcess(0x0400, false, (uint)process);
+    if (target == IntPtr.Zero) return null;
     var found = new System.Collections.Generic.Dictionary<string, int>();
-    using (target)
+    try
     {
-        System.Diagnostics.ProcessThreadCollection threads;
-        try { threads = target.Threads; }
-        catch (InvalidOperationException) { return null; }
-        foreach (System.Diagnostics.ProcessThread thread in threads)
+        IntPtr thread = IntPtr.Zero;
+        while (true)
         {
+            IntPtr next;
             // THREAD_QUERY_LIMITED_INFORMATION
-            IntPtr handle = OpenThread(0x0800, false, (uint)thread.Id);
-            if (handle == IntPtr.Zero) continue;
-            try
-            {
-                IntPtr text;
-                if (GetThreadDescription(handle, out text) < 0) continue;
-                string description;
-                try { description = Marshal.PtrToStringUni(text); }
-                finally { LocalFree(text); }
-                if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
-                    found[description] = GetThreadPriority(handle);
-            }
-            finally { CloseHandle(handle); }
+            int status = NtGetNextThread(target, thread, 0x0800, 0, 0, out next);
+            if (thread != IntPtr.Zero) CloseHandle(thread);
+            // STATUS_NO_MORE_ENTRIES, also once the process has ended.
+            if (status != 0) break;
+            thread = next;
+            uint code;
+            // STILL_ACTIVE
+            if (!GetExitCodeThread(thread, out code) || code != 259) continue;
+            IntPtr text;
+            if (GetThreadDescription(thread, out text) < 0) continue;
+            string description;
+            try { description = Marshal.PtrToStringUni(text); }
+            finally { LocalFree(text); }
+            if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
+                found[description] = GetThreadPriority(thread);
         }
     }
+    finally { CloseHandle(target); }
     return found;
 }
 
@@ -922,45 +946,56 @@ function Get-Priority([int]$Program) {
     $api::PriorityOf($process.Id, "conpty reader $Program")
 }
 
-# Waits until the reader thread of a program starts, while meiga has no
-# other one, and checks that it gets the lower priority of a hidden tab
-# from the start, and not once a wake-up of the window lowers it: a title of
-# the program wakes the window up, which then lowers the priority anyway
-# (Tab::learn), and PowerShell gives one as it starts as administrator, as
-# in the CI. So the check reads it from the moment it starts, until it is
-# the lower one, for 50 ms: meiga starts it with the normal priority, as
-# any thread, and lowers it right after, and the window raises it to the
-# normal one again only while it holds the lock of its terminal. $What, what
-# starts the program, is the subject of its messages, as in Wait-NewShell.
+# Waits for the reader thread of the program that $What starts again in a
+# hidden tab, and checks that it has the lower priority of a hidden tab from
+# the start. meiga lowers it right after it starts the session
+# (Tabs::restart), while the writer creates the pseudoconsole and the
+# program; and the reader gets the number of the program in its name only
+# once the program starts (ADR 0028). A meiga that did not lower it would
+# leave it with the normal priority until the first output of the session,
+# which ConPTY writes some tens of milliseconds after the program starts,
+# wakes the window up, which lowers it anyway (Tab::learn). The window
+# raises it to the normal one again only while it holds the lock of its
+# terminal, for much less. So the check reads the threads of meiga, in a
+# fraction of a millisecond each time, from the moment that the reader
+# appears, and fails if it still has the normal priority 3 ms after it got
+# the number of its program. $What, what starts the program, is the
+# subject of its messages, as in Wait-NewShell.
 function Assert-LowerReader([string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
-    $readings = [Collections.Generic.List[int]]::new()
-    $first = $null
+    $named = $null
+    $readings = 0
     while ($true) {
         if ($process.HasExited) {
             throw "$What started no program: $exe ended with exit code $($process.ExitCode)."
         }
-        # Null once meiga has ended: then the check above says so.
-        $readers = $api::PrioritiesOf($process.Id, 'conpty reader ')
+        # The reader is called 'conpty reader' until its program starts.
+        $readers = $api::PrioritiesOf($process.Id, 'conpty reader')
         $count = if ($null -eq $readers) { 0 } else { $readers.Count }
         if ($count -gt 1) {
             $all = ($readers.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)" }) -join ', '
             throw "$What left $exe with $count reader threads instead of one (name and priority: $all)."
         }
         if ($count -eq 1) {
+            $name = @($readers.Keys)[0]
             $priority = @($readers.Values)[0]
             if ($priority -eq $THREAD_PRIORITY_BELOW_NORMAL) { return }
-            $readings.Add($priority)
-            if ($null -eq $first) { $first = [DateTime]::UtcNow }
-            elseif (([DateTime]::UtcNow - $first).TotalMilliseconds -ge 50) { break }
+            $readings++
+            if ($name -ne 'conpty reader') {
+                if ($null -eq $named) { $named = [Diagnostics.Stopwatch]::StartNew() }
+                elseif ($named.Elapsed.TotalMilliseconds -ge 3) { break }
+            }
+            elseif ([DateTime]::UtcNow -gt $deadline) {
+                throw "$What did not start its program: the reader thread of its session still had no number after $TimeoutSeconds s."
+            }
         }
         elseif ([DateTime]::UtcNow -gt $deadline) {
             throw "$What did not start a program: $exe has no reader thread after $TimeoutSeconds s."
         }
-        [Threading.Thread]::Sleep(1)
+        # Without sleeping, which can take 15 ms: only what is ready to run.
+        $null = [Threading.Thread]::Yield()
     }
-    $priorities = ($readings | Sort-Object -Unique) -join ' and '
-    throw "$What started a program whose reader thread had the priority $priorities in $($readings.Count) readings for 50 ms, instead of the lower one of a hidden tab, $THREAD_PRIORITY_BELOW_NORMAL."
+    throw "$What started a program whose reader thread, '$name', still had the priority $priority 3 ms after the program started, in $readings readings, instead of the lower one of a hidden tab, ${THREAD_PRIORITY_BELOW_NORMAL}: meiga did not lower it as it started the session."
 }
 
 # Waits until the tab of $Shown is the one with the reader of normal
@@ -1767,8 +1802,9 @@ try {
     Write-Host 'OK: Ctrl+D closes the tab that is shown, whose program ended, and shows the next one, with one full frame; its program gets neither D nor Ctrl going up.'
 
     # 11. Ctrl+Shift+2 opens Later, whose folder is not there: its tab
-    # tells why its program could not start, and below it what can be done
-    # then. Enter tries again, and once the folder is there, starts it.
+    # tells why its program could not start, that its folder is not there,
+    # and below that what can be done then. Enter tries again, and once the
+    # folder is there, starts it.
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Ctrl+Shift+2'
@@ -1780,10 +1816,14 @@ try {
     $failure = Assert-Line 0 ('[could not start `' + $probeLine + '` in `' + $later + '`: ') ']' 'The tab of Later'
     # The line wraps into the rows that its characters take, two columns for
     # a wide one, as in an error of Windows in Chinese: a triple click on any
-    # of them copies the whole line. The hint follows it, on the first row
-    # that does not.
-    $hintRow = 1
-    while ((Assert-Line $hintRow $hint -What 'The tab of Later' -Or $failure) -cne $hint) { $hintRow++ }
+    # of them copies the whole line. The line that tells that the folder is
+    # not there follows it, as in Windows Terminal, and may wrap too; and the
+    # hint follows that one, on the first row that does not.
+    $folderLine = 'Could not access starting directory "' + $later + '"'
+    $folderRow = 1
+    while ((Assert-Line $folderRow $folderLine -What 'The tab of Later' -Or $failure) -cne $folderLine) { $folderRow++ }
+    $hintRow = $folderRow + 1
+    while ((Assert-Line $hintRow $hint -What 'The tab of Later' -Or $folderLine) -cne $hint) { $hintRow++ }
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Enter'
@@ -1804,7 +1844,7 @@ try {
     }
     Assert-Folder $ninth $later 'Later'
     Wait-OneFull $start 'Enter, which started Later,'
-    Write-Host 'OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.'
+    Write-Host 'OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, that its folder is not there, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.'
 
     # 12. Ctrl+V, with two lines in the clipboard, opens the message box that
     # asks before pasting. While it is open, the programs of both tabs end
@@ -1862,12 +1902,13 @@ try {
     # console closes, starts another one in it, as the shell of a tab can,
     # such as the git of its prompt: the new program connects to the console
     # while ConPTY closes it, and the session of the tab does not end. meiga
-    # waits for it before it ends, also once the session of the second tab,
-    # which it closes after the first one, has ended; and the writer thread
-    # of the session ends the programs left in it 10 s after the last of its
-    # programs ended (ADR 0011 and ADR 0026). meiga runs in a job of the
-    # check, where the check sees what it leaves, and which ends it if the
-    # check fails.
+    # waits for it before it ends, also once the sessions of the second tab,
+    # which it closes after the first one, and of a third one, which opens
+    # right before the window closes, have ended; and the writer thread of
+    # the session ends the programs left in it 10 s after the last of its
+    # programs ended (ADR 0011, ADR 0026 and ADR 0028). meiga runs in a job
+    # of the check, where the check sees what it leaves, and which ends it if
+    # the check fails.
     $process.Dispose()
     $process = $null
     $log = Join-Path $work 'frames-close.csv'
@@ -1905,13 +1946,37 @@ try {
     foreach ($console in $tabConsoles) {
         $null = $console.Handle
     }
-    $closing = [DateTime]::UtcNow
-    if (-not $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)) {
-        throw "Could not close the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    # A third tab opens right before the window closes: once the check sees
+    # the writer of its session, which starts with the session, it closes
+    # the window at once, while that writer creates the pseudoconsole and
+    # the program, or has just done it (ADR 0028). meiga waits for that
+    # session too, and it leaves nothing either. What this step cannot tell
+    # is whether meiga waits for it, nor whether its program gets the close:
+    # the first tab keeps meiga waiting for 10 s, which hides both; the unit
+    # tests of meiga-win, and the last step of check-window.ps1, check them.
+    # Ctrl and Shift stay down in the state of the keys that the check
+    # shares with the thread of the window until meiga ends: the thread
+    # reads it only when it takes the key, after the check has posted it.
+    Join-Input
+    $typed = Get-Chord 'Ctrl+Shift+T'
+    Send-Keys $typed.Messages $typed.Down
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $writers = $api::PrioritiesOf($process.Id, 'conpty writer')
+        $count = if ($null -eq $writers) { 0 } else { $writers.Count }
+        if ($count -ge 3) { break }
+        if ($process.HasExited -or [DateTime]::UtcNow -gt $deadline) {
+            $names = if ($count -gt 0) { " ('$($writers.Keys -join "', '")')" } else { '' }
+            throw "Ctrl+Shift+T opened no third tab: $exe has $count writer threads$names."
+        }
+        $null = [Threading.Thread]::Yield()
     }
+    $closing = [DateTime]::UtcNow
+    Send-Keys @($WM_CLOSE, 0, 0) $typed.Down
     if (-not $process.WaitForExit((17 + $TimeoutSeconds) * 1000)) {
         throw "$exe was still running $(17 + $TimeoutSeconds) s after its window closed."
     }
+    Split-Input
     if (-not $closerProgram.WaitForExit($TimeoutSeconds * 1000)) {
         throw "The program of the first tab was still running $TimeoutSeconds s after $exe ended."
     }
@@ -1955,7 +2020,7 @@ try {
         }
         Start-Sleep -Milliseconds 20
     }
-    Write-Host "OK: when its window closes, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the session of the second tab has ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, $(Format-Seconds $waited) s after its window closed, and leaves nothing of its tabs."
+    Write-Host "OK: when its window closes, right after a third tab opens, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the sessions of the second tab and of the third one, which was starting, have ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, $(Format-Seconds $waited) s after its window closed, and leaves nothing of its tabs."
     $passed = $true
 }
 finally {

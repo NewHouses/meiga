@@ -137,6 +137,60 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  coverage:
+    name: Coverage (Windows)
+    # What the tests run, line by line, for each pull request: it is not one
+    # of the checks that main requires, and it judges nothing. The checks
+    # with a window are measured locally, with an instrumented build.
+    if: github.event_name != 'schedule'
+    runs-on: windows-2025
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the Rust toolchain from rust-toolchain.toml, with llvm-tools
+        run: |
+          rustup toolchain install
+          rustup component add llvm-tools
+          rustc --version
+
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        with:
+          tool: cargo-llvm-cov@0.9.1
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          cache-bin: "false"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Download the ConPTY for the tests
+        run: ./tools/fetch-conpty.ps1
+
+      - name: Run the tests with coverage
+        run: cargo llvm-cov --workspace --locked --no-report
+
+      - name: Report the coverage of each file
+        run: |
+          cargo llvm-cov report --html --output-dir target/coverage
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $summary = cargo llvm-cov report
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $summary
+          @('## Coverage of the tests', '', '```text') + $summary + '```' |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: target/coverage/html
+          if-no-files-found: error
+          retention-days: 30
+
   scenarios:
     name: Load scenarios (bash)
     if: github.event_name != 'schedule'
