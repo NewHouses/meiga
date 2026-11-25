@@ -246,6 +246,19 @@ static extern uint GetLongPathNameW(string path, System.Text.StringBuilder longP
 [DllImport("kernel32.dll", SetLastError = true)]
 static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
 
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
+
+// The next thread of a process, after `thread`, or the first one if it is
+// null: a handle to it with `access`. It returns STATUS_NO_MORE_ENTRIES
+// after the last one.
+[DllImport("ntdll.dll")]
+static extern int NtGetNextThread(IntPtr process, IntPtr thread, uint access, uint attributes, uint flags, out IntPtr next);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetExitCodeThread(IntPtr thread, out uint code);
+
 [DllImport("kernel32.dll")]
 static extern int GetThreadPriority(IntPtr thread);
 
@@ -311,36 +324,44 @@ public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] s
 }
 
 // The priorities of the threads of a process whose names start with
-// `prefix`, by name, or null if the process has ended.
+// `prefix`, by name, or null if the process cannot be opened. It walks the
+// threads of that process only (NtGetNextThread), in a fraction of a
+// millisecond, while a snapshot of all the processes (Process.Threads) takes
+// tens of milliseconds on a busy machine. It leaves out the threads that
+// have ended: they stay in their process while a handle to them is open, as
+// the ones of the writers of closed sessions that meiga keeps (ADR 0026).
 public static System.Collections.Generic.Dictionary<string, int> PrioritiesOf(int process, string prefix)
 {
-    System.Diagnostics.Process target;
-    try { target = System.Diagnostics.Process.GetProcessById(process); }
-    catch (ArgumentException) { return null; }
+    // PROCESS_QUERY_INFORMATION: NtGetNextThread needs more than the
+    // limited one.
+    IntPtr target = OpenProcess(0x0400, false, (uint)process);
+    if (target == IntPtr.Zero) return null;
     var found = new System.Collections.Generic.Dictionary<string, int>();
-    using (target)
+    try
     {
-        System.Diagnostics.ProcessThreadCollection threads;
-        try { threads = target.Threads; }
-        catch (InvalidOperationException) { return null; }
-        foreach (System.Diagnostics.ProcessThread thread in threads)
+        IntPtr thread = IntPtr.Zero;
+        while (true)
         {
+            IntPtr next;
             // THREAD_QUERY_LIMITED_INFORMATION
-            IntPtr handle = OpenThread(0x0800, false, (uint)thread.Id);
-            if (handle == IntPtr.Zero) continue;
-            try
-            {
-                IntPtr text;
-                if (GetThreadDescription(handle, out text) < 0) continue;
-                string description;
-                try { description = Marshal.PtrToStringUni(text); }
-                finally { LocalFree(text); }
-                if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
-                    found[description] = GetThreadPriority(handle);
-            }
-            finally { CloseHandle(handle); }
+            int status = NtGetNextThread(target, thread, 0x0800, 0, 0, out next);
+            if (thread != IntPtr.Zero) CloseHandle(thread);
+            // STATUS_NO_MORE_ENTRIES, also once the process has ended.
+            if (status != 0) break;
+            thread = next;
+            uint code;
+            // STILL_ACTIVE
+            if (!GetExitCodeThread(thread, out code) || code != 259) continue;
+            IntPtr text;
+            if (GetThreadDescription(thread, out text) < 0) continue;
+            string description;
+            try { description = Marshal.PtrToStringUni(text); }
+            finally { LocalFree(text); }
+            if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
+                found[description] = GetThreadPriority(thread);
         }
     }
+    finally { CloseHandle(target); }
     return found;
 }
 
@@ -925,48 +946,53 @@ function Get-Priority([int]$Program) {
     $api::PriorityOf($process.Id, "conpty reader $Program")
 }
 
-# Waits until the reader thread of a program has the number of the program
-# in its name, while meiga has no other one, and checks that it has the
-# lower priority of a hidden tab from then on, and not once a wake-up of the
-# window lowers it: a title of the program wakes the window up, which then
-# lowers the priority anyway (Tab::learn), and PowerShell gives one as it
-# starts as administrator, as in the CI. The reader starts with the session,
-# before the program, and gets the number once the program starts (ADR
-# 0028): meiga starts it with the normal priority, as any thread, and lowers
-# it right after it starts the session, and the window raises it to the
-# normal one again only while it holds the lock of its terminal. So the
-# check reads it from the moment that it finds it, until it is the lower
-# one, for 50 ms. $What, what starts the program, is the subject of its
-# messages, as in Wait-NewShell.
+# Waits for the reader thread of the program that $What starts again in a
+# hidden tab, and checks that it has the lower priority of a hidden tab from
+# the start. meiga lowers it right after it starts the session
+# (Tabs::restart), while the writer creates the pseudoconsole and the
+# program; and the reader gets the number of the program in its name only
+# once the program starts (ADR 0028). A meiga that did not lower it would
+# leave it with the normal priority until the first output of the session,
+# which ConPTY writes some tens of milliseconds after the program starts,
+# wakes the window up, which lowers it anyway (Tab::learn). The window
+# raises it to the normal one again only while it holds the lock of its
+# terminal, for much less. So the check reads the threads of meiga, in a
+# fraction of a millisecond each time, from the moment that the reader
+# appears, and fails if it still has the normal priority 3 ms after it got
+# the number of its program. $What, what starts the program, is the
+# subject of its messages, as in Wait-NewShell.
 function Assert-LowerReader([string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
-    $readings = [Collections.Generic.List[int]]::new()
-    $first = $null
+    $named = $null
+    $readings = 0
     while ($true) {
         if ($process.HasExited) {
             throw "$What started no program: $exe ended with exit code $($process.ExitCode)."
         }
-        # Null once meiga has ended: then the check above says so.
-        $readers = $api::PrioritiesOf($process.Id, 'conpty reader ')
+        # The reader is called 'conpty reader' until its program starts.
+        $readers = $api::PrioritiesOf($process.Id, 'conpty reader')
         $count = if ($null -eq $readers) { 0 } else { $readers.Count }
         if ($count -gt 1) {
             $all = ($readers.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)" }) -join ', '
             throw "$What left $exe with $count reader threads instead of one (name and priority: $all)."
         }
         if ($count -eq 1) {
+            $name = @($readers.Keys)[0]
             $priority = @($readers.Values)[0]
             if ($priority -eq $THREAD_PRIORITY_BELOW_NORMAL) { return }
-            $readings.Add($priority)
-            if ($null -eq $first) { $first = [DateTime]::UtcNow }
-            elseif (([DateTime]::UtcNow - $first).TotalMilliseconds -ge 50) { break }
+            $readings++
+            if ($name -ne 'conpty reader') {
+                if ($null -eq $named) { $named = [Diagnostics.Stopwatch]::StartNew() }
+                elseif ($named.Elapsed.TotalMilliseconds -ge 3) { break }
+            }
         }
         elseif ([DateTime]::UtcNow -gt $deadline) {
             throw "$What did not start a program: $exe has no reader thread after $TimeoutSeconds s."
         }
-        [Threading.Thread]::Sleep(1)
+        # Without sleeping, which can take 15 ms: only what is ready to run.
+        $null = [Threading.Thread]::Yield()
     }
-    $priorities = ($readings | Sort-Object -Unique) -join ' and '
-    throw "$What started a program whose reader thread had the priority $priorities in $($readings.Count) readings for 50 ms, instead of the lower one of a hidden tab, $THREAD_PRIORITY_BELOW_NORMAL."
+    throw "$What started a program whose reader thread, '$name', still had the priority $priority 3 ms after the program started, in $readings readings, instead of the lower one of a hidden tab, ${THREAD_PRIORITY_BELOW_NORMAL}: meiga did not lower it as it started the session."
 }
 
 # Waits until the tab of $Shown is the one with the reader of normal
@@ -1917,17 +1943,33 @@ try {
     foreach ($console in $tabConsoles) {
         $null = $console.Handle
     }
-    $closing = [DateTime]::UtcNow
-    # A third tab opens right before the window closes, in the same batch of
-    # messages: its session is starting when the window closes, and its
-    # writer may not even have created its program yet (ADR 0028). meiga
-    # waits for it too, and it leaves nothing either. Ctrl and Shift stay
-    # down in the state of the keys that the check shares with the thread
-    # of the window until meiga ends: the thread reads it only when it takes
-    # the key, after the check has posted it.
+    # A third tab opens right before the window closes: once the check sees
+    # the writer of its session, which starts with the session, it closes
+    # the window at once, while that writer creates the pseudoconsole and
+    # the program, or has just done it (ADR 0028). meiga waits for that
+    # session too, and it leaves nothing either. What this step cannot tell
+    # is whether meiga waits for it, nor whether its program gets the close:
+    # the first tab keeps meiga waiting for 10 s, which hides both; the unit
+    # tests of meiga-win, and the last step of check-window.ps1, check them.
+    # Ctrl and Shift stay down in the state of the keys that the check
+    # shares with the thread of the window until meiga ends: the thread
+    # reads it only when it takes the key, after the check has posted it.
     Join-Input
     $typed = Get-Chord 'Ctrl+Shift+T'
-    Send-Keys ($typed.Messages + @($WM_CLOSE, 0, 0)) $typed.Down
+    Send-Keys $typed.Messages $typed.Down
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $writers = $api::PrioritiesOf($process.Id, 'conpty writer')
+        $count = if ($null -eq $writers) { 0 } else { $writers.Count }
+        if ($count -ge 3) { break }
+        if ($process.HasExited -or [DateTime]::UtcNow -gt $deadline) {
+            $names = if ($count -gt 0) { " ('$($writers.Keys -join "', '")')" } else { '' }
+            throw "Ctrl+Shift+T opened no third tab: $exe has $count writer threads$names."
+        }
+        $null = [Threading.Thread]::Yield()
+    }
+    $closing = [DateTime]::UtcNow
+    Send-Keys @($WM_CLOSE, 0, 0) $typed.Down
     if (-not $process.WaitForExit((17 + $TimeoutSeconds) * 1000)) {
         throw "$exe was still running $(17 + $TimeoutSeconds) s after its window closed."
     }
