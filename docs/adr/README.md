@@ -26,7 +26,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0009](0009-xanela-que-non-se-ve.md) | Que se debuxa cando a xanela non se ve | Aceptado |
 | [0010](0010-texto-con-directwrite.md) | Texto con DirectWrite e unha caché de glifos | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
 | [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado; concretado polos [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0026](0026-o-peche-das-sesions-ao-sair.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
-| [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) e [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
+| [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [0016](0016-o-historial-o-tamano-e-o-zoom.md) e [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) |
 | [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0014](0014-o-teclado.md) | O teclado | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0023](0023-os-atallos-de-teclado.md) |
@@ -38,11 +38,12 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0022](0022-os-perfis-e-a-configuracion.md) | Os perfís e a configuración | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0023](0023-os-atallos-de-teclado.md) | Os atallos de teclado | Aceptado; concretado polo [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
-| [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polos [0025](0025-moitas-tabs-e-os-indicadores.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
+| [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polos [0025](0025-moitas-tabs-e-os-indicadores.md), [0028](0028-as-sesions-fora-do-fio-da-xanela.md) e [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) |
 | [0025](0025-moitas-tabs-e-os-indicadores.md) | Moitas tabs: o ancho mínimo, o desprazamento da barra e os indicadores | Aceptado; concretado polo [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0026](0026-o-peche-das-sesions-ao-sair.md) | O peche das sesións ao saír | Aceptado; concretado polo [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) | A barra de tabs coma barra de título | Aceptado |
 | [0028](0028-as-sesions-fora-do-fio-da-xanela.md) | As sesións fóra do fío da xanela | Aceptado |
+| [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) | O título da tab e os títulos gardados | Aceptado |
 
 ## Como se relacionan
 
@@ -157,6 +158,13 @@ graph TD
     A19 --> A28
     A24 --> A28
     A26 --> A28
+    A3 --> A29["0029 O título da tab e os títulos gardados"]
+    A4 --> A29
+    A12 --> A29
+    A13 --> A29
+    A20 --> A29
+    A22 --> A29
+    A24 --> A29
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.

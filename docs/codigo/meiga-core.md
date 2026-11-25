@@ -1,6 +1,6 @@
 # Código › `meiga-core`
 
-> Estado: subfase 2.9. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, e o que é cada parte dela para Windows, coma barra de título da xanela, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato. Na 2.9, para as tabs na barra de título, a disposición da barra leva, coa xanela restaurada, unha banda enriba das tabs, onde se redimensiona a xanela, e, á dereita da barra, os botóns da xanela, minimizar, maximizar ou restaurar e pechar, cun sitio para arrastrar a xanela sempre antes deles, e di o ancho da barra máis estreita; e chegou o módulo `ui::titlebar`, que di que é cada parte da barra para Windows, a barra de título, o bordo de arriba e a súa esquina, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto, e o tamaño mínimo da área cliente.
+> Estado: subfase 3.1. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, e o que é cada parte dela para Windows, coma barra de título da xanela, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, o título do programa e os que este garda, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato. Na 2.9, para as tabs na barra de título, a disposición da barra leva, coa xanela restaurada, unha banda enriba das tabs, onde se redimensiona a xanela, e, á dereita da barra, os botóns da xanela, minimizar, maximizar ou restaurar e pechar, cun sitio para arrastrar a xanela sempre antes deles, e di o ancho da barra máis estreita; e chegou o módulo `ui::titlebar`, que di que é cada parte da barra para Windows, a barra de título, o bordo de arriba e a súa esquina, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto, e o tamaño mínimo da área cliente. Na 2.10 e no M3 non cambiou o código. Na 3.1, para os títulos dinámicos, chegou ao terminal o módulo `term::title`: o terminal leva el mesmo o título do programa e os que este garda, e non `alacritty_terminal`, que os baleiraba sen avisar nun reinicio da pantalla (`ESC c`); `ESC c` mantén os dous, e `restart`, coma nun terminal novo, quítaos; garda como moito 10 títulos, ignora os de máis de 1000 unidades de UTF-16, e o mesmo título outra vez xa non é un cambio. Chegaron sete probas en `term/title.rs` e sete en `term/tests.rs`.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato, e, desde a subfase 2.6, os atallos de teclado; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -27,7 +27,8 @@
 | [`src/model/tests.rs`](#cratesmeiga-coresrcmodeltestsrs) | As probas do modelo, unha delas con 10 000 cambios ao chou. |
 | [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, o cambio de tamaño, a vista do historial e a copia do que cambia, coas celas seleccionadas; e, desde a 2.7, o reinicio para o programa que empeza outra vez na súa tab. |
 | [`src/term/resize.rs`](#cratesmeiga-coresrctermresizers) | O cambio de tamaño da pantalla principal, que reparte o texto e coloca a pantalla onde a pon o ConPTY, seguindo a primeira fila e o cursor cunhas marcas; e a pantalla principal á parte mentres se ve a alternativa. |
-| [`src/term/handler.rs`](#cratesmeiga-coresrctermhandlerrs) | `Hooked`: o `Handler` entre o parser e o `Term`, que lle pasa todas as ordes, devolve a pantalla principal cando o programa deixa a alternativa ou reinicia o terminal, e deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba. |
+| [`src/term/handler.rs`](#cratesmeiga-coresrctermhandlerrs) | `Hooked`: o `Handler` entre o parser e o `Term`, que lle pasa as ordes, devolve a pantalla principal cando o programa deixa a alternativa ou reinicia o terminal, e deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba; desde a 3.1, o título e os títulos gardados non llos pasa: lévaos ao terminal. |
+| [`src/term/title.rs`](#cratesmeiga-coresrctermtitlers) | `Titles`, desde a 3.1: o título que lle dá o programa á súa tab e os que garda para dalos outra vez, como moito 10; un título baleiro é ningún, un de máis de 1000 unidades de UTF-16 ignórase, e o mesmo outra vez non é un cambio. |
 | [`src/term/screen.rs`](#cratesmeiga-coresrctermscreenrs) | `Screen`: o que mostra o terminal, en tipos de meiga, coa súa paleta, e as celas que cambiaron. |
 | [`src/term/selection.rs`](#cratesmeiga-coresrctermselectionrs) | A selección: creala, movela e quitala, o seu texto, e as súas celas, na grella de `alacritty_terminal`. |
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
@@ -3860,7 +3861,7 @@ Comprobouse tamén ao revés, con catro copias do modelo estragadas a propósito
 
 ## `crates/meiga-core/src/term/mod.rs`
 
-O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a 1.8 ten a selección, que vive na grella de `alacritty_terminal` e que a copia do que cambia marca nas celas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Desde a 1.9, cando cambia o tamaño, coloca a pantalla onde a pon o ConPTY e garda á parte a pantalla principal mentres se ve a alternativa, e move a vista do historial ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a 2.7, para o programa que empeza outra vez na mesma tab, volta ao estado no que o espera un programa novo, co que escribiu o anterior no historial; e di se o cursor está ao principio da súa fila, para a liña do fin do programa ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma), [› O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis), [› O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom) e [› O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio).
+O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a 1.8 ten a selección, que vive na grella de `alacritty_terminal` e que a copia do que cambia marca nas celas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Desde a 1.9, cando cambia o tamaño, coloca a pantalla onde a pon o ConPTY e garda á parte a pantalla principal mentres se ve a alternativa, e move a vista do historial ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a 2.7, para o programa que empeza outra vez na mesma tab, volta ao estado no que o espera un programa novo, co que escribiu o anterior no historial; e di se o cursor está ao principio da súa fila, para a liña do fin do programa ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md)). Desde a 3.1, leva el mesmo o título do programa e os que este garda, que xa non lle chegan a `alacritty_terminal` ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), [`term/title.rs`](#cratesmeiga-coresrctermtitlers)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma), [› O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis), [› O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom) e [› O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio).
 
 ```rust
 mod handler;
@@ -3869,14 +3870,15 @@ mod resize;
 mod scanner;
 mod screen;
 mod selection;
+mod title;
 
 pub use screen::{Cell, CellFlags, Color, Columns, Cursor, CursorShape, Screen};
 pub use selection::{SelectionKind, Side};
 ```
 
 - Os outros arquivos do cartafol `src/term/` son os submódulos de `term`.
-- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner`, `screen` e, desde a subfase 1.8, `selection` son privados, coma, desde a 1.9, `handler` e `resize`, pero os tipos de `screen` e de `selection` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen` ou `meiga_core::term::SelectionKind`, sen saber en que arquivo están.
-- Desde a 1.9, `use alacritty_terminal::grid::{self, Dimensions, Grid};` trae tamén o módulo `grid` (`self`): o `Scroll` de `alacritty_terminal` escríbese `grid::Scroll`, porque `Scroll` é o tipo de meiga ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E `use handler::Hooked;` trae o `Handler` que recibe a saída do programa ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)).
+- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner`, `screen` e, desde a subfase 1.8, `selection` son privados, coma, desde a 1.9, `handler` e `resize`, e, desde a 3.1, `title`, pero os tipos de `screen` e de `selection` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen` ou `meiga_core::term::SelectionKind`, sen saber en que arquivo están. Os de `title`, non: fóra da fachada, o título é un `Option<&str>`.
+- Desde a 1.9, `use alacritty_terminal::grid::{self, Dimensions, Grid};` trae tamén o módulo `grid` (`self`): o `Scroll` de `alacritty_terminal` escríbese `grid::Scroll`, porque `Scroll` é o tipo de meiga ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E `use handler::Hooked;` trae o `Handler` que recibe a saída do programa ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)). Desde a 3.1, `use title::Titles;` trae os títulos do programa, que garda o terminal ([`term/title.rs`](#cratesmeiga-coresrctermtitlers)).
 - Desde a 2.7, `use std::io::Write;` trae o trait `Write`, co que [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start) escribe con `write!` nun `Vec<u8>` as secuencias das tabulacións.
 
 ### Constantes
@@ -3896,7 +3898,7 @@ const DEFAULT_CURSOR: CursorStyle = CursorStyle {
 - **`SCROLLBACK_LINES`**: as liñas de historial que se gardan por riba da pantalla, só na pantalla principal: a alternativa non ten. Desde a subfase 1.9, a vista móstraas ([O historial e a súa vista](#o-historial-e-a-súa-vista)); ata a 1.8, gardábanse sen poder velas. `alacritty_terminal` non as reserva ao crear o terminal: a memoria do historial medra a medida que se enche, de 1 000 en 1 000 liñas. Cada cela ocupa 24 bytes, tamén as baleiras: un historial cheo de 100 columnas son 24 MB ([ADR 0016 › Consecuencias](../adr/0016-o-historial-o-tamano-e-o-zoom.md#consecuencias)). Desde a 1.9, úsaa tamén [`new_primary`](#a-pantalla-principal-á-parte), para a pantalla principal nova despois dun reinicio na alternativa.
 - **`MIN_SIZE`**: a grella máis pequena que admite `alacritty_terminal`, as súas constantes `MIN_COLUMNS` e `MIN_SCREEN_LINES`: 2 columnas e 1 fila. Un carácter ancho necesita dúas columnas: nunha grella dunha soa columna, `alacritty_terminal` falla (*panic*) ao escribilo. `as u16` converte os dous valores, que son `usize`, porque nunha constante non se pode usar `try_from`; son 2 e 1, así que caben.
 - **`DEFAULT_CURSOR`**, desde a subfase 1.6: o cursor cando o programa non escolle ningún, unha barra que pestanexa, coma no Windows Terminal ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Vai na configuración de `alacritty_terminal` (`default_cursor_style`), que o usa mentres o programa non pide outro, e outra vez despois de `ESC [ 0 SP q`, dun reinicio (RIS) ou, desde a subfase 2.7, de [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start). Se o programa só pide un cursor fixo ou que pestanexe (`?12l` e `?12h`), a barra segue, e só cambia o pestanexo. É privada porque `CursorStyle` é un tipo de `alacritty_terminal`: fóra da fachada, o cursor é un [`Cursor`](#cratesmeiga-coresrctermscreenrs). Que pestanexe de verdade decídeo a vista do terminal, segundo Windows ([Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)).
-- **`RESTART`**, desde a subfase 2.7: as secuencias coas que [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start) deixa os modos, as cores, o cursor e o título coma nun terminal novo, e pasa ao historial a pantalla principal. O seu código, e o que fai cada secuencia, están alí.
+- **`RESTART`**, desde a subfase 2.7: as secuencias coas que [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start) deixa os modos, as cores e o cursor coma nun terminal novo, e pasa ao historial a pantalla principal. Ata a 3.1 deixaba tamén o título, cun OSC 0 baleiro; desde entón quítao `restart`, sen secuencias. O seu código, e o que fai cada secuencia, están alí.
 
 ### `Changes` e `Modes`
 
@@ -3909,7 +3911,7 @@ pub struct Changes {
 }
 ```
 
-- **`Changes`**: o que pasou ao ler a saída, ademais dos cambios na pantalla: hai respostas para o programa (`take_responses`), cambiou o título (`title`), soou a campá ou hai texto para o portapapeis (`take_clipboard`). Devólveno `feed` e `end_sync`, e quen chama só ten que facer algo máis cando un campo é `true`.
+- **`Changes`**: o que pasou ao ler a saída, ademais dos cambios na pantalla: hai respostas para o programa (`take_responses`), cambiou o título (`title`), soou a campá ou hai texto para o portapapeis (`take_clipboard`). Devólveno `feed` e `end_sync`, e quen chama só ten que facer algo máis cando un campo é `true`. Desde a subfase 3.1, `title` só é `true` se o título é outro: dar outra vez o mesmo non é un cambio, coma di o seu comentario ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 2). Ata entón, cada OSC 0 ou 2, e cada `CSI 23 t` cun título gardado, era un cambio, tamén co mesmo título. Un título distinto e outra vez o de antes, na mesma lectura, si son un cambio, aínda que o título remate igual ([`take_changed`](#o-cambio-take_changed-e-replace)).
 - **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). `win32_input` dío o escáner, porque `alacritty_terminal` non coñece ese modo; o resto, `alacritty_terminal`. Desde a subfase 1.8, os modos do rato deciden se os clics seleccionan texto ou van ao programa, e en que formato ([`mouse.rs`](#cratesmeiga-coresrcmousers)), e o *bracketed paste*, como se pega o texto ([`paste.rs`](#cratesmeiga-coresrcpasters)). Desde a 1.9, na pantalla alternativa (`alt_screen`), que non ten historial, as teclas do historial van ao programa ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
 
 ### Os eventos: `Pending` e `Listener`
@@ -3920,7 +3922,6 @@ struct Pending {
     changes: Changes,
     responses: Vec<u8>,
     questions: Vec<(usize, Question)>,
-    title: Option<String>,
     clipboard: Option<String>,
 }
 
@@ -3942,11 +3943,10 @@ Mentres le a saída, `alacritty_terminal` avisa do que pasa chamando a `send_eve
 | `PtyWrite` | Unha resposta para o programa: os atributos do dispositivo (DA1 e DA2), o estado e a posición do cursor (DSR), o tamaño en celas… Engádese a `responses`. |
 | `ColorRequest(index, answer)` | Desde a subfase 1.6: unha pregunta por unha cor (OSC 4, 10, 11 ou 12 con `?`). Anótase en `questions` (`Question::Color`), coa posición na que irá a súa resposta: o final de `responses` nese momento. |
 | `TextAreaSizeRequest` | Desde a 1.6: unha pregunta polo tamaño da grella en píxeles (`CSI 14 t`). Anótase igual (`Question::TextAreaSize`). |
-| `Title` | O título que lle dá o programa á xanela (OSC 0 e 2). Un título baleiro é como non ter ningún: desde a subfase 2.3, a tab mostra o nome do seu programa ([`program_name`](#cratesmeiga-coresrcshellrs)) e, desde a 2.5, o do seu perfil, ou o do programa da liña de comandos de meiga ([`Launch`](#folder-profile-e-launch)). |
-| `ResetTitle` | O programa recuperou un título gardado (`ESC [ 23 t`) que era ningún. |
+| `Title` e `ResetTitle` | Ata a subfase 3.1: `Title`, o título que lle daba o programa á xanela (OSC 0 e 2), ou un gardado que daba outra vez (`ESC [ 23 t`); e `ResetTitle`, un gardado que era ningún. O `Listener` gardaba o título en `Pending`, e un título baleiro era coma non ter ningún. Desde a 3.1, `alacritty_terminal` xa non os envía: o [`Hooked`](#os-métodos-de-handler) non lle pasa o título nin os gardados, que leva o terminal ([`term/title.rs`](#cratesmeiga-coresrctermtitlers), [ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 2). Se chegasen, ignoraríanse coma os demais. |
 | `Bell` | A campá (BEL). |
 | `ClipboardStore(Clipboard, …)` | Texto para o portapapeis (OSC 52). Windows non ten selección primaria: só se garda o do portapapeis. |
-| Os demais | Ignóranse. Ler o portapapeis nunca se permite (`Osc52::OnlyCopy`), así que nunca se pide. `CursorBlinkingChange` tampouco fai falta: cada copia compara o cursor, tamén o seu pestanexo. O resto son para o bucle de eventos do Alacritty, que meiga non usa. |
+| Os demais | Ignóranse. Ler o portapapeis nunca se permite (`Osc52::OnlyCopy`), así que nunca se pide; e, coma di o comentario desde a 3.1, o título non vén de eiquí. `CursorBlinkingChange` tampouco fai falta: cada copia compara o cursor, tamén o seu pestanexo. O resto son para o bucle de eventos do Alacritty, que meiga non usa. |
 
 **As preguntas que `alacritty_terminal` non sabe responder.** As cores dependen da paleta de meiga, e o tamaño en píxeles, do tamaño dunha cela, que coñece quen debuxa: `alacritty_terminal` envíaas como eventos, en vez de respondelas. O `Listener` só ten a cola, así que as anota en `questions`, e o terminal respóndeas cando remata de ler ([As preguntas](#as-preguntas-polas-cores-e-polo-tamaño)). Cada `Question` garda o que fai falta para respondela:
 
@@ -3972,7 +3972,7 @@ pub struct Terminal {
     scanner: Scanner,
     pending: Arc<Mutex<Pending>>,
     size: GridSize,
-    title: Option<String>,
+    titles: Titles,
     theme: Palette,
     cell: Size,
     damaged: Vec<LineDamageBounds>,
@@ -3989,7 +3989,7 @@ pub struct Terminal {
 | `scanner` | O escáner propio ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). |
 | `pending` | A cola dos eventos, compartida co `Listener`. |
 | `size` | O tamaño da grella. |
-| `title` | O último título que deu o programa. |
+| `titles` | Desde a subfase 3.1: o título que deu o programa, os que gardou e se o título cambiou desde que o terminal colleu os seus cambios ([`Titles`](#titles)). Ata a 3.1 era `title`, o último título que deu o programa, que `take_changes` collía da cola dos eventos. |
 | `theme` | Desde a subfase 1.6: as cores do tema, `Palette::MEIGA` ata que haxa temas. As que cambia o programa non van eiquí: gárdaas `alacritty_terminal` ([A paleta](#a-paleta-o-tema-e-os-cambios-do-programa)). |
 | `cell` | Desde a 1.6: o tamaño dunha cela en píxeles, para responder a `CSI 14 t`; 0 × 0 mentres non se sabe. |
 | `damaged` | As filas danadas, nun `Vec` que se reutiliza en cada copia para non reservar memoria. |
@@ -4022,6 +4022,7 @@ pub fn new(size: GridSize) -> Self {
         region_below_top: false,
         parser: Processor::new(),
         …
+        titles: Titles::default(),
         theme: Palette::MEIGA,
         cell: Size::new(0, 0),
         damaged: Vec::new(),
@@ -4035,6 +4036,7 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
         term: &mut self.term,
         primary: &mut self.primary,
         region_below_top: &mut self.region_below_top,
+        titles: &mut self.titles,
     };
     self.parser.advance(&mut hooked, bytes);
     self.take_changes()
@@ -4049,9 +4051,9 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
   - desde a subfase 1.8, os caracteres que rematan unha palabra nun dobre clic (`semantic_escape_chars`), os de meiga, [`WORD_DELIMITERS`](#word_delimiters-selectionkind-e-side): `alacritty_terminal` úsaos para estender as seleccións de palabras. `to_owned` copia o texto nun `String`, que é o que garda a configuración;
   - o resto, cos valores por defecto (`..Config::default()`).
 
-  Ten as cores de meiga (`Palette::MEIGA`), ningunha selección e, desde a subfase 1.9, ningunha pantalla principal á parte (`primary: None`) e a rexión de desprazamento na pantalla enteira (`region_below_top: false`), e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
+  Ten as cores de meiga (`Palette::MEIGA`), ningunha selección e, desde a subfase 1.9, ningunha pantalla principal á parte (`primary: None`) e a rexión de desprazamento na pantalla enteira (`region_below_top: false`); desde a 3.1, ningún título nin ningún gardado (`Titles::default()`); e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
 - **`feed`** le o que escribiu o programa: primeiro o escáner e despois o parser, cos mesmos bytes, sen copialos nin cambialos. Devolve os `Changes`.
-  - Desde a subfase 1.9, o parser non lle dá a saída directamente ao `Term`, senón a un [`Hooked`](#hooked): pásalle todas as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve no momento a pantalla principal que deixou á parte un cambio de tamaño, antes da saída que vén despois. Tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([O historial e a súa vista](#o-historial-e-a-súa-vista)). `Hooked` toma prestados tres campos do terminal, `term`, `primary` e `region_below_top`, mentres le o parser, que é outro: o compilador permite as catro referencias mutábeis porque son campos distintos.
+  - Desde a subfase 1.9, o parser non lle dá a saída directamente ao `Term`, senón a un [`Hooked`](#hooked): pásalle as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve no momento a pantalla principal que deixou á parte un cambio de tamaño, antes da saída que vén despois. Tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E, desde a 3.1, o título e os gardados non llos pasa ao `Term`: lévaos aos `titles` do terminal ([`term/title.rs`](#cratesmeiga-coresrctermtitlers)). `Hooked` toma prestados catro campos do terminal, `term`, `primary`, `region_below_top` e, desde a 3.1, `titles`, mentres le o parser, que é outro: o compilador permite as cinco referencias mutábeis porque son campos distintos.
 
 | Método | Que fai |
 |---|---|
@@ -4061,11 +4063,11 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
 | `palette` | Desde a 1.6: as cores coas que se debuxan as celas ([A paleta](#a-paleta-o-tema-e-os-cambios-do-programa)). |
 | `take_responses(into)` | Move as respostas ao final de `into`, para envialas ao programa. `Vec::append` deixa a cola baleira pero coa súa memoria: a seguinte resposta non reserva nada. |
 | `take_clipboard` | O último texto que o programa copiou ao portapapeis; despois, ningún. Se copiou varios antes de recollelos, só queda o último, como no portapapeis. Desde a subfase 1.8, a xanela recólleo e pono no portapapeis de Windows, só se ten o foco e está en primeiro plano ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Código › meiga › `app.rs`](meiga.md#cratesmeigasrcapprs)). |
-| `title` | O título que deu o programa, se deu algún. |
+| `title` | O título que deu o programa, se deu algún: nunca un texto baleiro. Desde a subfase 3.1 dállo [`Titles::current`](#o-título-current-e-set); ata entón, o campo `title`. |
 | `modes` | Os modos, traducidos de `TermMode` (uns *bitflags*) aos campos de `Modes`. `win32_input` pregúntallo ao escáner. |
 | `resize(size)` | Cambia o tamaño da grella, con polo menos `MIN_SIZE`, e todo queda danado. Ata a subfase 1.8, `alacritty_terminal` repartía as liñas longas da pantalla principal (*reflow*) e colocaba a pantalla á súa maneira, e a selección só se ía se cambiaba o número de columnas. Desde a 1.9, a pantalla queda onde a pon o ConPTY, e a selección vaise sempre ([O tamaño](#o-tamaño-resize)). |
 | `sync_deadline` | Cando hai que mostrar a actualización sincronizada (`?2026`) que empezou o programa, aínda que non a remate: `vte` gárdaa como moito 150 ms desde o último `?2026h`, ou ata encher o búfer. Mentres tanto, a saída non chega á pantalla. |
-| `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador. Desde a subfase 1.6, remátaa a xanela: antes de cada fotograma consulta `sync_deadline`, e o temporizador dos fotogramas vence a esa hora, tamén coa xanela minimizada, que non debuxa ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Desde a 1.9, coma `feed`: a saída pasa polo `Hooked`. Desde a 2.7, chámao tamén `restart`, antes de reiniciar o terminal. |
+| `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador. Desde a subfase 1.6, remátaa a xanela: antes de cada fotograma consulta `sync_deadline`, e o temporizador dos fotogramas vence a esa hora, tamén coa xanela minimizada, que non debuxa ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Desde a 1.9, coma `feed`: a saída pasa polo `Hooked`, co mesmo préstamo dos campos do terminal, desde a 3.1 tamén os `titles`. Desde a 2.7, chámao tamén `restart`, antes de reiniciar o terminal. |
 
 Desde a subfase 1.8, `Terminal` ten tamén os métodos da selección, noutro arquivo do módulo: `select`, `select_to`, `clear_selection`, `has_selection` e `selection_text` ([`term/selection.rs`](#cratesmeiga-coresrctermselectionrs)). Desde a 1.9, ten tamén os do historial: `scroll`, `scroll_to` e `history` ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E desde a 2.7, `restart` e `at_empty_row_start`, para o fin do programa ([O fin do programa e o reinicio](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start)).
 
@@ -4294,15 +4296,13 @@ const RESTART: &[u8] = concat!(
     // The colours of the theme: the palette, the text, the background and
     // the cursor.
     "\x1b]104\x07\x1b]110\x07\x1b]111\x07\x1b]112\x07",
-    // No title: the tab shows the name of its profile.
-    "\x1b]0;\x07",
     // What the primary screen shows goes to the history.
     "\x1b[2J",
 )
 .as_bytes();
 ```
 
-**`RESTART`**: as secuencias que deixan os modos, as cores, o cursor e o título coma nun terminal novo, e que pasan ao historial a pantalla principal, sen o reinicio (`ESC c`) que tamén a borra. `concat!` xunta os textos ao compilar nun só `&'static str`, e `as_bytes` dá os seus bytes, coma os que escribe un programa: `restart` dállos a `feed`. Cada grupo leva un comentario. O que fai cada secuencia en `alacritty_terminal`:
+**`RESTART`**: as secuencias que deixan os modos, as cores e o cursor coma nun terminal novo, e que pasan ao historial a pantalla principal, sen o reinicio (`ESC c`) que tamén a borra. `concat!` xunta os textos ao compilar nun só `&'static str`, e `as_bytes` dá os seus bytes, coma os que escribe un programa: `restart` dállos a `feed`. Cada grupo leva un comentario. O que fai cada secuencia en `alacritty_terminal`:
 
 | Secuencias | Que deixan |
 |---|---|
@@ -4318,11 +4318,11 @@ const RESTART: &[u8] = concat!(
 | `?25h` | O cursor visíbel: a liña do fin ocultárao. |
 | `OSC 8 ; ;` | Sen ligazón (*hyperlink*) para o texto que vén: `ESC [ 0 m` non a quita. |
 | `OSC 104`, `OSC 110`, `OSC 111` e `OSC 112` | As cores do tema: as 256 da paleta, a do texto, a do fondo e a do cursor ([A paleta](#a-paleta-o-tema-e-os-cambios-do-programa)). |
-| `OSC 0 ;` | Un título baleiro, que é ningún ([Os eventos](#os-eventos-pending-e-listener)): a tab mostra o nome do seu perfil ata que o programa novo poña un. |
 | `ESC [ 2 J` | ED 2: o que mostra a pantalla principal vai ao historial, e a pantalla queda en branco (ver máis abaixo). |
 
 - **A orde importa.** `?1049l` vai primeiro: en `alacritty_terminal`, os xogos de caracteres e as cores do texto van co cursor de cada pantalla, e teñen que cambiar no da principal. E `ESC [ 0 m` vai antes ca `ESC [ 2 J`, porque `alacritty_terminal` borra as celas co fondo do cursor: así quedan co fondo por defecto, e non coa última cor do programa.
 - As OSC rematan en BEL (`\x07`). `ESC [ 2 J` non move o cursor: lévao á esquina `restart`, despois das tabulacións.
+- **Ata a subfase 3.1**, `RESTART` levaba tamén `OSC 0 ;`, despois das cores: un título baleiro, que era ningún ([Os eventos](#os-eventos-pending-e-listener)), e a tab mostraba o nome do seu perfil ata que o programa novo puxese un. Pero os títulos gardados seguían en `alacritty_terminal`, e un `CSI 23 t` do programa novo traía un título do vello ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 4). Desde a 3.1, o título e os gardados non pasan polo `Term`, e `restart` quítaos el mesmo, sen ningunha secuencia (ver máis abaixo).
 
 ```rust
 pub fn restart(&mut self) {
@@ -4344,25 +4344,27 @@ pub fn restart(&mut self) {
     tabs.extend_from_slice(b"\x1b[H\x1b7");
     self.feed(&tabs);
     self.scroll(Scroll::Bottom);
+    self.titles = Titles::default();
     let mut pending = lock(&self.pending);
     pending.responses.clear();
     pending.clipboard = None;
 }
 ```
 
-**`restart`** deixa o terminal coma o espera un programa novo, para a sesión que empeza outra vez na súa tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md), decisión 7): o que mostraba a pantalla principal pasa ao historial, por riba dunha pantalla limpa co cursor na esquina de arriba á esquerda, e os modos, as cores, o cursor, as tabulacións e o título son os dun terminal novo. O que mostraba a alternativa, se o programa rematou nela, pérdese, coma cando un programa sae dela. O historial queda, e a vista volta á pantalla. Así empeza tamén o ConPTY novo, cunha pantalla limpa e o seu cursor arriba á esquerda: o terminal queda coma o seu, coma nunha tab nova, e o que escribe o programa cae nas mesmas filas nos dous. Paso a paso:
+**`restart`** deixa o terminal coma o espera un programa novo, para a sesión que empeza outra vez na súa tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md), decisión 7): o que mostraba a pantalla principal pasa ao historial, por riba dunha pantalla limpa co cursor na esquina de arriba á esquerda, e os modos, as cores, o cursor e as tabulacións son os dun terminal novo, sen título e, desde a subfase 3.1, sen títulos gardados ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 4). O que mostraba a alternativa, se o programa rematou nela, pérdese, coma cando un programa sae dela. O historial queda, e a vista volta á pantalla. Así empeza tamén o ConPTY novo, cunha pantalla limpa e o seu cursor arriba á esquerda: o terminal queda coma o seu, coma nunha tab nova, e o que escribe o programa cae nas mesmas filas nos dous. Paso a paso:
 
 1. **A actualización sincronizada.** Se o último programa deixou unha aberta (`?2026h`), `vte` aínda garda a súa saída. `end_sync` móstraa primeiro, para que vaia ao historial co resto, e para que `RESTART` chegue ao `Term` e non ao búfer da actualización. Despois, xa non queda ningunha aberta. A sesión xa a remata ao escribir a liña do fin ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)), pero `restart` non depende diso.
 2. **`RESTART`**, por `feed`, coma a saída dun programa: pasa polo escáner e polo [`Hooked`](#hooked).
 3. **As tabulacións**, unha cada 8 columnas desde a primeira, coma nun terminal novo, onde `alacritty_terminal` as pon así ([`TabStops::new`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L2323-L2327), en `term/mod.rs`). `ESC [ 3 g` (TBC) quítaas todas e, en cada columna 1, 9, 17…, `ESC [ columna G` (CHA) leva alí o cursor e `ESC H` (HTS) pon unha. Noutros terminais abondaría con `CSI ? 5 W` (DECST8C), pero `alacritty_terminal` ignórao: `vte` chama con el a [`set_tabs(8)`](https://github.com/alacritty/vte/blob/3b3da71c34cc1256c7e20981cf03f8eb95e08ffc/src/ansi.rs#L1580), que `Term` non implementa, e queda [o método do trait, que non fai nada](https://github.com/alacritty/vte/blob/3b3da71c34cc1256c7e20981cf03f8eb95e08ffc/src/ansi.rs#L616), os dous en `src/ansi.rs` de `vte` 0.15.0.
 4. **O cursor**, despois das tabulacións, que o moven, e no mesmo `feed`: `ESC [ H` (CUP) lévao á esquina de arriba á esquerda, e `ESC 7` (DECSC) gárdao alí, coas cores por defecto e os xogos de caracteres en ASCII, que `alacritty_terminal` garda con el. Un `ESC 8` (DECRC) do programa novo lévao alí, coma nun terminal novo, ata que garde outro.
 5. **A vista volta á pantalla** (`Scroll::Bottom`). Se mostraba o historial, `ESC [ 2 J` subiuna coas filas que entraron nel, e seguiría mostrándoas.
-6. **O que quedaba pendente vaise**: as respostas ás preguntas que o último programa deixou nunha actualización sincronizada, e o texto que copiou ao portapapeis. O programa que as fixo xa rematou, e o novo non as espera. `restart` tampouco devolve os `Changes`: a sesión esquece tamén os avisos que a xanela non colleu ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)).
+6. **Sen títulos**, desde a subfase 3.1: uns [`Titles`](#titles) novos, sen título nin gardados, coma nun terminal novo. Van despois dos dous `feed`, para que tampouco quede un título que o último programa deixase nunha actualización sincronizada aberta, que mostra o paso 1. Tampouco queda ningún cambio do título por avisar: os `feed` xa colleron os seus, e os `Titles` novos non teñen ningún. Ata a 3.1, quitaba o título o `OSC 0 ;` de `RESTART`, e os gardados quedaban.
+7. **O que quedaba pendente vaise**: as respostas ás preguntas que o último programa deixou nunha actualización sincronizada, e o texto que copiou ao portapapeis. O programa que as fixo xa rematou, e o novo non as espera. `restart` tampouco devolve os `Changes`: a sesión esquece tamén os avisos que a xanela non colleu ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)).
 
 - **`write!` nun `Vec`.** O trait `std::io::Write` deixa escribir texto con formato nun `Vec<u8>`, sen un `String` no medio. Nun `Vec` nunca falla, e `let _ =` ignora o `Result`. Cada tabulación leva 5 bytes e as cifras da súa columna: a capacidade, 8 bytes por tabulación e 8 máis, abonda mentres as columnas teñen ata tres cifras, e nunha grella máis ancha o `Vec` medra.
 - **Cun tamaño novo.** As tabulacións son as das columnas que ten o terminal ao reiniciarse. A tab dálle despois o tamaño da xanela ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)), e `alacritty_terminal` corta as que sobran ou engade as que faltan, tamén cada 8 columnas desde a primeira ([`TabStops::resize`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L2337-L2346)).
 
-**Por que o historial, e non `ESC c`.** O reinicio enteiro, RIS (`ESC c`), deixaría o terminal novo dunha vez, pero en `alacritty_terminal` borra tamén o historial: [`reset_state`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1833-L1858), en `term/mod.rs`, chama a [`Grid::reset`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L335-L352), en `grid/mod.rs`, que baleira o historial (`clear_history`) e as filas da pantalla. Perderíase o que escribiu o programa que rematou, e por que rematou, que é o que mostraba a tab (ADR 0024, alternativas). En cambio, `ESC [ 2 J` (ED 2) na pantalla principal [chama a `clear_viewport`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1788-L1803), que [despraza a pantalla cara arriba](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L309-L333) ata a última fila con algo escrito: esas filas entran no historial, e as baleiras de debaixo non. Na alternativa, ED 2 só a borraría, pero `?1049l` xa a deixou. Os modos voltan coma no reinicio do Windows Terminal que non borra o texto, pero o texto vai ao historial, e non queda na pantalla: o programa novo empeza nunha pantalla limpa, coma o ConPTY, sen o texto dun programa que non coñece, e o de antes queda a unha roda de distancia (ADR 0024, decisión 7). Ademais, `reset_state` non volta ás cores que cambiou o programa nin avisa de que xa non hai título: farían falta igual as OSC de `RESTART`.
+**Por que o historial, e non `ESC c`.** O reinicio enteiro, RIS (`ESC c`), deixaría o terminal novo dunha vez, pero en `alacritty_terminal` borra tamén o historial: [`reset_state`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1833-L1858), en `term/mod.rs`, chama a [`Grid::reset`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L335-L352), en `grid/mod.rs`, que baleira o historial (`clear_history`) e as filas da pantalla. Perderíase o que escribiu o programa que rematou, e por que rematou, que é o que mostraba a tab (ADR 0024, alternativas). En cambio, `ESC [ 2 J` (ED 2) na pantalla principal [chama a `clear_viewport`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1788-L1803), que [despraza a pantalla cara arriba](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L309-L333) ata a última fila con algo escrito: esas filas entran no historial, e as baleiras de debaixo non. Na alternativa, ED 2 só a borraría, pero `?1049l` xa a deixou. Os modos voltan coma no reinicio do Windows Terminal que non borra o texto, pero o texto vai ao historial, e non queda na pantalla: o programa novo empeza nunha pantalla limpa, coma o ConPTY, sen o texto dun programa que non coñece, e o de antes queda a unha roda de distancia (ADR 0024, decisión 7). Ademais, `reset_state` non volta ás cores que cambiou o programa: farían falta igual as OSC de `RESTART`. Nin quitaría o título: desde a subfase 3.1, `ESC c` mantén o título e os gardados ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisións 1 e 3). Ata a 3.1, en cambio, baleirábaos en `alacritty_terminal` sen avisar, e facía falta igual o OSC 0.
 
 - **Se a pantalla principal está baleira e sen historial**, ED 2 mete igual unha fila en branco no historial: `clear_viewport` busca cara atrás a última cela con algo e, se chega ao principio da grella sen atopala, conta a primeira fila. Con historial, para nel, e non mete ningunha. O ConPTY de Windows fai iso en cada tab ao arrancar: borra a pantalla, que aínda está baleira, e o historial de cada tab empeza cunha fila en branco (atopado no mantemento M2, porque `check-exit.ps1` fallaba no seu paso 6 con ese ConPTY: [Ferramentas › `check-exit.ps1`](ferramentas.md#toolscheck-exitps1)). meiga deixará de metela na 8.6; o ConPTY que vai con meiga non borra a pantalla ao arrancar.
 
@@ -4463,7 +4465,17 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
   - `point_to_viewport` converte a posición na grella, que inclúe o historial, na fila que se ve: se queda fóra, porque desde a subfase 1.9 a vista pode mostrar o historial, o cursor non se debuxa.
 
   **Por que non `renderable_content()`**, que dá o cursor como o debuxa Alacritty: sobre unha metade dereita, pásao á columna anterior sen comprobar que exista. Borrar caracteres (`ESC [ P`) pode deixar unha metade dereita soa na primeira columna, co cursor enriba, e entón a resta baixa de cero: nas compilacións de depuración, que comproban os desbordamentos tamén nas dependencias, é un *panic*; en *release*, a columna dá a volta e o cursor desaparece. Atopouno a revisión do código, e compróbao a proba `the_cursor_on_a_lone_right_half_stays_in_its_cell`.
-- **`take_changes`**, desde a subfase 1.6, responde primeiro as preguntas pendentes ([As preguntas](#as-preguntas-polas-cores-e-polo-tamaño)). Despois colle os `Changes` da cola e déixaa baleira: `mem::take` devolve o valor e deixa no seu sitio o valor por defecto. O título só se move se cambiou.
+- **`take_changes`**, desde a subfase 1.6, responde primeiro as preguntas pendentes ([As preguntas](#as-preguntas-polas-cores-e-polo-tamaño)). Despois colle os `Changes` da cola e déixaa baleira: `mem::take` devolve o valor e deixa no seu sitio o valor por defecto. Desde a 3.1, o aviso do título non vén da cola, senón dos `titles`:
+
+  ```rust
+  let changes = mem::take(&mut pending.changes);
+  Changes {
+      title: self.titles.take_changed(),
+      ..changes
+  }
+  ```
+
+  [`take_changed`](#o-cambio-take_changed-e-replace) di se o título cambiou desde a última vez, e esquéceo; `..changes` dá aos outros campos os valores de `changes`. Ata a 3.1, o aviso do título viña na cola, coma os outros, e o título, en `Pending`: `take_changes` movíao ao campo `title` do terminal só se cambiara.
 
 ### Os axudantes
 
@@ -4865,7 +4877,7 @@ As probas están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs), coas do termi
 
 ## `crates/meiga-core/src/term/handler.rs`
 
-Desde a subfase 1.9: o terminal de `alacritty_terminal` coma o ve o parser. O parser de `vte` chama a un `Handler` por cada orde da saída ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Ata a 1.8 era o propio `Term`; desde a 1.9 é `Hooked`, que lle pasa ao `Term` todas as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve a pantalla principal que un cambio de tamaño deixou á parte ([`term/resize.rs`](#cratesmeiga-coresrctermresizers), [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a revisión do código, tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([Manter a vista](#manter-a-vista-view_to_keep-e-keep_view)).
+Desde a subfase 1.9: o terminal de `alacritty_terminal` coma o ve o parser. O parser de `vte` chama a un `Handler` por cada orde da saída ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Ata a 1.8 era o propio `Term`; desde a 1.9 é `Hooked`, que lle pasa ao `Term` as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve a pantalla principal que un cambio de tamaño deixou á parte ([`term/resize.rs`](#cratesmeiga-coresrctermresizers), [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a revisión do código, tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([Manter a vista](#manter-a-vista-view_to_keep-e-keep_view)). E, desde a subfase 3.1, o título do programa e os que este garda non llos pasa ao `Term`, que os baleiraba nun reinicio (`ESC c`) sen avisar: lévaos ao terminal, que os garda ([`term/title.rs`](#cratesmeiga-coresrctermtitlers), [ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md)). Ata a 3.1, pasáballe todas as ordes.
 
 **Por que dentro do parser.** A pantalla principal ten que voltar no momento en que o programa deixa a alternativa: a saída que vén despois de `?1049l`, na mesma lectura ou na mesma actualización sincronizada (`?2026`), xa é para ela, e ten que caer nas súas filas, co tamaño novo. `feed` só volta cando o parser leu o bloque enteiro; `vte` garda a saída dunha actualización sincronizada e dálla ao `Handler` dunha vez, cando remata ou cando vence (`end_sync`); e ningún evento de `alacritty_terminal` avisa do cambio de pantalla. Despois de ler, sería tarde. Compróbao a proba `the_output_after_leaving_the_alternate_screen_reaches_the_primary_one`, nos tres casos.
 
@@ -4876,12 +4888,13 @@ pub(super) struct Hooked<'a> {
     pub term: &'a mut Term<Listener>,
     pub primary: &'a mut Option<Grid<Cell>>,
     pub region_below_top: &'a mut bool,
+    pub titles: &'a mut Titles,
 }
 ```
 
-- **`Hooked`**: o terminal, a pantalla principal que un cambio de tamaño deixou á parte e, desde a revisión do código, se a rexión de desprazamento do programa empeza máis abaixo da primeira fila da pantalla: os campos `term`, `primary` e `region_below_top` do [`Terminal`](#terminal), prestados mentres le o parser. `feed` e `end_sync` crean un en cada lectura: son tres referencias, sen copiar nada.
-- `'a` é o tempo de vida dos tres préstamos: `Hooked` non pode durar máis ca eles. Os campos son públicos, pero o tipo só se ve no módulo `term` (`pub(super)`).
-- `Cell`, neste arquivo, é a cela de `alacritty_terminal`.
+- **`Hooked`**: o terminal, a pantalla principal que un cambio de tamaño deixou á parte, desde a revisión do código, se a rexión de desprazamento do programa empeza máis abaixo da primeira fila da pantalla e, desde a subfase 3.1, o que o terminal garda do programa: o seu título e os que gardou ([`Titles`](#titles)). Son os campos `term`, `primary`, `region_below_top` e `titles` do [`Terminal`](#terminal), prestados mentres le o parser. `feed` e `end_sync` crean un en cada lectura: son catro referencias, sen copiar nada.
+- `'a` é o tempo de vida dos catro préstamos: `Hooked` non pode durar máis ca eles. Os campos son públicos, pero o tipo só se ve no módulo `term` (`pub(super)`).
+- `Cell`, neste arquivo, é a cela de `alacritty_terminal`. E `Titles` vén do módulo irmán, `title` (`use super::title::Titles;`).
 
 ### Manter a vista: `view_to_keep` e `keep_view`
 
@@ -4960,7 +4973,6 @@ macro_rules! pass {
 #[deny(clippy::missing_trait_methods)]
 impl Handler for Hooked<'_> {
     pass! {
-        fn set_title(&mut self, title: Option<String>);
         fn set_cursor_style(&mut self, style: Option<CursorStyle>);
         fn set_cursor_shape(&mut self, shape: CursorShape);
         fn goto(&mut self, line: i32, column: usize);
@@ -5008,8 +5020,6 @@ impl Handler for Hooked<'_> {
         fn clipboard_store(&mut self, clipboard: u8, base64: &[u8]);
         fn clipboard_load(&mut self, clipboard: u8, terminator: &str);
         fn decaln(&mut self);
-        fn push_title(&mut self);
-        fn pop_title(&mut self);
         fn text_area_size_pixels(&mut self);
         fn text_area_size_chars(&mut self);
         fn set_hyperlink(&mut self, hyperlink: Option<Hyperlink>);
@@ -5021,6 +5031,21 @@ impl Handler for Hooked<'_> {
         fn set_modify_other_keys(&mut self, mode: ModifyOtherKeys);
         fn report_modify_other_keys(&mut self);
         fn set_scp(&mut self, path: ScpCharPath, update: ScpUpdateMode);
+    }
+
+    #[inline]
+    fn set_title(&mut self, title: Option<String>) {
+        self.titles.set(title);
+    }
+
+    #[inline]
+    fn push_title(&mut self) {
+        self.titles.push();
+    }
+
+    #[inline]
+    fn pop_title(&mut self) {
+        self.titles.pop();
     }
 
     #[inline]
@@ -5103,15 +5128,171 @@ impl Handler for Hooked<'_> {
 - **`pass!`**, unha macro declarativa (`macro_rules!`), escribe os métodos que só lle pasan a orde ao `Term`: recibe as súas firmas, coma no trait, e escribe cada un cun corpo que chama ao mesmo método do `Term`, cos mesmos argumentos. `$name:ident` e `$argument:ident` recollen identificadores, `$type:ty` un tipo, e `$( … )*` repítese para cada método e para cada argumento.
 - `<Term<Listener> as Handler>::$name(self.term …)` chama ao método do trait `Handler` do `Term` coa sintaxe completa, que non deixa dúbida de cal é. `self.term` xa é unha referencia mutábel ao `Term`.
 - `#[inline]` suxírelle ao compilador que meta cada método no sitio da chamada: o parser é xenérico no seu `Handler`, e así pasar polo `Hooked` non ten por que engadir unha chamada.
-- **Todos os métodos.** Os 71 métodos de `Handler` en `vte` 0.15.0 teñen unha implementación por defecto que non fai nada. Se unha versión nova engadise outro, `Hooked` usaría esa, e a orde non chegaría ao `Term`, sen ningún erro. O *lint* de Clippy `missing_trait_methods`, do grupo *restriction*, que non está activo por defecto, avisa de cada método dun trait que unha implementación non escribe; co nivel `deny`, só neste `impl`, é un erro, e a CI falla ([Tecnoloxías › *Lints*](../tecnoloxias.md#7-lints-rustc-e-clippy)). `pass!` escribe 61 deles, e os outros dez fan algo máis.
+- **Todos os métodos.** Os 71 métodos de `Handler` en `vte` 0.15.0 teñen unha implementación por defecto que non fai nada. Se unha versión nova engadise outro, `Hooked` usaría esa, e a orde non chegaría ao `Term`, sen ningún erro. O *lint* de Clippy `missing_trait_methods`, do grupo *restriction*, que non está activo por defecto, avisa de cada método dun trait que unha implementación non escribe; co nivel `deny`, só neste `impl`, é un erro, e a CI falla ([Tecnoloxías › *Lints*](../tecnoloxias.md#7-lints-rustc-e-clippy)). `pass!` escribe 58 deles, e os outros trece fan algo máis; ata a subfase 3.1, 61 e dez.
+- **`set_title`, `push_title` e `pop_title`**, desde a subfase 3.1: OSC 0 e OSC 2, `CSI 22 t` e `CSI 23 t` ([Tecnoloxías › Os títulos da tab](../tecnoloxias.md#65-os-títulos-da-tab)). Non van ao `Term`, senón aos títulos do terminal: [`set`](#o-título-current-e-set), [`push` e `pop`](#os-gardados-push-e-pop) de `Titles`, que deciden tamén se o título cambia ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 2). `vte` dálle a `set_title` o texto do OSC sen os espazos dos extremos, e chama a `push_title` e `pop_title` sen o segundo número da secuencia. Ata a 3.1, `pass!` pasáballos ao `Term`, que gardaba o título e ata 4096 gardados, e avisaba con `Title` ou `ResetTitle` ([Os eventos](#os-eventos-pending-e-listener)); e o seu reinicio baleirábaos sen avisar.
 - **`input`, `put_tab`, `linefeed`, `newline` e `scroll_up`**, desde a revisión do código: as ordes que desprazan a rexión de desprazamento cara arriba, desde a súa primeira fila. Un carácter despois da última columna pasa á fila seguinte (`input`), e tamén un tabulador (`put_tab`); ao final da rexión, iso despráza, coma unha liña nova (`linefeed`, que fan LF, VT, FF, `ESC D` e `ESC E`). `newline` é unha liña nova e, no modo `LNM`, un retorno de carro, pero o parser de `vte` 0.15 non o chama. E `CSI n S` despraza a rexión `n` filas (`scroll_up`). Se a rexión empeza máis abaixo da primeira fila da pantalla (`region_below_top`), a vista queda onde estaba ([Manter a vista](#manter-a-vista-view_to_keep-e-keep_view)).
 - **`delete_lines`** (`CSI n M`) borra `n` filas desde a do cursor e sobe as de debaixo, dentro da rexión: despraza desde a fila do cursor. Se non é a primeira da pantalla, non entra nada no historial, aínda que a rexión empece arriba, e a vista queda onde estaba. `cursor.point.line.0` é a fila do cursor na pantalla, desde 0.
 - **`set_scrolling_region`** (`ESC [ superior ; inferior r`) pásalle a orde ao `Term`, e [`follow_region`](#seguir-a-rexión-follow_region-e-follow_column_mode) segue a rexión nova.
 - **`set_private_mode`** e **`unset_private_mode`**, con DECCOLM (`?3h` e `?3l`), seguen tamén a rexión que pon o `Term` ([`follow_column_mode`](#seguir-a-rexión-follow_region-e-follow_column_mode)).
 - **`unset_private_mode`**: despois de que o `Term` desactive o modo, se xa non está na pantalla alternativa e hai unha principal á parte, devólvea con [`bring_back_primary`](#a-pantalla-principal-á-parte), que lle dá o tamaño do terminal. Só pasa con `?1049l`, o único modo co que `alacritty_terminal` deixa a pantalla alternativa. `take` colle a principal e deixa `None` no seu sitio. Se o tamaño da principal cambia, a rexión volta ser a pantalla enteira.
-- **`reset_state`**: o reinicio (`ESC c`) de `alacritty_terminal` deixa tamén a pantalla alternativa e baleira a principal, co seu historial, e a rexión volta ser a pantalla enteira. Se a principal estaba á parte, o reinicio baleirou a grella que ocupaba o seu sitio: entón a principal á parte vaise, e [`new_primary`](#a-pantalla-principal-á-parte) pon unha nova, con historial.
+- **`reset_state`**: o reinicio (`ESC c`) de `alacritty_terminal` deixa tamén a pantalla alternativa e baleira a principal, co seu historial, e a rexión volta ser a pantalla enteira. Se a principal estaba á parte, o reinicio baleirou a grella que ocupaba o seu sitio: entón a principal á parte vaise, e [`new_primary`](#a-pantalla-principal-á-parte) pon unha nova, con historial. Desde a subfase 3.1, o título e os gardados quedan, coma di o seu comentario: coma no Windows Terminal, en xterm e en Kitty, e coma o título da consola do ConPTY ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisións 1 e 3). `reset_state` non toca os `titles`, e `alacritty_terminal` só baleira os seus, que xa non usa ninguén. Compróbao a proba `a_reset_keeps_the_title_and_the_saved_ones`, tamén coa principal á parte e dentro dunha actualización sincronizada.
 - `if … && let Some(primary) = self.primary.take() && resize::bring_back_primary(…)` encadea condicións e un `if let` (*let chains*, da edición 2024): cada unha só se avalía se se cumpre a anterior, así que `take` só se chama fóra da pantalla alternativa, e `bring_back_primary` só se hai unha principal á parte.
 - Un programa que activa a pantalla alternativa estando xa nela (`?1049h` dúas veces) non cambia nada en `alacritty_terminal`: a principal segue á parte ata que o programa volta a ela ([ADR 0016 › Consecuencias](../adr/0016-o-historial-o-tamano-e-o-zoom.md#consecuencias)).
+
+## `crates/meiga-core/src/term/title.rs`
+
+Desde a subfase 3.1: o título que lle dá o programa á súa tab, e os que garda para dalos outra vez máis tarde ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [Tecnoloxías › Os títulos da tab](../tecnoloxias.md#65-os-títulos-da-tab)). O programa pon o título con OSC 0 ou OSC 2, e gárdao e dáo outra vez con `CSI 22 t` e `CSI 23 t` (XTWINOPS), coma vim, que o garda ao entrar e o dá outra vez ao saír. O parser pásalle esas catro ordes ao [`Hooked`](#os-métodos-de-handler), e este, aos `Titles` do [`Terminal`](#terminal), que dá o título con `title` e di que cambiou con [`Changes::title`](#changes-e-modes).
+
+**Por que o terminal, e non `alacritty_terminal`.** Ata a 3.1 levábaos `alacritty_terminal`, que avisaba á fachada con `Title` ou `ResetTitle` ([Os eventos](#os-eventos-pending-e-listener)), e a fachada levaba unha copia do título. Pero o seu reinicio da pantalla (`ESC c`) baleiraba por dentro o título e os gardados, sen avisar: a tab mantiña o título, pero se despois o programa o gardaba e o daba outra vez, a tab quedaba co nome do seu perfil. O reinicio da sesión na súa tab quitaba o título, cun OSC 0 baleiro, pero non os gardados: un `CSI 23 t` do programa novo traía un título do vello. E un título non tiña límite de lonxitude, e cada `CSI 22 t` gardaba outra copia del, ata 4096. Levalos no terminal arranxa as tres cousas, e unha versión nova de `alacritty_terminal` que os trate doutra maneira non cambia nada en meiga ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 2).
+
+**Coma os outros terminais**, polo seu código: un reinicio da pantalla mantén o título no Windows Terminal, en xterm, en Kitty, en WezTerm, en xterm.js, en VS Code e na xanela de Alacritty, aínda que o modelo de `alacritty_terminal` o baleire; xterm e Kitty manteñen tamén os gardados, e gardan como moito 10; o Windows Terminal non garda títulos; e o Windows Terminal ignora os títulos de máis de 1000 unidades de UTF-16, e xterm, os de máis de 1000 bytes. O detalle, coas ligazóns ao seu código e ao do ConPTY, está en [Tecnoloxías › Os títulos da tab](../tecnoloxias.md#65-os-títulos-da-tab).
+
+```rust
+//! The title that the program gives to its tab, and the ones that it saves
+//! to give again later (ADR 0029). The terminal keeps them, and not
+//! `alacritty_terminal`, which empties them on a reset (`ESC c`) without
+//! telling it: the tab kept its title, but a program that then saved it
+//! and gave it again got none, and the tab showed the name of its profile.
+//!
+//! As in Windows Terminal and the other terminals, a reset keeps the title,
+//! and, as in xterm and Kitty, the saved ones too: they are of the window,
+//! not of the screen. A new program in the tab (ADR 0024) starts without
+//! them, as in a new tab.
+
+use std::collections::VecDeque;
+use std::mem;
+```
+
+- O comentario do módulo (`//!`) di o mesmo ca os parágrafos de enriba, e o que fan os dous reinicios. O da pantalla, `ESC c`, mantén o título, coma o Windows Terminal e os outros terminais, e tamén os gardados, coma xterm e Kitty: son da xanela, coma o título, e non da pantalla (decisións 1 e 3). Un programa novo na tab empeza sen eles, coma nunha tab nova (decisión 4): iso faino [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start), que pon uns `Titles` novos.
+- `use` trae `VecDeque`, para os gardados, e `mem`, para `mem::take`.
+- O módulo é privado (`mod title;`, en [`term/mod.rs`](#cratesmeiga-coresrctermmodrs)), e `Titles` e as constantes son `pub(super)`: só os ve o módulo `term`. `mod.rs` garda uns `Titles` no terminal, e `handler.rs` cámbiaos; as constantes só se usan eiquí.
+
+### Os límites: `SAVED_TITLES` e `MAX_TITLE`
+
+```rust
+pub(super) const SAVED_TITLES: usize = 10;
+
+pub(super) const MAX_TITLE: usize = 1000;
+```
+
+- **`SAVED_TITLES`**: os títulos que pode gardar o programa con `CSI 22 t`, como moito 10, coma en xterm e Kitty; gardar outro quita o máis vello ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 5). Un programa garda un ou dous. `alacritty_terminal` gardaba ata 4096 (`TITLE_STACK_MAX_DEPTH`).
+- **`MAX_TITLE`**: o título máis longo, 1000 unidades de UTF-16, coma as conta Windows: `x`, `ñ` ou `中` contan unha, e un emoji coma `😀`, fóra do plano básico de Unicode, conta dúas. Un título máis longo ignórase, e a tab queda co título de antes, coma no Windows Terminal e no anfitrión da consola do ConPTY, que mantén o seu (decisión 6): así, a tab e a consola seguen dicindo o mesmo. xterm ignora os títulos de máis de 1000 bytes.
+- **Canto ocupan.** Unha unidade de UTF-16 son como moito 3 bytes en UTF-8, que é o que garda un `String`: `中` ocupa 3 bytes e conta unha unidade, e `😀`, 4 bytes e dúas. Un título ocupa entón como moito 3000 bytes, e o título e os 10 gardados dunha tab, uns 33 KB. Sen límites, cun título de 1 MB e 4096 gardados, ata 4 GB.
+- **O que non limitan.** `vte` garda todo o texto dun OSC mentres chega, sen límite, e conserva despois esa memoria no analizador da tab: un título enorme, aínda que meiga o ignore, ocupa esa memoria ata que se pecha a tab. E meiga conta o título sen os espazos dos extremos, que `vte` xa quitou, e o ConPTY, con eles: un título de case 1000 unidades con espazos nos extremos pode cambiar en meiga e non na consola ([ADR 0029 › Consecuencias](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md#consecuencias)).
+
+### `Titles`
+
+```rust
+#[derive(Default)]
+pub(super) struct Titles {
+    current: Option<String>,
+    saved: VecDeque<Option<String>>,
+    changed: bool,
+}
+```
+
+| Campo | Que é |
+|---|---|
+| `current` | O título que deu o programa, se deu algún. `None` é «sen título»: a tab mostra o nome do seu perfil. Nunca é un texto baleiro, nin un de máis de `MAX_TITLE` unidades. |
+| `saved` | Os títulos que gardou, o máis novo ao final, como moito `SAVED_TITLES`. Cada un é un `Option`: tamén se garda «sen título». |
+| `changed` | O título cambiou desde que o terminal colleu os seus cambios por última vez. |
+
+- **`#[derive(Default)]`**: uns `Titles` sen título, sen gardados e sen cambios, os dun terminal novo. Fanos [`Terminal::new`](#terminal) e, para o programa que empeza outra vez na tab, [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start). Un `VecDeque` baleiro non reserva memoria ata que o programa garda o primeiro título.
+- **`VecDeque`**, unha cola dobre: o programa garda e dá outra vez polo mesmo extremo, o do máis novo, coma nunha pila, e, cando xa non caben, o máis vello sae polo outro, sen mover os demais. `alacritty_terminal` gardábaos nun `Vec`, e quitaba o primeiro con `remove(0)`, que move todos os outros.
+
+### O título: `current` e `set`
+
+```rust
+pub fn current(&self) -> Option<&str> {
+    self.current.as_deref()
+}
+
+pub fn set(&mut self, title: Option<String>) {
+    let title = title.filter(|title| !title.is_empty());
+    if title.as_deref().is_some_and(too_long) {
+        return;
+    }
+    self.replace(title);
+}
+```
+
+- **`current`**: o título, prestado, sen copialo: o que dá [`Terminal::title`](#terminal). `as_deref` converte o `&Option<String>` nun `Option<&str>`.
+- **`set`** atende OSC 0 e OSC 2, desde [`Hooked::set_title`](#os-métodos-de-handler). Paso a paso:
+  1. `vte` dálle o texto do OSC sen os espazos dos extremos, coas súas partes xuntas con `;`. Se queda baleiro, coma con `OSC 0 ;` ou cun título só de espazos, é «sen título» (`filter`), coma no Windows Terminal: a tab mostra o nome do seu perfil, ou o do programa da liña de comandos de meiga ([`Launch`](#folder-profile-e-launch) e [`program_name`](#cratesmeiga-coresrcshellrs)), e a xanela, «meiga» ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 2).
+  2. Un título de máis de `MAX_TITLE` unidades ignórase: dío [`too_long`](#os-títulos-longos-too_long), e `set` volta sen cambiar nada, nin o título nin `changed` (decisión 6). «Sen título» nunca é longo: `as_deref` presta o texto sen copialo, e `is_some_and` só chama a `too_long` se hai un.
+  3. Se non, [`replace`](#o-cambio-take_changed-e-replace) pono, e anota o cambio só se é outro.
+- `vte` sempre lle dá un texto (`Some`), aínda que sexa baleiro; `None`, que o trait `Handler` tamén permite, sería tamén «sen título». Ata a 3.1, o título baleiro filtrábao o `Listener`, ao recibir o evento `Title` ([Os eventos](#os-eventos-pending-e-listener)).
+
+### Os gardados: `push` e `pop`
+
+```rust
+pub fn push(&mut self) {
+    if self.saved.len() == SAVED_TITLES {
+        self.saved.pop_front();
+    }
+    self.saved.push_back(self.current.clone());
+}
+
+pub fn pop(&mut self) {
+    if let Some(title) = self.saved.pop_back() {
+        self.replace(title);
+    }
+}
+```
+
+- **`push`** atende `CSI 22 t`: garda ao final unha copia do título, tamén «sen título» (`None`), que se dá outra vez coma calquera outro: entón a tab mostra outra vez o nome do seu perfil, coma en Alacritty (decisión 5). Se xa hai `SAVED_TITLES`, quita antes o máis vello, o do principio (`pop_front`): un programa que garda sen parar non enche a memoria, e quedan os 10 últimos.
+- **`pop`** atende `CSI 23 t`: quita o último gardado, o máis novo (`pop_back`), e dáo outra vez con `replace`, que só anota o cambio se é outro título. Sen ningún gardado, non fai nada: nin cambia o título nin avisa (decisión 5).
+- O título que se dá outra vez non pasa por `set`: xa pasou cando se puxo, así que nin é baleiro nin longo.
+- **Sen o segundo número.** `vte` chama a `push_title` e a `pop_title` sen o segundo número da secuencia, que en xterm escolle o título da xanela, o da icona ou os dous. meiga só ten un, e sempre o garda e o dá outra vez: `CSI 22 ; 1 t`, que en xterm garda só o da icona, gárdao tamén. Os programas gardan e dan outra vez en parellas, coma vim, así que dá o mesmo ([ADR 0029 › Consecuencias](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md#consecuencias)).
+
+### O cambio: `take_changed` e `replace`
+
+```rust
+pub fn take_changed(&mut self) -> bool {
+    mem::take(&mut self.changed)
+}
+
+fn replace(&mut self, title: Option<String>) {
+    if self.current != title {
+        self.current = title;
+        self.changed = true;
+    }
+}
+```
+
+- **`replace`**, privado, pon o título que dan `set` e `pop` só se é outro, e entón marca `changed`. Compara os dous `Option`: un título e «sen título» son distintos, e dous títulos, se o seu texto é distinto. Dar outra vez o mesmo título, cun OSC ou desde os gardados, non é un cambio, e a tab non ten nada que coller (decisión 2).
+- **`take_changed`** di se o título cambiou desde a última vez que se lle preguntou, e esquéceo: `mem::take` devolve o valor e deixa `false`. Pregúntao [`take_changes`](#cursor-e-take_changes) ao final de cada `feed` e de cada `end_sync`, para `Changes::title`.
+- **Un cambio, aínda que remate igual.** Un título distinto e outra vez o de antes, antes de que o terminal colla os cambios, son un cambio, aínda que o título remate coma estaba: `changed` xa quedou marcado. A tab colle entón o mesmo título, e a sesión, que tamén compara, di que non é outro ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)).
+- **Ata a 3.1**, cada OSC 0 ou 2, e cada `CSI 23 t` cun título gardado, era un cambio, tamén co mesmo título: `alacritty_terminal` avisaba sempre, e só comparaba a sesión, ao coller o título.
+
+### Os títulos longos: `too_long`
+
+```rust
+fn too_long(title: &str) -> bool {
+    title.encode_utf16().nth(MAX_TITLE).is_some()
+}
+```
+
+- **`too_long`** di se `title` ten máis de `MAX_TITLE` unidades de UTF-16. `encode_utf16` dá as unidades unha a unha, sen copiar o texto nin reservar memoria, e `nth(MAX_TITLE)` salta as 1000 primeiras e dá a seguinte, a 1001.ª, se a hai: entón o título é longo. Coma di o comentario, conta como moito unha máis ca o límite: dun título de 1 MB só le o principio.
+- **Sen atallo.** Un texto ten polo menos tantos bytes en UTF-8 coma unidades en UTF-16, así que un título de ata 1000 bytes nunca é longo, e unha primeira versión miraba antes `title.len() > MAX_TITLE`. Pero non facía falta, porque `nth` xa para ao final dun título curto, e o seu mutante, `>` por `>=`, sobrevivía ás probas, porque daba o mesmo: quitouse ([Tecnoloxías › A cobertura e os mutantes](../tecnoloxias.md#64-a-cobertura-e-os-mutantes)).
+
+**Probas.** Sete, cos `Titles` sós, sen terminal nin parser. `titled(título)` dá uns `Titles` con ese título, co seu cambio xa collido:
+
+| Proba | Que comproba |
+|---|---|
+| `a_title_is_a_change_only_when_it_is_another_one` | Ao principio, sen título nin cambio. `pwsh` é un cambio, que se colle unha vez; `pwsh` outra vez, non. E `vim` e outra vez `pwsh`, antes de coller os cambios, son un cambio, e o título é `pwsh`. |
+| `an_empty_title_is_no_title` | Con `pwsh`, un título baleiro e `None` deixan «sen título», cun cambio; e outra vez, xa sen cambio. |
+| `a_title_of_more_than_1000_utf16_code_units_is_ignored` | Con catro caracteres que ocupan un, dous, tres e catro bytes en UTF-8, `x`, `ñ`, `中` e `😀`, o último de dúas unidades en UTF-16: un título de 1000 unidades, mil dos tres primeiros ou 500 emoji, cabe, e é un cambio; cun `x` máis, ou tres veces máis longo, ignórase, sen cambio. |
+| `saved_titles_come_back_newest_first` | Con `pwsh` e `vim` gardados e `less` de título, `pop` dá outra vez `vim`, e despois `pwsh`, cada un cun cambio; sen ningún gardado, `pop` non cambia nada. |
+| `no_title_can_be_saved_and_given_again` | Gardado «sen título», e despois de `vim`, `pop` deixa outra vez «sen título», cun cambio. |
+| `giving_again_the_same_title_is_not_a_change` | `pwsh`, gardado e dado outra vez, segue sendo `pwsh`, sen cambio. |
+| `saving_more_than_10_titles_drops_the_oldest` | Gardados once títulos, do `0` ao `10`, e con `last` de título, `pop` dá do `10` ao `1`; despois, sen o `0`, que se foi, non cambia nada. |
+
+**Como se comproba.** Ademais destas probas, sete do terminal comproban as mesmas regras a través de `feed`, coa saída dun programa, tamén cos dous reinicios ([`tests.rs`](#cratesmeiga-coresrctermtestsrs)). En `meiga-win`, a proba de integración `the_conpty_passes_the_titles_of_the_program_unchanged` comproba que o ConPTY empaquetado lle pasa ao terminal OSC 0, OSC 2, `CSI 22 t`, OSC 1, OSC 21, `CSI 23 t` e `ESC c` tal cal, enteiros, nesa orde e sen nada entre eles, e despois do reinicio só `ESC [ ? 1004 h ESC [ ? 9001 h`, sen título: un título que o ConPTY dese pola súa conta cambiaría o da tab ([Código › meiga-win › `tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs)). E `check-tabbar.ps1` comproba na CI, no seu paso 12, coa xanela de meiga, que un reinicio da pantalla mantén o título da tab e só debuxa o terminal, que os títulos gardados despois do reinicio e antes del se dan outra vez, e que un título de 1001 caracteres se ignora, sen debuxar nada na barra ([Código › ferramentas › `check-tabbar.ps1`](ferramentas.md#toolscheck-tabbarps1)).
+
+As trece comprobacións con xanela pasan coa compilación *release* da 3.1, e `check-tabbar.ps1` dá as súas doce liñas `OK:` tamén cunha copia de `meiga.exe` sen o seu ConPTY ao lado, coa consola de Windows. Desde a revisión, o seu paso 7 comproba tamén que o mesmo título unha e outra vez, nunha tab oculta, non esperta a xanela, como moito 20 veces por segundo: desde a 3.1 non é un cambio para o terminal ([`take_changed`](#o-cambio-take_changed-e-replace) e `Changes::title`), así que alí non a esperta nada; ata a 3.1, espertábaa unha vez por intervalo dos fotogramas. Así, a compilación de `main`, sen a 3.1, falla `check-tabbar.ps1` no paso 7, despois de catro liñas `OK:`, porque esperta a xanela decenas de veces por segundo, antes de chegar ao paso 12; e tamén o falla unha copia de meiga na que `replace` marca sempre un cambio, de xeito que o mesmo título outra vez é un cambio, coma ata a 3.1. As outras tres copias estragadas a man fallan o paso 12, cada unha no seu punto: a que co reinicio volta ao nome do perfil e a que non ten límite para a lonxitude dos títulos debuxan a barra, e a que co reinicio baleira os títulos gardados non trae outra vez o gardado antes del. A copia sen cambios pasa.
+
+`cargo mutants --in-diff`, co *diff* da 3.1, fai 28 mutantes, e as probas cóllenos todos. Só coas probas, a cobertura das liñas de `title.rs` é do 100 %, e todas as liñas que cambian en `term/mod.rs` e `term/handler.rs` están cubertas ([Tecnoloxías › A cobertura e os mutantes](../tecnoloxias.md#64-a-cobertura-e-os-mutantes)).
 
 ## `crates/meiga-core/src/term/screen.rs`
 
@@ -5557,7 +5738,7 @@ E despois, para cada bloque:
 
 ## `crates/meiga-core/src/term/tests.rs`
 
-As trinta e nove probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Oito axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras; desde a 1.9, `texts` dá o texto de cada fila que se ve, `cursor_at`, a fila e a columna do cursor, e `ten_lines`, un terminal de 10 × 3 coas liñas do 1 ao 10, 7 delas no historial; e, desde a revisión do código da 1.9, `assert_the_rows_go_into_the_history`, que, coa vista dúas filas arriba, comproba que dúas liñas novas ao final da pantalla meten dúas filas no historial e que a vista segue mostrando as mesmas. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén. Desde a 1.9, trece comproban o cambio de tamaño, a pantalla principal á parte e a vista do historial, e a proba aleatoria move tamén a vista. Desde a 2.7, dúas comproban o reinicio e se o cursor está ao principio dunha fila baleira.
+As corenta e seis probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Nove axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras; desde a 1.9, `texts` dá o texto de cada fila que se ve, `cursor_at`, a fila e a columna do cursor, e `ten_lines`, un terminal de 10 × 3 coas liñas do 1 ao 10, 7 delas no historial; desde a revisión do código da 1.9, `assert_the_rows_go_into_the_history`, que, coa vista dúas filas arriba, comproba que dúas liñas novas ao final da pantalla meten dúas filas no historial e que a vista segue mostrando as mesmas; e, desde a 3.1, `title_changed`, os `Changes` só cun título que cambiou. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén. Desde a 1.9, trece comproban o cambio de tamaño, a pantalla principal á parte e a vista do historial, e a proba aleatoria move tamén a vista. Desde a 2.7, dúas comproban o reinicio e se o cursor está ao principio dunha fila baleira. E desde a 3.1, sete comproban o título e os títulos gardados a través de `feed`, coa saída dun programa ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md); as dos `Titles` sós están en [`term/title.rs`](#cratesmeiga-coresrctermtitlers)): co código do M3, cinco delas fallan, e as outras dúas, `saving_no_title_gives_back_no_title` e `osc_1_and_21_do_not_change_the_title`, describen o que xa pasaba.
 
 | Proba | Que comproba |
 |---|---|
@@ -5567,6 +5748,13 @@ As trinta e nove probas do terminal, nun arquivo aparte para que `mod.rs` sexa m
 | `questions_about_colours_are_answered_with_the_palette` | As preguntas pola cor 1 da paleta (OSC 4) e polas do texto, o fondo e o cursor (10, 11 e 12) respóndense coas cores de meiga, cada unha co final da súa pregunta, BEL ou `ESC \`; o cursor ten a cor do texto. Despois de cambiar o programa o fondo, a resposta ten a cor nova, e vai entre as dúas respostas a DA1, na orde das preguntas. E cun tema que cambia a cor 1, a resposta é a do tema. |
 | `a_change_of_the_palette_changes_every_cell` | Cambiar a cor 1 da paleta (OSC 4) cambia todas as celas, aínda que seguen co mesmo número de cor; voltar á do tema (OSC 104), tamén; cambiar a do cursor (OSC 12) só cambia as dúas celas do cursor; e despois, unha copia sen cambios non marca nada. |
 | `the_title_and_the_bell` | O título de OSC 0 e 2, sen os espazos dos extremos; gardalo e recuperalo (`ESC [ 22 t` e `ESC [ 23 t`); un título baleiro é ningún; e a campá. |
+| `the_same_title_again_is_not_a_change` | Desde a subfase 3.1. Nun terminal novo, `OSC 0 ;` e un título só de espazos, por OSC 2, non cambian nada: xa non había título. `pwsh` é un cambio; `pwsh` outra vez, por OSC 2, e `pwsh` cun espazo en cada extremo, por OSC 0, que `vte` dá sen eles, non. E `vim` e outra vez `pwsh`, na mesma lectura, son un cambio, aínda que o título remate igual. |
+| `a_reset_keeps_the_title_and_the_saved_ones` | Desde a 3.1. Con `pwsh` gardado e `vim` de título, `ESC c` non cambia nada, e o título segue sendo `vim`. Gardado despois do reinicio, e con `less` de título, un `CSI 23 t` dá outra vez `vim`; outro, `pwsh`, o gardado antes do reinicio; e un terceiro, xa sen gardados, non cambia nada. E na pantalla alternativa, con `top` de título e a principal á parte por un cambio de tamaño: gardar o título, `ESC c` e `full`, dentro dunha actualización sincronizada, non cambian nada ata que a remata `end_sync`; despois, o título é `full`, xa na pantalla principal, e `CSI 23 t` dá outra vez `top`. |
+| `a_restart_forgets_the_title_and_the_saved_ones` | Desde a 3.1. Con `pwsh` e `vim` gardados, e `late` de título nunha actualización sincronizada que o programa deixou aberta, `restart` deixa o terminal sen título: tampouco queda `late`, que mostra primeiro. Sen nada gardado, `CSI 23 t` non cambia nada; e `vim`, o título do programa novo, é un cambio, aínda que o dese o anterior. |
+| `a_title_longer_than_1000_characters_is_ignored` | Desde a 3.1. Con `pwsh` de título, un de 1001 `x` non cambia nada, e `pwsh` queda. Ignorado, tampouco se garda: despois del, `CSI 22 t` garda `pwsh`, o título que quedou, e, despois de `vim`, `CSI 23 t` dá outra vez `pwsh`. 500 emoji, 1000 unidades de UTF-16, con dous espazos en cada extremo, que `vte` quita antes de que meiga as conte, caben, tamén partidos entre dúas lecturas no medio dun emoji, coma poden chegar do ConPTY: a primeira lectura non cambia nada, e a segunda pon o título. Cun `x` máis, 1001 unidades, ignórase. |
+| `the_program_saves_at_most_10_titles` | Desde a 3.1. O programa garda once títulos, do `0` ao `10`, e pon `last`: dez `CSI 23 t` dan do `10` ao `1`, cada un cun cambio, e o seguinte non cambia nada: o `0`, o máis vello, xa non estaba. |
+| `saving_no_title_gives_back_no_title` | Desde a 3.1. Nun terminal novo, `CSI 22 t` garda «sen título», e `vim` é un cambio; `CSI 23 t` deixa outra vez «sen título», tamén cun cambio: a tab mostra outra vez o nome do seu perfil. Co código do M3, xa pasaba. |
+| `osc_1_and_21_do_not_change_the_title` | Desde a 3.1. Con `pwsh` de título, OSC 1, o título da icona, e OSC 21, o de DECSWT, non cambian nada: `vte` non os pasa ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 7). Co código do M3, tamén pasaba. |
 | `osc_52_only_copies` | O texto en base64 de OSC 52 chega ao portapapeis; ler o portapapeis, a selección primaria e un texto que non é base64 non fan nada nin responden. |
 | `the_modes_follow_the_program` | Os modos por defecto; activar e desactivar cada un; os modos do rato, e os seus formatos, exclúense entre si; e un reinicio (RIS) déixaos como ao principio. |
 | `colours_and_styles_reach_the_cells` | As cores de 16, de 256 e *truecolor*, do texto e do fondo, e todos os estilos, tamén os cinco subliñados. |

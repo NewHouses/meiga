@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: mantemento M3, despois da subfase 2.10. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar. No M3 chegaron [§63](#63-crear-os-procesos-fóra-do-fío-da-interface), crear os procesos fóra do fío da interface, e [§64](#64-a-cobertura-e-os-mutantes), a cobertura e os mutantes.
+> Estado: subfase 3.1. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar. No M3 chegaron [§63](#63-crear-os-procesos-fóra-do-fío-da-interface), crear os procesos fóra do fío da interface, e [§64](#64-a-cobertura-e-os-mutantes), a cobertura e os mutantes; e na 3.1, [§65](#65-os-títulos-da-tab), os títulos da tab.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -802,7 +802,7 @@ Dous crates do proxecto Alacritty fan o traballo central do terminal ([ADR 0003]
 | Evento | Que é | En meiga |
 |---|---|---|
 | `PtyWrite` | Unha resposta para o programa ([§35](#35-as-secuencias-de-control)). | Gárdase, para enviarlla. |
-| `Title`, `ResetTitle` | O programa cambiou o título, ou volta ao do terminal. | O título que dá o programa. |
+| `Title`, `ResetTitle` | O programa cambiou o título, ou volta ao do terminal. | Ata a 3.1, o título que dá o programa. Desde a 3.1, non se usan: o título lévao o terminal ([§65](#65-os-títulos-da-tab)). |
 | `Bell` | A campá. | Un aviso, desde a fase 2. |
 | `ClipboardStore` | Copiar un texto (OSC 52) ao portapapeis ou á selección primaria. | Só ao portapapeis. |
 | `ClipboardLoad` | Ler o portapapeis para o programa. | Nunca chega: `Osc52::OnlyCopy`. |
@@ -872,9 +872,9 @@ Ademais, `ESC =` e `ESC >` activan e desactivan o modo aplicación do teclado nu
 
 `ST` é o final dunha OSC: a resposta remata coma a pregunta, con `BEL` ou con `ESC \`. A orde das respostas é a das preguntas: moitos programas preguntan pola cor do fondo e despois polos atributos do terminal (`ESC [ c`), á que responden todos, para saber, se esta chega primeiro, que o terminal non responde a outra ([ADR 0013](adr/0013-da-saida-a-pantalla.md)).
 
-`ESC [ 22 t` e `ESC [ 23 t` gardan e recuperan o título. `ESC [ 1 t`, que o ConPTY envía ao arrancar, pide restaurar a xanela se está minimizada, e ignórase.
+`ESC [ 22 t` e `ESC [ 23 t` gardan e recuperan o título ([§65](#65-os-títulos-da-tab)). `ESC [ 1 t`, que o ConPTY envía ao arrancar, pide restaurar a xanela se está minimizada, e ignórase.
 
-**O título e o portapapeis.** `ESC ] 0 ; texto BEL` e `ESC ] 2 ; texto BEL` cambian o título; con un texto baleiro, a tab volta ao seu. `ESC ] 52 ; c ; base64 BEL` copia ao portapapeis un texto codificado en base64. Con `?` no lugar do texto, pediría lelo, e meiga nunca o permite: calquera programa, tamén un servidor remoto ao que te conectas por SSH, podería ler o que copiaches. `p` e `s` no lugar de `c` son a selección primaria de X11, que Windows non ten.
+**O título e o portapapeis.** `ESC ] 0 ; texto BEL` e `ESC ] 2 ; texto BEL` cambian o título; con un texto baleiro, a tab volta ao seu ([§65](#65-os-títulos-da-tab)). `ESC ] 52 ; c ; base64 BEL` copia ao portapapeis un texto codificado en base64. Con `?` no lugar do texto, pediría lelo, e meiga nunca o permite: calquera programa, tamén un servidor remoto ao que te conectas por SSH, podería ler o que copiaches. `p` e `s` no lugar de `c` son a selección primaria de X11, que Windows non ten.
 
 **As actualizacións sincronizadas.** Un programa que redebuxa moito, como un editor ou unha IA que reescribe a súa zona de estado, pode escribir `ESC [ ? 2026 h` antes e `ESC [ ? 2026 l` despois: o terminal garda o que hai entre as dúas e móstrao de vez, sen fotogramas a medio debuxar. Se o fin non chega, móstrao igual aos 150 ms, ou cando xa garda 2 MiB. Cada `ESC [ ? 2026 h` que chega mentres está aberta pon a hora límite outros 150 ms despois: un programa que a abre unha e outra vez mantena aberta ata eses 2 MiB. `vte` garda a saída e coñece a hora límite, pero non ten temporizador: antes de cada fotograma, meiga consúltaa (`sync_deadline`) e, se xa pasou, remata a actualización (`end_sync`); se non, programa o temporizador dos fotogramas para esa hora ([ADR 0012](adr/0012-fachada-do-terminal.md), [ADR 0013](adr/0013-da-saida-a-pantalla.md)). Faino tamén coa xanela minimizada, que non debuxa fotogramas: mentres a actualización está aberta, `vte` garda tamén as preguntas do programa, e este esperaría a resposta ata que se restaurase a xanela. Desde a subfase 2.3, ao mostrar unha tab, meiga remata no momento a que deixase aberta o seu programa: o que escribiu nela mentres a tab estaba oculta conta coma escrito oculta ([ADR 0020](adr/0020-a-barra-de-tabs.md), decisión 10).
 
@@ -1770,3 +1770,38 @@ O código explícase en [Código › meiga-win › `conpty.rs`](codigo/meiga-win
 | Na CI, un job non obrigatorio, *Coverage (Windows)*, corre as probas coa cobertura e garda o informe | Ver a cobertura de cada PR sen compilar nada; as comprobacións con xanela necesitarían outra compilación, e quedan para a medición en local |
 
 O job explícase en [Código › GitHub](codigo/github.md#job-coverage).
+
+## 65. Os títulos da tab
+
+**As secuencias.** OSC 0 cambia o título da xanela e o da icona; OSC 2, só o da xanela; OSC 1, só o da icona; e OSC 21 (*DECSWT*, do VT520), o da xanela. `CSI 22 ; n t` garda o título nunha pila do terminal, e `CSI 23 ; n t` volta dar o último gardado (*XTWINOPS*): con `n` 0, os dous; 1, o da icona; e 2, o da xanela ([*Xterm Control Sequences*](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)). Así, un programa que cambia o título pode voltar deixar o que había ao saír, sen ter que lelo: vim, por exemplo, garda o título da xanela e o da icona ao entrar, `CSI 22 ; 2 t` e `CSI 22 ; 1 t`, e vóltaos dar ao saír ([`term.c`](https://github.com/vim/vim/blob/v9.2.1411/src/term.c#L543-L546)).
+
+**O reinicio, `ESC c`** (*RIS*), deixa o terminal coma ao arrancar: a pantalla, o historial, os modos e as cores. O título non é da pantalla, senón da xanela, e os terminais mantéñeno, polo seu código:
+
+| Terminal | Título despois de `ESC c` | Títulos gardados | Gardados despois de `ESC c` | Títulos longos |
+|---|---|---|---|---|
+| Windows Terminal 1.25 | Mantense ([`HardReset`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/adapter/adaptDispatch.cpp#L3029-L3122)) | Non ten: `CSI 22 t` e `CSI 23 t` non fan nada ([`WindowManipulation`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/adapter/adaptDispatch.cpp#L3469-L3513)) | — | Máis de 1000 caracteres UTF-16: ignórase, «coma en xterm» ([`SetWindowTitle`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/adapter/adaptDispatch.cpp#L2613-L2622)) |
+| xterm 412 | Mantense | 10, nun anel que sobrescribe o máis vello ([`xtermPushTitle`](https://github.com/ThomasDickey/xterm-snapshots/blob/xterm-412/misc.c#L7972-L8033)) | Mantéñense: só se borran ao pechar a xanela ([`VTDestroy`](https://github.com/ThomasDickey/xterm-snapshots/blob/xterm-412/charproc.c#L12126-L12148)) | Máis de 1000 bytes: ignórase ([`misc.c`](https://github.com/ThomasDickey/xterm-snapshots/blob/xterm-412/misc.c#L6141-L6145)) |
+| Kitty 0.51.1 | Mantense | 10; ao pasar, vaise o máis vello ([`window.py`](https://github.com/kovidgoyal/kitty/blob/v0.51.1/kitty/window.py#L876)) | Mantéñense ([`on_reset`](https://github.com/kovidgoyal/kitty/blob/v0.51.1/kitty/window.py#L1804-L1812)) | — |
+| Alacritty 0.17 | A xanela mantéño, pero o modelo de `alacritty_terminal` baléirao, sen avisar ([`reset_state`](https://github.com/alacritty/alacritty/blob/v0.17.0/alacritty_terminal/src/term/mod.rs#L1833-L1858)) | 4096 | Baléiranse | Sen límite |
+| WezTerm, xterm.js e VS Code | Mantense | Non, ou opcional | — | — |
+
+No Windows Terminal, OSC 1 e OSC 21 cambian o título coma OSC 0 e OSC 2 ([`ActionOscDispatch`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/parser/OutputStateMachineEngine.cpp#L763-L774)), e un título baleiro mostra o de partida, o `tabTitle` ou o nome do perfil.
+
+**O que fai `vte`.** Pásalle ao terminal o título de OSC 0 e OSC 2 sen os espazos dos extremos, xuntando con `;` as partes do texto, tamén se queda baleiro; OSC 1 e OSC 21 non os pasa ([`ansi.rs`](https://github.com/alacritty/vte/blob/v0.15.0/src/ansi.rs#L1344-L1363)). `CSI 22 t` e `CSI 23 t` pásaos sen o seu segundo número ([`ansi.rs`](https://github.com/alacritty/vte/blob/v0.15.0/src/ansi.rs#L1739-L1744)). E garda todo o texto dun OSC mentres chega, sen límite, e conserva esa memoria para o seguinte ([`lib.rs`](https://github.com/alacritty/vte/blob/v0.15.0/src/lib.rs#L543-L559)).
+
+**O ConPTY** 1.25 le o texto do programa co seu analizador, para levar a súa consola, e despois pásallo ao terminal tal cal ([`WriteCharsVT`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/host/_stream.cpp#L389-L464)): o terminal recibe todas estas secuencias, e despois de `ESC c`, ademais, `ESC [ ? 1004 h ESC [ ? 9001 h`, os modos que o ConPTY necesita. O título da consola, o de `GetConsoleTitle`, lévao el, co mesmo código ca o Windows Terminal: `ESC c` non o cambia, un baleiro volta ao título orixinal da consola ([`SetWindowTitle`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/host/outputStream.cpp#L185-L189)) e un de máis de 1000 caracteres ignórase. Un programa que chama a `SetConsoleTitle` fai que o ConPTY lle escriba ao terminal `ESC ] 0 ; título ESC \`, sen os caracteres de control ([`WriteWindowTitle`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/host/VtIo.cpp#L759-L764)).
+
+**En meiga**, desde a 3.1 ([ADR 0029](adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md)):
+
+| Regra | Por que |
+|---|---|
+| O terminal leva o título e os gardados, e `alacritty_terminal` xa non os recibe | O modelo de `alacritty_terminal` baleiraba os dous con `ESC c` sen avisar: a tab mantiña o título, pero un programa que despois o gardaba e o voltaba dar deixaba a tab co nome do perfil |
+| `ESC c` mantén o título e os gardados | Coma todas as referencias e o ConPTY, o título; e coma xterm e Kitty, os gardados: son da xanela, e non da pantalla |
+| O reinicio da sesión na tab déixaa sen título e sen gardados | Coma nun terminal novo: un programa novo non volta dar títulos do anterior |
+| Como moito, 10 gardados; gardar outro quita o máis vello | Coma xterm e Kitty. Un programa garda un ou dous, e cada un pode ter ata 1000 caracteres |
+| Un título de máis de 1000 unidades de UTF-16 ignórase | Coma o Windows Terminal, xterm e o ConPTY, que conta coma Windows: a tab e a consola seguen co mesmo título, e un programa non pode encher a memoria con títulos |
+| Un título baleiro, ou só de espazos, é «sen título»: a tab mostra o nome do seu perfil | Coma o Windows Terminal |
+| Dar outra vez o mesmo título non é un cambio | O terminal non avisa del, e nunha tab oculta un programa que o dá unha e outra vez xa non esperta a xanela |
+| OSC 1 e OSC 21 non fan nada | `vte` non os pasa; collelos co escáner de meiga é traballo da 4.1 |
+
+O código explícase en [Código › meiga-core › `term/title.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermtitlers).
