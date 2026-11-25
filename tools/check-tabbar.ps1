@@ -38,6 +38,10 @@ on (ADR 0020 and 0027). It checks that:
   button goes up, outside the tab, which closes nothing;
 - the middle button closes the tab under it, and its programs end; the bar
   is drawn again, and nothing else;
+- a reset of the screen (ESC c) keeps the title of the tab, and draws only
+  the terminal; the titles that the program saved, before the reset and
+  after it, come back when it gives them again; and a title of more than
+  1000 characters is ignored, and draws nothing in the bar (ADR 0029);
 - while nothing changes, nothing is drawn;
 - the close button of the last tab closes the window, and meiga.exe ends
   with exit code 0.
@@ -373,7 +377,17 @@ $steps = @(
     # Titles while it is hidden, another one, and then that one again and
     # again.
     { "titles $(Write-Titles 'meiga-tabbar-renamed')" },
-    { "titles $(Write-Titles 'meiga-tabbar-renamed' -Same)" }
+    { "titles $(Write-Titles 'meiga-tabbar-renamed' -Same)" },
+    # A title saved and another one; a reset of the screen, which shows the
+    # cursor again: it is hidden again, and text written.
+    { $out.Write("$e]0;meiga-tabbar-before$e\$e[22t$e]0;meiga-tabbar-reset$e\"); 'title' },
+    { $out.Write("${e}c$e[?25l$e[2;3Hreset"); 'reset' },
+    # The title saved, and another one; then the saved ones, one at a time.
+    { $out.Write("$e[22t$e]0;meiga-tabbar-saved$e\"); 'saved' },
+    { $out.Write("$e[23t"); 'restored' },
+    { $out.Write("$e[23t"); 'restored' },
+    # A title of 1001 characters, and text in the third row.
+    { $out.Write("$e]0;$('x' * 1001)$e\$e[3;3Hlong"); 'long' }
 )
 foreach ($step in $steps) {
     if (-not $go.WaitOne(60000)) { exit 1 }
@@ -990,7 +1004,37 @@ try {
     $frames = Assert-Inside $start $bar.Rect 'The middle button on a tab'
     Write-Host "OK: the middle button closes the tab under it, and its programs end; only the bar is drawn again ($($frames.Count) frames)."
 
-    # 12. Nothing changes: nothing is drawn.
+    # 12. A reset of the screen (ESC c) keeps the title of the tab, and the
+    # titles that its program saved (ADR 0029): the bar is not drawn, and
+    # the titles saved after the reset and before it come back. A title of
+    # more than 1000 characters is ignored.
+    $bar = Get-Bar 1
+    $terminal = New-Rect 0 $bar.Height $bar.Rect.Right $bar.Client.Bottom
+    $null = Invoke-Step 'save a title and give another one before the reset'
+    Wait-For { (Get-Title) -eq 'meiga-tabbar-reset' } { "The title of the window is '$(Get-Title)' instead of 'meiga-tabbar-reset'." }
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    $null = Invoke-Step 'reset the screen'
+    $null = Assert-Inside $start $terminal 'A reset of the screen'
+    if ((Get-Title) -ne 'meiga-tabbar-reset') {
+        throw "After a reset of the screen, the title of the window is '$(Get-Title)' instead of 'meiga-tabbar-reset'."
+    }
+    $null = Invoke-Step 'save the title and give another one'
+    Wait-For { (Get-Title) -eq 'meiga-tabbar-saved' } { "After the reset, the title of the window is '$(Get-Title)' instead of 'meiga-tabbar-saved'." }
+    $null = Invoke-Step 'give the title saved after the reset again'
+    Wait-For { (Get-Title) -eq 'meiga-tabbar-reset' } { "The title saved after the reset, and given again, is '$(Get-Title)' instead of 'meiga-tabbar-reset'." }
+    $null = Invoke-Step 'give the title saved before the reset again'
+    Wait-For { (Get-Title) -eq 'meiga-tabbar-before' } { "The title saved before the reset, and given again, is '$(Get-Title)' instead of 'meiga-tabbar-before'." }
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    $null = Invoke-Step 'give a title of 1001 characters'
+    $null = Assert-Inside $start $terminal 'A title of 1001 characters, and text in the third row'
+    if ((Get-Title) -ne 'meiga-tabbar-before') {
+        throw "A title of 1001 characters reached the window: its title is $((Get-Title).Length) characters long."
+    }
+    Write-Host 'OK: a reset of the screen keeps the title of the tab, and draws only the terminal; the titles saved after it and before it come back; and a title of 1001 characters is ignored.'
+
+    # 13. Nothing changes: nothing is drawn.
     $start = @(Get-Log).Count
     Start-Sleep -Seconds 1
     $lines = @(Get-Log | Select-Object -Skip $start)
@@ -1000,7 +1044,7 @@ try {
     }
     Write-Host 'OK: while nothing changes, nothing is drawn (1 s).'
 
-    # 13. The close button of the last tab closes the window.
+    # 14. The close button of the last tab closes the window.
     $close = Get-Middle (Get-Bar 1).Tabs[0].Close
     Send-Mouse @(
         Get-Mouse $WM_MOUSEMOVE 0 $close
