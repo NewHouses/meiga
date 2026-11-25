@@ -17,8 +17,9 @@ use std::mem;
 pub(super) const SAVED_TITLES: usize = 10;
 
 /// The longest title, in UTF-16 code units, as Windows counts them. A longer
-/// one is ignored, as in Windows Terminal and xterm, and in the console host
-/// of ConPTY, which keeps the title that it had.
+/// one is ignored, as in Windows Terminal and in the console host of ConPTY,
+/// which keeps the title that it had; xterm ignores titles of more than 1000
+/// bytes.
 pub(super) const MAX_TITLE: usize = 1000;
 
 /// The title of the program, and the ones that it saved.

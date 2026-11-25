@@ -551,23 +551,11 @@ fn the_conpty_passes_the_titles_of_the_program_unchanged() {
     let (_pty, mut transcript) = spawn_helper(&bundled(), "titler");
     transcript.wait_for("titler-done");
     let text = transcript.text();
-    // Each one, in order and whole. After the reset, ConPTY turns on again
-    // the modes that it needs, without a title.
-    let mut from = 0;
-    for sequence in [
-        "\x1b]0;un\x07",
-        "\x1b]2;dous\x1b\\",
-        "\x1b[22t",
-        "\x1b]1;icona\x07",
-        "\x1b]21;dec\x1b\\",
-        "\x1b[23t",
-        "\x1bc\x1b[?1004h\x1b[?9001h",
-    ] {
-        let Some(at) = text[from..].find(sequence) else {
-            panic!("{sequence:?} is not in {:?}", &text[from..]);
-        };
-        from += at + sequence.len();
-    }
+    // Whole, in order, and with nothing in between: a title that ConPTY gave
+    // by itself would change the one of the tab. After the reset, ConPTY
+    // turns on again the modes that it needs, without a title.
+    let expected = format!("{TITLES}\x1b[?1004h\x1b[?9001htitler-done");
+    assert!(text.contains(&expected), "{expected:?} is not in {text:?}");
 }
 
 /// Sends with each block of output the priority of the reader thread, which

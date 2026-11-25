@@ -312,8 +312,8 @@ fn a_title_longer_than_1000_characters_is_ignored() {
     assert_eq!(terminal.feed(longer.as_bytes()), Changes::default());
     assert_eq!(terminal.title(), Some("pwsh"));
     // Ignored, it is not saved either: the one that stayed is.
-    terminal.feed(b"\x1b[22t");
     terminal.feed(longer.as_bytes());
+    terminal.feed(b"\x1b[22t");
     terminal.feed(b"\x1b]0;vim\x07");
     terminal.feed(b"\x1b[23t");
     assert_eq!(terminal.title(), Some("pwsh"));
