@@ -11,6 +11,7 @@ mod resize;
 mod scanner;
 mod screen;
 mod selection;
+mod title;
 
 use std::io::Write;
 use std::mem;
@@ -35,6 +36,7 @@ use crate::geometry::{GridSize, Size};
 use crate::text::CellChar;
 use handler::Hooked;
 use scanner::Scanner;
+use title::Titles;
 
 /// Lines of history kept above the screen, which the view can show.
 pub const SCROLLBACK_LINES: usize = 10_000;
@@ -51,9 +53,9 @@ const DEFAULT_CURSOR: CursorStyle = CursorStyle {
     blinking: true,
 };
 
-/// What leaves the modes, the colours, the cursor and the title as in a new
-/// terminal, and moves the primary screen to the history, without the reset
-/// (`ESC c`) that erases it too: see [`Terminal::restart`].
+/// What leaves the modes, the colours and the cursor as in a new terminal,
+/// and moves the primary screen to the history, without the reset (`ESC c`)
+/// that erases it too: see [`Terminal::restart`].
 const RESTART: &[u8] = concat!(
     // The primary screen, the default colours of the text, and all the
     // screen for the program: the scrolling region, the origin mode, the
@@ -70,8 +72,6 @@ const RESTART: &[u8] = concat!(
     // The colours of the theme: the palette, the text, the background and
     // the cursor.
     "\x1b]104\x07\x1b]110\x07\x1b]111\x07\x1b]112\x07",
-    // No title: the tab shows the name of its profile.
-    "\x1b]0;\x07",
     // What the primary screen shows goes to the history.
     "\x1b[2J",
 )
@@ -83,7 +83,8 @@ const RESTART: &[u8] = concat!(
 pub struct Changes {
     /// There are answers for the program: [`Terminal::take_responses`].
     pub responses: bool,
-    /// The title changed: [`Terminal::title`].
+    /// The title changed: [`Terminal::title`]. Giving the same one again is
+    /// not a change.
     pub title: bool,
     /// The program rang the bell.
     pub bell: bool,
@@ -160,7 +161,6 @@ struct Pending {
     /// The questions that only the terminal can answer, with where their
     /// answers go among `responses`.
     questions: Vec<(usize, Question)>,
-    title: Option<String>,
     clipboard: Option<String>,
 }
 
@@ -203,15 +203,6 @@ impl EventListener for Listener {
                 let at = pending.responses.len();
                 pending.questions.push((at, Question::TextAreaSize));
             }
-            Event::Title(title) => {
-                // An empty title is no title: the tab shows its own.
-                pending.title = Some(title).filter(|title| !title.is_empty());
-                pending.changes.title = true;
-            }
-            Event::ResetTitle => {
-                pending.title = None;
-                pending.changes.title = true;
-            }
             Event::Bell => pending.changes.bell = true,
             // Windows has no primary selection: only the clipboard.
             Event::ClipboardStore(ClipboardType::Clipboard, text) => {
@@ -219,8 +210,9 @@ impl EventListener for Listener {
                 pending.changes.clipboard = true;
             }
             // Reading the clipboard is never allowed (Osc52::OnlyCopy). The
-            // rest is for the event loop of Alacritty, which meiga does not
-            // use.
+            // title does not come from here: the terminal keeps it
+            // (ADR 0029). The rest is for the event loop of Alacritty, which
+            // meiga does not use.
             _ => {}
         }
     }
@@ -257,7 +249,7 @@ pub struct Terminal {
     scanner: Scanner,
     pending: Arc<Mutex<Pending>>,
     size: GridSize,
-    title: Option<String>,
+    titles: Titles,
     /// The colours of the theme, which the program can change.
     theme: Palette,
     /// The size of a cell in pixels, or 0 × 0 while it is not known.
@@ -299,7 +291,7 @@ impl Terminal {
             scanner: Scanner::new(),
             pending,
             size,
-            title: None,
+            titles: Titles::default(),
             theme: Palette::MEIGA,
             cell: Size::new(0, 0),
             damaged: Vec::new(),
@@ -353,6 +345,7 @@ impl Terminal {
             term: &mut self.term,
             primary: &mut self.primary,
             region_below_top: &mut self.region_below_top,
+            titles: &mut self.titles,
         };
         self.parser.advance(&mut hooked, bytes);
         self.take_changes()
@@ -371,7 +364,7 @@ impl Terminal {
 
     /// The title that the program gave, if it gave one.
     pub fn title(&self) -> Option<&str> {
-        self.title.as_deref()
+        self.titles.current()
     }
 
     pub fn modes(&self) -> Modes {
@@ -466,6 +459,7 @@ impl Terminal {
             term: &mut self.term,
             primary: &mut self.primary,
             region_below_top: &mut self.region_below_top,
+            titles: &mut self.titles,
         };
         self.parser.stop_sync(&mut hooked);
         self.take_changes()
@@ -474,11 +468,12 @@ impl Terminal {
     /// Leaves the terminal as a new program expects it, for the session
     /// that starts again in its tab (ADR 0024): the primary screen goes to
     /// the history, above a clean screen with the cursor at its top-left
-    /// corner, as with `ESC [ 2 J`, and the modes, the colours, the cursor,
-    /// the tab stops and the title are the ones of a new terminal, as after
-    /// the reset of Windows Terminal that keeps the text. What the last
-    /// program left on the alternate screen is dropped, as when a program
-    /// leaves it. The history stays, and the view goes back to the screen.
+    /// corner, as with `ESC [ 2 J`, and the modes, the colours, the cursor
+    /// and the tab stops are the ones of a new terminal, as after the reset
+    /// of Windows Terminal that keeps the text. What the last program left
+    /// on the alternate screen is dropped, as when a program leaves it. The
+    /// history stays, and the view goes back to the screen. As in a new tab,
+    /// there is no title, nor titles saved (ADR 0029).
     ///
     /// ConPTY starts with a clean screen and its cursor at the top-left
     /// corner: the terminal is then like the one of ConPTY, as in a new tab.
@@ -501,6 +496,7 @@ impl Terminal {
         tabs.extend_from_slice(b"\x1b[H\x1b7");
         self.feed(&tabs);
         self.scroll(Scroll::Bottom);
+        self.titles = Titles::default();
         let mut pending = lock(&self.pending);
         pending.responses.clear();
         pending.clipboard = None;
@@ -660,10 +656,10 @@ impl Terminal {
             pending.responses = answered;
         }
         let changes = mem::take(&mut pending.changes);
-        if changes.title {
-            self.title = pending.title.take();
+        Changes {
+            title: self.titles.take_changed(),
+            ..changes
         }
-        changes
     }
 
     /// The answer to `question`, with the colours of `palette`, or `None`

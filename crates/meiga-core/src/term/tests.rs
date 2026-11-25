@@ -226,6 +226,146 @@ fn the_title_and_the_bell() {
     assert_eq!(terminal.feed(b"ola"), Changes::default());
 }
 
+fn title_changed() -> Changes {
+    Changes {
+        title: true,
+        ..Changes::default()
+    }
+}
+
+#[test]
+fn the_same_title_again_is_not_a_change() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    // No title, and an empty one: the same.
+    assert_eq!(
+        terminal.feed(b"\x1b]0;\x07\x1b]2;   \x07"),
+        Changes::default()
+    );
+    assert_eq!(terminal.feed(b"\x1b]0;pwsh\x07"), title_changed());
+    assert_eq!(
+        terminal.feed(b"\x1b]2;pwsh\x07\x1b]0; pwsh \x07"),
+        Changes::default()
+    );
+    // Another one and back in the same read: it changed, though it ends the
+    // same.
+    assert_eq!(
+        terminal.feed(b"\x1b]0;vim\x07\x1b]0;pwsh\x07"),
+        title_changed()
+    );
+    assert_eq!(terminal.title(), Some("pwsh"));
+}
+
+#[test]
+fn a_reset_keeps_the_title_and_the_saved_ones() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"\x1b]0;pwsh\x07\x1b[22t\x1b]0;vim\x07");
+    assert_eq!(terminal.feed(b"\x1bc"), Changes::default());
+    assert_eq!(terminal.title(), Some("vim"));
+    // Saved after the reset, and given again: the same one.
+    assert_eq!(terminal.feed(b"\x1b[22t\x1b]0;less\x07"), title_changed());
+    assert_eq!(terminal.feed(b"\x1b[23t"), title_changed());
+    assert_eq!(terminal.title(), Some("vim"));
+    // And the one saved before the reset.
+    assert_eq!(terminal.feed(b"\x1b[23t"), title_changed());
+    assert_eq!(terminal.title(), Some("pwsh"));
+    assert_eq!(terminal.feed(b"\x1b[23t"), Changes::default());
+
+    // Also on the alternate screen, with the primary one set aside by a
+    // resize, and inside a synchronized update.
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"\x1b]0;top\x07\x1b[?1049h");
+    terminal.resize(GridSize::new(12, 4));
+    assert_eq!(
+        terminal.feed(b"\x1b[?2026h\x1b[22t\x1bc\x1b]0;full\x07"),
+        Changes::default()
+    );
+    assert_eq!(terminal.title(), Some("top"));
+    assert_eq!(terminal.end_sync(), title_changed());
+    assert_eq!(terminal.title(), Some("full"));
+    assert!(!terminal.modes().alt_screen);
+    assert_eq!(terminal.feed(b"\x1b[23t"), title_changed());
+    assert_eq!(terminal.title(), Some("top"));
+}
+
+#[test]
+fn a_restart_forgets_the_title_and_the_saved_ones() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"\x1b]0;pwsh\x07\x1b[22t\x1b]0;vim\x07\x1b[22t");
+    // A title in a synchronized update that the program left open: the
+    // restart shows the update first.
+    terminal.feed(b"\x1b[?2026h\x1b]0;late\x07");
+    terminal.restart();
+    assert_eq!(terminal.title(), None);
+    // Nothing saved, as in a new terminal.
+    assert_eq!(terminal.feed(b"\x1b[23t"), Changes::default());
+    assert_eq!(terminal.title(), None);
+    // The title of the new program is a change, also if the last one gave
+    // it.
+    assert_eq!(terminal.feed(b"\x1b]0;vim\x07"), title_changed());
+}
+
+#[test]
+fn a_title_longer_than_1000_characters_is_ignored() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"\x1b]0;pwsh\x07");
+    let longer = format!("\x1b]0;{}\x07", "x".repeat(1001));
+    assert_eq!(terminal.feed(longer.as_bytes()), Changes::default());
+    assert_eq!(terminal.title(), Some("pwsh"));
+    // Ignored, it is not saved either: the one that stayed is.
+    terminal.feed(b"\x1b[22t");
+    terminal.feed(longer.as_bytes());
+    terminal.feed(b"\x1b]0;vim\x07");
+    terminal.feed(b"\x1b[23t");
+    assert_eq!(terminal.title(), Some("pwsh"));
+    // 1000 UTF-16 code units, which vte gives without the spaces at their
+    // ends, split between reads, as they can come from ConPTY.
+    let fits = "😀".repeat(500);
+    let output = format!("\x1b]2;  {fits}  \x1b\\");
+    let (first, second) = output.as_bytes().split_at(700);
+    assert_eq!(terminal.feed(first), Changes::default());
+    assert_eq!(terminal.feed(second), title_changed());
+    assert_eq!(terminal.title(), Some(&*fits));
+    let longer = format!("\x1b]2;{fits}x\x1b\\");
+    assert_eq!(terminal.feed(longer.as_bytes()), Changes::default());
+    assert_eq!(terminal.title(), Some(&*fits));
+}
+
+#[test]
+fn the_program_saves_at_most_10_titles() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    for n in 0..=10 {
+        terminal.feed(format!("\x1b]0;{n}\x07\x1b[22t").as_bytes());
+    }
+    terminal.feed(b"\x1b]0;last\x07");
+    for n in (1..=10).rev() {
+        assert_eq!(terminal.feed(b"\x1b[23t"), title_changed());
+        assert_eq!(terminal.title(), Some(&*n.to_string()));
+    }
+    // The first one went away.
+    assert_eq!(terminal.feed(b"\x1b[23t"), Changes::default());
+    assert_eq!(terminal.title(), Some("1"));
+}
+
+#[test]
+fn saving_no_title_gives_back_no_title() {
+    // The tab shows the name of its profile again.
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    assert_eq!(terminal.feed(b"\x1b[22t\x1b]0;vim\x07"), title_changed());
+    assert_eq!(terminal.feed(b"\x1b[23t"), title_changed());
+    assert_eq!(terminal.title(), None);
+}
+
+#[test]
+fn osc_1_and_21_do_not_change_the_title() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"\x1b]0;pwsh\x07");
+    assert_eq!(
+        terminal.feed(b"\x1b]1;icon\x07\x1b]21;dec\x1b\\"),
+        Changes::default()
+    );
+    assert_eq!(terminal.title(), Some("pwsh"));
+}
+
 #[test]
 fn osc_52_only_copies() {
     let mut terminal = Terminal::new(GridSize::new(10, 3));

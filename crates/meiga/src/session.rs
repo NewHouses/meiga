@@ -771,11 +771,20 @@ mod tests {
         assert_eq!(title.as_deref(), Some("ola"));
         assert!(!shared.title_changed);
         assert!(!shared.take_title(&mut title));
-        // The same title again is taken, but it is not another one.
+        // The same title again is not a change: nothing to take.
         let changes = shared.terminal.feed(b"\x1b]0;ola\x07");
+        assert!(!changes.title);
         shared.note(changes);
+        assert!(!shared.title_changed);
+        assert!(!shared.take_title(&mut title));
+        // Another one and back before the window takes it: it changed, but
+        // it is not another one.
+        let changes = shared.terminal.feed(b"\x1b]0;adeus\x07\x1b]0;ola\x07");
+        shared.note(changes);
+        assert!(shared.title_changed);
         assert!(!shared.take_title(&mut title));
         assert!(!shared.title_changed);
+        assert_eq!(title.as_deref(), Some("ola"));
         // An empty title is no title.
         let changes = shared.terminal.feed(b"\x1b]0;\x07");
         shared.note(changes);
