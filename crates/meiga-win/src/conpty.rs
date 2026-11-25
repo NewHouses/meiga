@@ -2461,15 +2461,21 @@ mod tests {
         assert!(state.closing && state.connected && !state.closed_early);
     }
 
-    /// When [`noted_close`] closed each pseudoconsole.
-    static CLOSED_AT: Mutex<Vec<Instant>> = Mutex::new(Vec::new());
+    /// When [`noted_close`] closed each pseudoconsole, in the slot of each
+    /// test that uses it: the tests run at the same time.
+    static CLOSED_AT: [Mutex<Vec<Instant>>; 2] = [Mutex::new(Vec::new()), Mutex::new(Vec::new())];
 
-    /// Notes when it closes a pseudoconsole of Windows, and closes it.
-    extern "system" fn noted_close(console: HPCON) {
-        CLOSED_AT
+    /// When the pseudoconsoles of the test of `slot` closed.
+    fn closed_at(slot: usize) -> MutexGuard<'static, Vec<Instant>> {
+        CLOSED_AT[slot]
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .push(Instant::now());
+    }
+
+    /// Notes when it closes a pseudoconsole of Windows, in the slot of its
+    /// test, and closes it.
+    extern "system" fn noted_close<const SLOT: usize>(console: HPCON) {
+        closed_at(SLOT).push(Instant::now());
         // SAFETY: `gated_create` created it with the function of Windows.
         unsafe { ClosePseudoConsole(console) };
     }
@@ -2514,13 +2520,10 @@ mod tests {
         const FLAGS: u32 = 0x0007_0000;
         open(FLAGS);
         let conpty = Conpty {
-            close: noted_close,
+            close: noted_close::<0>,
             ..gated(FLAGS)
         };
-        CLOSED_AT
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clear();
+        closed_at(0).clear();
         let (sender, told) = mpsc::channel();
         let (holding, held) = mpsc::channel();
         let (go, waiting) = mpsc::channel();
@@ -2544,12 +2547,7 @@ mod tests {
         // Meanwhile the writer waits for the connection, and does not close
         // the pseudoconsole: a close now could be lost.
         thread::sleep(Duration::from_millis(200));
-        assert!(
-            CLOSED_AT
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .is_empty()
-        );
+        assert!(closed_at(0).is_empty());
         let released = Instant::now();
         go.send(()).unwrap();
         let (end, shown) = end_of(&told);
@@ -2566,7 +2564,7 @@ mod tests {
         // Right after: the reader told it. Without the connection, the
         // writer would close it a second after the close, a moment after
         // the test let the reader go.
-        let closed = CLOSED_AT.lock().unwrap_or_else(PoisonError::into_inner);
+        let closed = closed_at(0);
         assert_eq!(closed.len(), 1);
         let after = closed
             .first()
@@ -2574,6 +2572,71 @@ mod tests {
         assert!(
             after.is_some_and(|after| after < Duration::from_millis(500)),
             "released {released:?}, closed {closed:?}"
+        );
+    }
+
+    /// `STATUS_CONTROL_C_EXIT`: the exit code of a console program that gets
+    /// `CTRL_CLOSE_EVENT`, as cmd.
+    const CONSOLE_CLOSED: u32 = 0xC000_013A;
+
+    #[test]
+    fn a_session_whose_connection_is_not_seen_in_a_second_closes_as_any_other() {
+        const FLAGS: u32 = 0x0008_0000;
+        open(FLAGS);
+        let conpty = Conpty {
+            close: noted_close::<1>,
+            ..gated(FLAGS)
+        };
+        closed_at(1).clear();
+        let (sender, told) = mpsc::channel();
+        let (holding, held) = mpsc::channel();
+        let (go, waiting) = mpsc::channel();
+        let pty = conpty
+            .spawn(
+                &Command::new("cmd /d /k"),
+                GridSize::new(80, 25),
+                Holder {
+                    told: sender,
+                    shown: Vec::new(),
+                    hold: Some((holding, waiting)),
+                },
+            )
+            .unwrap();
+        // The session closes before the reader notes the connection, and the
+        // test holds the reader until the pseudoconsole closes: as with a
+        // program that never connects, such as one with a window of its own,
+        // the writer waits a second, and then closes the pseudoconsole as
+        // for any other session, without ending its programs. Meanwhile
+        // ConPTY has answered cmd, which does not wait for the reader.
+        held.recv_timeout(Duration::from_secs(30))
+            .expect("ConPTY did not write CONNECTED");
+        let dropped = Instant::now();
+        drop(pty);
+        let deadline = dropped + Duration::from_secs(10);
+        while closed_at(1).is_empty() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(10));
+        }
+        let closed = closed_at(1)
+            .first()
+            .and_then(|closed| closed.checked_duration_since(dropped));
+        go.send(()).unwrap();
+        let (end, shown) = end_of(&told);
+        let ended = dropped.elapsed();
+        assert!(
+            closed.is_some_and(|closed| {
+                closed > Duration::from_millis(900) && closed < Duration::from_secs(3)
+            }),
+            "closed {closed:?} after the drop"
+        );
+        // cmd got CTRL_CLOSE_EVENT, and the writer did not end it. Only if
+        // cmd took more than that second to finish connecting, on a very busy
+        // machine, could the close be lost: then the writer ends the session
+        // 10 s later, as any that is stuck (ADR 0011).
+        assert!(
+            matches!(end, Told::Ended(Some(CONSOLE_CLOSED)))
+                || matches!(end, Told::Ended(Some(KILLED_EXIT_CODE)))
+                    && ended >= Duration::from_secs(10),
+            "{shown:?} after {ended:?}"
         );
     }
 }
