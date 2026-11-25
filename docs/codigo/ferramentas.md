@@ -1,6 +1,6 @@
 # Código › ferramentas (`tools/`)
 
-> Estado: subfase 2.9. Na 2.9 chegou [`check-titlebar.ps1`](#toolscheck-titlebarps1), que comproba a barra de título de meiga, a barra de tabs, que chega ata o bordo de arriba da xanela: a banda enriba das tabs que redimensiona a xanela, e o marco de Windows nos outros lados; o que é para Windows cada parte da xanela; os botóns de minimizar, maximizar e pechar, e o menú da xanela; o dobre clic, o tamaño mínimo e o foco. As comprobacións que calculan a barra, `check-tabbar.ps1`, `check-menu.ps1`, `check-profiles.ps1`, `check-tabs.ps1`, `check-exit.ps1` e `check-manytabs.ps1`, contan coa banda e cos botóns da xanela, e `check-manytabs.ps1` usa unha xanela máis ancha, de 983 × 400 píxeles a escala 100 %, para que sigan cabendo 7 tabs e non 8; `check-exit.ps1`, `check-mouse.ps1` e `check-resize.ps1` pregúntanlle ao terminal o tamaño en píxeles da súa zona de texto, porque a área cliente xa non di as celas, e coa consola de Windows, que se traga a pregunta, as dúas primeiras calculan as celas coa xanela e avisan, e `check-resize.ps1` para no momento; e o punto ao que `Move-Pointer` aparta o punteiro, 8 píxeles por riba da área cliente, está agora fóra da xanela, por riba dela; os outros scripts non cambiaron. No mantemento M2, `check-exit.ps1` comproba tamén o peche ao saír: cando se pecha a xanela e a sesión dunha tab non remata, porque o seu programa arranca outro mentres se pecha a consola, meiga agarda por ela ata que a remata o seu escritor, cando pasan 10 s sen que remate ningún dos seus programas, e despois sae sen deixar nada das súas tabs; e `check-profiles.ps1` e `check-tabs.ps1` agardan a que se calmen as shells das tabs, e os programas que arrancaron elas, antes de pechalas, e `check-profiles.ps1` dálle a meiga para saír o tempo das shells do usuario; os outros scripts non cambiaron. Na 2.8 chegou `check-manytabs.ps1`, que comproba que meiga mantén manexábeis 30 tabs: o ancho mínimo das tabs, e a franxa onde van despois, que desprazan a roda e os seus botóns, cun clic e mantidos; que cada tab se mostra cun clic; que as tabs que pecha o rato deixan as outras no seu sitio mentres o punteiro segue na barra, e que o teclado e a última tab as recolocan no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e os indicadores dunha tab oculta, a actividade, a campá e o fin, que só debuxan o seu título; `check-tabs.ps1` conta co indicador da actividade: a saída dunha tab oculta debuxa só a súa tab na barra, unha vez; e `check-exit.ps1`, co do fin: o fin dunha tab oculta co código 4 debuxa só a súa tab; os outros scripts non cambiaron. Na 2.7 chegou `check-exit.ps1`, que comproba o que fai meiga cando remata o programa dunha tab: o código 0 pecha a tab, oculta ou á vista, e a última pecha a xanela; outro fin deixa a tab, que di como rematou o programa, ou por que non arrancou, e o que se pode facer entón; sen programa, Intro reinicia o programa na mesma tab, Ctrl+D pecha a tab, e as outras teclas non fan nada; *Restart tab* reinicia o programa dunha tab oculta sen mostrala; e os fins que chegan coa caixa de mensaxe aberta pechan as súas tabs cando se pecha ela; `check-menu.ps1` conta co elemento novo do menú, *Restart tab*; os outros scripts non cambiaron. Na 2.6 chegou `check-shortcuts.ps1`, que comproba os atallos de teclado de meiga: a caixa de mensaxe cos erros da táboa `[shortcuts]` do `config.toml`; as teclas que lle chegan ao programa, tamén con AltGr e mentres repite unha que baixou para el, e as que colle meiga, tamén mentres repiten; e os atallos que mostran, abren, duplican e pechan as tabs e abren os perfís, cos que o arquivo engade, cambia e libera; os outros scripts non cambiaron. Na 2.5 chegou `check-profiles.ps1`, que comproba os perfís e a configuración de meiga: a caixa de mensaxe cos erros do `config.toml`, o perfil e o contorno da primeira tab, o menú dos perfís, co teclado e co rato, cada perfil que atopa meiga, o botón + e *Duplicate tab*; e as comprobacións con xanela lanzan meiga cun `APPDATA` baleiro, para que o `config.toml` de quen as executa non cambie o que comproban, e `check-tabbar.ps1` e `check-menu.ps1` deixan sitio na barra para o botón dos perfís. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
+> Estado: mantemento M3, despois da subfase 2.10. No M3, `check-exit.ps1` comproba tamén que a tab dun programa cuxo cartafol non existe o di, cunha liña entre o erro e o aviso, coma o Windows Terminal; le as prioridades percorrendo só os fíos de meiga, e mira o lector dun programa reiniciado nunha tab oculta desde que leva o número do programa; e, no último paso, abre unha terceira tab e pecha a xanela en canto aparece o escritor da súa sesión, para que esta se peche mentres se crea; e `check-window.ps1` pecha meiga en canto pinta, mentres a shell da súa tab se conecta á súa consola; os outros scripts non cambiaron. Na 2.9 chegou [`check-titlebar.ps1`](#toolscheck-titlebarps1), que comproba a barra de título de meiga, a barra de tabs, que chega ata o bordo de arriba da xanela: a banda enriba das tabs que redimensiona a xanela, e o marco de Windows nos outros lados; o que é para Windows cada parte da xanela; os botóns de minimizar, maximizar e pechar, e o menú da xanela; o dobre clic, o tamaño mínimo e o foco. As comprobacións que calculan a barra, `check-tabbar.ps1`, `check-menu.ps1`, `check-profiles.ps1`, `check-tabs.ps1`, `check-exit.ps1` e `check-manytabs.ps1`, contan coa banda e cos botóns da xanela, e `check-manytabs.ps1` usa unha xanela máis ancha, de 983 × 400 píxeles a escala 100 %, para que sigan cabendo 7 tabs e non 8; `check-exit.ps1`, `check-mouse.ps1` e `check-resize.ps1` pregúntanlle ao terminal o tamaño en píxeles da súa zona de texto, porque a área cliente xa non di as celas, e coa consola de Windows, que se traga a pregunta, as dúas primeiras calculan as celas coa xanela e avisan, e `check-resize.ps1` para no momento; e o punto ao que `Move-Pointer` aparta o punteiro, 8 píxeles por riba da área cliente, está agora fóra da xanela, por riba dela; os outros scripts non cambiaron. No mantemento M2, `check-exit.ps1` comproba tamén o peche ao saír: cando se pecha a xanela e a sesión dunha tab non remata, porque o seu programa arranca outro mentres se pecha a consola, meiga agarda por ela ata que a remata o seu escritor, cando pasan 10 s sen que remate ningún dos seus programas, e despois sae sen deixar nada das súas tabs; e `check-profiles.ps1` e `check-tabs.ps1` agardan a que se calmen as shells das tabs, e os programas que arrancaron elas, antes de pechalas, e `check-profiles.ps1` dálle a meiga para saír o tempo das shells do usuario; os outros scripts non cambiaron. Na 2.8 chegou `check-manytabs.ps1`, que comproba que meiga mantén manexábeis 30 tabs: o ancho mínimo das tabs, e a franxa onde van despois, que desprazan a roda e os seus botóns, cun clic e mantidos; que cada tab se mostra cun clic; que as tabs que pecha o rato deixan as outras no seu sitio mentres o punteiro segue na barra, e que o teclado e a última tab as recolocan no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e os indicadores dunha tab oculta, a actividade, a campá e o fin, que só debuxan o seu título; `check-tabs.ps1` conta co indicador da actividade: a saída dunha tab oculta debuxa só a súa tab na barra, unha vez; e `check-exit.ps1`, co do fin: o fin dunha tab oculta co código 4 debuxa só a súa tab; os outros scripts non cambiaron. Na 2.7 chegou `check-exit.ps1`, que comproba o que fai meiga cando remata o programa dunha tab: o código 0 pecha a tab, oculta ou á vista, e a última pecha a xanela; outro fin deixa a tab, que di como rematou o programa, ou por que non arrancou, e o que se pode facer entón; sen programa, Intro reinicia o programa na mesma tab, Ctrl+D pecha a tab, e as outras teclas non fan nada; *Restart tab* reinicia o programa dunha tab oculta sen mostrala; e os fins que chegan coa caixa de mensaxe aberta pechan as súas tabs cando se pecha ela; `check-menu.ps1` conta co elemento novo do menú, *Restart tab*; os outros scripts non cambiaron. Na 2.6 chegou `check-shortcuts.ps1`, que comproba os atallos de teclado de meiga: a caixa de mensaxe cos erros da táboa `[shortcuts]` do `config.toml`; as teclas que lle chegan ao programa, tamén con AltGr e mentres repite unha que baixou para el, e as que colle meiga, tamén mentres repiten; e os atallos que mostran, abren, duplican e pechan as tabs e abren os perfís, cos que o arquivo engade, cambia e libera; os outros scripts non cambiaron. Na 2.5 chegou `check-profiles.ps1`, que comproba os perfís e a configuración de meiga: a caixa de mensaxe cos erros do `config.toml`, o perfil e o contorno da primeira tab, o menú dos perfís, co teclado e co rato, cada perfil que atopa meiga, o botón + e *Duplicate tab*; e as comprobacións con xanela lanzan meiga cun `APPDATA` baleiro, para que o `config.toml` de quen as executa non cambie o que comproban, e `check-tabbar.ps1` e `check-menu.ps1` deixan sitio na barra para o botón dos perfís. Na 2.4 chegou `check-menu.ps1`, que comproba co rato e co teclado o menú dunha tab de meiga: onde se abre, o que debuxa cada cambio, o que fan os seus elementos, as teclas que lle quita ao programa e cando se pecha; os outros scripts non cambiaron. Na 2.3 chegou `check-tabbar.ps1`, que comproba co rato a barra de tabs de meiga: os botóns que abren e pechan as tabs, os clics nas tabs, o que debuxa cada cambio, cantas veces esperta a xanela un programa que cambia o título sen parar ou que o repite, e que a barra non perde o rato cando un atallo mostra outra tab; `check-mouse.ps1` e `check-resize.ps1` contan co alto da barra, e `check-tabs.ps1` comproba tamén que a xanela leva ao portapapeis o texto que un programa copia dentro dunha actualización sincronizada que ela remata á súa hora límite, e que non leva o que copiou unha tab oculta dentro dunha que segue aberta ao mostrala; os outros scripts non cambiaron. Na 2.2 chegou `check-tabs.ps1`, que comproba as tabs de meiga: os atallos que as abren, as mostran e as pechan, e o que fai e o que non fai unha tab oculta. No mantemento M1, `fetch-conpty.ps1` fixou o ConPTY 1.25.261109001.
 
 Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman parte do programa. Os de medición do rendemento, en `tools/perf/`, explícanse á parte en [Código › medición](perf.md) e en [Código › escenarios de carga](escenarios.md).
 
@@ -19,7 +19,7 @@ Scripts e modelos que axudan a compilar, revisar e empaquetar meiga. Non forman 
 | [`check-menu.ps1`](#toolscheck-menups1) | Comprobar co rato e co teclado o menú dunha tab de `meiga.exe`: que se abre debaixo da tab ou no punteiro, que cada cambio debuxa só o que cambia, que os seus elementos duplican e pechan tabs, que as teclas que colle non lle chegan ao programa, e as que baixaron antes para el si, ao subir, e que se pecha con Esc, tamén cun botón premido nel, cun clic fóra, cando a xanela cambia de tamaño e cando se minimiza. |
 | [`check-profiles.ps1`](#toolscheck-profilesps1) | Comprobar os perfís e a configuración de `meiga.exe`: que os erros do `config.toml` saen nunha caixa de mensaxe da súa xanela, sen parar nada; que a primeira tab corre o perfil por defecto, no seu cartafol e co contorno dun terminal; que Ctrl+Maiús+Espazo e o botón ▾ abren o menú dos perfís, e que cada perfil corre a súa shell no cartafol persoal; e que o + abre o perfil por defecto, e *Duplicate tab* repite o perfil e o cartafol. |
 | [`check-shortcuts.ps1`](#toolscheck-shortcutsps1) | Comprobar os atallos de teclado de `meiga.exe`: que os erros da táboa `[shortcuts]` do `config.toml` saen na caixa de mensaxe, coa súa liña e a súa columna; que Ctrl+T, Ctrl+W, AltGr e as combinacións que libera o arquivo chegan ao programa; que os atallos mostran, abren, duplican e pechan as tabs e abren os perfís, tamén os que engade ou cambia o arquivo; que unha tab ou un perfil que non existe non fai nada, e a súa tecla non chega ao programa; que, mentres se mantén a tecla, Ctrl+Maiús+T abre unha soa tab, e Ctrl+RePáx segue mostrando a anterior; e que AvPáx, se baixou para o programa, segue sendo del ata que sobe, aínda que se prema Ctrl. |
-| [`check-exit.ps1`](#toolscheck-exitps1) | Comprobar o que fai `meiga.exe` cando remata o programa dunha tab: que o código 0 pecha a tab, e a última a xanela, tamén despois dunha caixa de mensaxe e co programa da súa liña de comandos; que calquera outro fin deixa a tab, coa liña do fin nunha fila propia e o que se pode facer debaixo, e o mesmo cun programa que non arranca; que, sen programa, Intro reinicia o programa na mesma tab, no mesmo cartafol, e Ctrl+D pecha a tab, sen que as súas teclas lle cheguen a outro programa, e as outras teclas non fan nada; que *Restart tab*, desactivado mentres corre o programa, reinicia o dunha tab oculta sen mostrala; e que, cando se pecha a xanela, agarda pola sesión dunha tab que non remata ata que a remata o seu escritor, e sae sen deixar nada das súas tabs. |
+| [`check-exit.ps1`](#toolscheck-exitps1) | Comprobar o que fai `meiga.exe` cando remata o programa dunha tab: que o código 0 pecha a tab, e a última a xanela, tamén despois dunha caixa de mensaxe e co programa da súa liña de comandos; que calquera outro fin deixa a tab, coa liña do fin nunha fila propia e o que se pode facer debaixo, e o mesmo cun programa que non arranca, que di tamén se o seu cartafol non existe; que, sen programa, Intro reinicia o programa na mesma tab, no mesmo cartafol, e Ctrl+D pecha a tab, sen que as súas teclas lle cheguen a outro programa, e as outras teclas non fan nada; que *Restart tab*, desactivado mentres corre o programa, reinicia o dunha tab oculta sen mostrala; e que, cando se pecha a xanela, agarda pola sesión dunha tab que non remata ata que a remata o seu escritor, e sae sen deixar nada das súas tabs, tampouco dunha tab que se abriu xusto antes. |
 | [`check-manytabs.ps1`](#toolscheck-manytabsps1) | Comprobar que `meiga.exe` mantén manexábeis 30 tabs: que se encollen ata un ancho mínimo, e despois van nunha franxa que desprazan a roda e os seus botóns, unha tab cada vez, tamén mentres se mantén o botón; que cada tab se mostra cun clic; que o × e o botón do medio pechan unha tab tras outra sen mover o rato, e o teclado e a última tab recolocan as outras no momento; que a tab que se mostra vai á vista, tamén co menú do teclado; e que unha tab oculta di que o seu programa escribiu, tocou a campá ou rematou, debuxando só o seu título. |
 | [`check-titlebar.ps1`](#toolscheck-titlebarps1) | Comprobar a barra de título de `meiga.exe`: que a barra de tabs chega ata o bordo de arriba da xanela, cunha banda que a redimensiona, e Windows mantén o seu marco nos outros lados; que Windows sabe que é cada parte da xanela, restaurada, maximizada, co tamaño mínimo e cun menú de meiga aberto; que o punteiro nos botóns da xanela só debuxa o botón; que o botón dereito na barra abre o menú da xanela; que os botóns e o dobre clic maximizan, restauran, minimizan e pechan a xanela; que a xanela non pode ser máis pequena ca a barra cunha tab; e que perder e coller o foco só debuxa os botóns da xanela. |
 | [`terminal-sample.ps1`](#toolsterminal-sampleps1) | Escribir unha mostra do que ten que saber mostrar un terminal (cores, estilos, caracteres anchos…), para comprobala a ollo. |
@@ -484,7 +484,7 @@ Busca as DLL do *runtime*: `vcruntime*.dll` (o *runtime* de Visual C++), `msvcp*
 
 ## `tools/check-window.ps1`
 
-Comproba que `meiga.exe` fai o que prometen as subfases 1.1 e 1.6: abre a súa xanela, sen consola e coa escala por monitor; executa no seu terminal o programa da liña de comandos, que lle pon título á xanela; e, cando se pecha, remata ben, e con el o programa e a súa consola. Inicia o programa de verdade, con `cmd` no terminal, así que a xanela vese durante un segundo, máis ou menos.
+Comproba que `meiga.exe` fai o que prometen as subfases 1.1 e 1.6: abre a súa xanela, sen consola e coa escala por monitor; executa no seu terminal o programa da liña de comandos, que lle pon título á xanela; e, cando se pecha, remata ben, e con el o programa e a súa consola. Inicia o programa de verdade, con `cmd` no terminal, así que a xanela vese durante un segundo, máis ou menos. Desde o mantemento M3, despois ábreo outra vez, co perfil por defecto, e pecha a xanela en canto pinta, mentres a shell da tab arranca e se conecta á súa consola: meiga ten que saír axiña, sen deixar nada ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 8).
 
 ```powershell
 .\tools\check-window.ps1                                  # comproba target\release\meiga.exe
@@ -501,9 +501,10 @@ OK: the window is DPI aware per monitor (v2).
 OK: the program in the terminal sets the title of the window ('meiga-check').
 OK: it ends with exit code 0 when its window closes.
 OK: then the program in the terminal and its console end too (cmd.exe, OpenConsole.exe).
+OK: closed as soon as it is painted, while the shell of its tab starts, it ends with exit code 0 0.1 s later, and leaves nothing of its tab.
 ```
 
-A última liña di `conhost.exe` en vez de `OpenConsole.exe` se o ConPTY non está ao lado de `meiga.exe`, por exemplo despois dun `cargo build --release` sen [`package.ps1`](#toolspackageps1): meiga usa entón o de Windows.
+A sexta liña di `conhost.exe` en vez de `OpenConsole.exe` se o ConPTY non está ao lado de `meiga.exe`, por exemplo despois dun `cargo build --release` sen [`package.ps1`](#toolspackageps1): meiga usa entón o de Windows. Na sétima, os segundos cambian un pouco dunha vez a outra.
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1. Pase o que pase, `meiga.exe` non queda aberto.
 
@@ -627,7 +628,7 @@ try {
     }
 ```
 
-`WaitForInputIdle` agarda a que o programa remate de arrancar e quede esperando mensaxes, sen ningunha pendente: no caso de meiga, coa xanela xa pintada (ver [Código › meiga-win](meiga-win.md#windowrun)) e, desde a subfase 1.6, co programa do terminal xa lanzado, porque meiga lanza a súa sesión antes do primeiro fotograma ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Devolve `$false` se pasa o tempo, e produce un erro se o proceso xa rematou, por iso o `try`/`catch`.
+`WaitForInputIdle` agarda a que o programa remate de arrancar e quede esperando mensaxes, sen ningunha pendente: no caso de meiga, coa xanela xa pintada (ver [Código › meiga-win](meiga-win.md#windowrun)) e, desde a subfase 1.6, co programa do terminal xa lanzado, porque meiga lanza a súa sesión antes do primeiro fotograma ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde o mantemento M3, a sesión empeza antes do primeiro fotograma, pero o seu escritor crea o programa á vez, e pode non existir aínda ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 7): a comprobación non o busca ata que o programa pon o título. Devolve `$false` se pasa o tempo, e produce un erro se o proceso xa rematou, por iso o `try`/`catch`.
 
 ```powershell
     $process.Refresh()
@@ -727,7 +728,9 @@ O **contexto de escala** da xanela di como escala (ver [Tecnoloxías › Manifes
 }
 finally {
     if (-not $process.HasExited) {
-        $process.Kill()
+        # With the programs of its tab, and their console.
+        try { $process.Kill($true) }
+        catch { Write-Host "Could not end $exe and the programs of its tab: $($_.Exception.Message)" }
     }
     $process.Dispose()
     Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
@@ -737,8 +740,67 @@ finally {
 **Despois de meiga, os seus fillos.** Cando meiga remata, a súa sesión péchase, e con ela o ConPTY: cmd e o anfitrión teñen que rematar tamén ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)). Un terminal que, ao pecharse, deixase vivos a shell e o anfitrión da súa consola deixaría procesos sen xanela, que ninguén ve nin pecha, cada vez que se pecha unha xanela.
 
 - `Get-Process -Id … -ErrorAction Ignore` non devolve nada, sen erro, se o proceso xa non existe: `$alive` son os que seguen vivos. O script mira cada 0,1 s ata que non queda ningún, e se pasa o tempo, falla e di cales seguen.
-- O script pecha a xanela cando cmd xa leva polo menos un segundo aberto. Pechala mentres un programa aínda se está a conectar á consola é outro caso, que estuda o [ADR 0011](../adr/0011-fin-e-peche-das-sesions.md).
-- O bloque `finally` execútase sempre, tamén despois dun `throw`: se meiga segue aberto, remátao (`Kill`), e libera os recursos do obxecto do proceso (`Dispose`). Despois borra o cartafol `APPDATA`, co que teña dentro (`-Recurse -Force`), e sen erro se non pode (`-ErrorAction SilentlyContinue`).
+- O script pecha a xanela cando cmd xa leva polo menos un segundo aberto. Pechala mentres un programa aínda se está a conectar á consola é outro caso, que estuda o [ADR 0011](../adr/0011-fin-e-peche-das-sesions.md), e que comproba desde o M3 o paso seguinte.
+- O bloque `finally` execútase sempre, tamén despois dun `throw`: se meiga segue aberto, remátao coa súa árbore de procesos enteira, a shell da tab e o anfitrión da súa consola (`Kill($true)`), coma [`check-titlebar.ps1`](#toolscheck-titlebarps1); e se non pode, dío, e segue. Se só rematase meiga, e a sesión da tab quedase bloqueada, ninguén remataría eses dous: o *job* da sesión non remata os seus programas ao pecharse, e o ConPTY só lles envía o peche unha vez. Despois libera os recursos do obxecto do proceso (`Dispose`) e borra o cartafol `APPDATA`, co que teña dentro (`-Recurse -Force`), e sen erro se non pode (`-ErrorAction SilentlyContinue`).
+
+```powershell
+# A session that gets stuck ends 10 s after the last of its programs that
+# ended (ADR 0011), and meiga waits for it before it exits (ADR 0026).
+$closeSeconds = 5
+
+# Without a program on its command line, meiga starts the default shell of
+# its default profile, PowerShell 7 if it is installed.
+$null = New-Item -ItemType Directory -Force -Path $appdata
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
+$process = [Diagnostics.Process]::Start($info)
+try {
+    $idle = try { $process.WaitForInputIdle($TimeoutSeconds * 1000) } catch { $false }
+    # (…)
+    # At once: the shell of the tab is still starting, or connecting to its
+    # console, which takes some tens of milliseconds more.
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    if (-not $process.CloseMainWindow()) {
+        throw "Could not ask the window of $exe to close."
+    }
+    if (-not $process.WaitForExit($closeSeconds * 1000)) {
+        throw "$exe was still running $closeSeconds s after its window closed, as soon as it was painted: did the session of its tab get stuck?"
+    }
+    $seconds = $clock.Elapsed.TotalSeconds.ToString('0.0', [cultureinfo]::InvariantCulture)
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0, $seconds s after its window closed, as soon as it was painted."
+    }
+    # meiga waits for its sessions to end before it exits: the shell of the
+    # tab and its console host, if they started, have ended. They are gone
+    # from the processes a moment later.
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.CreationDate -ge $process.StartTime })
+    $deadline = [DateTime]::UtcNow.AddSeconds(2)
+    while ($true) {
+        $alive = @($children | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction Ignore })
+        if ($alive.Count -eq 0) {
+            break
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$(($alive | ForEach-Object Name) -join ' and ') still running 2 s after meiga.exe ended, $seconds s after its window closed, as soon as it was painted."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    Write-Host "OK: closed as soon as it is painted, while the shell of its tab starts, it ends with exit code 0 $seconds s later, and leaves nothing of its tab."
+}
+```
+
+**Pechar en canto pinta**, desde o M3. Desde que o escritor de cada sesión crea o seu programa, a xanela pinta antes de que a shell se conecte á súa consola; e se o peche chega nese intre, o ConPTY perdíao: a shell seguía nunha consola que ninguén le, a sesión bloqueábase, e meiga agardaba por ela os 10 s despois dos que o escritor a remata ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 8). Agora o escritor agarda a que a shell se conecte e remátaa, normalmente antes de que execute nada seu.
+
+- **Sen programa na liña de comandos**, meiga abre o seu perfil por defecto: con este `APPDATA` baleiro, PowerShell 7, se está instalado, o único co que se bloqueaba sempre. Por iso o script non lle dá ningún programa, coma no primeiro arranque.
+- **`WaitForInputIdle`** volta cando meiga pintou a xanela e agarda mensaxes; e o script pídelle que se peche no momento, sen mirar nada antes: a shell aínda está arrancando, ou conectándose. Mirar os fillos de meiga, coma no primeiro arranque, levaría o tempo de que se conectase.
+- **Os 5 s** (`$closeSeconds`) quedan lonxe dos 10 s dunha sesión bloqueada, e lonxe do que tarda agora, unhas décimas de segundo. Unha shell que nunca se conectase só faría agardar 1 s.
+- **Os fillos**, só despois: meiga agarda polas súas sesións antes de saír, así que a shell e o anfitrión da súa consola, se chegaron a arrancar, xa remataron. `Get-CimInstance` pode atopalos aínda un intre, e por iso o script mira 2 s, coma no primeiro arranque. Se o peche chegase antes de que o escritor crease a shell, non habería fillos, e a comprobación pasaría igual: tampouco quedaría nada.
+- A liña do resultado di os segundos desde o peche, cun decimal e con punto (`InvariantCulture`), coma [`check-exit.ps1`](#toolscheck-exitps1).
+- O `finally` deste paso é coma o do primeiro arranque. O cartafol `APPDATA` créase outra vez, porque o primeiro `finally` xa o borrou: así, se falla o primeiro arranque, o cartafol non queda.
+
+**Comprobado** no mantemento M3 con cinco copias de meiga cun cambio feito a propósito cada unha, compiladas noutro cartafol en *release* sen LTO, coma as de [`check-exit.ps1`](#toolscheck-exitps1), e co ConPTY ao lado. Tres son mutantes que `cargo mutants` non podía coller sen xanela: a que fai que `main` volte sen abrir a xanela falla despois dunha liña `OK:`, porque a xanela principal non é a de meiga; e a que non esperta nunca a xanela desde o lector e a que non arranca a sesión da tab, despois de tres, porque o título non chega. A cuarta pecha a sesión no momento, sen agardar a que se conecte o programa: falla no paso novo, despois de seis, porque meiga segue aberto 5 s despois de pecharse a xanela; e o `finally` remata meiga coa shell e a consola da tab, que quedarían bloqueadas. Ata a revisión do código, só remataba meiga, e esta copia deixaba a consola da tab. A quinta, que agarda sen que o lector avise da conexión, pasa: o escritor agarda 1 s, e a comprobación acéptao; cóllea [unha proba unitaria](meiga-win.md#probas-2). E unha copia sen ningún cambio, compilada igual, pasa, coas sete liñas `OK:`.
 
 A CI executa este script en cada PR, despois de empaquetar (ver [Código › .github](github.md#empaquetar-e-comprobar-o-executábel)), así que o anfitrión é `OpenConsole.exe`: `package.ps1` deixou o ConPTY ao lado de `meiga.exe`. Os *runners* de Windows de GitHub teñen un escritorio, así que a xanela ábrese de verdade.
 
@@ -3251,7 +3313,7 @@ OK: closing the last tab closes the window, and it ends with exit code 0.
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1; se é dos fotogramas, antes mostra as liñas do rexistro que o demostran, coma `check-present.ps1`; e, se é do portapapeis e a xanela entrou ou saíu do primeiro plano mentres tanto, dío, e pide correr a comprobación outra vez. E garda o rexistro dos fotogramas e os informes do script da primeira tab, e di onde, cunha liña `Kept …` por arquivo. Pase o que pase, `meiga.exe` non queda aberto, e o portapapeis volta ter o texto que tiña.
 
-**Comprobado** na 2.8 cunha copia de meiga cun cambio feito a propósito, compilada noutro cartafol en *release* sen LTO, coma as de [`check-exit.ps1`](#toolscheck-exitps1), e co ConPTY ao lado: unha meiga sen o indicador da actividade, cuxa tab oculta non debuxa nada cando escribe o seu programa. Falla no paso 4, despois dunha liña `OK:`: a xanela non debuxa ningún fotograma.
+**Comprobado** na 2.8 cunha copia de meiga cun cambio feito a propósito, compilada noutro cartafol en *release* sen LTO, coma as de [`check-exit.ps1`](#toolscheck-exitps1), e co ConPTY ao lado: unha meiga sen o indicador da actividade, cuxa tab oculta non debuxa nada cando escribe o seu programa. Falla no paso 4, despois dunha liña `OK:`: a xanela non debuxa ningún fotograma. E no mantemento M3, con dúas máis: a que non lle pon ao lector o número do programa cando arranca, que falla no paso 1, sen ningunha liña `OK:`, porque a comprobación non atopa o lector polo seu nome; e a que non lle envía ao programa as respostas do terminal, no paso 3, despois de dúas, porque a tab oculta non recibe a resposta á súa pregunta. Unha copia sen ningún cambio pasa, coas oito liñas `OK:`.
 
 Esta comprobación non ve o foco nin o rato, que pasan á tab nova ([ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md), decisión 9), nin os avisos das tabs que se perden mentres está aberta a caixa de mensaxe (decisión 13). Tampouco mide os orzamentos da subfase, os espertares e a CPU con varias tabs: os números dunha máquina compartida, coma o *runner*, non dirían nada ([Subfases › 2.2](../subfases/2.2-sesions.md)).
 
@@ -3421,7 +3483,7 @@ public static int? PriorityOf(int process, string name)
 
 **A prioridade dun fío: `PriorityOf`.**
 
-- meiga dálles nome aos dous fíos de cada sesión, co número do proceso do seu programa: o lector chámase `conpty reader` e ese número ([Código › meiga-win › `Conpty::spawn`](meiga-win.md#conptyspawn)). Rust gárdao coma a descrición do fío (`SetThreadDescription`), que pode ler outro proceso.
+- meiga dálles nome aos dous fíos de cada sesión, co número do proceso do seu programa: o lector chámase `conpty reader` e ese número ([Código › meiga-win › Os nomes dos fíos](meiga-win.md#os-nomes-dos-fíos-keep_reader-started-name_thread-e-name_reader)). O nome gárdase coma a descrición do fío (`SetThreadDescription`), que pode ler outro proceso. Ata a 2.10, Rust dáballo ao lanzar o fío; desde o mantemento M3, os fíos lánzanse antes ca o programa, chamados só `conpty reader` e `conpty writer`, e o escritor dálles o número un intre despois de crear o programa ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 6). A comprobación busca o lector dun programa que xa atopou, e agarda pola súa prioridade con `Wait-Shown`, así que ese intre non lle afecta.
 - `Process.GetProcessById` dá o proceso de meiga, e `Threads`, os seus fíos. Se meiga xa rematou, a primeira lanza `ArgumentException`, ou a segunda `InvalidOperationException`, se remata entre as dúas: entón `PriorityOf` devolve `null`, coma se non atopase o fío, e quen agarda unha prioridade, `Wait-For`, falla co código de saída de meiga, en vez de cunha excepción de .NET. `using` libera o obxecto `Process` ao saír, tamén con `return`.
 - Para cada fío, `OpenThread` abre un *handle* co permiso máis pequeno que abonda para ler a descrición e a prioridade, `THREAD_QUERY_LIMITED_INFORMATION` (`0x0800`). Se non pode, por exemplo porque o fío xa rematou, pasa ao seguinte.
 - `GetThreadDescription` devolve un `HRESULT`, negativo se falla, e deixa a descrición nunha memoria que reserva Windows: `Marshal.PtrToStringUni` cópiaa nun texto de .NET, e `LocalFree` libéraa, como pide a súa documentación.
@@ -10908,7 +10970,7 @@ A CI executa este script en cada PR, despois de `check-profiles.ps1`, no paso *C
 
 ## `tools/check-exit.ps1`
 
-Desde a subfase 2.7. Comproba o que fai `meiga.exe` cando remata o programa dunha tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md); [Arquitectura › O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio)). Os fins limpos: co código 0, a tab péchase, e con ela o seu menú, se está aberto, pero ningún outro: o dos perfís e o doutra tab seguen abertos. Se a tab está oculta, só se debuxa a barra, se non se pecha o seu menú; e, se é a que se mostra, móstrase a da súa esquerda, cun só fotograma completo. Os outros: a tab queda, tamén unha oculta cuxo programa escribiu antes de rematar, e o seu terminal di como rematou o programa, nunha fila propia, e debaixo o aviso, `You can now close this tab with Ctrl+D, or press Enter to restart.`; meiga segue. Se a tab está oculta, desde a 2.8 só se debuxa outra vez a súa tab na barra, que o di co indicador do fin ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)). Sen programa, as teclas que non son atallos non fan nada, nin quitan a selección, e Ctrl+Intro e AltGr+D tampouco; Intro reinicia o programa na mesma tab, coa mesma liña de comandos e no mesmo cartafol, e móstrao cun só fotograma completo, e o que escribiu o programa anterior vai ao historial; e Ctrl+D pecha a tab, e mostra a seguinte. Nin o programa novo nin o da tab seguinte reciben as teclas que baixaron para meiga. No menú da tab, *Restart tab* está desactivado mentres corre o programa; nunha tab oculta cuxo programa rematou, reinicia o programa sen mostrar a tab, co lector na prioridade de debaixo desde o principio. Un programa que non arranca, porque o cartafol do seu perfil non existe, di por que, co mesmo aviso; Intro téntao outra vez, e, cando o cartafol xa existe, arráncao nel. Os programas que rematan co código 0 mentres está aberta unha caixa de mensaxe pechan as súas tabs cando se pecha ela, a oculta e a que se mostra, e a última pecha a xanela: meiga sae co código 0, e as consolas rematan. E o mesmo co programa da liña de comandos de meiga. Desde o mantemento M2, comproba tamén o peche ao saír ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)): cando se pecha a xanela, e o programa da primeira tab, ao pecharse a súa consola, arranca outro nela, coma pode facer a shell dunha tab co git do seu *prompt*, a sesión desa tab non remata; meiga agarda por ela, tamén despois de rematar a da segunda tab, e 10 s despois de que remate o programa da primeira tab, a sesión remata os programas que quedan nela ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)); entón meiga sae co código 0, menos de 17 s despois de pecharse a xanela, e sen deixar nada das súas tabs. O código que comproba explícase en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs), [› `view.rs`](meiga.md#cratesmeigasrcviewrs) e [› `main.rs`](meiga.md#cratesmeigasrcmainrs), en [Código › meiga-core › `term/mod.rs`](meiga-core.md#cratesmeiga-coresrctermmodrs), e, desde o M2, en [Código › meiga-win › `conpty.rs`](meiga-win.md#cratesmeiga-winsrcconptyrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Probe, o perfil por defecto, e Later, que corren o mesmo script de PowerShell, Later nun cartafol que ao principio non existe; e as shells que atopa meiga, ocultas. O script de cada tab escribe nun arquivo propio o seu cartafol e o tamaño da súa consola e, desde a 2.9, o da zona de texto do terminal, en píxeles, que lle pregunta, e noutro as teclas que recibe o seu programa; escribe o texto que lle dá a comprobación; e remata cando llo di ela, co código de saída que lle dá, despois dun texto ou sen el. A comprobación le as liñas do terminal cun triplo clic, que as copia ao portapapeis, coma [`check-mouse.ps1`](#toolscheck-mouseps1), e teclea coma [`check-shortcuts.ps1`](#toolscheck-shortcutsps1): publica as mensaxes co fío da xanela suspendido, co estado das teclas que necesitan, que comparte con el. As teclas que non poden facer nada que se vexa van cun movemento do punteiro a un botón da barra detrás delas: cando a xanela debuxa o botón, xa tratou as teclas. E sabe que tab se mostra polas prioridades dos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Onde están as tabs e os botóns da barra calcúlao coma meiga, desde a 2.9 coa banda de enriba das tabs e co sitio dos botóns da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)). A última meiga, a do peche, corre nun *job* da comprobación, que di o que deixa meiga ao saír, e que o remata se a comprobación falla.
+Desde a subfase 2.7. Comproba o que fai `meiga.exe` cando remata o programa dunha tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md); [Arquitectura › O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio)). Os fins limpos: co código 0, a tab péchase, e con ela o seu menú, se está aberto, pero ningún outro: o dos perfís e o doutra tab seguen abertos. Se a tab está oculta, só se debuxa a barra, se non se pecha o seu menú; e, se é a que se mostra, móstrase a da súa esquerda, cun só fotograma completo. Os outros: a tab queda, tamén unha oculta cuxo programa escribiu antes de rematar, e o seu terminal di como rematou o programa, nunha fila propia, e debaixo o aviso, `You can now close this tab with Ctrl+D, or press Enter to restart.`; meiga segue. Se a tab está oculta, desde a 2.8 só se debuxa outra vez a súa tab na barra, que o di co indicador do fin ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)). Sen programa, as teclas que non son atallos non fan nada, nin quitan a selección, e Ctrl+Intro e AltGr+D tampouco; Intro reinicia o programa na mesma tab, coa mesma liña de comandos e no mesmo cartafol, e móstrao cun só fotograma completo, e o que escribiu o programa anterior vai ao historial; e Ctrl+D pecha a tab, e mostra a seguinte. Nin o programa novo nin o da tab seguinte reciben as teclas que baixaron para meiga. No menú da tab, *Restart tab* está desactivado mentres corre o programa; nunha tab oculta cuxo programa rematou, reinicia o programa sen mostrar a tab, co lector na prioridade de debaixo desde o principio. Un programa que non arranca, porque o cartafol do seu perfil non existe, di por que, co mesmo aviso, e, desde o mantemento M3, entre os dous, que o cartafol non existe, coma o Windows Terminal ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 4); Intro téntao outra vez, e, cando o cartafol xa existe, arráncao nel. Os programas que rematan co código 0 mentres está aberta unha caixa de mensaxe pechan as súas tabs cando se pecha ela, a oculta e a que se mostra, e a última pecha a xanela: meiga sae co código 0, e as consolas rematan. E o mesmo co programa da liña de comandos de meiga. Desde o mantemento M2, comproba tamén o peche ao saír ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)): cando se pecha a xanela, e o programa da primeira tab, ao pecharse a súa consola, arranca outro nela, coma pode facer a shell dunha tab co git do seu *prompt*, a sesión desa tab non remata; meiga agarda por ela, tamén despois de rematar a da segunda tab, e 10 s despois de que remate o programa da primeira tab, a sesión remata os programas que quedan nela ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md)); entón meiga sae co código 0, menos de 17 s despois de pecharse a xanela, e sen deixar nada das súas tabs. Desde o M3, a xanela péchase nas mesmas mensaxes ca as teclas que abren unha terceira tab, cuxa sesión se pecha entón mentres se crea: tampouco deixa nada. O código que comproba explícase en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs), [› `tabs.rs`](meiga.md#cratesmeigasrctabsrs), [› `view.rs`](meiga.md#cratesmeigasrcviewrs) e [› `main.rs`](meiga.md#cratesmeigasrcmainrs), en [Código › meiga-core › `term/mod.rs`](meiga-core.md#cratesmeiga-coresrctermmodrs), e, desde o M2, en [Código › meiga-win › `conpty.rs`](meiga-win.md#cratesmeiga-winsrcconptyrs). Abre meiga co rexistro dos fotogramas ([`--trace-frames`](meiga.md#cratesmeigasrctracers)), sen programa e cun `APPDATA` propio, co `config.toml` que escribe a comprobación: dous perfís, Probe, o perfil por defecto, e Later, que corren o mesmo script de PowerShell, Later nun cartafol que ao principio non existe; e as shells que atopa meiga, ocultas. O script de cada tab escribe nun arquivo propio o seu cartafol e o tamaño da súa consola e, desde a 2.9, o da zona de texto do terminal, en píxeles, que lle pregunta, e noutro as teclas que recibe o seu programa; escribe o texto que lle dá a comprobación; e remata cando llo di ela, co código de saída que lle dá, despois dun texto ou sen el. A comprobación le as liñas do terminal cun triplo clic, que as copia ao portapapeis, coma [`check-mouse.ps1`](#toolscheck-mouseps1), e teclea coma [`check-shortcuts.ps1`](#toolscheck-shortcutsps1): publica as mensaxes co fío da xanela suspendido, co estado das teclas que necesitan, que comparte con el. As teclas que non poden facer nada que se vexa van cun movemento do punteiro a un botón da barra detrás delas: cando a xanela debuxa o botón, xa tratou as teclas. E sabe que tab se mostra polas prioridades dos lectores, coma [`check-tabs.ps1`](#toolscheck-tabsps1). Onde están as tabs e os botóns da barra calcúlao coma meiga, desde a 2.9 coa banda de enriba das tabs e co sitio dos botóns da xanela ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)). A última meiga, a do peche, corre nun *job* da comprobación, que di o que deixa meiga ao saír, e que o remata se a comprobación falla.
 
 ```powershell
 .\tools\check-exit.ps1                                  # comproba target\release\meiga.exe
@@ -10939,19 +11001,19 @@ OK: while the program of a tab runs, Restart tab is disabled in the menu of the 
 OK: when the program ends with exit code 1 at the start of a row, '[process exited with code 1 (0x00000001)]' goes in that row.
 OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and only its tab is drawn again, which tells it; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.
 OK: Ctrl+D closes the tab that is shown, whose program ended, and shows the next one, with one full frame; its program gets neither D nor Ctrl going up.
-OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.
+OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, that its folder is not there, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.
 OK: while a message box is open, the programs of a hidden tab and of the tab that is shown end with exit code 0, and once it closes, both tabs close: the last one closes the window, which ends with exit code 0, and the consoles end too.
 OK: when the program of its command line ends with exit code 0, meiga.exe ends with exit code 0 too, and its console ends.
-OK: when its window closes, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the session of the second tab has ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, … s after its window closed, and leaves nothing of its tabs.
+OK: when its window closes, right after a third tab opens, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the sessions of the second tab and of the third one, which was starting, have ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, … s after its window closed, and leaves nothing of its tabs.
 ```
 
 - A primeira liña di o tamaño da grella, en celas, e o de cada cela, en píxeles, coma en `check-mouse.ps1`: a comprobación necesítaos para saber onde premer. Desde a 2.9, as celas son as que di o terminal ou, co ConPTY de Windows, as que saen da xanela, despois do aviso. As liñas `OK:` son as mesmas en calquera máquina e pantalla, menos a última, desde o mantemento M2, que di cantos segundos despois de pecharse a xanela rematou meiga, cun decimal: algo máis de 10, os que agarda o escritor despois de que remate o programa da primeira tab, e sempre menos de 17.
 
 Se falla unha comprobación, o script remata cun erro que explica cal, e código de saída 1: se é dunha liña do terminal, a mensaxe di o que ten a fila e o que tiña que ter; se é dunha tab, as prioridades dos lectores, co número do programa de cada tab; se é das teclas, as que recibiu o programa antes do Z; e, se é dos fotogramas, antes mostra as liñas do rexistro que o demostran. Se meiga rematou antes de tempo, dío, co seu código de saída. No paso 14, se meiga non agardou pola sesión que non remata, ou tardou de máis, a mensaxe di cantos segundos despois de pecharse a xanela rematou, e cantos despois do programa da primeira tab; e, se quedan procesos das súas tabs, cantos, co nome e o número de cada un. E garda o cartafol da comprobación, co `config.toml`, os rexistros dos fotogramas e os arquivos das tabs, e di onde, cunha liña `Kept …`. Pase o que pase, `meiga.exe` non queda aberto, nin, desde o mantemento M2, o que deixou no *job* do paso 14; o portapapeis volta ter o texto que tiña e o punteiro volta a onde estaba.
 
-**Comprobado** con corenta e dúas copias de meiga cun cambio feito a propósito cada unha, trinta e seis na 2.7, unha na 2.8 e cinco no M2, compiladas noutro cartafol en *release* sen LTO, coma as de `check-shortcuts.ps1`, e co ConPTY ao lado. Corenta e unha fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle; as cinco do M2, no paso 14, despois das doce primeiras liñas `OK:`. A outra, unha da 2.7, a que deixa coa prioridade normal o lector dunha tab oculta que reinicia, pasa desde a 2.8, e acéptase (ver o paso 9). No M2, ademais, unha copia sen ningún cambio, compilada igual, pasa, coas trece liñas `OK:`: o paso 14 non falla cunha meiga que fai o que debe.
+**Comprobado** con corenta e tres copias de meiga cun cambio feito a propósito cada unha, trinta e seis na 2.7, unha na 2.8, cinco no M2 e unha no M3, compiladas noutro cartafol en *release* sen LTO, coma as de `check-shortcuts.ps1`, e co ConPTY ao lado. Todas fallan, cada unha no seu paso: cada paso di, máis abaixo, que erros colle; as cinco do M2, no paso 14, despois das doce primeiras liñas `OK:`; e a do M3, que non di que o cartafol non está, no paso 11, despois de nove. Unha da 2.7, a que deixa coa prioridade normal o lector dunha tab oculta que reinicia, pasaba desde a 2.8, e aceptábase; desde o M3 falla outra vez, no paso 9, despois de oito (ver o paso 9). No M2 e no M3, ademais, unha copia sen ningún cambio, compilada igual, pasa, coas trece liñas `OK:`: o paso 14 non falla cunha meiga que fai o que debe.
 
-Esta comprobación non remata ningún programa sen código de saída (`Exit::Unknown`), nin co código 0xC000013A, o dunha consola que se pecha, que tampouco son fins limpos (decisión 1); nin co terminal na pantalla alternativa, nin coa vista no historial (decisións 3 e 7). Tampouco remata ningún co cursor ao principio dunha fila con texto, coma a que deixa unha barra de progreso, ou dunha fila na que continúa a de riba; nin con texto debaixo do cursor, nin cunha rexión de desprazamento, nin cunha actualización sincronizada aberta, nin cun xogo de caracteres que non sexa ASCII, nin co modo de inserir, nin sen o paso á fila seguinte despois da última columna (decisión 3). Das teclas que reinician o programa e pechan a tab, só teclea Intro e Ctrl+D, co Ctrl esquerdo e sen Maiús: Maiús+Intro, o Intro do teclado numérico e Ctrl+D co Ctrl dereito ou con Maiús próbanse en Rust (decisión 5). Tampouco mantén abaixo, mentres remata o programa, unha tecla que baixou para el, que despois non fai nada mentres repite. Non mira o título que mostra a tab ao reiniciar, o nome do seu perfil: no paso 9, a tab oculta ten o título `hidden` antes do reinicio, e só a súa etiqueta na barra podería quedar con el, pero a comprobación non le o texto da barra; nin o título da xanela o mostraría, porque, ao mostrarse unha tab, `TerminalView::show` colle o título do seu terminal, que `Terminal::restart` borra. Tampouco mira a grella dun reinicio despois de cambiar o tamaño da xanela (decisión 7); nin escolle *Restart tab* na tab que se mostra, que reinicia con Intro. E non mira onde queda un menú aberto cando cambia a barra: queda onde se abriu, aínda que se movan a súa tab ou os botóns, coma os menús do paso 2. Os fins e o reinicio próbanse tamén en Rust, sen xanela: como rematou o programa e a liña do fin, tamén coa vista no historial, o erro dun programa que non arranca, e o que esquece un reinicio, en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs); as teclas sen programa, en [› `view.rs`](meiga.md#cratesmeigasrcviewrs); e o terminal que volta estar coma o espera un programa novo, en [Código › meiga-core › `term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs). Do peche ao saír, o paso 14 non comproba unha sesión con máis de 62 programas, nin unha cuxos programas seguen rematando máis de 10 s, nin un programa que saíu do *job* da súa sesión ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)); tampouco que a xanela xa non estea mentres meiga agarda, nin que meiga non agarde polos lectores, nin que a xanela siga atendendo cando se pecha unha tab cuxa sesión se bloquea. Dúas probas de integración comproban que unha sesión cuxos programas seguen rematando non a remata o escritor, e que un proceso que pecha sesións agarda por elas antes de saír, en [Código › meiga-win › `tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs).
+Esta comprobación non remata ningún programa sen código de saída (`Exit::Unknown`), nin co código 0xC000013A, o dunha consola que se pecha, que tampouco son fins limpos (decisión 1); nin co terminal na pantalla alternativa, nin coa vista no historial (decisións 3 e 7). Tampouco remata ningún co cursor ao principio dunha fila con texto, coma a que deixa unha barra de progreso, ou dunha fila na que continúa a de riba; nin con texto debaixo do cursor, nin cunha rexión de desprazamento, nin cunha actualización sincronizada aberta, nin cun xogo de caracteres que non sexa ASCII, nin co modo de inserir, nin sen o paso á fila seguinte despois da última columna (decisión 3). Das teclas que reinician o programa e pechan a tab, só teclea Intro e Ctrl+D, co Ctrl esquerdo e sen Maiús: Maiús+Intro, o Intro do teclado numérico e Ctrl+D co Ctrl dereito ou con Maiús próbanse en Rust (decisión 5). Tampouco mantén abaixo, mentres remata o programa, unha tecla que baixou para el, que despois non fai nada mentres repite. Non mira o título que mostra a tab ao reiniciar, o nome do seu perfil: no paso 9, a tab oculta ten o título `hidden` antes do reinicio, e só a súa etiqueta na barra podería quedar con el, pero a comprobación non le o texto da barra; nin o título da xanela o mostraría, porque, ao mostrarse unha tab, `TerminalView::show` colle o título do seu terminal, que `Terminal::restart` borra. Tampouco mira a grella dun reinicio despois de cambiar o tamaño da xanela (decisión 7); nin escolle *Restart tab* na tab que se mostra, que reinicia con Intro. E non mira onde queda un menú aberto cando cambia a barra: queda onde se abriu, aínda que se movan a súa tab ou os botóns, coma os menús do paso 2. Os fins e o reinicio próbanse tamén en Rust, sen xanela: como rematou o programa e a liña do fin, tamén coa vista no historial, o erro dun programa que non arranca, e o que esquece un reinicio, en [Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs); as teclas sen programa, en [› `view.rs`](meiga.md#cratesmeigasrcviewrs); e o terminal que volta estar coma o espera un programa novo, en [Código › meiga-core › `term/tests.rs`](meiga-core.md#cratesmeiga-coresrctermtestsrs). Do peche ao saír, o paso 14 non comproba unha sesión con máis de 62 programas, nin unha cuxos programas seguen rematando máis de 10 s, nin un programa que saíu do *job* da súa sesión ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)); tampouco que a xanela xa non estea mentres meiga agarda, nin que meiga non agarde polos lectores, nin que a xanela siga atendendo cando se pecha unha tab cuxa sesión se bloquea. Dúas probas de integración comproban que unha sesión cuxos programas seguen rematando non a remata o escritor, e que un proceso que pecha sesións agarda por elas antes de saír, en [Código › meiga-win › `tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs). Desde o mantemento M3, tampouco ve se a terceira tab chegou a abrirse antes do peche, nin ata onde chegou o escritor da súa sesión, nin distingue se meiga agarda por ela: a sesión da primeira tab fai que agarde máis de 10 s igual, e a da terceira remata moito antes. Só collería unha meiga que falla ou se bloquea ao pechar unha sesión que se está a crear, ou que deixa a súa consola ou o seu programa. Que unha sesión pechada mentres se crea non arranca o programa, ou o pecha, compróbano as probas de `meiga-win`, cos ConPTY falsos, que deteñen o escritor mentres crea a pseudoconsola, e cun proceso que pecha sesións que se están a crear antes de saír ([Código › meiga-win › `conpty.rs`](meiga-win.md#cratesmeiga-winsrcconptyrs) e [› `tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs)).
 
 Explicación por partes. Moito é coma en [`check-shortcuts.ps1`](#toolscheck-shortcutsps1), e o que le as liñas do terminal, coma en [`check-mouse.ps1`](#toolscheck-mouseps1): o código vai enteiro, e o que xa se explicou alí explícase eiquí en breve.
 
@@ -11015,21 +11077,24 @@ It checks that:
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
-  its program could not start, and what can be done then; Enter tries
-  again, with one full frame, and once the folder is there, starts it there;
+  its program could not start, that its folder is not there, and what can be
+  done then; Enter tries again, with one full frame, and once the folder is
+  there, starts it there;
 - while a message box is open, the programs of a hidden tab and of the tab
   that is shown end with exit code 0, and once the box closes, both tabs
   close, and the last one closes the window: meiga.exe ends with exit code
   0, and the consoles end too;
 - when the program of the command line of meiga.exe ends with exit code 0,
   meiga.exe ends with exit code 0 too;
-- when the window closes, and the program of the first tab, as its console
-  closes, starts another one in it, which connects to the console while
-  ConPTY closes it, the session of that tab does not end: meiga waits for
-  it, also once the session of the second tab has ended, and 10 s after the
-  program of the first tab ended, the session ends the programs left in it
-  (ADR 0011); then meiga.exe ends with exit code 0, less than 17 s after its
-  window closed, and leaves nothing of its tabs (ADR 0026).
+- when the window closes, right after a third tab opens, in the same batch
+  of messages, and the program of the first tab, as its console closes,
+  starts another one in it, which connects to the console while ConPTY
+  closes it, the session of that tab does not end: meiga waits for it, also
+  once the sessions of the second tab and of the third one, which was
+  starting (ADR 0028), have ended, and 10 s after the program of the first
+  tab ended, the session ends the programs left in it (ADR 0011); then
+  meiga.exe ends with exit code 0, less than 17 s after its window closed,
+  and leaves nothing of its tabs (ADR 0026).
 
 The last run starts meiga.exe in a job of the check, with the script of
 Probe, with -Closer, as the program of its first tab: when its console
@@ -11211,6 +11276,19 @@ static extern uint GetLongPathNameW(string path, System.Text.StringBuilder longP
 [DllImport("kernel32.dll", SetLastError = true)]
 static extern IntPtr OpenThread(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
 
+[DllImport("kernel32.dll", SetLastError = true)]
+static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint id);
+
+// The next thread of a process, after `thread`, or the first one if it is
+// null: a handle to it with `access`. It returns STATUS_NO_MORE_ENTRIES
+// after the last one.
+[DllImport("ntdll.dll")]
+static extern int NtGetNextThread(IntPtr process, IntPtr thread, uint access, uint attributes, uint flags, out IntPtr next);
+
+[DllImport("kernel32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+static extern bool GetExitCodeThread(IntPtr thread, out uint code);
+
 [DllImport("kernel32.dll")]
 static extern int GetThreadPriority(IntPtr thread);
 
@@ -11250,12 +11328,12 @@ static extern bool GetThreadContext(IntPtr thread, IntPtr context);
 | `OpenClipboard`, `EmptyClipboard` e `CloseClipboard` | Baleiran o portapapeis ao rematar, se ao principio non tiña texto. |
 | `GetLongPathNameW` | Os nomes longos do cartafol da comprobación. |
 | `OpenThread`, `SuspendThread`, `GetThreadContext`, `ResumeThread` e `CloseHandle` | Suspenden o fío da xanela mentres se publican as mensaxes, e agardan a que pare. |
-| `OpenThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len as prioridades dos fíos de meiga polo seu nome. |
+| `OpenProcess`, `NtGetNextThread`, `GetExitCodeThread`, `GetThreadDescription`, `GetThreadPriority`, `LocalFree` e `CloseHandle` | Len as prioridades dos fíos de meiga polo seu nome: desde o mantemento M3, percorrendo só os seus fíos, e sen os que xa remataron. |
 | `CreateJobObjectW`, `SetInformationJobObject`, `AssignProcessToJobObject`, `QueryInformationJobObject` e `CloseHandle` | Crean o *job* do paso 14, meten nel meiga, len os procesos que quedan nel e péchano. |
 
-- **Son as de `check-shortcuts.ps1` con doce máis e sen catro.** Máis: `GetDpiForWindow`, porque esta comprobación calcula as celas e a barra; as tres do portapapeis, coma en [`check-mouse.ps1`](#toolscheck-mouseps1); `GetLongPathNameW`, coma en [`check-profiles.ps1`](#toolscheck-profilesps1); desde o mantemento M2, as catro do *job* do paso 14, que van ao final, despois de `LongPathOf`; e, desde a 2.9, as tres da banda, `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi`, despois de `GetDpiForWindow`. Sen: `IsWindow`, `GetDlgCtrlID`, `EnumChildWindows` e `GetWindowTextW`: non le o título de ningunha xanela, nin busca o botón da caixa, que pecha cunha mensaxe, nin agarda a que a caixa se peche.
+- **Son as de `check-shortcuts.ps1` con quince máis e sen catro.** Máis: `GetDpiForWindow`, porque esta comprobación calcula as celas e a barra; as tres do portapapeis, coma en [`check-mouse.ps1`](#toolscheck-mouseps1); `GetLongPathNameW`, coma en [`check-profiles.ps1`](#toolscheck-profilesps1); desde o mantemento M2, as catro do *job* do paso 14, que van ao final, despois de `LongPathOf`; desde a 2.9, as tres da banda, `GetWindowRect`, `IsZoomed` e `GetSystemMetricsForDpi`, despois de `GetDpiForWindow`; e, desde o mantemento M3, as tres coas que `PrioritiesOf` percorre só os fíos de meiga, `OpenProcess`, `NtGetNextThread` e `GetExitCodeThread`, despois de `OpenThread`. Sen: `IsWindow`, `GetDlgCtrlID`, `EnumChildWindows` e `GetWindowTextW`: non le o título de ningunha xanela, nin busca o botón da caixa, que pecha cunha mensaxe, nin agarda a que a caixa se peche.
 - **As estruturas.** `RECT`, `POINT`, `MSG` e `EnumProc` son as de `check-shortcuts.ps1`.
-- **As vinte que non levan `public`,** as oito desde `EnumWindows`, as oito desde `OpenThread` e, desde o M2, as catro do *job*, só as usan as funcións propias da clase, en C#.
+- **As vinte e tres que non levan `public`,** as oito desde `EnumWindows`, as once desde `OpenThread` e, desde o M2, as catro do *job*, só as usan as funcións propias da clase, en C#.
 - **Unha clase propia,** coma nas outras comprobacións: PowerShell garda durante toda a sesión a clase que crea `Add-Type`, e coa doutro script faltarían funcións.
 
 ```csharp
@@ -11305,36 +11383,44 @@ public static void PostAll(IntPtr window, uint thread, long[] messages, byte[] s
 
 ```csharp
 // The priorities of the threads of a process whose names start with
-// `prefix`, by name, or null if the process has ended.
+// `prefix`, by name, or null if the process cannot be opened. It walks the
+// threads of that process only (NtGetNextThread), in a fraction of a
+// millisecond, while a snapshot of all the processes (Process.Threads) takes
+// tens of milliseconds on a busy machine. It leaves out the threads that
+// have ended: they stay in their process while a handle to them is open, as
+// the ones of the writers of closed sessions that meiga keeps (ADR 0026).
 public static System.Collections.Generic.Dictionary<string, int> PrioritiesOf(int process, string prefix)
 {
-    System.Diagnostics.Process target;
-    try { target = System.Diagnostics.Process.GetProcessById(process); }
-    catch (ArgumentException) { return null; }
+    // PROCESS_QUERY_INFORMATION: NtGetNextThread needs more than the
+    // limited one.
+    IntPtr target = OpenProcess(0x0400, false, (uint)process);
+    if (target == IntPtr.Zero) return null;
     var found = new System.Collections.Generic.Dictionary<string, int>();
-    using (target)
+    try
     {
-        System.Diagnostics.ProcessThreadCollection threads;
-        try { threads = target.Threads; }
-        catch (InvalidOperationException) { return null; }
-        foreach (System.Diagnostics.ProcessThread thread in threads)
+        IntPtr thread = IntPtr.Zero;
+        while (true)
         {
+            IntPtr next;
             // THREAD_QUERY_LIMITED_INFORMATION
-            IntPtr handle = OpenThread(0x0800, false, (uint)thread.Id);
-            if (handle == IntPtr.Zero) continue;
-            try
-            {
-                IntPtr text;
-                if (GetThreadDescription(handle, out text) < 0) continue;
-                string description;
-                try { description = Marshal.PtrToStringUni(text); }
-                finally { LocalFree(text); }
-                if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
-                    found[description] = GetThreadPriority(handle);
-            }
-            finally { CloseHandle(handle); }
+            int status = NtGetNextThread(target, thread, 0x0800, 0, 0, out next);
+            if (thread != IntPtr.Zero) CloseHandle(thread);
+            // STATUS_NO_MORE_ENTRIES, also once the process has ended.
+            if (status != 0) break;
+            thread = next;
+            uint code;
+            // STILL_ACTIVE
+            if (!GetExitCodeThread(thread, out code) || code != 259) continue;
+            IntPtr text;
+            if (GetThreadDescription(thread, out text) < 0) continue;
+            string description;
+            try { description = Marshal.PtrToStringUni(text); }
+            finally { LocalFree(text); }
+            if (description != null && description.StartsWith(prefix, StringComparison.Ordinal))
+                found[description] = GetThreadPriority(thread);
         }
     }
+    finally { CloseHandle(target); }
     return found;
 }
 
@@ -11351,9 +11437,11 @@ public static int? PriorityOf(int process, string name)
 
 **As prioridades dos fíos: `PrioritiesOf` e `PriorityOf`.**
 
-- **`PrioritiesOf`** percorre os fíos de meiga coma a `PriorityOf` de `check-tabs.ps1` (ver *A prioridade dun fío: `PriorityOf`*), pero non para no primeiro que atopa: devolve, nun dicionario polo seu nome, a prioridade de cada fío cuxo nome empeza por `prefix`, carácter a carácter (`StringComparison.Ordinal`), coma o `==` de alí co nome enteiro. Se meiga xa rematou, `null`, coma alí; se ningún fío ten un nome así, un dicionario baleiro.
-- **`PriorityOf`** busca o nome enteiro, `name`, entre os fíos cuxo nome empeza por el: dá o mesmo que a de `check-profiles.ps1`, a prioridade do fío ou `null`. Úsaa `Get-Priority`.
-- **Por que un prefixo.** `Assert-LowerReader` (paso 9) le o lector dun programa que acaba de arrancar *Restart tab*, antes de saber o número do seu proceso, que vai no nome do lector: busca `conpty reader ` e ve así todos os lectores de meiga. O outro fío de cada sesión, `conpty writer <proceso>`, non empeza igual.
+- **`PrioritiesOf`** devolve, nun dicionario polo seu nome, a prioridade de cada fío de meiga cuxo nome empeza por `prefix`, carácter a carácter (`StringComparison.Ordinal`), coma o `==` da `PriorityOf` de `check-tabs.ps1` co nome enteiro (ver *A prioridade dun fío: `PriorityOf`*). Se ningún fío ten un nome así, ou meiga xa rematou, un dicionario baleiro; e `null`, se non pode abrir o proceso.
+- **Só os fíos de meiga,** desde o mantemento M3. `OpenProcess` abre meiga con `PROCESS_QUERY_INFORMATION`, porque `NtGetNextThread` non se conforma co permiso limitado; e `NtGetNextThread` dá un *handle* a cada un dos seus fíos, un tras outro, ata `STATUS_NO_MORE_ENTRIES`, tamén cando o proceso xa rematou. O bucle pecha cada *handle* ao pedir o seguinte. Así, ler os fíos leva unha fracción de milisegundo, e `Assert-LowerReader` (paso 9) pode lelos moitas veces nun milisegundo. Ata o M3, `PrioritiesOf` percorríaos coma a `PriorityOf` de `check-tabs.ps1`, cunha fotografía de todos os procesos do sistema (`Process.Threads`), que coa máquina ocupada leva decenas de milisegundos, e daba `null` se meiga xa rematara.
+- **Sen os fíos que remataron.** Un fío que remata segue no seu proceso mentres alguén ten aberto un *handle* del, coma os escritores das sesións pechadas que garda meiga ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md)). `GetExitCodeThread` dá `STILL_ACTIVE`, 259, só dos que seguen: sen isto, os pasos 9 e 14 poderían contar fíos que xa non fan nada.
+- **`PriorityOf`** busca o nome enteiro, `name`, entre os fíos cuxo nome empeza por el: dá o mesmo que a de `check-profiles.ps1`, a prioridade do fío ou `null`, tamén se meiga xa rematou. Úsaa `Get-Priority`.
+- **Por que un prefixo.** `Assert-LowerReader` (paso 9) le o lector dun programa que acaba de arrancar *Restart tab* desde que aparece, antes de que leve no nome o número do seu proceso: busca `conpty reader`, e ve así todos os lectores de meiga. Desde o mantemento M3, mentres o escritor crea o programa, os dous fíos chámanse só `conpty reader` e `conpty writer`, sen o número, ata que o escritor llelo dá. E o paso 14 conta así os escritores, `conpty writer`, para saber que xa se abriu a terceira tab.
 
 ```csharp
 static string ClassOf(IntPtr window)
@@ -12048,45 +12136,56 @@ function Get-Priority([int]$Program) {
     $api::PriorityOf($process.Id, "conpty reader $Program")
 }
 
-# Waits until the reader thread of a program starts, while meiga has no
-# other one, and checks that it gets the lower priority of a hidden tab
-# from the start, and not once a wake-up of the window lowers it: a title of
-# the program wakes the window up, which then lowers the priority anyway
-# (Tab::learn), and PowerShell gives one as it starts as administrator, as
-# in the CI. So the check reads it from the moment it starts, until it is
-# the lower one, for 50 ms: meiga starts it with the normal priority, as
-# any thread, and lowers it right after, and the window raises it to the
-# normal one again only while it holds the lock of its terminal. $What, what
-# starts the program, is the subject of its messages, as in Wait-NewShell.
+# Waits for the reader thread of the program that $What starts again in a
+# hidden tab, and checks that it has the lower priority of a hidden tab from
+# the start. meiga lowers it right after it starts the session
+# (Tabs::restart), while the writer creates the pseudoconsole and the
+# program; and the reader gets the number of the program in its name only
+# once the program starts (ADR 0028). A meiga that did not lower it would
+# leave it with the normal priority until the first output of the session,
+# which ConPTY writes some tens of milliseconds after the program starts,
+# wakes the window up, which lowers it anyway (Tab::learn). The window
+# raises it to the normal one again only while it holds the lock of its
+# terminal, for much less. So the check reads the threads of meiga, in a
+# fraction of a millisecond each time, from the moment that the reader
+# appears, and fails if it still has the normal priority 3 ms after it got
+# the number of its program. $What, what starts the program, is the
+# subject of its messages, as in Wait-NewShell.
 function Assert-LowerReader([string]$What) {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
-    $readings = [Collections.Generic.List[int]]::new()
-    $first = $null
+    $named = $null
+    $readings = 0
     while ($true) {
         if ($process.HasExited) {
             throw "$What started no program: $exe ended with exit code $($process.ExitCode)."
         }
-        # Null once meiga has ended: then the check above says so.
-        $readers = $api::PrioritiesOf($process.Id, 'conpty reader ')
+        # The reader is called 'conpty reader' until its program starts.
+        $readers = $api::PrioritiesOf($process.Id, 'conpty reader')
         $count = if ($null -eq $readers) { 0 } else { $readers.Count }
         if ($count -gt 1) {
             $all = ($readers.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)" }) -join ', '
             throw "$What left $exe with $count reader threads instead of one (name and priority: $all)."
         }
         if ($count -eq 1) {
+            $name = @($readers.Keys)[0]
             $priority = @($readers.Values)[0]
             if ($priority -eq $THREAD_PRIORITY_BELOW_NORMAL) { return }
-            $readings.Add($priority)
-            if ($null -eq $first) { $first = [DateTime]::UtcNow }
-            elseif (([DateTime]::UtcNow - $first).TotalMilliseconds -ge 50) { break }
+            $readings++
+            if ($name -ne 'conpty reader') {
+                if ($null -eq $named) { $named = [Diagnostics.Stopwatch]::StartNew() }
+                elseif ($named.Elapsed.TotalMilliseconds -ge 3) { break }
+            }
+            elseif ([DateTime]::UtcNow -gt $deadline) {
+                throw "$What did not start its program: the reader thread of its session still had no number after $TimeoutSeconds s."
+            }
         }
         elseif ([DateTime]::UtcNow -gt $deadline) {
             throw "$What did not start a program: $exe has no reader thread after $TimeoutSeconds s."
         }
-        [Threading.Thread]::Sleep(1)
+        # Without sleeping, which can take 15 ms: only what is ready to run.
+        $null = [Threading.Thread]::Yield()
     }
-    $priorities = ($readings | Sort-Object -Unique) -join ' and '
-    throw "$What started a program whose reader thread had the priority $priorities in $($readings.Count) readings for 50 ms, instead of the lower one of a hidden tab, $THREAD_PRIORITY_BELOW_NORMAL."
+    throw "$What started a program whose reader thread, '$name', still had the priority $priority 3 ms after the program started, in $readings readings, instead of the lower one of a hidden tab, ${THREAD_PRIORITY_BELOW_NORMAL}: meiga did not lower it as it started the session."
 }
 ```
 
@@ -12094,14 +12193,14 @@ function Assert-LowerReader([string]$What) {
 
 **`Assert-LowerReader`** é nova: comproba que o lector dun programa que acaba de arrancar nunha tab oculta ten a prioridade de debaixo desde o principio (decisión 7). Chámaa o paso 9 xusto despois de publicar as teclas que escollen *Restart tab*, cando meiga non ten ningún outro lector.
 
-- **Le unha e outra vez os lectores de meiga,** todos os fíos cuxo nome empeza por `conpty reader ` (`PrioritiesOf`), porque aínda non sabe o número do programa novo; entre lectura e lectura, `Thread.Sleep(1)`, a pausa máis curta.
-- **Antes de cada lectura,** mira se meiga rematou: entón falla co seu código de saída. Sen iso, `PrioritiesOf` daría `null`, coma unha meiga sen lectores, e a comprobación agardaría ata `TimeoutSeconds` para dicir que non arrancou ningún programa.
+- **Le unha e outra vez os lectores de meiga,** todos os fíos cuxo nome empeza por `conpty reader` (`PrioritiesOf`), sen pausa entre lectura e lectura: só `Thread.Yield`, que lle deixa o procesador a outro fío que estea listo, porque `Thread.Sleep(1)` pode durar ata 15 ms. Desde o mantemento M3, o lector chámase só `conpty reader`, sen o número, desde que arranca coa sesión ata que o escritor arranca o programa e llo dá ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 6): a comprobación véo desde que aparece, e ata o M3, coa pausa e o espazo despois de `reader`, só despois.
+- **Antes de cada lectura,** mira se meiga rematou: entón falla co seu código de saída. Sen iso, `PrioritiesOf` non daría ningún lector, coma unha meiga que non arrancou ningún programa, e a comprobación agardaría ata `TimeoutSeconds` para dicilo.
 - **Con máis dun lector,** falla, co nome e a prioridade de cada un: só pode estar o do programa novo.
-- **Con un,** se ten a prioridade de debaixo, `THREAD_PRIORITY_BELOW_NORMAL`, todo vai ben. Se non, garda a lectura, e volta ler; 50 ms despois da primeira vez que o viu, falla, coas prioridades que leu e o número de lecturas.
+- **Con un,** se ten a prioridade de debaixo, `THREAD_PRIORITY_BELOW_NORMAL`, todo vai ben. Se non, conta a lectura e volta ler. Se o lector xa leva o número do programa, falla 3 ms despois da primeira lectura que o viu así, co seu nome, a súa prioridade e o número de lecturas; se aínda non o leva, o escritor segue creando o programa, e falla despois de `TimeoutSeconds`.
 - **Sen ningún,** segue lendo, e falla despois de `TimeoutSeconds`: non arrancou ningún programa.
-- **As mensaxes** teñen coma suxeito `$What`, o que arranca o programa, coma as de `Wait-NewShell`: no paso 9, `Down, Down and Enter, on the menu of a hidden tab whose program ended,`, coa coma do final, e despois o que pasou: `started no program`, se meiga rematou; `left … with … reader threads instead of one`, con máis dun lector; `did not start a program`, sen ningún; ou `started a program whose reader thread had the priority …`, se non é a de debaixo.
-- **Por que desde o principio.** meiga arranca o lector coa prioridade normal, coma calquera fío, e `Tabs::restart` báixaa xusto despois, se a tab está oculta. Despois, a xanela só a sobe á normal mentres ten o *lock* do terminal da tab: cada espertar da xanela por unha tab oculta pasa por `Tab::learn`, que a sobe, colle o que trae o espertar, e báixaa ao soltar o *lock*. Así, o primeiro espertar baixa a prioridade tamén nunha meiga cuxo `Tabs::restart` non a baixase; e o programa novo pode espertar a xanela axiña cun título, coma PowerShell cando corre como administrador, na CI, e, desde a 2.8, coa súa primeira saída (ver o paso 9). Unha comprobación que agardase a prioridade de debaixo, coma `Wait-Shown`, non distinguiría esa meiga cando chega un título. PowerShell tarda máis de 50 ms en arrancar e dar o seu título: na 2.7, se nos 50 ms desde que aparecía o lector a súa prioridade non era a de debaixo, non a puxera `Tabs::restart`. Desde a 2.8, a primeira saída chega antes, e a comprobación xa non distingue esa meiga (ver o paso 9).
-- **Os 50 ms son un compromiso.** Se a xanela tardase máis en baixar a prioridade despois de arrancar o lector, porque outro fío lle quitase o procesador todo ese tempo, coma pode pasar nun *runner* moi cargado, a comprobación fallaría cunha meiga sen erros. E un título que chegase antes de 50 ms non deixaría distinguir unha meiga sen a prioridade de `Tabs::restart`: desde a 2.8, a primeira saída do programa novo chega antes, e xa non a distingue (ver o paso 9).
+- **As mensaxes** teñen coma suxeito `$What`, o que arranca o programa, coma as de `Wait-NewShell`: no paso 9, `Down, Down and Enter, on the menu of a hidden tab whose program ended,`, coa coma do final, e despois o que pasou: `started no program`, se meiga rematou; `left … with … reader threads instead of one`, con máis dun lector; `did not start a program`, sen ningún; `did not start its program`, cun lector que nunca leva o número; ou `started a program whose reader thread, '…', still had the priority … 3 ms after the program started`, se non é a de debaixo.
+- **Por que desde que o lector leva o número.** meiga crea o lector coa sesión, coa prioridade normal, coma calquera fío, e `Tabs::restart` báixaa xusto despois, se a tab está oculta: desde o M3, mentres o escritor crea a pseudoconsola e o programa, antes de que lle dea ao lector o número. Despois, a xanela só a sobe á normal mentres ten o *lock* do terminal da tab: cada espertar da xanela por unha tab oculta pasa por `Tab::learn`, que a sobe, colle o que trae o espertar, e báixaa ao soltar o *lock*. Así, o primeiro espertar baixa a prioridade tamén nunha meiga cuxo `Tabs::restart` non a baixase; e o programa novo esperta a xanela coa primeira saída do ConPTY, unhas decenas de milisegundos despois de arrancar, desde a 2.8, ou cun título, coma PowerShell cando corre como administrador, na CI. Unha comprobación que agardase a prioridade de debaixo, coma `Wait-Shown`, non distinguiría esa meiga. Por iso le desde que o programa arranca, cando o lector leva o seu número, e antes de que escriba nada.
+- **Os 3 ms** son moito menos ca o que tarda esa primeira saída, e moito máis ca unha lectura, que leva unha fracción de milisegundo: a comprobación le moitas veces neses 3 ms. Unha meiga sen erros nunca chega a eles, porque baixou a prioridade antes de que o programa arrancase; só fallaría se o fío da xanela quedase sen procesador desde que crea a sesión ata despois de que o escritor arranque o programa, decenas de milisegundos. Ata o M3, a comprobación agardaba 50 ms desde que aparecía o lector, e cada lectura, cunha fotografía de todos os procesos, levaba decenas de milisegundos coa máquina ocupada: desde a 2.8, a primeira saída chegaba antes, e xa non distinguía esa meiga (ver o paso 9).
 
 ```powershell
 # Waits until the tab of $Shown is the one with the reader of normal
@@ -12743,7 +12842,7 @@ try {
 - **`$saved`,** o texto que ten o portapapeis antes de empezar, coma en `check-mouse.ps1`, para deixalo nel ao rematar.
 - `$started`, a hora á que empezou meiga, para `Get-Shells` e `Get-Consoles`.
 
-**Os pasos,** catorce, numerados no código; todos menos o primeiro rematan cunha liña `OK:`, e o primeiro, coa da grella. Cada programa coñécese polo número do seu proceso: de `$first` a `$fifth`, os das cinco primeiras tabs; `$sixth`, o da tab que abre e pecha o paso 3; `$again`, o que arranca Intro; `$seventh` e `$eighth`, os de dúas tabs máis; `$behind`, o que arranca *Restart tab* nunha tab oculta; `$ninth`, o de Later; e, desde o mantemento M2, `$closer` e `$quick`, os das dúas tabs da última meiga, a do paso 14.
+**Os pasos,** catorce, numerados no código; todos menos o primeiro rematan cunha liña `OK:`, e o primeiro, coa da grella. Cada programa coñécese polo número do seu proceso: de `$first` a `$fifth`, os das cinco primeiras tabs; `$sixth`, o da tab que abre e pecha o paso 3; `$again`, o que arranca Intro; `$seventh` e `$eighth`, os de dúas tabs máis; `$behind`, o que arranca *Restart tab* nunha tab oculta; `$ninth`, o de Later; e, desde o mantemento M2, `$closer` e `$quick`, os das dúas tabs da última meiga, a do paso 14. A terceira tab desa meiga, desde o M3, non ten ningún: a comprobación non busca o seu programa, que pode non chegar a arrancar.
 
 | Paso | Que fai a comprobación | Que ten que pasar |
 |---|---|---|
@@ -12757,10 +12856,10 @@ try {
 | 8 | O programa da primeira tab remata co código 1, ao principio dunha fila baleira. | A liña do código 1 vai nesa fila, a 1, e o aviso na 2. |
 | 9 | Ctrl+Maiús+T e Ctrl+1. O programa da segunda tab, oculta, escribe unha liña e dá un título, e despois remata co código 4. O botón dereito nela, a frecha abaixo dúas veces e Intro. | Ctrl+1 mostra a primeira, cun só fotograma completo. A liña e o título debuxan só a segunda tab na barra, e o fin, outra vez só ela, co indicador do fin. *Restart tab* reinicia o seu programa, no seu cartafol, co lector na prioridade de debaixo desde que arranca, e sen mostrala: ningún fotograma completo. |
 | 10 | Ctrl+D, e o Z. | Pecha a primeira tab, sen programa, e mostra a segunda, cun só fotograma completo; o seu programa non recibe nada antes do Z. Queda un programa. |
-| 11 | Ctrl+Maiús+2. Intro. Crea o cartafol de Later. Intro, e o Z. | Ábrese ao final unha tab con Later, cun só fotograma completo, que di por que non arrancou o seu programa, e debaixo o aviso. Intro téntao outra vez, cun só fotograma completo, co mesmo erro. Co cartafol, Intro arranca o programa nel, cun só fotograma completo, e o programa non recibe nada antes do Z. |
+| 11 | Ctrl+Maiús+2. Intro. Crea o cartafol de Later. Intro, e o Z. | Ábrese ao final unha tab con Later, cun só fotograma completo, que di por que non arrancou o seu programa, desde o mantemento M3 debaixo que o seu cartafol non existe, e debaixo o aviso. Intro téntao outra vez, cun só fotograma completo, co mesmo erro. Co cartafol, Intro arranca o programa nel, cun só fotograma completo, e o programa non recibe nada antes do Z. |
 | 12 | Ctrl+V, con dúas liñas no portapapeis. Cos programas das dúas tabs rematados co código 0, o botón *Cancel* da caixa. | Ábrese a caixa que pregunta antes de pegar. Ao pecharse, péchanse as dúas tabs, e a última, a xanela: meiga sae co código 0, e as consolas rematan. |
 | 13 | Abre outra meiga, con `cmd /c exit 0`. | meiga sae co código 0, despois de compoñer a súa xanela, e a consola remata. |
-| 14 | Abre outra meiga, nun *job* da comprobación, co script das tabs con `-Closer` na súa liña de comandos. Ctrl+Maiús+T. Pecha a xanela. | meiga, os programas das dúas tabs e as súas consolas están no *job*. Cando se pecha a súa consola, o programa da primeira tab arranca outro nela, e a sesión desa tab non remata: meiga agarda por ela, tamén despois de rematar a da segunda tab. 10 s despois de que remate o programa da primeira tab, a sesión remata os programas que quedan nela, e meiga sae co código 0, menos de 17 s despois de pecharse a xanela. Despois, non queda ningún proceso no *job*. |
+| 14 | Abre outra meiga, nun *job* da comprobación, co script das tabs con `-Closer` na súa liña de comandos. Ctrl+Maiús+T. Pecha a xanela; desde o mantemento M3, nas mesmas mensaxes ca outro Ctrl+Maiús+T. | meiga, os programas das dúas tabs e as súas consolas están no *job*. Cando se pecha a súa consola, o programa da primeira tab arranca outro nela, e a sesión desa tab non remata: meiga agarda por ela, tamén despois de rematar a da segunda tab e, desde o M3, a da terceira, que se estaba a crear. 10 s despois de que remate o programa da primeira tab, a sesión remata os programas que quedan nela, e meiga sae co código 0, menos de 17 s despois de pecharse a xanela. Despois, non queda ningún proceso no *job*. |
 
 ```powershell
     # 1. The first tab runs Probe, the default profile, in its folder; and
@@ -13147,12 +13246,12 @@ try {
 
 **Despois, *Restart tab* nunha tab oculta.** O botón dereito na segunda tab, a de `$eighth`, abre o seu menú sen mostrala (`Open-TabMenu`), e sen nada resaltado: a primeira frecha abaixo resalta *Duplicate tab*, e a segunda, *Restart tab*, activado porque a xanela sabe que o programa rematou. Intro escólleo.
 
-- **O lector novo, na prioridade de debaixo desde que arranca** (`Assert-LowerReader`), lido xusto despois das teclas, antes de saber o número do programa novo.
+- **O lector novo, na prioridade de debaixo desde que arranca** (`Assert-LowerReader`), lido xusto despois das teclas, antes de saber o número do programa novo; desde o mantemento M3, desde que o escritor lle dá ese número, cando arranca o programa.
 - **O programa novo,** `$behind`, na mesma tab, no seu cartafol: a tab segue oculta, co lector na prioridade de debaixo, e a primeira segue á vista, sen lector (`Wait-Shown 0`).
 - **Sen mostrar a tab:** desde que remata o programa de `$eighth` non hai ningún fotograma completo. O menú e a barra debuxan só o seu sitio.
-- **Por que desde que arranca.** Despois, calquera espertar da xanela pola tab baixaría a prioridade igual, con `Tab::learn` (ver `Assert-LowerReader`). Ata a 2.7, o da pantalla do programa novo non chegaba, porque a marca da pantalla seguía posta, e o script non dá ningún título. Pero no *runner* da CI PowerShell corre como administrador, e ao arrancar pon `Administrator: ` diante do título da súa consola (ver [`check-profiles.ps1`](#toolscheck-profilesps1)): ese título esperta a xanela. Unha comprobación que mirase a prioridade só despois, coma `Wait-Shown`, non distinguiría alí unha meiga sen a prioridade de `Tabs::restart`. `Assert-LowerReader` le a prioridade antes de que chegue ese título, en calquera consola. Desde a 2.8, `Shared::restart` quita a marca da pantalla, para que a tab diga tamén que o programa novo escribiu algo ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)), e o ConPTY escribe algo nada máis arrancar ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)): ese espertar chega axiña, en calquera máquina, antes dos 50 ms, e `Assert-LowerReader` xa non distingue unha meiga sen a prioridade de `Tabs::restart` (ver *O que colle*).
-- **O que colle:** unha meiga cuxo fin só esperta a xanela pola marca da pantalla, coma ata a 2.6: a xanela non sabe que rematou o programa, e o menú ten *Restart tab* desactivado; as frechas chegan a *Close tab*, Intro pecha a tab, e non arranca ningún programa: `Assert-LowerReader` non atopa ningún lector, e falla despois de `TimeoutSeconds`. Iso foi na 2.7; desde a 2.8, esa copia xa fallaría antes, no segundo `Assert-Inside`: sen espertar, a xanela non debuxa o indicador do fin. Coma ela na 2.7, unha meiga onde *Restart tab* nunca está activado. Unha onde reinicia a tab que se mostra, e non a do menú, e unha onde a mostra: nas dúas, o lector do programa novo ten a prioridade normal, e `Assert-LowerReader` falla aos 50 ms. E, na 2.8, unha meiga onde o fin dunha tab oculta non debuxa o seu título: a xanela esperta, pero non debuxa nada, e o segundo `Assert-Inside` falla despois de `TimeoutSeconds`, despois de sete liñas `OK:`.
-- **O que xa non colle:** unha meiga onde o lector da tab oculta queda na prioridade normal. Na 2.7, `Assert-LowerReader` collíaa aos 50 ms, tamén na CI dunha rama temporal; desde a 2.8 pasa, e acéptase. O primeiro que escribe o ConPTY esperta a xanela, e `Tab::learn` baixa a prioridade igual, antes dos 50 ms: esa meiga só deixa o lector coa prioridade normal ata ese primeiro espertar, uns milisegundos despois de arrancar. Nunha copia así, a prioridade xa era a de debaixo na segunda lectura de `Assert-LowerReader`.
+- **Por que desde que arranca.** Despois, calquera espertar da xanela pola tab baixaría a prioridade igual, con `Tab::learn` (ver `Assert-LowerReader`). Ata a 2.7, o da pantalla do programa novo non chegaba, porque a marca da pantalla seguía posta, e o script non dá ningún título. Pero no *runner* da CI PowerShell corre como administrador, e ao arrancar pon `Administrator: ` diante do título da súa consola (ver [`check-profiles.ps1`](#toolscheck-profilesps1)): ese título esperta a xanela. Unha comprobación que mirase a prioridade só despois, coma `Wait-Shown`, non distinguiría alí unha meiga sen a prioridade de `Tabs::restart`. `Assert-LowerReader` le a prioridade antes de que chegue ese título, en calquera consola. Desde a 2.8, `Shared::restart` quita a marca da pantalla, para que a tab diga tamén que o programa novo escribiu algo ([ADR 0025](../adr/0025-moitas-tabs-e-os-indicadores.md)), e o ConPTY escribe algo nada máis arrancar ([Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows)): ese espertar chega axiña, en calquera máquina, e ata o M3 chegaba antes dos 50 ms que deixaba `Assert-LowerReader`, que xa non distinguía unha meiga sen a prioridade de `Tabs::restart`. Desde o M3, `Assert-LowerReader` le o lector moitas veces por milisegundo, e falla se aínda ten a prioridade normal 3 ms despois de levar o número do programa: antes dese espertar (ver *O que colle*).
+- **O que colle:** unha meiga cuxo fin só esperta a xanela pola marca da pantalla, coma ata a 2.6: a xanela non sabe que rematou o programa, e o menú ten *Restart tab* desactivado; as frechas chegan a *Close tab*, Intro pecha a tab, e non arranca ningún programa: `Assert-LowerReader` non atopa ningún lector, e falla despois de `TimeoutSeconds`. Iso foi na 2.7; desde a 2.8, esa copia xa fallaría antes, no segundo `Assert-Inside`: sen espertar, a xanela non debuxa o indicador do fin. Coma ela na 2.7, unha meiga onde *Restart tab* nunca está activado. Unha onde reinicia a tab que se mostra, e non a do menú, e unha onde a mostra: nas dúas, o lector do programa novo ten a prioridade normal, e `Assert-LowerReader` falla: ata o M3, aos 50 ms; desde o M3, 3 ms despois de que o lector leve o número do programa. E, na 2.8, unha meiga onde o fin dunha tab oculta non debuxa o seu título: a xanela esperta, pero non debuxa nada, e o segundo `Assert-Inside` falla despois de `TimeoutSeconds`, despois de sete liñas `OK:`. E, desde o M3 outra vez, unha meiga onde o lector da tab oculta que reinicia queda na prioridade normal: `Assert-LowerReader` falla despois de oito liñas `OK:`.
+- **O que non colleu da 2.8 ao M3:** esa meiga, a do lector na prioridade normal. Na 2.7, `Assert-LowerReader` collíaa aos 50 ms, tamén na CI dunha rama temporal; da 2.8 ao M3 pasaba, e aceptábase. O primeiro que escribe o ConPTY esperta a xanela, e `Tab::learn` baixa a prioridade igual, antes dos 50 ms: esa meiga só deixa o lector coa prioridade normal ata ese primeiro espertar, uns milisegundos despois de arrancar. Nunha copia así, a prioridade xa era a de debaixo na segunda lectura de `Assert-LowerReader`, que entón levaba decenas de milisegundos. Atopouno a segunda revisión do código do M3, e desde entón a comprobación mira o lector moitas veces por milisegundo, e só lle deixa 3 ms.
 
 ```powershell
     # 10. Ctrl+D closes the tab that is shown, whose program ended, and
@@ -13182,8 +13281,9 @@ try {
 
 ```powershell
     # 11. Ctrl+Shift+2 opens Later, whose folder is not there: its tab
-    # tells why its program could not start, and below it what can be done
-    # then. Enter tries again, and once the folder is there, starts it.
+    # tells why its program could not start, that its folder is not there,
+    # and below that what can be done then. Enter tries again, and once the
+    # folder is there, starts it.
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Ctrl+Shift+2'
@@ -13195,17 +13295,22 @@ try {
     $failure = Assert-Line 0 ('[could not start `' + $probeLine + '` in `' + $later + '`: ') ']' 'The tab of Later'
     # The line wraps into the rows that its characters take, two columns for
     # a wide one, as in an error of Windows in Chinese: a triple click on any
-    # of them copies the whole line. The hint follows it, on the first row
-    # that does not.
-    $hintRow = 1
-    while ((Assert-Line $hintRow $hint -What 'The tab of Later' -Or $failure) -cne $hint) { $hintRow++ }
+    # of them copies the whole line. The line that tells that the folder is
+    # not there follows it, as in Windows Terminal, and may wrap too; and the
+    # hint follows that one, on the first row that does not.
+    $folderLine = 'Could not access starting directory "' + $later + '"'
+    $folderRow = 1
+    while ((Assert-Line $folderRow $folderLine -What 'The tab of Later' -Or $failure) -cne $folderLine) { $folderRow++ }
+    $hintRow = $folderRow + 1
+    while ((Assert-Line $hintRow $hint -What 'The tab of Later' -Or $folderLine) -cne $hint) { $hintRow++ }
 ```
 
-**11. Un programa que non arranca** (decisións 4 e 7). Ctrl+Maiús+2 abre o segundo perfil do menú, Later, nunha tab ao final, que se mostra, cun só fotograma completo. O cartafol de Later aínda non existe: o seu programa non arranca, e segue habendo un, o de `$behind`.
+**11. Un programa que non arranca** (decisións 4 e 7). Ctrl+Maiús+2 abre o segundo perfil do menú, Later, nunha tab ao final, que se mostra, cun só fotograma completo. O cartafol de Later aínda non existe: o seu programa non arranca, e segue habendo un, o de `$behind`. Desde o mantemento M3, o erro chega un intre despois de mostrarse a tab, cando o di o fío lector da súa sesión ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 4): `Assert-Line` repite o triplo clic ata que a fila o ten.
 
 - **A liña do erro,** na fila 0: empeza por ``[could not start `<liña de comandos>` in `<cartafol>`: ``, coa liña de comandos de Later e o seu cartafol, e remata en `]`. O do medio é o erro de Windows, na súa lingua, que a comprobación non mira. A liña é longa, e continúa nas filas que necesita: o triplo clic na fila 0 cópiaa enteira, e `$failure` gárdaa.
-- **O aviso,** na primeira fila despois da liña. A comprobación le as filas unha a unha desde a 1: mentres o triplo clic copia outra vez `$failure`, a fila é un anaco da liña, e pasa á seguinte; a primeira que non o é ten que ser o aviso. Non calcula as filas coa lonxitude da liña: un carácter ancho, coma os do chinés ou do xaponés, ocupa dúas columnas, e un erro de Windows nesas linguas, ou un cartafol con eses caracteres, ocuparía máis filas ca as que dá a conta, e a comprobación fallaría cunha meiga correcta. Atopouno a revisión independente do código. Comprobouse cunha simulación, fóra do repositorio: coas variábeis `TMP` e `TEMP` nun cartafol con 150 ideogramas no nome, coma o dun usuario cun nome en chinés, o cartafol da comprobación vai nel, e o erro de Later lévao tres veces, dúas na liña de comandos e unha no cartafol de Later. Ocupa entón polo menos 450 columnas máis ca caracteres: nunha grella de ata 450 columnas, polo menos unha fila máis ca as que dá a conta. A comprobación de antes, que calculaba a fila, busca o aviso nunha fila que aínda é do erro, e falla no paso 11; esta pasa.
-- **Se a fila despois da liña non é o aviso,** baleira ou con outro texto, `Assert-Line` falla cando pasa `TimeoutSeconds`, co que tiña a fila e co que tiña que ter: o aviso, ou a liña. O bucle sempre remata: a liña ten fin, e cada fila despois dela copia outra cousa.
+- **A liña do cartafol,** desde o M3, na primeira fila despois da liña do erro: `Could not access starting directory "<cartafol>"`, co cartafol de Later, coma no Windows Terminal (`$folderLine`). A comprobación le as filas unha a unha desde a 1 (`$folderRow`): mentres o triplo clic copia outra vez `$failure`, a fila é un anaco da liña do erro, e pasa á seguinte; a primeira que non o é ten que ser a liña do cartafol, que tamén pode continuar noutras filas, como di o comentario.
+- **O aviso,** na primeira fila despois da liña do cartafol, e ata a 2.10, despois da liña do erro. A comprobación le as filas unha a unha desde a seguinte á primeira da liña do cartafol (`$hintRow`), e ata a 2.10, desde a 1: mentres o triplo clic copia outra vez a liña de enriba, a fila é un anaco dela, e pasa á seguinte; a primeira que non o é ten que ser o aviso. Non calcula as filas coa lonxitude da liña: un carácter ancho, coma os do chinés ou do xaponés, ocupa dúas columnas, e un erro de Windows nesas linguas, ou un cartafol con eses caracteres, ocuparía máis filas ca as que dá a conta, e a comprobación fallaría cunha meiga correcta. Atopouno a revisión independente do código. Comprobouse cunha simulación, fóra do repositorio: coas variábeis `TMP` e `TEMP` nun cartafol con 150 ideogramas no nome, coma o dun usuario cun nome en chinés, o cartafol da comprobación vai nel, e o erro de Later lévao tres veces, dúas na liña de comandos e unha no cartafol de Later. Ocupa entón polo menos 450 columnas máis ca caracteres: nunha grella de ata 450 columnas, polo menos unha fila máis ca as que dá a conta. A comprobación de antes, que calculaba a fila, busca o aviso nunha fila que aínda é do erro, e falla no paso 11; esta pasa. Desde o M3, a liña do cartafol, co mesmo cartafol, tamén se le así.
+- **Se a fila despois dunha liña non é a seguinte,** baleira ou con outro texto, `Assert-Line` falla cando pasa `TimeoutSeconds`, co que tiña a fila e co que tiña que ter: a liña do cartafol ou a do erro; ou o aviso ou a liña do cartafol, e ata a 2.10, o aviso ou a liña do erro. Os bucles sempre rematan: cada liña ten fin, e cada fila despois dela copia outra cousa.
 
 ```powershell
     Wait-Quiet 400
@@ -13228,14 +13333,14 @@ try {
     }
     Assert-Folder $ninth $later 'Later'
     Wait-OneFull $start 'Enter, which started Later,'
-    Write-Host 'OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.'
+    Write-Host 'OK: Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why its program could not start, that its folder is not there, and what can be done then; Enter tries again, with one full frame, and once the folder is there, starts the program in it.'
 ```
 
 **Despois, Intro, dúas veces.**
 
-- **Sen o cartafol aínda,** Intro téntao outra vez, co mesmo perfil: un só fotograma completo, ningún programa novo, e na fila 0, o mesmo erro.
+- **Sen o cartafol aínda,** Intro téntao outra vez, co mesmo perfil: un só fotograma completo, ningún programa novo, e na fila 0, o mesmo erro, que desde o M3 chega un intre despois.
 - **Co cartafol creado,** Intro arranca o programa de Later, `$ninth`, que corre a liña de comandos de Probe, coma Later, e se mostra, coa tab de `$behind` oculta; non recibe nada antes do Z, nin Intro cando sobe; e corre no cartafol de Later (`Assert-Folder`). Un só fotograma completo.
-- **O que colle:** unha meiga que non escribe o aviso debaixo do erro. E unha onde reiniciar corre o perfil por defecto, e non o da tab: Intro arranca Probe, no cartafol da comprobación, que existe, e meiga ten dous programas.
+- **O que colle:** unha meiga que non escribe o aviso debaixo do erro. E unha onde reiniciar corre o perfil por defecto, e non o da tab: Intro arranca Probe, no cartafol da comprobación, que existe, e meiga ten dous programas. Desde o mantemento M3, tamén unha que non escribe a liña do cartafol, coma ata a 2.10: a fila despois do erro é entón o aviso, que non é nin esa liña nin un anaco do erro, e o primeiro bucle falla cando pasa `TimeoutSeconds`.
 
 ```powershell
     # 12. Ctrl+V, with two lines in the clipboard, opens the message box that
@@ -13309,12 +13414,13 @@ try {
     # console closes, starts another one in it, as the shell of a tab can,
     # such as the git of its prompt: the new program connects to the console
     # while ConPTY closes it, and the session of the tab does not end. meiga
-    # waits for it before it ends, also once the session of the second tab,
-    # which it closes after the first one, has ended; and the writer thread
-    # of the session ends the programs left in it 10 s after the last of its
-    # programs ended (ADR 0011 and ADR 0026). meiga runs in a job of the
-    # check, where the check sees what it leaves, and which ends it if the
-    # check fails.
+    # waits for it before it ends, also once the sessions of the second tab,
+    # which it closes after the first one, and of a third one, which opens
+    # right before the window closes, have ended; and the writer thread of
+    # the session ends the programs left in it 10 s after the last of its
+    # programs ended (ADR 0011, ADR 0026 and ADR 0028). meiga runs in a job
+    # of the check, where the check sees what it leaves, and which ends it if
+    # the check fails.
     $process.Dispose()
     $process = $null
     $log = Join-Path $work 'frames-close.csv'
@@ -13347,7 +13453,7 @@ try {
     }
 ```
 
-**14. O peche ao saír, cunha sesión bloqueada** (desde o mantemento M2; [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisións 1 e 3). Unha meiga nova, co mesmo `APPDATA`, co mesmo `MEIGA_CHECK_WORK`, para a liña de comandos de Probe, e co seu propio rexistro dos fotogramas, `frames-close.csv`, corre na súa primeira tab o programa da súa liña de comandos: despois de `--`, o fin das súas opcións ([Código › meiga › `options.rs`](meiga.md#cratesmeigasrcoptionsrs)), `$closerArguments`, o script das tabs con `-Closer`. Cando se pecha a xanela, meiga pecha as sesións das súas tabs, e o script, ao pecharse a súa consola, arranca nela `cmd`, que se conecta á consola mentres o ConPTY a pecha: a sesión da primeira tab bloquéase. O seu fío escritor remata os programas que quedan nela 10 s despois de que remate o script, o último dos programas que tiña ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md), decisión 6), e meiga ten que agardar por el antes de saír. O paso ten tres partes.
+**14. O peche ao saír, cunha sesión bloqueada** (desde o mantemento M2; [ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisións 1 e 3). Unha meiga nova, co mesmo `APPDATA`, co mesmo `MEIGA_CHECK_WORK`, para a liña de comandos de Probe, e co seu propio rexistro dos fotogramas, `frames-close.csv`, corre na súa primeira tab o programa da súa liña de comandos: despois de `--`, o fin das súas opcións ([Código › meiga › `options.rs`](meiga.md#cratesmeigasrcoptionsrs)), `$closerArguments`, o script das tabs con `-Closer`. Cando se pecha a xanela, meiga pecha as sesións das súas tabs, e o script, ao pecharse a súa consola, arranca nela `cmd`, que se conecta á consola mentres o ConPTY a pecha: a sesión da primeira tab bloquéase. O seu fío escritor remata os programas que quedan nela 10 s despois de que remate o script, o último dos programas que tiña ao pechala ([ADR 0011](../adr/0011-fin-e-peche-das-sesions.md), decisión 6), e meiga ten que agardar por el antes de saír. Desde o mantemento M3, ademais, unha terceira tab ábrese xusto antes do peche, que a comprobación publica en canto aparece o escritor da súa sesión: esta péchase mentres se crea ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 3), como di o comentario. O paso ten tres partes.
 
 **Primeiro, meiga nun *job*, con dúas tabs.**
 
@@ -13365,13 +13471,37 @@ try {
     foreach ($console in $tabConsoles) {
         $null = $console.Handle
     }
-    $closing = [DateTime]::UtcNow
-    if (-not $api::PostMessageW($window, $WM_CLOSE, [UIntPtr]::Zero, [IntPtr]::Zero)) {
-        throw "Could not close the window: error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
+    # A third tab opens right before the window closes: once the check sees
+    # the writer of its session, which starts with the session, it closes
+    # the window at once, while that writer creates the pseudoconsole and
+    # the program, or has just done it (ADR 0028). meiga waits for that
+    # session too, and it leaves nothing either. What this step cannot tell
+    # is whether meiga waits for it, nor whether its program gets the close:
+    # the first tab keeps meiga waiting for 10 s, which hides both; the unit
+    # tests of meiga-win, and the last step of check-window.ps1, check them.
+    # Ctrl and Shift stay down in the state of the keys that the check
+    # shares with the thread of the window until meiga ends: the thread
+    # reads it only when it takes the key, after the check has posted it.
+    Join-Input
+    $typed = Get-Chord 'Ctrl+Shift+T'
+    Send-Keys $typed.Messages $typed.Down
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $writers = $api::PrioritiesOf($process.Id, 'conpty writer')
+        $count = if ($null -eq $writers) { 0 } else { $writers.Count }
+        if ($count -ge 3) { break }
+        if ($process.HasExited -or [DateTime]::UtcNow -gt $deadline) {
+            $names = if ($count -gt 0) { " ('$($writers.Keys -join "', '")')" } else { '' }
+            throw "Ctrl+Shift+T opened no third tab: $exe has $count writer threads$names."
+        }
+        $null = [Threading.Thread]::Yield()
     }
+    $closing = [DateTime]::UtcNow
+    Send-Keys @($WM_CLOSE, 0, 0) $typed.Down
     if (-not $process.WaitForExit((17 + $TimeoutSeconds) * 1000)) {
         throw "$exe was still running $(17 + $TimeoutSeconds) s after its window closed."
     }
+    Split-Input
     if (-not $closerProgram.WaitForExit($TimeoutSeconds * 1000)) {
         throw "The program of the first tab was still running $TimeoutSeconds s after $exe ended."
     }
@@ -13392,7 +13522,9 @@ try {
 **Despois, o peche.**
 
 - **O programa da primeira tab,** `$closerProgram`, e as consolas das dúas tabs, `$tabConsoles`, cos seus *handles* abertos desde antes de pechar a xanela: `GetProcessById` non os abre ata que se le `Handle`. Así, cando rematen, a comprobación pode agardar polo programa e ler cando rematou (`ExitTime`), e saber se as consolas xa remataran (`HasExited`): un proceso que rematou deixa de existir cando se pecha o último *handle* del, e despois xa non se pode abrir polo seu número, e o número pode ser xa doutro.
-- **`$closing`,** a hora do peche, en UTC, xusto antes de publicar `WM_CLOSE` na xanela, coma o botón X (`PostMessageW`). Se non se pode publicar, a comprobación falla co erro de Windows.
+- **`$closing`,** a hora do peche, en UTC, xusto antes de publicar as mensaxes que pechan a xanela.
+- **A terceira tab e o peche,** como di o comentario: desde o mantemento M3, `Join-Input` comparte outra vez a entrada co fío da xanela; `Get-Chord` dá as mensaxes de Ctrl+Maiús+T, e `Send-Keys` publícaas, co fío da xanela suspendido e Ctrl e Maiús abaixo. Despois, a comprobación le unha e outra vez os escritores de meiga, os fíos cuxo nome empeza por `conpty writer` (`PrioritiesOf`), sen pausa, coma `Assert-LowerReader`, ata que hai tres: o da terceira tab arranca coa súa sesión, antes de crear a pseudoconsola e o programa. En canto o ve, publica `WM_CLOSE`, sen nada máis (`0, 0`, o seu `wParam` e o seu `lParam`), que pecha a xanela coma o botón X, e as súas tabs con ela: o escritor da terceira sesión está a crear a pseudoconsola ou o programa, ou acaba de facelo, e crea o que lle falta só se a sesión segue aberta ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md), decisión 3). Se meiga remata, ou pasan `TimeoutSeconds` sen tres escritores, a comprobación falla, cos que atopou. Ctrl e Maiús seguen abaixo no estado das teclas que comparte co fío da xanela ata que remata meiga, e só entón `Split-Input` deixa de compartilo: o fío le ese estado cando colle a tecla, despois de que a comprobación a publique. Se non se poden publicar as mensaxes, a comprobación falla co erro de Windows ou, se meiga xa rematou, dío (`Send-Posted`). Na primeira versión do M3, publicaba as teclas e `WM_CLOSE` de vez, sen mirar se se abría a terceira tab: atopouno a segunda revisión independente. Ata a 2.10, publicaba só `WM_CLOSE`, con `PostMessageW`.
+- **O que este paso non pode dicir,** coma di tamén o comentario: se meiga agarda pola terceira sesión, e se o seu programa recibe o peche. A primeira tab fai agardar a meiga 10 s, e iso tapa as dúas cousas; cóllenas as probas unitarias de `meiga-win` e o último paso de [`check-window.ps1`](#toolscheck-windowps1).
 - **meiga ten que saír** en 17 s máis `TimeoutSeconds`; se non, a comprobación falla, e o `finally` remátao, co que quede no *job*. Os 17 s son o que pode tardar como moito (ver *Por último*, máis abaixo), e o resto, para dicir canto tardou.
 - **O programa da primeira tab** ten que rematar tamén, en `TimeoutSeconds` despois de meiga, se aínda non rematara.
 - **O programa que arrancou:** `closer-<proceso>.txt` ten que ter só un número, o do programa que arrancou o script ao pecharse a súa consola. Sen arquivo, ou baleiro, o script non o arrancou, e a comprobación falla; con outro texto, falla co erro polo que non puido.
@@ -13427,7 +13559,7 @@ try {
         }
         Start-Sleep -Milliseconds 20
     }
-    Write-Host "OK: when its window closes, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the session of the second tab has ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, $(Format-Seconds $waited) s after its window closed, and leaves nothing of its tabs."
+    Write-Host "OK: when its window closes, right after a third tab opens, and the program of the first tab, as its console closes, starts another one in it, the session of that tab does not end; meiga waits for it, also once the sessions of the second tab and of the third one, which was starting, have ended: 10 s after the program of the first tab ended, its session ends the programs left in it, and meiga ends with exit code 0, $(Format-Seconds $waited) s after its window closed, and leaves nothing of its tabs."
     $passed = $true
 }
 ```
@@ -13436,9 +13568,9 @@ try {
 
 - **meiga agardou pola sesión:** `$after` ten que ser polo menos 9,9 s. A sesión remata 10 s despois do script, e meiga sae a continuación: a décima que falta cobre os saltos das horas de Windows. Se non, a mensaxe di cantos segundos despois do peche rematou meiga, e se foi antes ca o script ou cantos segundos despois del. E di por que, segundo as consolas das tabs: se algunha segue correndo, a sesión bloqueouse, e meiga non agardou por ela; se xa remataran todas, a sesión non se bloqueou, e meiga non tiña nada que agardar. Pasaría cun ConPTY que non se bloquee neste caso, se un día o arranxa Microsoft: entón o paso non pode comprobar nada, e a mensaxe dío, en vez de culpar a meiga.
 - **E non de máis:** `$waited` ten que ser menos de 17 s: os 10 s do escritor despois do script, que Windows remata como moito 5 s despois de avisalo do peche da súa consola, e unha marxe. Se non, a mensaxe di tamén cantos segundos despois do peche rematou o script.
-- **Nada no *job*:** en `TimeoutSeconds` despois de saír meiga, o *job* ten que quedar baleiro (`ProcessesIn`): sen os programas das tabs, nin o `cmd` e o `ping` do script, nin as consolas. A comprobación mírao cada 20 ms, porque o ConPTY dunha sesión bloqueada remata un intre despois dos seus programas, aínda que meiga xa saíse ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 1). Se non queda baleiro, falla, co nome e o número de cada proceso que queda, ou só o número, se xa rematou.
-- **A liña `OK:`** di cantos segundos despois do peche rematou meiga, cun decimal (`Format-Seconds`). Despois, `$passed` di que todo foi ben.
-- **O que colle:** unha meiga que non agarda polas sesións que pechou, e outra que, ao pechar unha sesión, solta o *handle* do seu escritor en vez de gardalo na lista: as dúas saen ao pecharse a xanela, antes ca o programa da primeira tab. Unha que, ao gardar un escritor na lista, garda os que xa remataron e tira os que seguen correndo: ao pechar a sesión da segunda tab, tira o escritor da primeira, e sae cando remata a da segunda, antes ou pouco despois ca o programa da primeira tab. Esta só a colle porque meiga pecha as tabs da primeira á última, ao destruír a súa lista: se pechase antes a segunda, o escritor da primeira chegaría o último, e quedaría na lista. A proba de integración do peche das sesións, en [Código › meiga-win](meiga-win.md#cratesmeiga-wintestsconptyrs), cóllea sexa cal sexa a orde. Unha que conta os 10 s desde o peche, e non desde o último programa que rematou: a sesión remata 10 s despois do peche, e, como o programa da primeira tab remata polo menos medio segundo despois del, meiga sae uns 9,5 s despois do programa, ou menos. E unha coa espera do escritor de ata a 2.8, que só mira os programas cando pasan 10 s: a sesión remata 20 s despois do peche, e meiga, máis de 17 s despois.
+- **Nada no *job*:** en `TimeoutSeconds` despois de saír meiga, o *job* ten que quedar baleiro (`ProcessesIn`): sen os programas das tabs, nin o `cmd` e o `ping` do script, nin as consolas; desde o mantemento M3, tampouco a consola da terceira tab, se o seu escritor chegou a creala, nin o seu programa, se chegou a arrancalo. A comprobación mírao cada 20 ms, porque o ConPTY dunha sesión bloqueada remata un intre despois dos seus programas, aínda que meiga xa saíse ([ADR 0026](../adr/0026-o-peche-das-sesions-ao-sair.md), decisión 1). Se non queda baleiro, falla, co nome e o número de cada proceso que queda, ou só o número, se xa rematou.
+- **A liña `OK:`** di cantos segundos despois do peche rematou meiga, cun decimal (`Format-Seconds`), e, desde o M3, que a xanela se pechou xusto despois de abrirse unha terceira tab. Despois, `$passed` di que todo foi ben.
+- **O que colle:** unha meiga que non agarda polas sesións que pechou, e outra que, ao pechar unha sesión, solta o *handle* do seu escritor en vez de gardalo na lista: as dúas saen ao pecharse a xanela, antes ca o programa da primeira tab. Unha que, ao gardar un escritor na lista, garda os que xa remataron e tira os que seguen correndo: ao pechar a sesión da segunda tab, tira o escritor da primeira, e sae cando remata a da segunda, antes ou pouco despois ca o programa da primeira tab. Esta só a colle porque meiga pecha as tabs da primeira á última, ao destruír a súa lista: se pechase antes a segunda, o escritor da primeira chegaría o último, e quedaría na lista. A proba de integración do peche das sesións, en [Código › meiga-win](meiga-win.md#cratesmeiga-wintestsconptyrs), cóllea sexa cal sexa a orde. Unha que conta os 10 s desde o peche, e non desde o último programa que rematou: a sesión remata 10 s despois do peche, e, como o programa da primeira tab remata polo menos medio segundo despois del, meiga sae uns 9,5 s despois do programa, ou menos. E unha coa espera do escritor de ata a 2.8, que só mira os programas cando pasan 10 s: a sesión remata 20 s despois do peche, e meiga, máis de 17 s despois. Desde o M3, a terceira tab colle tamén unha meiga que falla ou se bloquea ao pechar unha sesión que se está a crear, ou que deixa no *job* a súa consola ou o seu programa; pero non unha que non agarde por esa sesión: a da primeira tab fai que meiga agarde máis de 10 s igual, e a da terceira remata moito antes.
 
 ```powershell
 finally {
@@ -13887,7 +14019,7 @@ public static System.Collections.Generic.Dictionary<string, int> PrioritiesOf(in
 }
 ```
 
-**`PrioritiesOf`** é a de `check-exit.ps1`, letra por letra (ver *As prioridades dos fíos*): as prioridades dos fíos de meiga cuxo nome empeza por `prefix`, nun dicionario polo seu nome; un dicionario baleiro, se non hai ningún, e `null`, se meiga xa rematou. Esta comprobación non ten `PriorityOf`: le os lectores todos de vez (`Get-Readers`), tamén para a prioridade dun só (`Get-Priority`).
+**`PrioritiesOf`** é a que tiña `check-exit.ps1` ata o mantemento M3, letra por letra (ver *As prioridades dos fíos*), que desde entón percorre só os fíos de meiga: as prioridades dos fíos de meiga cuxo nome empeza por `prefix`, nun dicionario polo seu nome; un dicionario baleiro, se non hai ningún, e `null`, se meiga xa rematou. Esta comprobación non ten `PriorityOf`: le os lectores todos de vez (`Get-Readers`), tamén para a prioridade dun só (`Get-Priority`).
 
 ```csharp
 static string ClassOf(IntPtr window)
@@ -13981,7 +14113,7 @@ $extendedKeys = @(0x21..0x28) + @(0x2D, 0x2E)
 - **As mensaxes das teclas,** a dunha tecla que baixa e a dunha que sobe, e as das teclas do sistema (ver `Get-Key`); e **as do rato**: mover o punteiro, premer e soltar o botón esquerdo e o do medio, e a roda, a vertical e a horizontal, co bit de `wParam` do botón que está abaixo, `MK_LBUTTON` ou `MK_MBUTTON`. **`WHEEL_DELTA`**, 120, é un paso da roda, coma o conta Windows, e meiga (`WHEEL_STEP`).
 - **`SWP_NOMOVE`, `SWP_NOZORDER` e `SWP_NOACTIVATE`:** `SetWindowPos` cambia o tamaño da xanela sen movela, sen cambiar a súa orde entre as outras e sen activala (`Resize-Window`).
 - `MAPVK_VK_TO_VSC`, a conversión dunha tecla virtual no seu código de exploración; e as teclas virtuais que o script nomea, Ctrl e Alt, para saber se unha combinación vai coma teclas do sistema, e F10, que Windows envía coma tecla do sistema tamén sen Alt (ver `Get-Key`). Sen o Z: esta comprobación non le as teclas de ningún programa.
-- **As dúas prioridades dos lectores,** a normal e a de debaixo; **`$readerPrefix`**, o comezo do nome do fío lector dunha sesión, `conpty reader `, antes do número do seu programa ([Código › meiga-win › `Conpty::spawn`](meiga-win.md#conptyspawn)); e os nomes das consolas das tabs, coma en `check-exit.ps1`.
+- **As dúas prioridades dos lectores,** a normal e a de debaixo; **`$readerPrefix`**, o comezo do nome do fío lector dunha sesión, `conpty reader `, antes do número do seu programa ([Código › meiga-win › Os nomes dos fíos](meiga-win.md#os-nomes-dos-fíos-keep_reader-started-name_thread-e-name_reader)); e os nomes das consolas das tabs, coma en `check-exit.ps1`.
 - **`$chordKeys` e `$extendedKeys`** son os de `check-exit.ps1`, sen AltGr: ningunha combinación desta comprobación o leva.
 
 ```powershell

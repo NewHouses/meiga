@@ -1,6 +1,6 @@
 # ADR 0026 · O peche das sesións ao saír
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0028](0028-as-sesions-fora-do-fio-da-xanela.md)
 - **Data:** 2026-11-18
 - **Relacionados:** [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0011](0011-fin-e-peche-das-sesions.md), [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md)
 

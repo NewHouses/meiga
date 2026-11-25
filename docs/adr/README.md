@@ -19,15 +19,15 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0002](0002-windows-e-renderizado-cpu.md) | Só Windows, con renderizado por CPU | Aceptado; concretado polos [0009](0009-xanela-que-non-se-ve.md) e [0010](0010-texto-con-directwrite.md) |
 | [0003](0003-nucleo-vt-alacritty-terminal.md) | `alacritty_terminal` como núcleo, detrás dunha fachada | Aceptado; concretado polo [0012](0012-fachada-do-terminal.md) |
 | [0004](0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga | Aceptado; concretado polos [0011](0011-fin-e-peche-das-sesions.md) e [0014](0014-o-teclado.md) |
-| [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polos [0008](0008-temporizador-dos-fotogramas.md), [0011](0011-fin-e-peche-das-sesions.md), [0013](0013-da-saida-a-pantalla.md), [0017](0017-os-fotogramas-por-escritorio-remoto.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
+| [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polos [0008](0008-temporizador-dos-fotogramas.md), [0011](0011-fin-e-peche-das-sesions.md), [0013](0013-da-saida-a-pantalla.md), [0017](0017-os-fotogramas-por-escritorio-remoto.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0006](0006-licenzas-e-dependencias.md) | Licenzas e dependencias | Aceptado |
 | [0007](0007-integracion-coa-shell.md) | Integración coa shell | Aceptado |
 | [0008](0008-temporizador-dos-fotogramas.md) | Temporizador dos fotogramas | Aceptado |
 | [0009](0009-xanela-que-non-se-ve.md) | Que se debuxa cando a xanela non se ve | Aceptado |
 | [0010](0010-texto-con-directwrite.md) | Texto con DirectWrite e unha caché de glifos | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
-| [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado; concretado polos [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0026](0026-o-peche-das-sesions-ao-sair.md) |
+| [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado; concretado polos [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0026](0026-o-peche-das-sesions-ao-sair.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) e [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
-| [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
+| [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0014](0014-o-teclado.md) | O teclado | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0023](0023-os-atallos-de-teclado.md) |
 | [0016](0016-o-historial-o-tamano-e-o-zoom.md) | O historial, o tamaño e o zoom | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0023](0023-os-atallos-de-teclado.md) |
@@ -38,10 +38,11 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0022](0022-os-perfis-e-a-configuracion.md) | Os perfís e a configuración | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0023](0023-os-atallos-de-teclado.md) | Os atallos de teclado | Aceptado; concretado polo [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
-| [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polo [0025](0025-moitas-tabs-e-os-indicadores.md) |
+| [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polos [0025](0025-moitas-tabs-e-os-indicadores.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0025](0025-moitas-tabs-e-os-indicadores.md) | Moitas tabs: o ancho mínimo, o desprazamento da barra e os indicadores | Aceptado; concretado polo [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
-| [0026](0026-o-peche-das-sesions-ao-sair.md) | O peche das sesións ao saír | Aceptado |
+| [0026](0026-o-peche-das-sesions-ao-sair.md) | O peche das sesións ao saír | Aceptado; concretado polo [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) | A barra de tabs coma barra de título | Aceptado |
+| [0028](0028-as-sesions-fora-do-fio-da-xanela.md) | As sesións fóra do fío da xanela | Aceptado |
 
 ## Como se relacionan
 
@@ -149,6 +150,13 @@ graph TD
     A21 --> A27
     A23 --> A27
     A25 --> A27
+    A4 --> A28["0028 As sesións fóra do fío da xanela"]
+    A5 --> A28
+    A11 --> A28
+    A13 --> A28
+    A19 --> A28
+    A24 --> A28
+    A26 --> A28
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.

@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 2.9. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar.
+> Estado: mantemento M3, despois da subfase 2.10. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar. No M3 chegaron [§63](#63-crear-os-procesos-fóra-do-fío-da-interface), crear os procesos fóra do fío da interface, e [§64](#64-a-cobertura-e-os-mutantes), a cobertura e os mutantes.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -759,7 +759,7 @@ O ConPTY empaquetado pásalle a medida ao seu anfitrión como unha opción (`--t
 
 **Cargar unha DLL.** `LoadLibraryExW` carga unha DLL e `GetProcAddress` dá a dirección dunha das súas funcións, que en Rust se converte nun punteiro a función coa súa firma (`mem::transmute`). meiga carga `conpty.dll` coa ruta completa e coas opcións `LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR` e `LOAD_LIBRARY_SEARCH_SYSTEM32`: as DLL que ela necesite só se buscan no seu cartafol e en System32, nunca no cartafol actual nin no `PATH`, onde alguén podería deixar unha DLL falsa.
 
-**Os fíos en Rust.** `std::thread::Builder` crea un fío cun nome, que se ve nos depuradores e nos perfís de WPA, e devolve o seu `JoinHandle`, co que se pode agardar a que remate ([§61](#61-o-fin-dun-proceso-e-dos-seus-fíos)). Os datos que comparten varios fíos van nun `Arc`, unha conta de referencias atómica, e, se cambian, nun `Mutex`. Se un fío falla (*panic*) co `Mutex` collido, o `Mutex` queda **envelenado**, e quen o colla despois recibe un erro. En meiga, os datos dos seus `Mutex` nunca quedan a medias, así que se collen igual (`PoisonError::into_inner`).
+**Os fíos en Rust.** `std::thread::Builder` crea un fío cun nome, que se ve nos depuradores e nos perfís de WPA, e devolve o seu `JoinHandle`, co que se pode agardar a que remate ([§61](#61-o-fin-dun-proceso-e-dos-seus-fíos)). O nome pono o propio fío cando arranca ([§63](#63-crear-os-procesos-fóra-do-fío-da-interface)). Os datos que comparten varios fíos van nun `Arc`, unha conta de referencias atómica, e, se cambian, nun `Mutex`. Se un fío falla (*panic*) co `Mutex` collido, o `Mutex` queda **envelenado**, e quen o colla despois recibe un erro. En meiga, os datos dos seus `Mutex` nunca quedan a medias, así que se collen igual (`PoisonError::into_inner`).
 
 ## 33. NuGet e as sinaturas Authenticode
 
@@ -1714,3 +1714,59 @@ O Windows Terminal ábreo con [`TrackPopupMenu`](https://learn.microsoft.com/en-
 Sen fíos, temporizadores nin *polling* novos: `WM_NCHITTEST` respóndese sen chamar ao programa, e `shell32.dll` só se carga a primeira vez que se maximiza a xanela. O punteiro sobre os botóns da xanela só debuxa eses botóns, e o foco, os tres e o cursor do terminal.
 
 O código explícase en [Código › meiga-win › `window.rs`](codigo/meiga-win.md#cratesmeiga-winsrcwindowrs), en [Código › meiga-core › `ui/titlebar.rs`](codigo/meiga-core.md#cratesmeiga-coresrcuititlebarrs) e [› `ui/tabbar.rs`](codigo/meiga-core.md#cratesmeiga-coresrcuitabbarrs), e en [Código › meiga › `tabbar.rs`](codigo/meiga.md#cratesmeigasrctabbarrs) e [› `tabs.rs`](codigo/meiga.md#cratesmeigasrctabsrs).
+
+## 63. Crear os procesos fóra do fío da interface
+
+**O que leva crear un proceso.** `CreateProcessW` ([§32](#32-procesos-tubaxes-e-eventos)) non volta ata que Windows creou o proceso e o seu primeiro fío, aínda que o programa empece a correr despois; e `CreatePseudoConsole` ([§31](#31-conpty-a-pseudoconsola-de-windows)) crea outro proceso, o do anfitrión. Cada un leva normalmente uns milisegundos. Pero Windows deixa que os controladores apunten unha función á que chama cada vez que se crea un proceso ([`PsSetCreateProcessNotifyRoutineEx`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-pssetcreateprocessnotifyroutineex)), coma os dos antivirus, e esa función corre «in the context of the thread that created the new process»: mentres non remata, `CreateProcessW` agarda. Na porta 2.10, unha sonda viu que crear un proceso se atrancaba ás veces, case sempre o mesmo tempo, tamén sen o ConPTY ([Subfases › 2.10](subfases/2.10-porta.md)): seguramente unha desas funcións, sen comprobar.
+
+**Por que importa o fío.** O fío que crea o proceso agarda. Se é o da interface, a xanela non debuxa nin atende o rato e o teclado mentres tanto, e o que se escribe agarda na cola das mensaxes ([§22](#22-xanelas-win32-e-o-bucle-de-mensaxes)).
+
+| Programa | Onde crea os procesos | Que fai mentres tanto |
+|---|---|---|
+| O Windows Terminal v1.25.3131.0 | No fío da interface: [`ConptyConnection::Start`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalConnection/ConptyConnection.cpp#L400-L512) crea a pseudoconsola e o programa cando o control da tab xa ten tamaño | A interface agarda. Antes de conectar, a conexión garda o tamaño que recibe e descarta a entrada |
+| Chromium | Nun fío dedicado a lanzar procesos ([`GetProcessLauncherTaskRunner`](https://github.com/chromium/chromium/blob/e0736bcb2fad0b3b201465ce341b763086604ce8/content/browser/child_process_launcher_helper.cc#L565-L588)), coa prioridade *USER_BLOCKING*; o peche do navegador agarda polos lanzamentos que están en marcha (*BLOCK_SHUTDOWN*) | Quen o pediu segue, e recibe o resultado despois; se xa non o quere, Chromium remata o proceso |
+| meiga, desde o mantemento M3 | No fío escritor de cada sesión | A xanela mostra a tab no momento; a entrada e o tamaño agardan na sesión |
+
+**Calcular un valor unha vez.** [`std::sync::OnceLock`](https://doc.rust-lang.org/std/sync/struct.OnceLock.html) garda un valor que se calcula a primeira vez que alguén o pide (`get_or_init`): se varios fíos o piden á vez, só un o calcula, e os outros agardan por el e reciben o mesmo.
+
+**O nome dun fío.** [`SetThreadDescription`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription) ponlle nome a un fío, desde el mesmo ou desde outro, e `GetThreadDescription` léo: veno os depuradores, os perfís de Windows e as ferramentas que buscan un fío polo seu nome. [`std::thread::Builder::name`](https://doc.rust-lang.org/std/thread/struct.Builder.html#method.name) dálle o nome dentro do propio fío, cando arranca ([§32](#32-procesos-tubaxes-e-eventos)): un nome que outro fío lle dese antes desaparece.
+
+**Pechar mentres o programa se conecta.** Un programa de consola non se conecta á súa consola no momento no que Windows o crea, senón un intre despois, ao arrancar, unhas decenas de milisegundos, antes de executar código seu. E o ConPTY non empeza a falar co terminal ata que se lle conecta o primeiro programa: mentres atende a súa conexión, antes de responderlle, escribe `ESC [ c`, `ESC [ ? 1004 h` e `ESC [ ? 9001 h` ([`ConsoleHandleConnectionRequest`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/server/IoDispatchers.cpp#L405-L544) e [`VtIo::StartIfNeeded`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/host/VtIo.cpp#L154-L243)), e despois respóndelle sen agardar a que o terminal o lea. Pechar a pseudoconsola, ou romper a tubaxe da entrada, envíalles `CTRL_CLOSE_EVENT` aos programas da consola, só unha vez ([`VtIo::SendCloseEvent`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/host/VtIo.cpp#L300-L322)); e un programa que aínda se está a conectar non reacciona a el, coma di un comentario do propio `StartIfNeeded`, tamén despois desa secuencia. Un terminal que crea o programa fóra do fío da interface pinta antes, e pode pechar a tab nese intre: o programa seguiría nunha consola que ninguén le. Coa máquina ocupada, ese intre é máis longo: agardar a secuencia para pechar non abonda.
+
+**En meiga** ([ADR 0028](adr/0028-as-sesions-fora-do-fio-da-xanela.md)):
+
+| Regra | Por que |
+|---|---|
+| O fío que abre a sesión só fai o que non agarda por outros procesos: as comprobacións, os eventos, o *job*, as tubaxes e os dous fíos | A xanela nunca agarda por Windows ao abrir, duplicar ou reiniciar unha tab, nin ao arrancar |
+| O escritor crea a pseudoconsola, coa última grella que recibiu a sesión, e o programa nela, e despois envía a entrada coma sempre | Sen fíos novos; e a pseudoconsola créase e péchase no mesmo fío |
+| O que se escribe mentres tanto gárdao a sesión, e o tamaño tamén | Ata o M3 agardaba na cola da xanela: non se perde nada |
+| Se non pode crealos, o escritor apunta por que, e o lector dío cando se pecha a saída (`Output::failed`) | Os métodos do `Output` corren no lector, un detrás doutro, e o fallo vai despois do que xa escribise o ConPTY |
+| O ConPTY que está ao lado do executábel cárgao unha vez o primeiro escritor que o precisa, nun `OnceLock` | A carga ía no fío da xanela antes do primeiro fotograma, e mirar os arquivos en cada tab non serve de nada |
+| O escritor dálles aos dous fíos o número do programa en canto o crea, baixo o *lock* da sesión; e o lector póñeo el mesmo ao arrancar, se xa o hai | A biblioteca estándar pon o nome dun fío cando arranca, e borraría o que lle dese antes o escritor; e as comprobacións atopan o lector dunha tab por ese número |
+| Ao pechar a sesión apúntase se o lector xa viu `ESC [ ? 9001 h` nos primeiros 1024 bytes da saída. Se non, o escritor agarda a que o programa se conecte, ou remate, ou remate o ConPTY, como moito 1 s, sen pechar a pseudoconsola nin soltar a tubaxe da entrada; e se se conecta, remata os programas do *job* e despois pecha a pseudoconsola, xa sen eles | O ConPTY perde un peche que chega mentres se lle conecta o primeiro programa, tamén xusto despois da secuencia, e a sesión bloquearíase ata que o escritor a rematase, 10 s despois; normalmente, o programa aínda non executou nada seu, e rematalo non perde nada, pero se o lector ve tarde a secuencia, o programa pode ter empezado, e remata igual. Case sempre o programa conectouse moito antes, e pechar é coma sempre. Un programa que non se conecta, coma un con xanela propia, recibe o peche ao segundo, e segue |
+
+O código explícase en [Código › meiga-win › `conpty.rs`](codigo/meiga-win.md#cratesmeiga-winsrcconptyrs) e en [Código › meiga › `session.rs`](codigo/meiga.md#cratesmeigasrcsessionrs).
+
+## 64. A cobertura e os mutantes
+
+**A cobertura** di que partes do código executan as probas: as liñas, as funcións e as rexións, cada anaco que corre de seguido, coma unha rama dun `if`. Non di se as probas comproban o que fai ese código, só que o executaron: unha liña que corre nunha proba sen ningunha comprobación sobre ela conta coma cuberta.
+
+**A cobertura de Rust.** Con `-C instrument-coverage`, o compilador mete un contador en cada rexión e garda no executábel o mapa das rexións no código ([*Instrumentation-based Code Coverage*](https://doc.rust-lang.org/rustc/instrument-coverage.html)). Cando o programa remata, escribe os contadores nun arquivo `.profraw`, onde di a variábel `LLVM_PROFILE_FILE` (`%p` é o número do proceso, e `%m`, a sinatura do executábel). Un proceso que se remata desde fóra, con `TerminateProcess`, non o escribe. As ferramentas de LLVM, `llvm-profdata` e `llvm-cov`, do compoñente `llvm-tools` de rustup, xuntan os arquivos e fan o informe.
+
+**[`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov)** (0.9.1, Apache-2.0 ou MIT) fai todo isto con Cargo: compila o *workspace* coa instrumentación nun cartafol propio, corre as probas e fai o informe, en texto, HTML, `lcov` ou JSON.
+
+- Desde a 0.7, só instrumenta os *crates* do *workspace*, cun envoltorio de `rustc` (`RUSTC_WRAPPER`), e non con `RUSTFLAGS` ([#471](https://github.com/taiki-e/cargo-llvm-cov/pull/471)): os *flags* de `.cargo/config.toml`, coma `+crt-static`, seguen valendo.
+- `show-env` dá as variábeis para compilar e correr outros programas coa instrumentación, coma `meiga.exe` nas comprobacións con xanela, e `report` fai despois o informe con todos os `.profraw`. Con `CARGO_TARGET_DIR`, todo vai a outro cartafol.
+
+**Os mutantes.** Unha proba de mutación cambia o código a propósito, un pouco de cada vez, e mira se algunha proba falla. Se ningunha falla, o cambio, o **mutante**, sobrevive: as probas non distinguen ese erro do código bo. **[`cargo-mutants`](https://mutants.rs/)** (27.1.0, MIT) xéraos: cambia o corpo dunha función polo valor por defecto do que devolve (`()`, `Ok(())`, `None`, `Default::default()`…), cambia operadores (`==` por `!=`, `&&` por `||`…) e borra `!`; e compila e proba cada un nunha copia do código. Cada mutante dá *caught*, se algunha proba falla; *missed*, se ningunha falla; *unviable*, se non compila; ou *timeout*, se as probas non rematan ([*Using the results*](https://mutants.rs/using-results.html)). Con `--in-diff`, só cambia as liñas dun *diff*. Desde a 1.2, meiga proba tamén as súas comprobacións con xanela con copias estragadas a man, que cada comprobación ten que fallar no seu paso.
+
+**En meiga**, desde o mantemento M3:
+
+| Regra | Por que |
+|---|---|
+| Cada subfase leva probas de todo o que engade ou cambia, tamén dos casos raros e dos erros; e cada erro que se atopa, unha proba que falla sen o arranxo | Que as probas collan os erros antes ca ninguén |
+| A cobertura das liñas que cambian mídese coas probas e coas comprobacións con xanela, cunha compilación instrumentada en *release* | Moito do programa só corre cunha xanela, e as comprobacións necesitan o subsistema gráfico, que só ten a compilación *release* |
+| `cargo mutants --in-diff` co *diff* de cada subfase, e copias estragadas a man para o que só ven as comprobacións | Que as probas distingan os erros, e non só que executen o código |
+| Na CI, un job non obrigatorio, *Coverage (Windows)*, corre as probas coa cobertura e garda o informe | Ver a cobertura de cada PR sen compilar nada; as comprobacións con xanela necesitarían outra compilación, e quedan para a medición en local |
+
+O job explícase en [Código › GitHub](codigo/github.md#job-coverage).
