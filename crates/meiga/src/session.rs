@@ -275,12 +275,13 @@ impl Wake for Waker {
 /// identifier of the tab of the session, `tab`.
 ///
 /// It returns at once: the writer thread of the session creates the
-/// pseudoconsole and the program, in the ConPTY next to meiga, which the
-/// first writer loads (ADR 0028). If the program cannot start, the reader
-/// tells it, as the end of a program, and the terminal shows why: which
-/// program, in which folder, and why. Only when the session itself cannot
-/// start, for example because Windows cannot give it its threads, it
-/// returns that, which the terminal shows with [`Shared::not_started`].
+/// pseudoconsole and the program, in the ConPTY next to meiga or else in
+/// the one of Windows, which the first writer loads (ADR 0028). If the
+/// program cannot start, the reader tells it, as the end of a program, and
+/// the terminal shows why: which program, in which folder, and why. Only
+/// when the session itself cannot start, for example because Windows cannot
+/// give it its threads, it returns that, which the terminal shows with
+/// [`Shared::not_started`].
 pub fn start<W: Wake>(
     launch: &Launch,
     environment: &[u16],

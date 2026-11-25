@@ -346,6 +346,9 @@ fn the_size_given_before_the_program_starts_is_the_one_that_it_gets() {
 fn the_process_of_the_program_is_known_once_it_starts() {
     let (pty, mut transcript) = spawn(&bundled(), "cmd /k");
     transcript.wait_for(">");
+    // The program may write before the writer notes it, right after Windows
+    // creates it.
+    wait_for_program(&pty);
     let id = pty.process_id().expect("the program has started");
     assert_eq!(image_name(id).as_deref(), Some("cmd.exe"));
     drop(pty);
@@ -378,10 +381,19 @@ fn the_conpty_next_to_the_executable_runs_programs() {
 #[test]
 fn a_bundled_conpty_needs_its_two_files_and_its_functions() {
     // In the temporary folder of the target, which cargo gives integration
-    // tests: a library that this process loads stays there until it exits.
-    let folder =
-        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("conpty-files-{}", process::id()));
-    let _ = fs::remove_dir_all(&folder);
+    // tests: a library that this process loads stays there until it exits,
+    // so each run leaves its folder, and removes the ones of earlier runs.
+    let temporary = Path::new(env!("CARGO_TARGET_TMPDIR"));
+    for entry in fs::read_dir(temporary).into_iter().flatten().flatten() {
+        if entry
+            .file_name()
+            .to_string_lossy()
+            .starts_with("conpty-files-")
+        {
+            let _ = fs::remove_dir_all(entry.path());
+        }
+    }
+    let folder = temporary.join(format!("conpty-files-{}", process::id()));
     fs::create_dir_all(&folder).unwrap();
     let error_of = |folder: &Path| match Conpty::bundled(folder) {
         Ok(_) => panic!("{} has a ConPTY", folder.display()),

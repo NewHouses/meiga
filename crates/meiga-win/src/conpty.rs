@@ -319,9 +319,11 @@ impl Choice {
 /// on the writer thread of the session (ADR 0028): what is written to it
 /// meanwhile waits for it, and the size that it is given is the one that it
 /// starts with. If the program cannot start, [`Output::failed`] tells why,
-/// instead of [`Output::ended`]. If the session is closed before the
-/// program starts, the program does not start, and `output` gets
-/// [`Output::ended`], without an exit code.
+/// instead of [`Output::ended`]. If the session is closed before the writer
+/// starts the program, the program does not start, and `output` gets
+/// [`Output::ended`], without an exit code; if it is closed while the
+/// writer starts it, the program starts, and then the session closes as any
+/// other.
 ///
 /// The program runs in a job of the session, as the programs that it
 /// starts, unless they ask to leave it.
@@ -479,9 +481,10 @@ pub enum Priority {
 ///
 /// Dropping it closes the session without waiting. Its writer thread closes
 /// the pseudoconsole, which asks the program to end, and its reader thread
-/// calls [`Output::ended`] after the last output. If the program has not
-/// started yet, it does not start. If the session gets stuck, the writer
-/// ends the programs of its job. Before the process exits,
+/// calls [`Output::ended`] after the last output. If the writer has not
+/// started the program yet, it does not start it; if it is starting it,
+/// the program starts, and then closes as any other. If the session gets
+/// stuck, the writer ends the programs of its job. Before the process exits,
 /// [`wait_for_closed_sessions`] waits for the writers of the sessions that
 /// were closed, also of the ones that were starting.
 pub struct Pty {
@@ -639,7 +642,8 @@ impl Input {
     }
 
     /// Closes the session without waiting: the writer closes the
-    /// pseudoconsole.
+    /// pseudoconsole or, if it has not created it yet, does not create it,
+    /// and if it has not started the program yet, does not start it.
     fn close(&self) {
         self.shared.lock().closing = true;
         self.shared.wake();
@@ -705,8 +709,13 @@ impl Shared {
     /// Notes, on the writer thread, that the program started, and gives the
     /// writer and the reader the number of its process in their names,
     /// which only had the kind of the thread until now: the checks and the
-    /// profiles of Windows find them by it. The names come before the
-    /// program, so whoever sees the program sees them too.
+    /// profiles of Windows find them by it. The names come first, under the
+    /// lock: whoever sees the program through the session, as
+    /// [`Pty::process_id`] does, sees the name of the writer, and the one
+    /// of the reader unless the reader has not started yet: the standard
+    /// library gives it its own name as it starts, and then the reader
+    /// takes the number again ([`read_output`]). Windows shows the process
+    /// of the program earlier, as soon as it is created.
     fn started(&self, process: Process) -> &Process {
         let _state = self.lock();
         name_thread(
@@ -722,9 +731,13 @@ impl Shared {
     }
 
     /// Notes, on the writer thread, why the program could not start: the
-    /// reader tells it, once the output closes.
+    /// reader tells it, once the output closes. The session is finished
+    /// from then on, and takes no more input nor sizes: also if the reader
+    /// tells it before the writer gets to close the pseudoconsole.
     fn fail(&self, error: Error) {
-        self.lock().failure = Some(error);
+        let mut state = self.lock();
+        state.failure = Some(error);
+        state.finished = true;
     }
 
     /// Waits, once the pseudoconsole has closed, for the session to end: for
@@ -1805,8 +1818,18 @@ mod tests {
             .spawn(&Command::new(&line), GridSize::new(80, 25), Teller(sender))
             .unwrap();
         assert_eq!(wait_created(FLAGS).len(), 1);
+        let writer = pty.writer.as_ref().map(|writer| writer.thread().id());
         // The tab closes while the writer creates the pseudoconsole.
         drop(pty);
+        // Its writer goes with the ones of the other sessions that were
+        // closed: before it exits, meiga waits for it too (ADR 0026).
+        assert!(
+            CLOSING
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .iter()
+                .any(|closing| Some(closing.thread().id()) == writer)
+        );
         open(FLAGS);
         // The writer closes the pseudoconsole without a program: ConPTY ends,
         // and the session ends without an exit code.
@@ -1922,7 +1945,16 @@ mod tests {
             Some(r"C:\meiga\no such folder"),
         );
         assert!(create(&shared, creation).is_none());
-        let mut state = shared.lock();
+        // From then on, the session takes no input nor sizes, which no
+        // program would get: also before the writer marks it as finished.
+        let input = Input {
+            shared: Arc::new(shared),
+        };
+        input.write(b"ola");
+        input.resize(GridSize::new(90, 28)).unwrap();
+        let mut state = input.shared.lock();
+        assert!(state.finished && state.input.is_empty());
+        assert_eq!((state.size.X, state.size.Y), (80, 25));
         let failure = state.failure.take().expect("the writer notes why");
         // ERROR_DIRECTORY.
         assert_eq!(
@@ -1932,7 +1964,7 @@ mod tests {
         );
         // The writer closes it: it is there, without a program.
         assert!(state.console.is_some());
-        assert!(shared.process.get().is_none());
+        assert!(input.shared.process.get().is_none());
     }
 
     #[test]

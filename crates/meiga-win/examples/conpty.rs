@@ -68,6 +68,8 @@ impl Output for Printer {
                 "{ms:>9.1} ms  The session ended without an exit code: the program is still running, or never started."
             ),
         }
+        // The exit code of a process is the u32 that Windows keeps: the one
+        // of an example is its bits as an i32.
         self.finish(exit_code.map_or(1, |code| code as i32));
     }
 
@@ -93,9 +95,8 @@ impl Printer {
                 Err(error) => eprintln!("Could not write to {}: {error}", path.display()),
             }
         }
-        // The exit code of a process is the u32 that Windows keeps. If the
-        // session was closed, its writer may still be ending it: the output
-        // has closed, so it does not wait for this thread.
+        // If the session was closed, its writer may still be ending it: the
+        // output has closed, so it does not wait for this thread.
         conpty::wait_for_closed_sessions();
         std::process::exit(code);
     }
