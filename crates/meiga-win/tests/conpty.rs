@@ -931,10 +931,10 @@ fn exiter() {
     meiga_win::conpty::wait_for_closed_sessions();
     let waited = closing.elapsed();
     // The writer ends the programs of a session closed before its program
-    // connected once it connects, and then waits for them to end. If this
-    // thread fell behind, the program could connect before the close, which
-    // ConPTY then could lose: its writer ends its job 10 s later, and
-    // TerminateJobObject does not wait for the programs to end.
+    // connected once the reader sees it connect, and then waits for them to
+    // end. If this thread fell behind, the program could connect before the
+    // close, which ConPTY then could lose: its writer ends its job 10 s
+    // later, and TerminateJobObject does not wait for the programs to end.
     // SAFETY: the handle is valid while `program` exists; a program takes
     // much less than 5 s to end.
     let ends_within = |ms| unsafe { WaitForSingleObject(program.as_raw_handle(), ms) };
