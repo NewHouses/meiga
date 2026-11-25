@@ -985,6 +985,9 @@ function Assert-LowerReader([string]$What) {
                 if ($null -eq $named) { $named = [Diagnostics.Stopwatch]::StartNew() }
                 elseif ($named.Elapsed.TotalMilliseconds -ge 3) { break }
             }
+            elseif ([DateTime]::UtcNow -gt $deadline) {
+                throw "$What did not start its program: the reader thread of its session still had no number after $TimeoutSeconds s."
+            }
         }
         elseif ([DateTime]::UtcNow -gt $deadline) {
             throw "$What did not start a program: $exe has no reader thread after $TimeoutSeconds s."
