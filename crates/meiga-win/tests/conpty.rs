@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use meiga_core::geometry::GridSize;
 use meiga_win::conpty::{self, Command, Conpty, Input, Output, Priority, Pty, Source};
 use meiga_win::{Error, profiles};
-use windows_sys::Win32::Foundation::TRUE;
+use windows_sys::Win32::Foundation::{TRUE, WAIT_OBJECT_0};
 use windows_sys::Win32::System::Console::{CTRL_CLOSE_EVENT, SetConsoleCtrlHandler};
 use windows_sys::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
@@ -32,8 +32,8 @@ use windows_sys::Win32::System::JobObjects::{
 };
 use windows_sys::Win32::System::Threading::{
     GetCurrentThread, GetThreadPriority, OpenProcess, PROCESS_NAME_WIN32,
-    PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW, THREAD_PRIORITY_BELOW_NORMAL,
-    THREAD_PRIORITY_NORMAL,
+    PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, QueryFullProcessImageNameW,
+    THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_NORMAL, WaitForSingleObject,
 };
 use windows_sys::core::BOOL;
 
@@ -743,11 +743,12 @@ fn a_session_whose_programs_keep_ending_is_not_ended_by_the_writer() {
 
 #[test]
 fn the_sessions_that_were_closed_end_before_the_process_exits() {
-    // Another process closes a session that gets stuck, another one, and two
-    // that are starting, waits for them, and exits. The job of the test
-    // counts its programs, and those of its sessions, which are in it too:
-    // it ends the ones left only when it is dropped, after the test has
-    // counted them.
+    // Another process closes two sessions that are starting, waits for them,
+    // and checks that the program of the one that had started has ended;
+    // then it closes a session that gets stuck and another one, waits for
+    // them, and exits. The job of the test counts its programs, and those of
+    // its sessions, which are in it too: it ends the ones left only when it
+    // is dropped, after the test has counted them.
     let job = Job::new();
     let mut exiter = process::Command::new(env::current_exe().unwrap())
         .args(HELPER_ARGUMENTS)
@@ -908,33 +909,53 @@ unsafe extern "system" fn wait_on_close(event: u32) -> BOOL {
     TRUE
 }
 
-/// A process that closes a session that gets stuck, one that ends at once,
-/// and two that are starting, waits for them, tells how long it waited, and
-/// exits.
+/// A process that closes two sessions that are starting, waits for them,
+/// and checks that the program of the one that had started has ended:
+/// without the wait for its writer, it would still be closing (ADR 0026 and
+/// ADR 0028). Then it closes a session that gets stuck and one that ends at
+/// once, waits for them, tells how long it waited, and exits.
 fn exiter() {
     // The test says go once this process is in its job.
     let mut go = String::new();
     io::stdin().read_line(&mut go).unwrap();
     let conpty = bundled();
+    // The program of one has just started, and connects to its console; the
+    // writer of the other one may not even have created its pseudoconsole.
+    let (starting, _) = spawn(&conpty, "cmd /k");
+    wait_for_program(&starting);
+    let program = open_to_wait(starting.process_id().unwrap());
+    let (unborn, _) = spawn(&conpty, "cmd /k");
+    drop(starting);
+    drop(unborn);
+    meiga_win::conpty::wait_for_closed_sessions();
+    // SAFETY: the handle is valid while `program` exists; 0 ms: it only
+    // looks.
+    let ended = unsafe { WaitForSingleObject(program.as_raw_handle(), 0) } == WAIT_OBJECT_0;
+    assert!(
+        ended,
+        "the program of a session closed as it started was still running once the wait ended"
+    );
     let (stuck, mut transcript) = spawn_helper(&conpty, "closer");
     transcript.wait_for("closer-ready");
     let (quick, mut transcript) = spawn(&conpty, "cmd /k");
     transcript.wait_for(">");
-    // The program of one has just started, and connects to its console; the
-    // writer of the other one may not even have created its pseudoconsole.
-    // The process waits for both, as for the others (ADR 0026 and ADR 0028).
-    let (starting, _) = spawn(&conpty, "cmd /k");
-    wait_for_program(&starting);
-    let (unborn, _) = spawn(&conpty, "cmd /k");
     let closing = Instant::now();
     // The writer of the quick one comes after the one of the stuck one,
     // which has to stay while it runs.
     drop(stuck);
     drop(quick);
-    drop(starting);
-    drop(unborn);
     meiga_win::conpty::wait_for_closed_sessions();
     println!("waited {} ms", closing.elapsed().as_millis());
+}
+
+/// A handle to wait for the end of the process `id`.
+fn open_to_wait(id: u32) -> OwnedHandle {
+    // SAFETY: it asks only for the right to wait for it, and does not let
+    // new processes inherit the handle. It returns null if it fails.
+    let handle = unsafe { OpenProcess(PROCESS_SYNCHRONIZE, 0, id) };
+    assert!(!handle.is_null(), "{}", io::Error::last_os_error());
+    // SAFETY: OpenProcess has just opened it, and nothing else owns it.
+    unsafe { OwnedHandle::from_raw_handle(handle) }
 }
 
 /// The lines that `reader` reads, on another thread.
