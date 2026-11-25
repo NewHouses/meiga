@@ -505,9 +505,11 @@ pub enum Priority {
 /// the pseudoconsole, which asks the program to end, and its reader thread
 /// calls [`Output::ended`] after the last output. If the writer has not
 /// started the program yet, it does not start it; if it is starting it, the
-/// program starts, and the writer ends it as soon as it connects to the
-/// pseudoconsole, before it runs any code of its own. If the session gets
-/// stuck, the writer ends the programs of its job. Before the process exits,
+/// program starts, and the writer ends it as soon as the reader sees it
+/// connect to the pseudoconsole: usually before it runs any code of its own,
+/// but it may have started if the reader is late, and it ends with exit
+/// code 1 all the same. If the session gets stuck, the writer ends the
+/// programs of its job. Before the process exits,
 /// [`wait_for_closed_sessions`] waits for the writers of the sessions that
 /// were closed, also of the ones that were starting.
 pub struct Pty {
@@ -922,7 +924,7 @@ struct State {
     /// pseudoconsole.
     connected: bool,
     /// The session was closed before the reader saw [`CONNECTED`]: the
-    /// writer ends the programs of the session once the program connects.
+    /// writer ends the programs of the session once the reader sees it.
     closed_early: bool,
     /// The writer has closed the pseudoconsole, or the program did not
     /// start: input is no longer sent.
@@ -975,9 +977,12 @@ fn write_input(shared: &Shared, pipe: OwnedHandle, creation: Creation) {
         // program of the console connects as Windows starts it, before it
         // runs any code of its own, so the writer waits for it to connect,
         // and ends the programs of the session instead, as if it had never
-        // started them (ADR 0028). Then the pseudoconsole closes without
-        // programs. One that does not connect in time, as one with a
-        // window of its own, gets the close, and goes on.
+        // started them (ADR 0028). ConPTY answers the program without
+        // waiting for the reader, though: if the reader sees the connection
+        // late, the program may have started, and it ends all the same.
+        // Then the pseudoconsole closes without programs. One that does not
+        // connect in time, as one with a window of its own, gets the close,
+        // and goes on.
         let closed_early = shared.lock().closed_early;
         if closed_early && shared.wait_until_connected(process) {
             shared.terminate();
@@ -2540,7 +2545,9 @@ mod tests {
             .unwrap();
         // ConPTY has written CONNECTED as it handles the connection of cmd,
         // and the reader has not noted it yet: the session is closed before
-        // its program connects, as a tab that closes as it opens.
+        // its program connects, as a tab that closes as it opens. ConPTY
+        // has answered cmd, which runs meanwhile, as with a reader that is
+        // late: the writer ends it all the same.
         held.recv_timeout(Duration::from_secs(30))
             .expect("ConPTY did not write CONNECTED");
         drop(pty);
