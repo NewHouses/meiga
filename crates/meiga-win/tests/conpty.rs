@@ -911,7 +911,7 @@ unsafe extern "system" fn wait_on_close(event: u32) -> BOOL {
 
 /// A process that closes two sessions that are starting, waits for them,
 /// and checks that the program of the one that had started has ended:
-/// without the wait for its writer, it would still be closing (ADR 0026 and
+/// without the wait for its writer, it would still be starting (ADR 0026 and
 /// ADR 0028). Then it closes a session that gets stuck and one that ends at
 /// once, waits for them, tells how long it waited, and exits.
 fn exiter() {
@@ -925,15 +925,25 @@ fn exiter() {
     wait_for_program(&starting);
     let program = open_to_wait(starting.process_id().unwrap());
     let (unborn, _) = spawn(&conpty, "cmd /k");
+    let closing = Instant::now();
     drop(starting);
     drop(unborn);
     meiga_win::conpty::wait_for_closed_sessions();
-    // SAFETY: the handle is valid while `program` exists; 0 ms: it only
-    // looks.
-    let ended = unsafe { WaitForSingleObject(program.as_raw_handle(), 0) } == WAIT_OBJECT_0;
+    let waited = closing.elapsed();
+    // The writer ends the programs of a session closed before its program
+    // connected once it connects, and then waits for them to end. If this
+    // thread fell behind, the program could connect before the close, which
+    // ConPTY then could lose: its writer ends its job 10 s later, and
+    // TerminateJobObject does not wait for the programs to end.
+    // SAFETY: the handle is valid while `program` exists; a program takes
+    // much less than 5 s to end.
+    let ends_within = |ms| unsafe { WaitForSingleObject(program.as_raw_handle(), ms) };
+    let ended = ends_within(0) == WAIT_OBJECT_0
+        || (waited >= Duration::from_secs(10) && ends_within(5_000) == WAIT_OBJECT_0);
     assert!(
         ended,
-        "the program of a session closed as it started was still running once the wait ended"
+        "the program of a session closed as it started was still running once the wait ended, \
+         {waited:?} after the close"
     );
     let (stuck, mut transcript) = spawn_helper(&conpty, "closer");
     transcript.wait_for("closer-ready");
