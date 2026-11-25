@@ -14,6 +14,13 @@ sets its title, and checks that:
   the X button of the title bar;
 - then cmd and its console host end too.
 
+Then it starts meiga.exe again, with the default shell of its default
+profile, and closes its window as soon as it is painted, while the program
+of its tab starts and connects to its console: meiga ends with exit code 0
+within a few seconds, and leaves nothing of its tab. If ConPTY got the close
+while the program connected, it would lose it, the session would get stuck,
+and meiga would wait for it at least 10 s (ADR 0026 and ADR 0028).
+
 If a check fails, the script ends meiga.exe, so that it never stays open.
 
 .PARAMETER Path
@@ -189,6 +196,64 @@ try {
         Start-Sleep -Milliseconds 100
     }
     Write-Host "OK: then the program in the terminal and its console end too ($($names -join ', '))."
+}
+finally {
+    if (-not $process.HasExited) {
+        $process.Kill()
+    }
+    $process.Dispose()
+    Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# A session that gets stuck ends 10 s after the last of its programs that
+# ended (ADR 0011), and meiga waits for it before it exits (ADR 0026).
+$closeSeconds = 5
+
+# Without a program on its command line, meiga starts the default shell of
+# its default profile, PowerShell 7 if it is installed.
+$null = New-Item -ItemType Directory -Force -Path $appdata
+$info = [Diagnostics.ProcessStartInfo]::new($Path)
+$info.UseShellExecute = $false
+$info.Environment['APPDATA'] = $appdata
+$process = [Diagnostics.Process]::Start($info)
+try {
+    $idle = try { $process.WaitForInputIdle($TimeoutSeconds * 1000) } catch { $false }
+    if (-not $idle) {
+        if ($process.HasExited) {
+            throw "$exe ended with exit code $($process.ExitCode) before it opened its window."
+        }
+        throw "$exe did not open its window within $TimeoutSeconds s."
+    }
+    # At once: the shell of the tab is still starting, or connecting to its
+    # console, which takes some tens of milliseconds more.
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    if (-not $process.CloseMainWindow()) {
+        throw "Could not ask the window of $exe to close."
+    }
+    if (-not $process.WaitForExit($closeSeconds * 1000)) {
+        throw "$exe was still running $closeSeconds s after its window closed, as soon as it was painted: did the session of its tab get stuck?"
+    }
+    $seconds = $clock.Elapsed.TotalSeconds.ToString('0.0', [cultureinfo]::InvariantCulture)
+    if ($process.ExitCode -ne 0) {
+        throw "$exe ended with exit code $($process.ExitCode) instead of 0, $seconds s after its window closed, as soon as it was painted."
+    }
+    # meiga waits for its sessions to end before it exits: the shell of the
+    # tab and its console host, if they started, have ended. They are gone
+    # from the processes a moment later.
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.CreationDate -ge $process.StartTime })
+    $deadline = [DateTime]::UtcNow.AddSeconds(2)
+    while ($true) {
+        $alive = @($children | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction Ignore })
+        if ($alive.Count -eq 0) {
+            break
+        }
+        if ([DateTime]::UtcNow -gt $deadline) {
+            throw "$(($alive | ForEach-Object Name) -join ' and ') still running 2 s after meiga.exe ended, $seconds s after its window closed, as soon as it was painted."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    Write-Host "OK: closed as soon as it is painted, while the shell of its tab starts, it ends with exit code 0 $seconds s later, and leaves nothing of its tab."
 }
 finally {
     if (-not $process.HasExited) {

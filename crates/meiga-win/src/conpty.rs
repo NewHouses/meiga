@@ -80,6 +80,25 @@ const GLYPH_WIDTH_WCSWIDTH: u32 = 0x10;
 /// of the pipe.
 const READ_SIZE: u32 = 64 * 1024;
 
+/// What ConPTY writes once the first program connects to the pseudoconsole:
+/// it starts to talk to the terminal then, and turns the win32-input-mode
+/// on, the bundled ConPTY and the one of Windows alike. It is the only sign
+/// that the program has connected.
+const CONNECTED: &[u8] = b"\x1b[?9001h";
+
+/// How long the writer waits, at most, for the program of a session that is
+/// closed before it has connected to the pseudoconsole to connect, before
+/// it closes the pseudoconsole (ADR 0028). A program connects some tens of
+/// milliseconds after Windows creates it; one that never does, as one with
+/// a window of its own, only makes the close of its session wait this long.
+const CONNECT_TIMEOUT_MS: u32 = 1_000;
+
+/// How many bytes of the output the reader looks through for [`CONNECTED`],
+/// which ConPTY writes among its first ones. A ConPTY that does not write
+/// it costs the reader no more than this, and each close of a session
+/// [`CONNECT_TIMEOUT_MS`].
+const CONNECT_SCAN: usize = 1024;
+
 /// How long the writer waits, once it has closed the pseudoconsole, for one
 /// more of the programs that the session had to end, from the last one that
 /// ended. Windows asks the programs of a console to end one at a time, and
@@ -354,12 +373,14 @@ fn spawn_in<O: Output>(
         .transpose()?;
     let wake = event(false)?;
     let output_closed = event(true)?;
+    let connected = event(true)?;
     let job = job()?;
     let (input_read, input_write) = pipe(0)?;
     let (output_read, output_write) = pipe(READ_SIZE)?;
     let shared = Arc::new(Shared {
         event: wake,
         output_closed,
+        connected,
         process: OnceLock::new(),
         reader: OnceLock::new(),
         job,
@@ -658,6 +679,9 @@ struct Shared {
     /// A manual-reset event that the reader sets when the output closes:
     /// ConPTY has ended.
     output_closed: OwnedHandle,
+    /// A manual-reset event that the reader sets when ConPTY writes
+    /// [`CONNECTED`]: the program has connected to the pseudoconsole.
+    connected: OwnedHandle,
     /// The program, once the writer has started it.
     process: OnceLock<Process>,
     /// The reader thread, whose priority can change, from the moment that
@@ -692,6 +716,31 @@ impl Shared {
     fn close_output(&self) {
         // SAFETY: the event is valid while `self` exists.
         unsafe { SetEvent(self.output_closed.as_raw_handle()) };
+    }
+
+    /// Tells the writer that the program has connected to the
+    /// pseudoconsole.
+    fn note_connection(&self) {
+        // SAFETY: the event is valid while `self` exists.
+        unsafe { SetEvent(self.connected.as_raw_handle()) };
+    }
+
+    /// Waits, once the session is closed, until `process`, the program, has
+    /// connected to the pseudoconsole, has ended, or ConPTY has ended, or
+    /// for [`CONNECT_TIMEOUT_MS`] at most. Usually the program connected
+    /// long before, and it returns at once. ConPTY loses the close if it
+    /// comes while the first program connects: the program goes on in a
+    /// console that nobody reads, and the session would end only when the
+    /// writer ends its programs (ADR 0028). The writer keeps the input pipe
+    /// open meanwhile: ConPTY takes it breaking as the close too.
+    fn wait_until_connected(&self, process: &Process) {
+        let handles = [
+            self.connected.as_raw_handle(),
+            process.handle.as_raw_handle(),
+            self.output_closed.as_raw_handle(),
+        ];
+        // SAFETY: the handles are valid while `self` and `process` exist.
+        unsafe { WaitForMultipleObjects(3, handles.as_ptr(), FALSE, CONNECT_TIMEOUT_MS) };
     }
 
     /// Keeps the reader thread, which the thread that started the session
@@ -893,14 +942,16 @@ impl Drop for PseudoConsole {
 
 /// The writer thread: creates the pseudoconsole and starts the program in
 /// it, sends the input to the program, closes the pseudoconsole when the
-/// program ends or the session is closed, and makes sure that the session
-/// ends. Creating them here, and not on the thread that starts the session,
-/// means that the thread of the window never waits for Windows to create a
-/// process, which sometimes takes some hundreds of milliseconds (ADR 0028).
+/// program ends or the session is closed, once the program has connected to
+/// it, and makes sure that the session ends. Creating them here, and not on
+/// the thread that starts the session, means that the thread of the window
+/// never waits for Windows to create a process, which sometimes takes some
+/// hundreds of milliseconds (ADR 0028).
 fn write_input(shared: &Shared, pipe: OwnedHandle, creation: Creation) {
     let process = create(shared, creation);
     if let Some(process) = process {
         send_input(shared, process, &pipe);
+        shared.wait_until_connected(process);
     }
     let console = {
         let mut state = shared.lock();
@@ -1069,6 +1120,49 @@ fn write_all(pipe: &OwnedHandle, mut bytes: &[u8]) -> bool {
     true
 }
 
+/// Looks for [`CONNECTED`] among the first [`CONNECT_SCAN`] bytes of the
+/// output of a session, also when it comes split across reads.
+#[derive(Default)]
+struct ConnectionWatch {
+    /// How many of the last bytes of the output are the first ones of
+    /// [`CONNECTED`].
+    matched: usize,
+    /// How many bytes of the output it has looked at.
+    seen: usize,
+    /// Whether it has stopped looking: it found [`CONNECTED`], or the
+    /// output went past [`CONNECT_SCAN`] without it.
+    done: bool,
+}
+
+impl ConnectionWatch {
+    /// Whether `bytes`, the next ones of the output, complete
+    /// [`CONNECTED`]: once at most.
+    fn completed_by(&mut self, bytes: &[u8]) -> bool {
+        if self.done {
+            return false;
+        }
+        for &byte in bytes {
+            if self.seen == CONNECT_SCAN {
+                self.done = true;
+                return false;
+            }
+            self.seen += 1;
+            if CONNECTED.get(self.matched) == Some(&byte) {
+                self.matched += 1;
+                if self.matched == CONNECTED.len() {
+                    self.done = true;
+                    return true;
+                }
+            } else {
+                // ESC is only the first byte of CONNECTED: a byte that breaks
+                // the match can only start it again.
+                self.matched = usize::from(CONNECTED.first() == Some(&byte));
+            }
+        }
+        false
+    }
+}
+
 /// The reader thread: gives what the program shows to `output`, until
 /// ConPTY ends and closes its end of the output pipe, or until the writer
 /// closes its own end, if it did not create the pseudoconsole. Then it tells
@@ -1091,6 +1185,7 @@ fn read_output<O: Output>(pipe: OwnedHandle, shared: Arc<Shared>, mut output: O)
     }
     let input = Input { shared };
     let mut buffer = vec![0; READ_SIZE as usize];
+    let mut connection = ConnectionWatch::default();
     loop {
         let mut read = 0;
         // SAFETY: the buffer has READ_SIZE bytes, and the pipe is
@@ -1115,6 +1210,11 @@ fn read_output<O: Output>(pipe: OwnedHandle, shared: Arc<Shared>, mut output: O)
             .filter(|bytes| !bytes.is_empty())
         {
             output.received(bytes, &input);
+            // After `output` has them: a session closed meanwhile closes
+            // after its output has seen the program connect.
+            if connection.completed_by(bytes) {
+                input.shared.note_connection();
+            }
         }
     }
     drop(pipe);
@@ -1737,6 +1837,7 @@ mod tests {
         let shared = Shared {
             event: event(false).unwrap(),
             output_closed: event(true).unwrap(),
+            connected: event(true).unwrap(),
             process: OnceLock::new(),
             reader: OnceLock::new(),
             job: job().unwrap(),
@@ -2185,5 +2286,218 @@ mod tests {
         assert!(ptr::eq(first, second));
         // The tests have no conpty.dll next to them.
         assert_eq!(first.source(), &Source::System);
+    }
+
+    // The close of a session whose program has not connected to its
+    // pseudoconsole yet waits until it has (ADR 0028).
+
+    /// What the bundled ConPTY writes as its first program connects: it asks
+    /// for the size of the window first, a moment before.
+    const PREAMBLE: &[u8] = b"\x1b[1t\x1b[c\x1b[?1004h\x1b[?9001h";
+
+    #[test]
+    fn the_connection_is_seen_wherever_the_output_is_split() {
+        let output = [PREAMBLE, b"\x1b[?25lola"].concat();
+        let end = PREAMBLE.len();
+        for first in 0..=output.len() {
+            for second in first..=output.len() {
+                let mut watch = ConnectionWatch::default();
+                let completed = [&output[..first], &output[first..second], &output[second..]]
+                    .map(|read| watch.completed_by(read));
+                // Only the read with the last byte of CONNECTED completes it.
+                let expected = [end <= first, first < end && end <= second, second < end];
+                assert_eq!(completed, expected, "reads split at {first} and {second}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_byte_that_breaks_the_connection_can_only_start_it_again() {
+        let completes = |output: &[u8]| ConnectionWatch::default().completed_by(output);
+        // An ESC starts it again.
+        assert!(completes(b"\x1b[?90\x1b[?9001h"));
+        assert!(completes(b"\x1b\x1b[?9001h"));
+        assert!(completes(b"\x1b[?9001\x1b[?9001h"));
+        // Any other byte does not, and what it broke does not count.
+        assert!(!completes(b"\x1b[?90x01h"));
+        assert!(!completes(b"\x1b[?9001l"));
+        assert!(!completes(b"\x1b[?1004h"));
+        assert!(!completes(b"[?9001h"));
+        assert!(!completes(b"\x1b[?9001"));
+    }
+
+    #[test]
+    fn the_connection_is_seen_once() {
+        let mut watch = ConnectionWatch::default();
+        assert!(watch.completed_by(PREAMBLE));
+        assert!(!watch.completed_by(CONNECTED));
+        assert!(!watch.completed_by(PREAMBLE));
+    }
+
+    #[test]
+    fn the_connection_is_looked_for_only_at_the_start_of_the_output() {
+        // CONNECTED after `blanks` other bytes, in two reads.
+        let seen_after = |blanks: usize| {
+            let output = [vec![b' '; blanks], CONNECTED.to_vec()].concat();
+            let (first, second) = output.split_at(blanks / 2);
+            let mut watch = ConnectionWatch::default();
+            [first, second]
+                .map(|read| watch.completed_by(read))
+                .contains(&true)
+        };
+        assert!(seen_after(0));
+        assert!(seen_after(CONNECT_SCAN - CONNECTED.len()));
+        assert!(!seen_after(CONNECT_SCAN - CONNECTED.len() + 1));
+        // Once it stops looking, it does not look again.
+        let mut watch = ConnectionWatch::default();
+        assert!(!watch.completed_by(&[b' '; CONNECT_SCAN]));
+        assert!(!watch.completed_by(CONNECTED));
+    }
+
+    #[test]
+    fn a_closed_session_waits_for_its_program_to_connect_but_not_for_ever() {
+        // A program that runs: an event that nobody sets.
+        let running = || Process {
+            handle: event(true).unwrap(),
+            id: 4545,
+        };
+        let waited = |shared: &Shared, process: &Process| {
+            let started = Instant::now();
+            shared.wait_until_connected(process);
+            started.elapsed()
+        };
+        let at_once = Duration::from_millis(500);
+        // Once the program has connected, or has ended, or ConPTY has
+        // ended, the writer closes the pseudoconsole at once.
+        let (connected, ..) = session(Conpty::system(), "cmd /c exit", None);
+        connected.note_connection();
+        assert!(waited(&connected, &running()) < at_once);
+        let (shared, ..) = session(Conpty::system(), "cmd /c exit", None);
+        let ended = running();
+        // SAFETY: the event is valid.
+        unsafe { SetEvent(ended.handle.as_raw_handle()) };
+        assert!(waited(&shared, &ended) < at_once);
+        let (closed, ..) = session(Conpty::system(), "cmd /c exit", None);
+        closed.close_output();
+        assert!(waited(&closed, &running()) < at_once);
+        // Otherwise, for about a second, as decided (ADR 0028).
+        let (shared, ..) = session(Conpty::system(), "cmd /c exit", None);
+        let waited = waited(&shared, &running());
+        assert!(
+            waited > Duration::from_millis(900) && waited < Duration::from_secs(3),
+            "{waited:?}"
+        );
+    }
+
+    /// When [`noted_close`] closed each pseudoconsole.
+    static CLOSED_AT: Mutex<Vec<Instant>> = Mutex::new(Vec::new());
+
+    /// Notes when it closes a pseudoconsole of Windows, and closes it.
+    extern "system" fn noted_close(console: HPCON) {
+        CLOSED_AT
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(Instant::now());
+        // SAFETY: `gated_create` created it with the function of Windows.
+        unsafe { ClosePseudoConsole(console) };
+    }
+
+    /// Tells what a session shows and how it ends, as [`Teller`], and notes
+    /// when the output first has CONNECTED, as soon as it gets it.
+    struct Stamper {
+        told: mpsc::Sender<Told>,
+        shown: Vec<u8>,
+        connected: Arc<Mutex<Option<Instant>>>,
+    }
+
+    impl Output for Stamper {
+        fn received(&mut self, bytes: &[u8], _input: &Input) {
+            self.shown.extend_from_slice(bytes);
+            let mut connected = self
+                .connected
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            if connected.is_none()
+                && self
+                    .shown
+                    .windows(CONNECTED.len())
+                    .any(|shown| shown == CONNECTED)
+            {
+                *connected = Some(Instant::now());
+            }
+            drop(connected);
+            let _ = self.told.send(Told::Received(bytes.to_vec()));
+        }
+
+        fn ended(&mut self, exit_code: Option<u32>) {
+            let _ = self.told.send(Told::Ended(exit_code));
+        }
+
+        fn failed(&mut self, error: Error) {
+            let _ = self.told.send(Told::Failed(error));
+        }
+    }
+
+    #[test]
+    fn a_session_closed_before_its_program_connects_closes_once_it_has() {
+        const FLAGS: u32 = 0x0007_0000;
+        open(FLAGS);
+        let conpty = Conpty {
+            close: noted_close,
+            ..gated(FLAGS)
+        };
+        // The program connects some milliseconds after Windows creates it:
+        // usually the test closes the session before.
+        for _ in 0..20 {
+            CLOSED_AT
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .clear();
+            let connected = Arc::new(Mutex::new(None));
+            let (sender, told) = mpsc::channel();
+            let pty = conpty
+                .spawn(
+                    &Command::new("cmd /d /k"),
+                    GridSize::new(80, 25),
+                    Stamper {
+                        told: sender,
+                        shown: Vec::new(),
+                        connected: Arc::clone(&connected),
+                    },
+                )
+                .unwrap();
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while pty.process_id().is_none() {
+                assert!(Instant::now() < deadline, "the program did not start");
+                thread::yield_now();
+            }
+            let early = connected
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .is_none();
+            // Closed as soon as the program exists, as a tab that closes as
+            // it opens.
+            drop(pty);
+            let (end, shown) = end_of(&told);
+            if !early {
+                continue;
+            }
+            // cmd got the close, as it does once connected: it was not lost.
+            assert!(matches!(end, Told::Ended(Some(0xC000_013A))), "{shown:?}");
+            let closed = CLOSED_AT.lock().unwrap_or_else(PoisonError::into_inner);
+            let connected = *connected.lock().unwrap_or_else(PoisonError::into_inner);
+            assert_eq!(closed.len(), 1);
+            // The writer closed the pseudoconsole after the output had
+            // CONNECTED, and right after: the reader told it.
+            let waited = connected
+                .zip(closed.first())
+                .and_then(|(connected, closed)| closed.checked_duration_since(connected));
+            assert!(
+                waited.is_some_and(|waited| waited < Duration::from_millis(500)),
+                "connected {connected:?}, closed {closed:?}"
+            );
+            return;
+        }
+        panic!("in 20 sessions, the program connected before the test closed it");
     }
 }
