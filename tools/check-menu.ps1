@@ -42,8 +42,9 @@ from the frame that opens it. It checks that:
 - "Close tabs to the right", on the tab in the middle, closes the last one,
   and the first one stays; its program ends, and the tab of the menu is
   shown, with one full frame, because the one that was shown closed;
-- the menu closes when the window changes size, and when it is minimized:
-  then Esc, which would close it, reaches the program;
+- the menu closes when the window changes size, when a button goes down on
+  the band above the tabs, where Windows handles the mouse, and when the
+  window is minimized: then Esc, which would close it, reaches the program;
 - "Close tab", on a tab that is hidden, closes it, and draws only the bar
   and what the menu covered: the tab that is shown stays. "Close other
   tabs", on the last tab, closes the first one, on its left: its program
@@ -312,6 +313,8 @@ public static int? PriorityOf(int process, string name)
 }
 $api = [Meiga.Tools.MenuCheck]
 
+$WM_NCRBUTTONDOWN = 0x00A4
+$WM_NCRBUTTONUP = 0x00A5
 $WM_KEYDOWN = 0x0100
 $WM_KEYUP = 0x0101
 $WM_SYSKEYDOWN = 0x0104
@@ -323,6 +326,7 @@ $WM_RBUTTONDOWN = 0x0204
 $WM_RBUTTONUP = 0x0205
 $MK_LBUTTON = 0x0001
 $MK_RBUTTON = 0x0002
+$HTTOP = 12
 $MAPVK_VK_TO_VSC = 0
 $VK_RETURN = 0x0D
 $VK_SHIFT = 0x10
@@ -404,6 +408,7 @@ $steps = @(
     { $out.Write("$e[3;3Hhidden"); 'wrote' },
     # And on the fourth one, from the third column, across its right side.
     { $out.Write("$e[4;3H" + ('across' * 6)); 'wrote' },
+    { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
@@ -831,6 +836,20 @@ function Get-Mouse([int]$Message, [int]$Keys, $Point) {
     $Message, $Keys, (([int]$Point.X -band 0xFFFF) -bor (([int]$Point.Y -band 0xFFFF) -shl 16))
 }
 
+# A mouse message of a part of the window where Windows handles the mouse,
+# at $Point of the client area: the message, what that part is for Windows,
+# $Hit, its answer to WM_NCHITTEST, and the point on the screen, as Windows
+# sends them.
+function Get-FrameMouse([int]$Message, [int]$Hit, $Point) {
+    $screen = [Meiga.Tools.MenuCheck+POINT]::new()
+    $screen.X = $Point.X
+    $screen.Y = $Point.Y
+    if (-not $api::ClientToScreen($window, [ref]$screen)) {
+        throw "Could not read where the window of $exe is."
+    }
+    Get-Mouse $Message $Hit $screen
+}
+
 # Posts mouse messages at once: see PostAll.
 function Send-Mouse([long[]]$Messages) {
     $api::PostAll($window, $thread, $Messages, $null)
@@ -1146,9 +1165,11 @@ try {
     Assert-OneFull $start 'Close tabs to the right'
     Write-Host 'OK: Close tabs to the right closes the tabs on the right of the tab, and their programs end; the tab of the menu is shown, with one full frame, when the one that was shown closes.'
 
-    # 8. The menu closes when the window changes size: Esc, which would
-    # close it, reaches the program then. The program of the first tab
-    # reads the keys: a click shows it again.
+    # 8. The menu closes when the window changes size, and when a button
+    # goes down where Windows handles the mouse, as the right button on the
+    # band above the tabs: Esc, which would close it, reaches the program
+    # then. The program of the first tab reads the keys: a click shows it
+    # again.
     $bar = Get-Bar 2
     Send-Click (Get-TabPoint $bar.Tabs[0])
     Wait-Shown $first @($copy2) 'After a click on the first tab'
@@ -1175,7 +1196,21 @@ try {
     if ($keys -ne '27+ 27- 90+ 90-') {
         throw "After the window changed size, the program got the keys '$keys' instead of '27+ 27- 90+ 90-': the menu did not close."
     }
-    Write-Host 'OK: the menu closes when the window changes size: then Esc reaches the program.'
+    Send-Press $VK_APPS
+    Wait-Quiet 400
+    $band = [pscustomobject]@{ X = (Get-TabPoint $bar.Tabs[0]).X; Y = [Math]::Floor((Get-Band) / 2) }
+    Send-Mouse @(
+        Get-FrameMouse $WM_NCRBUTTONDOWN $HTTOP $band
+        Get-FrameMouse $WM_NCRBUTTONUP $HTTOP $band
+    )
+    Wait-Quiet 400
+    Send-Press $VK_ESCAPE
+    Send-Press $VK_Z
+    $keys = (Invoke-Step 'read the keys') -replace '^keys ', ''
+    if ($keys -ne '27+ 27- 90+ 90-') {
+        throw "After the right button on the band above the tabs, the program got the keys '$keys' instead of '27+ 27- 90+ 90-': the menu did not close."
+    }
+    Write-Host 'OK: the menu closes when the window changes size, and when a button goes down on the band above the tabs, where Windows handles the mouse: then Esc reaches the program.'
 
     # 9. The same when the window is minimized.
     Send-Press $VK_APPS

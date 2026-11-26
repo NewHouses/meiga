@@ -27,22 +27,28 @@ messages of the focus. It checks that:
   the tab, opens the field: its repeat and Enter going up do nothing, and X
   and Enter give the tab another name;
 - Ctrl+Shift+R opens the field too, which draws only its tab; meanwhile
-  Ctrl+Shift+T opens no tab, and
-  Esc closes the field and leaves the name as it was. The program gets Ctrl
-  and Shift going up, which went down for it before the field opened, and
-  none of the other keys;
+  Ctrl+Shift+T opens no tab, and Esc closes the field and leaves the name as
+  it was. The program gets Ctrl and Shift going up, which went down for it
+  before the field opened, and none of the other keys;
 - while the left button is down in the field, the window keeps the mouse, and
-  then lets it go; a click puts the caret, at the end of the text, and a
-  click outside the field, on the terminal, keeps the name;
+  then lets it go; a click puts the caret, at the end of the text, and draws
+  only the tab; and a click outside the field, on the terminal, keeps the
+  name;
 - a button that goes down where Windows handles the mouse keeps the name
   too, and then Windows does what it does: a double click on the room to
   drag the window maximizes it, and another one restores it; and so does
   the right button on the band above the tab, and the window draws the tab;
-- a click on the tab, one on the terminal or the right button on the band,
-  and another click on the tab, at once, are not a double click, as in
-  Windows: the program gets the next keys; while the left button that went
-  down on the terminal is down, Ctrl+Shift+R opens the field, and a move
-  over it is for the terminal, which draws its selection;
+- a click on the tab and another one there, at once, with a press between
+  them that the bar does not get, are not a double click, as in Windows:
+  on the terminal, on the band, in the field of the name, or one that
+  closes the menu of the tab; the program gets the next keys;
+- while a button that went down on the terminal or on the bar is down, the
+  field does not take the mouse: while the left one selects on the
+  terminal, Ctrl+Shift+R opens the field, and a move over it is for the
+  terminal, which draws its selection, on its first row, so that nothing
+  reaches the clipboard; and while the middle one is down on the tab, a
+  click in the field is for the bar, which lets the middle button go when
+  it goes up: a double click on the tab opens the field again;
 - the titles that the program gives meanwhile do not change the title of the
   window, nor the name, and draw nothing; a name of only spaces gives the
   tab the title of its program back, and Enter without changing the text
@@ -188,6 +194,9 @@ public static extern uint GetCaretBlinkTime();
 
 [DllImport("user32.dll")]
 public static extern uint GetDoubleClickTime();
+
+[DllImport("user32.dll")]
+public static extern uint GetClipboardSequenceNumber();
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
@@ -340,8 +349,11 @@ $WM_LBUTTONDOWN = 0x0201
 $WM_LBUTTONUP = 0x0202
 $WM_RBUTTONDOWN = 0x0204
 $WM_RBUTTONUP = 0x0205
+$WM_MBUTTONDOWN = 0x0207
+$WM_MBUTTONUP = 0x0208
 $MK_LBUTTON = 0x0001
 $MK_RBUTTON = 0x0002
+$MK_MBUTTON = 0x0010
 $HTCAPTION = 2
 $HTTOP = 12
 $MAPVK_VK_TO_VSC = 0
@@ -424,6 +436,7 @@ $steps = @(
     # Hide the cursor, so that it never blinks, give the tab a title, and
     # tell the process.
     { $out.Write("$e[?25l$e]0;meiga-rename-1$e\$e[2J$e[H"); "ready $PID" },
+    { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
@@ -1112,24 +1125,27 @@ try {
 
     # 6. A double click opens the field again, with all the name selected.
     # While the left button is down in it, the window keeps the mouse; a
-    # click at the end of the title puts the caret after the text, and Y
-    # goes there. A click on the terminal keeps the name.
+    # click at the end of the title puts the caret after the text, and draws
+    # only the tab, and Y goes there. A click on the terminal keeps the name.
     Send-DoubleClick (Get-TabPoint $tab)
     Wait-Quiet 400
     $last = [pscustomobject]@{ X = $tab.Title.Right - 2; Y = (Get-TabPoint $tab).Y }
-    Send-Posted @(
-        Get-Mouse $WM_MOUSEMOVE 0 $last
-        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $last
-    )
+    # The pointer comes first, and its highlight goes, before the click.
+    Send-Posted (Get-Mouse $WM_MOUSEMOVE 0 $last)
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Posted (Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $last)
     Wait-For { (Get-Capture) -ne [IntPtr]::Zero } { 'The left button down in the field did not capture the mouse.' }
     Send-Posted (Get-Mouse $WM_LBUTTONUP 0 $last)
     Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The left button went up in the field, and the window kept the mouse.' }
+    Wait-Quiet 400
+    Assert-Inside $start $tab.Area 1 'A click at the end of the field'
     Send-Text 'y'
     Wait-Quiet 400
     Send-Click ([pscustomobject]@{ X = $tab.Title.Left + 4; Y = $bar.Height + 40 })
     Wait-Title 'xy' 'After a click at the end of the field, y, and a click on the terminal'
     Assert-Keys '90+ 90-' 'After the clicks in the field, y, and the click on the terminal'
-    Write-Host 'OK: while the left button is down in the field, the window keeps the mouse, and then lets it go; a click puts the caret at the end of the text, and a click on the terminal keeps the name.'
+    Write-Host 'OK: while the left button is down in the field, the window keeps the mouse, and then lets it go; a click puts the caret at the end of the text, and draws only the tab; and a click on the terminal keeps the name.'
 
     # 7. A button that goes down where Windows handles the mouse keeps the
     # name too, and then Windows does what it does with it: a double click
@@ -1166,38 +1182,92 @@ try {
     Assert-Keys '17+ 16+ 16- 17- 17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R and w, a double click on the room to drag the window, Ctrl+Shift+R and v, and the right button on the band'
     Write-Host 'OK: a button that goes down where Windows handles the mouse keeps the name too, and then Windows does what it does: a double click on the room to drag the window maximizes it, and another one restores it; and so does the right button on the band above the tab, and the window draws the tab with its name.'
 
-    # 8. A click on the tab, one on the terminal or the right button on the
-    # band, and another click on the tab, at once, are not a double click,
-    # as in Windows: the field does not open, and the program gets the next
-    # keys. While the left button that went down on the terminal is down,
-    # Ctrl+Shift+R opens the field, and a move over it is for the terminal,
-    # which selects up to there, and draws it.
+    # 8. A click on the tab and another one there, at once, with a press
+    # between them that the bar does not get, are not a double click, as in
+    # Windows: on the terminal, on the band, in the field of the name, or one
+    # that closes the menu of the tab. The field does not open, and the
+    # program gets the next keys. Each pair comes long after the last click
+    # of the one before, which is a first one again.
     $point = Get-TabPoint $tab
     $click = @(
         Get-Mouse $WM_MOUSEMOVE 0 $point
         Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $point
         Get-Mouse $WM_LBUTTONUP 0 $point
     )
+    $pause = $api::GetDoubleClickTime() + 100
     $terminal = [pscustomobject]@{ X = $point.X; Y = $bar.Height + 40 }
-    Send-Posted ($click + @(
-            Get-Mouse $WM_MOUSEMOVE 0 $terminal
-            Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $terminal
-            Get-Mouse $WM_LBUTTONUP 0 $terminal
-        ) + $click)
-    Send-Press $VK_Q
-    Send-Press $VK_RETURN
-    Assert-Title 'v' 'After a click on the tab, one on the terminal and another one on the tab, at once, q and Enter'
-    # Long after the last click, which is a first one again.
-    Start-Sleep -Milliseconds ($api::GetDoubleClickTime() + 100)
-    Send-Posted ($click + @(
-            Get-FrameMouse $WM_NCRBUTTONDOWN $HTTOP $band
-            Get-FrameMouse $WM_NCRBUTTONUP $HTTOP $band
-        ) + $click)
-    Send-Press $VK_Q
-    Send-Press $VK_RETURN
-    Assert-Title 'v' 'After a click on the tab, the right button on the band and another click on the tab, at once, q and Enter'
-    $from = [pscustomobject]@{ X = $point.X; Y = $bar.Height + 60 }
-    $to = [pscustomobject]@{ X = $point.X + 100; Y = $bar.Height + 60 }
+    $between = @(
+        [pscustomobject]@{
+            What = 'one on the terminal'
+            Messages = @(
+                Get-Mouse $WM_MOUSEMOVE 0 $terminal
+                Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $terminal
+                Get-Mouse $WM_LBUTTONUP 0 $terminal
+            )
+            Down = @()
+        }
+        [pscustomobject]@{
+            What = 'the right button on the band'
+            Messages = @(
+                Get-FrameMouse $WM_NCRBUTTONDOWN $HTTOP $band
+                Get-FrameMouse $WM_NCRBUTTONUP $HTTOP $band
+            )
+            Down = @()
+        }
+        # Ctrl+Shift+R opens the field over the title, where the click goes,
+        # and Esc closes it: all at once, with Ctrl and Shift down, which Esc
+        # does not mind.
+        [pscustomobject]@{
+            What = 'Ctrl+Shift+R, one in the field and Esc'
+            Messages = @(
+                Get-Key $VK_CONTROL $true
+                Get-Key $VK_SHIFT $true
+                Get-Key $VK_R $true
+                Get-Key $VK_R $false
+                Get-Key $VK_SHIFT $false
+                Get-Key $VK_CONTROL $false
+            ) + $click + @(
+                Get-Key $VK_ESCAPE $true
+                Get-Key $VK_ESCAPE $false
+            )
+            Down = $ctrlShiftKeys
+        }
+        # The Menu key opens the menu of the tab, below it, and a click on
+        # the tab closes it, and does nothing else.
+        [pscustomobject]@{
+            What = 'the Menu key and one that closes the menu'
+            Messages = @(
+                Get-Key $VK_APPS $true
+                Get-Key $VK_APPS $false
+            ) + $click
+            Down = @()
+        }
+    )
+    foreach ($press in $between) {
+        Start-Sleep -Milliseconds $pause
+        Send-Keys ($click + $press.Messages + $click) $press.Down
+        # The window reads them with their key state, before the next keys
+        # change it.
+        Wait-Quiet 400
+        Send-Press $VK_Q
+        Send-Press $VK_RETURN
+        Assert-Title 'v' "After a click on the tab, $($press.What), and another click on the tab, at once, q and Enter"
+    }
+    Assert-Keys '81+ 81- 13+ 13- 81+ 81- 13+ 13- 17+ 16+ 16- 17- 81+ 81- 13+ 13- 81+ 81- 13+ 13- 90+ 90-' 'After the clicks on the tab with a press between them, and q and Enter after each pair'
+    Write-Host 'OK: a click on the tab and another one there, at once, with a press between them that the bar does not get, on the terminal, on the band, in the field of the name, or one that closes the menu of the tab, are not a double click: the program gets the next keys.'
+
+    # 9. While a button that went down on the terminal or on the bar is down,
+    # the field does not take the mouse. While the left one selects on the
+    # terminal, on its first row, which is blank, so that nothing reaches
+    # the clipboard, Ctrl+Shift+R opens the field, and a move over it is for
+    # the terminal, which selects up to there, and draws it. While the
+    # middle one is down on the tab, a click in the field is for the bar,
+    # which lets the middle button go when it goes up, away from the tab,
+    # which then stays: a double click on the tab opens the field again, and
+    # U and Enter give the tab its name.
+    $clipboard = $api::GetClipboardSequenceNumber()
+    $from = [pscustomobject]@{ X = $point.X + 20; Y = $bar.Height + 2 }
+    $to = [pscustomobject]@{ X = $point.X + 120; Y = $bar.Height + 2 }
     Send-Posted @(
         Get-Mouse $WM_MOUSEMOVE 0 $from
         Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $from
@@ -1219,10 +1289,37 @@ try {
     Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The left button that went down on the terminal went up, and the window kept the mouse.' }
     Send-Press $VK_ESCAPE
     Assert-Title 'v' 'After a selection on the terminal, Ctrl+Shift+R and Esc'
-    Assert-Keys '81+ 81- 13+ 13- 81+ 81- 13+ 13- 17+ 16+ 16- 17- 90+ 90-' 'After the clicks on the tab with q and Enter, twice, and Ctrl+Shift+R and Esc during a selection'
-    Write-Host 'OK: a click on the tab, one on the terminal or the right button on the band, and another click on the tab, at once, are not a double click: the program gets the next keys; while the left button that went down on the terminal is down, Ctrl+Shift+R opens the field, and a move over it is for the terminal, which draws its selection.'
+    if ($api::GetClipboardSequenceNumber() -ne $clipboard) {
+        throw 'The selection on the first row of the terminal, which is blank, changed the clipboard.'
+    }
+    Send-Posted @(
+        Get-Mouse $WM_MOUSEMOVE 0 $point
+        Get-Mouse $WM_MBUTTONDOWN $MK_MBUTTON $point
+    )
+    Wait-For { (Get-Capture) -ne [IntPtr]::Zero } { 'The middle button down on the tab did not capture the mouse.' }
+    Send-CtrlShift $VK_R
+    Wait-Quiet 400
+    Send-Posted @(
+        Get-Mouse $WM_LBUTTONDOWN ($MK_LBUTTON -bor $MK_MBUTTON) $point
+        Get-Mouse $WM_MOUSEMOVE ($MK_LBUTTON -bor $MK_MBUTTON) $terminal
+        Get-Mouse $WM_MBUTTONUP $MK_LBUTTON $terminal
+        Get-Mouse $WM_LBUTTONUP 0 $terminal
+    )
+    Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The middle and the left buttons went up, and the window kept the mouse.' }
+    Send-Press $VK_ESCAPE
+    Start-Sleep -Milliseconds $pause
+    Send-DoubleClick $point
+    Wait-Quiet 400
+    Send-Text 'u'
+    Send-Press $VK_RETURN
+    Wait-Title 'u' 'After the middle button on the tab, Ctrl+Shift+R, a click in the field, both buttons up away from the tab, Esc, a double click on the tab, u and Enter'
+    if (@(Get-Shells).Count -ne 1) {
+        throw 'The middle button, which went up away from the tab, closed it.'
+    }
+    Assert-Keys '17+ 16+ 16- 17- 17+ 16+ 16- 17- 90+ 90-' 'After a selection on the terminal and the middle button on the tab, each with Ctrl+Shift+R and Esc, and a double click on the tab with u and Enter'
+    Write-Host 'OK: while a button that went down on the terminal or on the bar is down, the field does not take the mouse: a move over it is for the terminal, which draws its selection, and nothing reaches the clipboard; and a click in it, while the middle button is down on the tab, is for the bar, which lets the middle button go when it goes up: a double click on the tab opens the field again.'
 
-    # 9. A title that the program gives meanwhile changes neither the title
+    # 10. A title that the program gives meanwhile changes neither the title
     # of the window nor the name, and nothing is drawn: the tab shows the
     # same. A name of only spaces gives the tab the title of its program
     # back. Enter without changing the text does not keep it as a name: the
@@ -1230,7 +1327,7 @@ try {
     Wait-Quiet 400
     $start = @(Get-Log).Count
     $null = Invoke-Step 'give another title'
-    Assert-Title 'v' 'After the program gave another title to the tab with a name'
+    Assert-Title 'u' 'After the program gave another title to the tab with a name'
     Assert-Nothing $start 'After the program gave another title to the tab with a name'
     Send-CtrlShift $VK_R
     Wait-Quiet 400
@@ -1246,7 +1343,7 @@ try {
     Assert-Keys '17+ 16+ 16- 17- 17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R twice, three spaces and Enter, and Enter'
     Write-Host 'OK: the titles that the program gives meanwhile change neither the title of the window nor the name, and draw nothing; a name of only spaces gives the tab the title of its program back, and Enter without changing the text does not keep it as a name.'
 
-    # 10. Duplicate tab, the second item of the menu, gives the copy the name
+    # 11. Duplicate tab, the second item of the menu, gives the copy the name
     # of the tab, which the window keeps when the program of the copy gives
     # its title. Rename tab, in the menu that the right button opens on the
     # first tab, which is hidden then, shows it and edits its name.
@@ -1276,7 +1373,7 @@ try {
     Assert-Keys '17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R, dup and Enter, Duplicate tab, and one and Enter on the first tab'
     Write-Host 'OK: Duplicate tab gives the copy the name of the tab, which the window keeps when the program of the copy gives its title; Rename tab, in the menu of a hidden tab, shows it and edits its name.'
 
-    # 11. A double click on the copy, which is hidden, shows it and edits its
+    # 12. A double click on the copy, which is hidden, shows it and edits its
     # name. When its program ends with exit code 1, the tab stays, with its
     # name, and Enter starts the program again, and the tab keeps its name,
     # also when the new program gives its title. Its field, open again with
@@ -1311,7 +1408,7 @@ try {
     Assert-Keys '90+ 90-' 'After the tab whose name was edited closed'
     Write-Host 'OK: a double click on a hidden tab shows it and edits its name; when its program ends with exit code 1, and starts again with Enter, the tab keeps its name; when the program of the tab whose name is edited ends with exit code 0, its tab closes, and the editing with it: the program of the tab that is shown then gets the keys again.'
 
-    # 12. Ctrl+Shift+W closes the last tab, and the window: meiga ends, and
+    # 13. Ctrl+Shift+W closes the last tab, and the window: meiga ends, and
     # the program of the tab and the consoles end too.
     $tabConsoles = @(Get-Consoles)
     Send-CtrlShift $VK_W
