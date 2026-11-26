@@ -83,7 +83,8 @@ pub struct Shown {
 /// What a button held down over the field selects when it moves.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 enum Drag {
-    /// Nothing: no button went down, or the text changed while it was down.
+    /// Nothing: no button went down, or the text was edited while it was
+    /// down.
     #[default]
     None,
     /// Up to the cluster under the pointer, after a click.
