@@ -347,13 +347,9 @@ impl Field {
 
     /// Replaces `range` of the text with `with`, which fits, and puts the
     /// caret at the end of what it inserted. It keeps the edit, as `kind`,
-    /// so that it can be undone.
+    /// so that it can be undone. `range` or `with` is not empty.
     fn replace(&mut self, range: Range<usize>, with: &str, kind: Kind) {
-        let removed = &self.text[range.clone()];
-        if removed.is_empty() && with.is_empty() {
-            return;
-        }
-        let removed = removed.to_owned();
+        let removed = self.text[range.clone()].to_owned();
         let before = (self.anchor, self.caret);
         self.text.replace_range(range.clone(), with);
         self.edited();
