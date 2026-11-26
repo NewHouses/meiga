@@ -44,6 +44,7 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) | A barra de tabs coma barra de título | Aceptado |
 | [0028](0028-as-sesions-fora-do-fio-da-xanela.md) | As sesións fóra do fío da xanela | Aceptado |
 | [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) | O título da tab e os títulos gardados | Aceptado |
+| [0030](0030-o-campo-de-texto.md) | O campo de texto | Aceptado |
 
 ## Como se relacionan
 
@@ -165,6 +166,15 @@ graph TD
     A20 --> A29
     A22 --> A29
     A24 --> A29
+    A2 --> A30["0030 O campo de texto"]
+    A6 --> A30
+    A10 --> A30
+    A14 --> A30
+    A15 --> A30
+    A20 --> A30
+    A21 --> A30
+    A23 --> A30
+    A29 --> A30
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.
