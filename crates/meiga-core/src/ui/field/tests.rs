@@ -1055,13 +1055,9 @@ fn the_changes_say_what_changed() {
     field.take_changes();
     tap(&mut field, VK_LEFT, none());
     assert_eq!(field.take_changes(), Changes::default());
-    // Cells that show the same part of the text change nothing either.
+    // Other cells are a change, because the field shows more or less; the
+    // same ones are not.
     field.set_columns(2);
-    assert_eq!(field.take_changes(), Changes::default());
-    // Another part of it is a change.
-    tap(&mut field, VK_END, none());
-    field.take_changes();
-    field.set_columns(10);
     assert_eq!(
         field.take_changes(),
         Changes {
@@ -1069,6 +1065,8 @@ fn the_changes_say_what_changed() {
             text: false
         }
     );
+    field.set_columns(2);
+    assert_eq!(field.take_changes(), Changes::default());
 }
 
 /// A generator of pseudorandom numbers (xorshift64), so that the test
@@ -1102,7 +1100,7 @@ const KEYS: [u16; 16] = [
 /// caret stops, the text within the limit and without control characters,
 /// the caret in sight, the cells of the field, and the changes since
 /// `before`.
-fn check(field: &mut Field, before: &(String, usize, usize, usize), context: &str) {
+fn check(field: &mut Field, before: &(String, usize, usize, usize, usize), context: &str) {
     let text = field.text().to_owned();
     for at in [field.anchor, field.caret] {
         assert!(
@@ -1132,7 +1130,7 @@ fn check(field: &mut Field, before: &(String, usize, usize, usize), context: &st
     if text != before.0 {
         assert!(changes.text, "{context}: {changes:?}");
     }
-    if (text, field.anchor, field.caret, field.scroll) != *before {
+    if (text, field.anchor, field.caret, field.scroll, field.columns) != *before {
         assert!(changes.shown, "{context}: {changes:?}");
     }
 }
@@ -1148,7 +1146,13 @@ fn random_edits_keep_the_field_whole_and_undo_to_the_start() {
         // At most two edits each, which are fewer than the steps that can be
         // undone.
         for step in 0..45 {
-            let before = (field.text.clone(), field.anchor, field.caret, field.scroll);
+            let before = (
+                field.text.clone(),
+                field.anchor,
+                field.caret,
+                field.scroll,
+                field.columns,
+            );
             let action = random.below(10);
             match action {
                 0..=3 => type_text(&mut field, PIECES[random.below(PIECES.len())]),

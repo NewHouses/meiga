@@ -50,7 +50,8 @@ pub enum Reply {
     /// The field took the key.
     Taken,
     /// The field took the key, and its user puts `text` in the clipboard:
-    /// Ctrl+C and Ctrl+X, which already removed it from the field.
+    /// Ctrl+C and Ctrl+Insert, which copy, and Ctrl+X and Shift+Delete,
+    /// which cut, and already removed it from the field.
     Copy(String),
     /// The field took the key, and its user gives the text of the clipboard
     /// to [`Field::paste`]: Ctrl+V and Shift+Insert.
@@ -60,8 +61,8 @@ pub enum Reply {
 /// What changed in the field since its changes were last taken.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Changes {
-    /// What it shows: its text, its caret, its selection or the part of
-    /// the text in its cells.
+    /// What it shows: its text, its caret, its selection, its cells or the
+    /// part of the text in them.
     pub shown: bool,
     /// Its text.
     pub text: bool,
@@ -426,10 +427,10 @@ impl Field {
     /// Runs `change`, and then brings the part of the text that the field
     /// shows up to date, and notes what changed.
     fn track<R>(&mut self, change: impl FnOnce(&mut Self) -> R) -> R {
-        let before = (self.anchor, self.caret, self.scroll);
+        let before = (self.anchor, self.caret, self.scroll, self.columns);
         let result = change(self);
         self.follow_caret();
-        if self.changes.text || (self.anchor, self.caret, self.scroll) != before {
+        if self.changes.text || (self.anchor, self.caret, self.scroll, self.columns) != before {
             self.changes.shown = true;
         }
         result
