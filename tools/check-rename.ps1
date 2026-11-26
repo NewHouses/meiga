@@ -18,19 +18,31 @@ messages of the focus. It checks that:
   the frames draw only its tab and, while Windows lets the caret blink, it
   blinks there; without the focus it does not, and the editing goes on, and
   with the focus again it blinks again;
-- the letters typed and Enter give the tab its name, which the window takes
-  as its title; the field closes, and nothing blinks any more; the program
-  gets none of those keys, neither going down nor going up;
+- the letters typed, and the character of an Alt code when Alt goes up,
+  write in the field, which draws only its tab; Enter gives the tab its
+  name, which the window takes as its title; the field closes, and nothing
+  blinks any more; the program gets none of those keys, neither going down
+  nor going up;
 - Enter on "Rename tab", which the Menu key highlights first in the menu of
   the tab, opens the field: its repeat and Enter going up do nothing, and X
   and Enter give the tab another name;
-- Ctrl+Shift+R opens the field too; meanwhile Ctrl+Shift+T opens no tab, and
+- Ctrl+Shift+R opens the field too, which draws only its tab; meanwhile
+  Ctrl+Shift+T opens no tab, and
   Esc closes the field and leaves the name as it was. The program gets Ctrl
   and Shift going up, which went down for it before the field opened, and
   none of the other keys;
 - while the left button is down in the field, the window keeps the mouse, and
   then lets it go; a click puts the caret, at the end of the text, and a
   click outside the field, on the terminal, keeps the name;
+- a button that goes down where Windows handles the mouse keeps the name
+  too, and then Windows does what it does: a double click on the room to
+  drag the window maximizes it, and another one restores it; and so does
+  the right button on the band above the tab, and the window draws the tab;
+- a click on the tab, one on the terminal or the right button on the band,
+  and another click on the tab, at once, are not a double click, as in
+  Windows: the program gets the next keys; while the left button that went
+  down on the terminal is down, Ctrl+Shift+R opens the field, and a move
+  over it is for the terminal, which draws its selection;
 - the titles that the program gives meanwhile do not change the title of the
   window, nor the name, and draw nothing; a name of only spaces gives the
   tab the title of its program back, and Enter without changing the text
@@ -41,10 +53,12 @@ messages of the focus. It checks that:
   tab", in the menu that the right button opens on the first tab, which is
   hidden then, shows it and edits its name;
 - a double click on the copy, which is hidden then, shows it and edits its
-  name; when the program of the tab whose name is edited ends, its tab
-  closes, and the editing with it: the program of the tab that is shown then
-  gets the keys again. Ctrl+Shift+W closes the last tab, and meiga.exe ends
-  with exit code 0, and the program of the tab and its console end too.
+  name; when its program ends with exit code 1, and Enter starts it again,
+  the tab keeps its name; when the program of the tab whose name is edited
+  ends with exit code 0, its tab closes, and the editing with it: the
+  program of the tab that is shown then gets the keys again. Ctrl+Shift+W
+  closes the last tab, and meiga.exe ends with exit code 0, and the program
+  of the tab and its console end too.
 
 As check-menu.ps1 does, the check moves the pointer out of the window, posts
 its messages while the thread of the window is suspended, and does not count
@@ -171,6 +185,13 @@ public static extern uint GetDpiForWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 public static extern uint GetCaretBlinkTime();
+
+[DllImport("user32.dll")]
+public static extern uint GetDoubleClickTime();
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool SystemParametersInfoW(uint action, uint parameter, out uint value, uint update);
 
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
@@ -307,8 +328,13 @@ $api = [Meiga.Tools.RenameCheck]
 
 $WM_SETFOCUS = 0x0007
 $WM_KILLFOCUS = 0x0008
+$WM_NCLBUTTONDBLCLK = 0x00A3
+$WM_NCRBUTTONDOWN = 0x00A4
+$WM_NCRBUTTONUP = 0x00A5
 $WM_KEYDOWN = 0x0100
 $WM_KEYUP = 0x0101
+$WM_CHAR = 0x0102
+$WM_SYSKEYDOWN = 0x0104
 $WM_MOUSEMOVE = 0x0200
 $WM_LBUTTONDOWN = 0x0201
 $WM_LBUTTONUP = 0x0202
@@ -316,14 +342,18 @@ $WM_RBUTTONDOWN = 0x0204
 $WM_RBUTTONUP = 0x0205
 $MK_LBUTTON = 0x0001
 $MK_RBUTTON = 0x0002
+$HTCAPTION = 2
+$HTTOP = 12
 $MAPVK_VK_TO_VSC = 0
 $SM_CARETBLINKINGENABLED = 0x2002
+$SPI_GETCARETTIMEOUT = 0x2022
 $VK_RETURN = 0x0D
 $VK_SHIFT = 0x10
 $VK_CONTROL = 0x11
+$VK_MENU = 0x12
 $VK_ESCAPE = 0x1B
-$VK_SPACE = 0x20
 $VK_DOWN = 0x28
+$VK_Q = 0x51
 $VK_R = 0x52
 $VK_T = 0x54
 $VK_W = 0x57
@@ -332,8 +362,11 @@ $VK_Z = 0x5A
 $VK_APPS = 0x5D
 $VK_LSHIFT = 0xA0
 $VK_LCONTROL = 0xA2
+$VK_LMENU = 0xA4
 # The keys that Ctrl and Shift set down: Ctrl, Shift, and their left ones.
 $ctrlShiftKeys = $VK_CONTROL, $VK_LCONTROL, $VK_SHIFT, $VK_LSHIFT
+# And the ones of Alt.
+$altKeys = $VK_MENU, $VK_LMENU
 $THREAD_PRIORITY_NORMAL = 0
 $THREAD_PRIORITY_BELOW_NORMAL = -1
 # The console of each tab: the one of the ConPTY of meiga, or the one of
@@ -349,15 +382,16 @@ $ErrorActionPreference = 'Stop'
 $e = [char]27
 $out = [Console]::Out
 # A copy of the first tab gives its tab a title, tells it in a file of its
-# own, and waits until the check sets the event <Name>-end, or its tab
-# closes: then it ends with exit code 0.
+# own, and waits until the check sets the event <Name>-end, and then ends
+# with exit code 0, or <Name>-fail, and then with exit code 1; or until its
+# tab closes.
 $created = $false
 $first = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::ManualReset, "$Name-first", [ref]$created)
 if (-not $created) {
     $out.Write("$e[?25l$e]0;meiga-rename-copy$e\")
     [IO.File]::WriteAllText("$Log.$PID", 'copy')
-    $null = [Threading.EventWaitHandle]::OpenExisting("$Name-end").WaitOne()
-    exit
+    $events = [Threading.EventWaitHandle]::OpenExisting("$Name-end"), [Threading.EventWaitHandle]::OpenExisting("$Name-fail")
+    exit [Threading.WaitHandle]::WaitAny($events)
 }
 $go = [Threading.EventWaitHandle]::OpenExisting("$Name-go")
 $done = [Threading.EventWaitHandle]::OpenExisting("$Name-done")
@@ -394,6 +428,8 @@ $steps = @(
     { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
     { "keys $(Read-Keys)" },
+    { "keys $(Read-Keys)" },
+    { "keys $(Read-Keys)" },
     { $out.Write("$e]0;meiga-rename-2$e\"); 'retitled' },
     { $out.Write("$e]0;meiga-rename-3$e\"); 'retitled' },
     { "keys $(Read-Keys)" },
@@ -424,12 +460,22 @@ Remove-Item -LiteralPath $reports -ErrorAction SilentlyContinue
 $go = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-go")
 $done = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-done")
 $endCopies = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::ManualReset, "$name-end")
+# It ends one copy, and resets itself.
+$failCopy = [Threading.EventWaitHandle]::new($false, [Threading.EventResetMode]::AutoReset, "$name-fail")
 
 # Whether the caret blinks, as meiga reads it (see caret_settings in
-# crates/meiga-win/src/window.rs), fast enough for this check: then it
-# changes at least once in $blinkWait milliseconds.
+# crates/meiga-win/src/window.rs): every $blinkTime ms, up to 10 s, until the
+# timeout of the caret after the last key or click, 5 s by default. The
+# check waits for it if it blinks fast enough, and long enough: then it
+# changes at least twice in $blinkWait milliseconds, from 200 ms after a key
+# or a click.
 $blinkTime = $api::GetCaretBlinkTime()
-$blinks = $api::GetSystemMetrics($SM_CARETBLINKINGENABLED) -ne 0 -and $blinkTime -ge 1 -and $blinkTime -le 1000
+$caretTimeout = [uint32]0
+if (-not $api::SystemParametersInfoW($SPI_GETCARETTIMEOUT, 0, [ref]$caretTimeout, 0) -or $caretTimeout -eq 0) {
+    $caretTimeout = 5000
+}
+$blinking = $api::GetSystemMetrics($SM_CARETBLINKINGENABLED) -ne 0 -and $blinkTime -ge 1 -and $blinkTime -le 10000
+$blinks = $blinking -and $blinkTime -le 1000 -and $caretTimeout -ge 2 * $blinkTime + 400
 $blinkWait = if ($blinks) { 2 * $blinkTime + 200 } else { 1200 }
 
 # As per monitor (v2), the same as meiga, the size of the window is in pixels.
@@ -699,8 +745,8 @@ function Get-Band {
 # crates/meiga-core/src/ui/tabbar.rs): the band where the window is resized
 # above the row of tabs, the tabs a gap below it, and on the right of the
 # bar the buttons of the window and the room to drag it. Each tab with its
-# area, from the top of the bar to its bottom, and one pixel more on its
-# right, where a change of the tab draws (see TabBar::draw).
+# area, from the band to the bottom of the bar, and one pixel more on its
+# right, where a change of the tab draws (see Layout::tab_area).
 function Get-Bar([int]$Count) {
     $client = Get-Client
     $band = Get-Band
@@ -720,13 +766,15 @@ function Get-Bar([int]$Count) {
         $close = New-Rect ($right - $gap - $closeSide) 0 ($right - $gap) 0
         [pscustomobject]@{
             Rect = New-Rect $left $top $right $height
-            Area = New-Rect $left 0 ($right + 1) $height
+            Area = New-Rect $left $band ($right + 1) $height
             Title = New-Rect ($left + $padding) $top $close.Left $height
         }
     }
     [pscustomobject]@{
         Rect = New-Rect 0 0 $client.Right $height
         Height = $height
+        Band = $band
+        Captions = New-Rect ($client.Right - 3 * (Get-Scaled 46)) 0 $client.Right $height
         Tabs = @($tabs)
     }
 }
@@ -740,6 +788,34 @@ function Get-TabPoint($Tab) {
 # A mouse message at a point: the message, its wParam and its lParam.
 function Get-Mouse([int]$Message, [int]$Keys, $Point) {
     $Message, $Keys, (([int]$Point.X -band 0xFFFF) -bor (([int]$Point.Y -band 0xFFFF) -shl 16))
+}
+
+# A mouse message of a part of the window where Windows handles the mouse,
+# at $Point of the client area: the message, what that part is for Windows,
+# $Hit, its answer to WM_NCHITTEST, and the point on the screen, as Windows
+# sends them.
+function Get-FrameMouse([int]$Message, [int]$Hit, $Point) {
+    $screen = [Meiga.Tools.RenameCheck+POINT]::new()
+    $screen.X = $Point.X
+    $screen.Y = $Point.Y
+    if (-not $api::ClientToScreen($window, [ref]$screen)) {
+        throw "Could not read where the window of $exe is."
+    }
+    Get-Mouse $Message $Hit $screen
+}
+
+# A point of the room to drag the window of $Bar, on the left of the buttons
+# of the window, in the middle of the row of tabs: the bar leaves it free.
+function Get-DragPoint($Bar) {
+    [pscustomobject]@{
+        X = $Bar.Captions.Left - (Get-Scaled 20)
+        Y = [Math]::Floor(($Bar.Tabs[0].Rect.Top + $Bar.Height) / 2)
+    }
+}
+
+# A point of the band of $Bar above $Tab, where the window is resized.
+function Get-BandPoint($Bar, $Tab) {
+    [pscustomobject]@{ X = (Get-TabPoint $Tab).X; Y = [Math]::Floor($Bar.Band / 2) }
 }
 
 # Posts messages at once, without a key state: see PostAll.
@@ -856,6 +932,20 @@ function Send-Text([string]$Text) {
     }
 }
 
+# An Alt code that writes $Character, as Windows sends it once Alt goes up
+# after the digits of the numeric keypad, which the field does not take:
+# Alt goes down, as a system key, with the bit that says that Alt is down
+# (29), and then up, as a key that is not a system one after another key,
+# with the character in the queue. They go apart: the window takes a
+# character that is in the queue when a key goes down as the one of that
+# key.
+function Send-AltCode([int]$Character) {
+    $scan = $api::MapVirtualKeyExW($VK_MENU, $MAPVK_VK_TO_VSC, $api::GetKeyboardLayout($thread))
+    Send-Keys @($WM_SYSKEYDOWN, $VK_MENU, (1 -bor ($scan -shl 16) -bor 0x20000000L)) $altKeys
+    Wait-Quiet 400
+    Send-Keys @((Get-Key $VK_MENU $false) + @($WM_CHAR, $Character, 1))
+}
+
 # Ctrl+Shift and $Code: Ctrl and Shift go down for the program, if the keys
 # go to it, and up after $Code. All of them go at once, with Ctrl and Shift
 # down: if the key state of other messages could change before the window
@@ -917,9 +1007,16 @@ try {
     # again.
     $start = @(Get-Log).Count
     Send-DoubleClick (Get-TabPoint $tab)
+    # The pointer of the window leaves it at once, since the one of the
+    # system is not there: until then, the highlight of the tab draws too.
+    Start-Sleep -Milliseconds 200
+    $blinked = @(Get-Log).Count
     Start-Sleep -Milliseconds $blinkWait
-    $least = if ($blinks) { 2 } else { 1 }
-    Assert-Inside $start $tab.Area $least 'A double click on the tab, and the caret of the field'
+    Assert-Inside $start $tab.Area 1 'A double click on the tab, and the caret of the field'
+    if ($blinks -and @(Get-Frames $blinked).Count -lt 2) {
+        Show-Lines (Get-Frames $start)
+        throw 'After a double click on the tab, the caret of the field did not blink.'
+    }
     if ((Get-Capture) -ne [IntPtr]::Zero) {
         throw 'After a double click on the tab, the window kept the mouse.'
     }
@@ -937,21 +1034,41 @@ try {
         Show-Lines $frames
         throw 'With the focus again, the caret of the field did not blink.'
     }
-    $what = if ($blinks) { "blinks there, every $blinkTime ms" } else { 'is there, and Windows does not let it blink' }
+    $what = if ($blinks) {
+        "blinks there, every $blinkTime ms"
+    }
+    elseif ($blinking) {
+        "is there, and blinks every $blinkTime ms for $caretTimeout ms, which the check does not wait for"
+    }
+    else {
+        'is there, and Windows does not let it blink'
+    }
     Write-Host "OK: a double click on the title of the tab opens the field of its name, which draws only in its tab, and keeps nothing of the mouse; its caret $what; without the focus nothing is drawn meanwhile, and with the focus again the field is still there."
 
-    # 3. The letters and Enter give the tab its name, which the window takes
-    # as its title; then nothing blinks any more. The program gets none of
+    # 3. The letters, and the d of an Alt code, which comes when Alt goes up,
+    # write in the field, and the window draws them, only in the tab; Enter
+    # gives the tab its name, which the window takes as its title, and draws
+    # its tab, and then nothing blinks any more. The program gets none of
     # those keys.
-    Send-Text 'build'
-    Send-Press $VK_RETURN
-    Wait-Title 'build' 'After build and Enter in the field'
     Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Text 'buil'
+    Wait-Quiet 400
+    Assert-Inside $start $tab.Area 1 'The letters in the field'
+    $start = @(Get-Log).Count
+    Send-AltCode 0x64
+    Wait-Quiet 400
+    Assert-Inside $start $tab.Area 1 'The d of an Alt code in the field'
+    $start = @(Get-Log).Count
+    Send-Press $VK_RETURN
+    Wait-Title 'build' 'After buil, the d of an Alt code, and Enter in the field'
+    Wait-Quiet 400
+    Assert-Inside $start $tab.Area 1 'Enter in the field'
     $start = @(Get-Log).Count
     Start-Sleep -Milliseconds $blinkWait
     Assert-Nothing $start 'After Enter in the field'
-    Assert-Keys '90+ 90-' 'After build and Enter in the field'
-    Write-Host 'OK: the letters typed and Enter give the tab its name, which the window takes as its title; the field closes, and nothing blinks any more; the program gets none of those keys.'
+    Assert-Keys '90+ 90-' 'After buil, the d of an Alt code, and Enter in the field'
+    Write-Host 'OK: the letters typed, and the character of an Alt code when Alt goes up, write in the field, which draws only its tab; Enter gives the tab its name, which the window takes as its title; the field closes, and nothing blinks any more; the program gets none of those keys.'
 
     # 4. The Menu key opens the menu of the tab, with Rename tab highlighted
     # first, which Enter chooses: the field opens while Enter is down, and
@@ -973,8 +1090,11 @@ try {
     # 5. Ctrl+Shift+R opens the field; meanwhile Ctrl+Shift+T opens no tab,
     # and Esc closes the field and leaves the name. The program gets Ctrl
     # and Shift going up, which went down for it before the field opened.
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
     Send-CtrlShift $VK_R
     Wait-Quiet 400
+    Assert-Inside $start $tab.Area 1 'Ctrl+Shift+R'
     Send-CtrlShift $VK_T
     Start-Sleep -Milliseconds 1000
     if (@(Get-Shells).Count -ne 1) {
@@ -1011,7 +1131,98 @@ try {
     Assert-Keys '90+ 90-' 'After the clicks in the field, y, and the click on the terminal'
     Write-Host 'OK: while the left button is down in the field, the window keeps the mouse, and then lets it go; a click puts the caret at the end of the text, and a click on the terminal keeps the name.'
 
-    # 7. A title that the program gives meanwhile changes neither the title
+    # 7. A button that goes down where Windows handles the mouse keeps the
+    # name too, and then Windows does what it does with it: a double click
+    # on the room to drag the window maximizes it, and another one restores
+    # it. So does the right button on the band above the tab, and the window
+    # draws the tab with its name.
+    Send-CtrlShift $VK_R
+    Wait-Quiet 400
+    Send-Text 'w'
+    Send-Posted (Get-FrameMouse $WM_NCLBUTTONDBLCLK $HTCAPTION (Get-DragPoint $bar))
+    Wait-Title 'w' 'After Ctrl+Shift+R, w, and a double click on the room to drag the window'
+    Wait-For { $api::IsZoomed($window) } { 'A double click on the room to drag the window, while a name was edited, did not maximize it.' }
+    Wait-Quiet 400
+    Send-Posted (Get-FrameMouse $WM_NCLBUTTONDBLCLK $HTCAPTION (Get-DragPoint (Get-Bar 1)))
+    Wait-For { -not $api::IsZoomed($window) } { 'A double click on the room to drag the maximized window did not restore it.' }
+    # The window may have been under the pointer meanwhile.
+    Move-Pointer
+    Wait-Quiet 400
+    $bar = Get-Bar 1
+    $tab = $bar.Tabs[0]
+    $band = Get-BandPoint $bar $tab
+    Send-CtrlShift $VK_R
+    Wait-Quiet 400
+    Send-Text 'v'
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Posted @(
+        Get-FrameMouse $WM_NCRBUTTONDOWN $HTTOP $band
+        Get-FrameMouse $WM_NCRBUTTONUP $HTTOP $band
+    )
+    Wait-Title 'v' 'After Ctrl+Shift+R, v, and the right button on the band above the tab'
+    Wait-Quiet 400
+    Assert-Inside $start $tab.Area 1 'The right button on the band above the tab, which kept the name'
+    Assert-Keys '17+ 16+ 16- 17- 17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R and w, a double click on the room to drag the window, Ctrl+Shift+R and v, and the right button on the band'
+    Write-Host 'OK: a button that goes down where Windows handles the mouse keeps the name too, and then Windows does what it does: a double click on the room to drag the window maximizes it, and another one restores it; and so does the right button on the band above the tab, and the window draws the tab with its name.'
+
+    # 8. A click on the tab, one on the terminal or the right button on the
+    # band, and another click on the tab, at once, are not a double click,
+    # as in Windows: the field does not open, and the program gets the next
+    # keys. While the left button that went down on the terminal is down,
+    # Ctrl+Shift+R opens the field, and a move over it is for the terminal,
+    # which selects up to there, and draws it.
+    $point = Get-TabPoint $tab
+    $click = @(
+        Get-Mouse $WM_MOUSEMOVE 0 $point
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $point
+        Get-Mouse $WM_LBUTTONUP 0 $point
+    )
+    $terminal = [pscustomobject]@{ X = $point.X; Y = $bar.Height + 40 }
+    Send-Posted ($click + @(
+            Get-Mouse $WM_MOUSEMOVE 0 $terminal
+            Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $terminal
+            Get-Mouse $WM_LBUTTONUP 0 $terminal
+        ) + $click)
+    Send-Press $VK_Q
+    Send-Press $VK_RETURN
+    Assert-Title 'v' 'After a click on the tab, one on the terminal and another one on the tab, at once, q and Enter'
+    # Long after the last click, which is a first one again.
+    Start-Sleep -Milliseconds ($api::GetDoubleClickTime() + 100)
+    Send-Posted ($click + @(
+            Get-FrameMouse $WM_NCRBUTTONDOWN $HTTOP $band
+            Get-FrameMouse $WM_NCRBUTTONUP $HTTOP $band
+        ) + $click)
+    Send-Press $VK_Q
+    Send-Press $VK_RETURN
+    Assert-Title 'v' 'After a click on the tab, the right button on the band and another click on the tab, at once, q and Enter'
+    $from = [pscustomobject]@{ X = $point.X; Y = $bar.Height + 60 }
+    $to = [pscustomobject]@{ X = $point.X + 100; Y = $bar.Height + 60 }
+    Send-Posted @(
+        Get-Mouse $WM_MOUSEMOVE 0 $from
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $from
+        Get-Mouse $WM_MOUSEMOVE $MK_LBUTTON $to
+    )
+    Wait-For { (Get-Capture) -ne [IntPtr]::Zero } { 'The left button down on the terminal did not capture the mouse.' }
+    Wait-Quiet 400
+    Send-CtrlShift $VK_R
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
+    Send-Posted (Get-Mouse $WM_MOUSEMOVE $MK_LBUTTON $point)
+    Wait-Quiet 400
+    $frames = @(Get-Frames $start)
+    if (@(Get-Areas $frames | Where-Object { $_.Bottom -gt $bar.Height }).Count -eq 0) {
+        Show-Lines $frames
+        throw 'While the left button that went down on the terminal was down, a move over the field did not reach the terminal: the window drew nothing there.'
+    }
+    Send-Posted (Get-Mouse $WM_LBUTTONUP 0 $point)
+    Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The left button that went down on the terminal went up, and the window kept the mouse.' }
+    Send-Press $VK_ESCAPE
+    Assert-Title 'v' 'After a selection on the terminal, Ctrl+Shift+R and Esc'
+    Assert-Keys '81+ 81- 13+ 13- 81+ 81- 13+ 13- 17+ 16+ 16- 17- 90+ 90-' 'After the clicks on the tab with q and Enter, twice, and Ctrl+Shift+R and Esc during a selection'
+    Write-Host 'OK: a click on the tab, one on the terminal or the right button on the band, and another click on the tab, at once, are not a double click: the program gets the next keys; while the left button that went down on the terminal is down, Ctrl+Shift+R opens the field, and a move over it is for the terminal, which draws its selection.'
+
+    # 9. A title that the program gives meanwhile changes neither the title
     # of the window nor the name, and nothing is drawn: the tab shows the
     # same. A name of only spaces gives the tab the title of its program
     # back. Enter without changing the text does not keep it as a name: the
@@ -1019,7 +1230,7 @@ try {
     Wait-Quiet 400
     $start = @(Get-Log).Count
     $null = Invoke-Step 'give another title'
-    Assert-Title 'xy' 'After the program gave another title to the tab with a name'
+    Assert-Title 'v' 'After the program gave another title to the tab with a name'
     Assert-Nothing $start 'After the program gave another title to the tab with a name'
     Send-CtrlShift $VK_R
     Wait-Quiet 400
@@ -1035,7 +1246,7 @@ try {
     Assert-Keys '17+ 16+ 16- 17- 17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R twice, three spaces and Enter, and Enter'
     Write-Host 'OK: the titles that the program gives meanwhile change neither the title of the window nor the name, and draw nothing; a name of only spaces gives the tab the title of its program back, and Enter without changing the text does not keep it as a name.'
 
-    # 8. Duplicate tab, the second item of the menu, gives the copy the name
+    # 10. Duplicate tab, the second item of the menu, gives the copy the name
     # of the tab, which the window keeps when the program of the copy gives
     # its title. Rename tab, in the menu that the right button opens on the
     # first tab, which is hidden then, shows it and edits its name.
@@ -1065,16 +1276,28 @@ try {
     Assert-Keys '17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R, dup and Enter, Duplicate tab, and one and Enter on the first tab'
     Write-Host 'OK: Duplicate tab gives the copy the name of the tab, which the window keeps when the program of the copy gives its title; Rename tab, in the menu of a hidden tab, shows it and edits its name.'
 
-    # 9. A double click on the copy, which is hidden, shows it and edits its
-    # name. Its field, open again with Ctrl+Shift+R, closes when its program
-    # ends, and its tab with it: the program of the first tab, which is shown
-    # then, gets the keys again.
+    # 11. A double click on the copy, which is hidden, shows it and edits its
+    # name. When its program ends with exit code 1, the tab stays, with its
+    # name, and Enter starts the program again, and the tab keeps its name,
+    # also when the new program gives its title. Its field, open again with
+    # Ctrl+Shift+R, closes when its program ends with exit code 0, and its
+    # tab with it: the program of the first tab, which is shown then, gets
+    # the keys again.
     Send-DoubleClick (Get-TabPoint $bar.Tabs[1])
     Wait-Shown $copy @($first) 'After a double click on the copy'
     Wait-Quiet 400
     Send-Text 'two'
     Send-Press $VK_RETURN
     Wait-Title 'two' 'After a double click on the copy, two and Enter'
+    $null = $failCopy.Set()
+    Wait-Ended $copy 'The program of the copy, after the check ended it with exit code 1,'
+    Assert-Title 'two' 'After the program of the copy ended with exit code 1'
+    Send-Press $VK_RETURN
+    $restarted = Wait-Copy @($first, $copy) 'Enter on the copy, whose program ended'
+    Wait-Shown $restarted @($first) 'After Enter on the copy, whose program ended'
+    Wait-For { Test-Path -LiteralPath "$reports.$restarted" } { 'After Enter on the copy, its program did not start again.' }
+    Assert-Title 'two' 'After the program of the copy started again, and gave its title'
+    $copy = $restarted
     Send-CtrlShift $VK_R
     Wait-Quiet 400
     Send-Text 'zz'
@@ -1086,9 +1309,9 @@ try {
     Wait-Shown $first @() 'After the tab of the copy closed'
     Wait-Title 'one' 'After the tab of the copy closed'
     Assert-Keys '90+ 90-' 'After the tab whose name was edited closed'
-    Write-Host 'OK: a double click on a hidden tab shows it and edits its name; when the program of the tab whose name is edited ends, its tab closes, and the editing with it: the program of the tab that is shown then gets the keys again.'
+    Write-Host 'OK: a double click on a hidden tab shows it and edits its name; when its program ends with exit code 1, and starts again with Enter, the tab keeps its name; when the program of the tab whose name is edited ends with exit code 0, its tab closes, and the editing with it: the program of the tab that is shown then gets the keys again.'
 
-    # 10. Ctrl+Shift+W closes the last tab, and the window: meiga ends, and
+    # 12. Ctrl+Shift+W closes the last tab, and the window: meiga ends, and
     # the program of the tab and the consoles end too.
     $tabConsoles = @(Get-Consoles)
     Send-CtrlShift $VK_W
@@ -1122,6 +1345,7 @@ finally {
     $go.Dispose()
     $done.Dispose()
     $endCopies.Dispose()
+    $failCopy.Dispose()
     Remove-Item -LiteralPath $script -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $appdata -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$reports.*" -ErrorAction SilentlyContinue
