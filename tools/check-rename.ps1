@@ -32,9 +32,10 @@ messages of the focus. It checks that:
   then lets it go; a click puts the caret, at the end of the text, and a
   click outside the field, on the terminal, keeps the name;
 - the titles that the program gives meanwhile do not change the title of the
-  window, nor the name; a name of only spaces gives the tab the title of its
-  program back, and Enter without changing the text does not keep it as a
-  name: the next title of the program is the title of the window;
+  window, nor the name, and draw nothing; a name of only spaces gives the
+  tab the title of its program back, and Enter without changing the text
+  does not keep it as a name: the next title of the program is the title of
+  the window;
 - "Duplicate tab" gives the copy the name of the tab, which the window keeps
   as its title when the program of the copy gives its tab a title; "Rename
   tab", in the menu that the right button opens on the first tab, which is
@@ -43,7 +44,7 @@ messages of the focus. It checks that:
   name; when the program of the tab whose name is edited ends, its tab
   closes, and the editing with it: the program of the tab that is shown then
   gets the keys again. Ctrl+Shift+W closes the last tab, and meiga.exe ends
-  with exit code 0.
+  with exit code 0, and the program of the tab and its console end too.
 
 As check-menu.ps1 does, the check moves the pointer out of the window, posts
 its messages while the thread of the window is suspended, and does not count
@@ -154,6 +155,10 @@ public static extern bool GetWindowRect(IntPtr window, out RECT rect);
 [DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool IsZoomed(IntPtr window);
+
+[DllImport("user32.dll")]
+[return: MarshalAs(UnmanagedType.Bool)]
+public static extern bool IsWindow(IntPtr window);
 
 [DllImport("user32.dll")]
 public static extern int GetSystemMetrics(int index);
@@ -567,6 +572,12 @@ function Get-Shells {
             Where-Object { $_.Name -notin $consoles -and $_.CreationDate -ge $started })
 }
 
+# The consoles of the tabs.
+function Get-Consoles {
+    @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+            Where-Object { $_.Name -in $consoles -and $_.CreationDate -ge $started })
+}
+
 # Waits until a tab opens with a program that is not one of $Known, and
 # checks that it runs the same command line as the first tab: it is a copy.
 # Returns its process.
@@ -846,15 +857,18 @@ function Send-Text([string]$Text) {
 }
 
 # Ctrl+Shift and $Code: Ctrl and Shift go down for the program, if the keys
-# go to it, and up after $Code.
+# go to it, and up after $Code. All of them go at once, with Ctrl and Shift
+# down: if the key state of other messages could change before the window
+# took $Code, it would take it without them.
 function Send-CtrlShift([int]$Code) {
     Send-Keys @(
         Get-Key $VK_CONTROL $true
         Get-Key $VK_SHIFT $true
         Get-Key $Code $true
         Get-Key $Code $false
+        Get-Key $VK_SHIFT $false
+        Get-Key $VK_CONTROL $false
     ) $ctrlShiftKeys
-    Send-Keys @(Get-Key $VK_SHIFT $false; Get-Key $VK_CONTROL $false)
 }
 
 $info = [Diagnostics.ProcessStartInfo]::new($Path)
@@ -998,12 +1012,15 @@ try {
     Write-Host 'OK: while the left button is down in the field, the window keeps the mouse, and then lets it go; a click puts the caret at the end of the text, and a click on the terminal keeps the name.'
 
     # 7. A title that the program gives meanwhile changes neither the title
-    # of the window nor the name. A name of only spaces gives the tab the
-    # title of its program back. Enter without changing the text does not
-    # keep it as a name: the next title of the program is the title of the
-    # window.
+    # of the window nor the name, and nothing is drawn: the tab shows the
+    # same. A name of only spaces gives the tab the title of its program
+    # back. Enter without changing the text does not keep it as a name: the
+    # next title of the program is the title of the window.
+    Wait-Quiet 400
+    $start = @(Get-Log).Count
     $null = Invoke-Step 'give another title'
     Assert-Title 'xy' 'After the program gave another title to the tab with a name'
+    Assert-Nothing $start 'After the program gave another title to the tab with a name'
     Send-CtrlShift $VK_R
     Wait-Quiet 400
     Send-Text '   '
@@ -1016,7 +1033,7 @@ try {
     $null = Invoke-Step 'give a third title'
     Wait-Title 'meiga-rename-3' 'After Enter without changing the text, the program gave another title'
     Assert-Keys '17+ 16+ 16- 17- 17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R twice, three spaces and Enter, and Enter'
-    Write-Host 'OK: the titles that the program gives meanwhile change neither the title of the window nor the name; a name of only spaces gives the tab the title of its program back, and Enter without changing the text does not keep it as a name.'
+    Write-Host 'OK: the titles that the program gives meanwhile change neither the title of the window nor the name, and draw nothing; a name of only spaces gives the tab the title of its program back, and Enter without changing the text does not keep it as a name.'
 
     # 8. Duplicate tab, the second item of the menu, gives the copy the name
     # of the tab, which the window keeps when the program of the copy gives
@@ -1063,21 +1080,31 @@ try {
     Send-Text 'zz'
     $null = $endCopies.Set()
     Wait-Ended $copy 'The program of the copy, after the check ended it,'
+    Wait-For { @(Get-Shells).Count -eq 1 -and @(Get-Consoles).Count -eq 1 } {
+        "After the tab of the copy closed, $exe has $(@(Get-Shells).Count) programs and $(@(Get-Consoles).Count) consoles instead of one."
+    }
     Wait-Shown $first @() 'After the tab of the copy closed'
     Wait-Title 'one' 'After the tab of the copy closed'
     Assert-Keys '90+ 90-' 'After the tab whose name was edited closed'
     Write-Host 'OK: a double click on a hidden tab shows it and edits its name; when the program of the tab whose name is edited ends, its tab closes, and the editing with it: the program of the tab that is shown then gets the keys again.'
 
-    # 10. Ctrl+Shift+W closes the last tab, and the window.
+    # 10. Ctrl+Shift+W closes the last tab, and the window: meiga ends, and
+    # the program of the tab and the consoles end too.
+    $tabConsoles = @(Get-Consoles)
     Send-CtrlShift $VK_W
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-        throw "$exe was still running $TimeoutSeconds s after Ctrl+Shift+W on its last tab."
+        $state = if ($api::IsWindow($window)) { 'its window is still open' } else { 'its window closed' }
+        $left = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" | ForEach-Object { "$($_.Name) $($_.ProcessId)" })
+        throw "$exe was still running $TimeoutSeconds s after Ctrl+Shift+W on its last tab: $state, and it has these processes: $($left -join ', ')."
     }
     if ($process.ExitCode -ne 0) {
         throw "$exe ended with exit code $($process.ExitCode) instead of 0."
     }
     Wait-Ended $first 'The program of the last tab'
-    Write-Host 'OK: Ctrl+Shift+W closes the last tab and the window, and meiga ends with exit code 0.'
+    foreach ($console in $tabConsoles) {
+        Wait-Ended ([int]$console.ProcessId) "The console $($console.Name) of the last tab"
+    }
+    Write-Host 'OK: Ctrl+Shift+W closes the last tab and the window, and meiga ends with exit code 0; the program of the tab and its console end too.'
     $passed = $true
 }
 finally {
