@@ -6,12 +6,12 @@
 //!
 //! The pointer highlights the tab and the button under it. The left button
 //! shows a tab as soon as it goes down on it, as in Chrome, and a double
-//! click on a tab edits its name, in a field in the place of its title (ADR
-//! 0031). The buttons act when the left button goes up on the same button
-//! where it went down: moving away first takes the click back. The middle
-//! button closes the tab where it goes down and up, and the right one opens
-//! its menu, where it goes up, without showing it (ADR 0021). The other
-//! clicks do nothing yet.
+//! click on a tab, as Windows counts them, edits its name, in a field in the
+//! place of its title (ADR 0031). The buttons act when the left button goes
+//! up on the same button where it went down: moving away first takes the
+//! click back. The middle button closes the tab where it goes down and up,
+//! and the right one opens its menu, where it goes up, without showing it
+//! (ADR 0021). The other clicks do nothing yet.
 //!
 //! When even the narrowest tabs do not fit, the bar scrolls them (ADR 0025):
 //! the wheel, forward and backward or to the sides, a tab for each of its
@@ -101,8 +101,9 @@ const REPEAT: Duration = Duration::from_millis(100);
 /// A step of the wheel, `WHEEL_DELTA` of Windows: it scrolls a tab.
 const WHEEL_STEP: i64 = 120;
 
-/// What the tab of a content shows: the title of its program or, without
-/// one, the name of its profile; and an indicator, if it has one.
+/// What the tab of a content shows: the name that the user gave it or,
+/// without one, the title of its program or, without one, the name of its
+/// profile; and an indicator, if it has one.
 pub trait Label {
     fn label(&self) -> &str;
 
@@ -405,6 +406,13 @@ impl TabBar {
         self.click_settings = settings;
     }
 
+    /// A button went down where the bar does not get it: as in Windows, a
+    /// click on a tab before it and another one after it are not a double
+    /// click.
+    pub fn forget_clicks(&mut self) {
+        self.clicks.reset();
+    }
+
     /// Tabs opened or closed, but not one alone: [`TabBar::tab_closed`].
     /// The tabs get their width again, also if they kept it, and the one
     /// that is shown has to be in view.
@@ -542,7 +550,8 @@ impl TabBar {
     }
 
     /// The left button went down on the tab `id` at `now`: it shows it, or
-    /// edits its name if it is the second click on it in a row.
+    /// edits its name if it is the second click on it in a row. As in
+    /// Windows, the click after a double click is a single one again.
     fn click_tab(&mut self, id: TabId, now: Instant) -> TabAction {
         let Some(at) = self.pointer else {
             return TabAction::Activate(id);
@@ -550,7 +559,12 @@ impl TabBar {
         let count = self
             .clicks
             .press(Button::Left, at, now, &self.click_settings);
-        if self.clicked.replace(id) == Some(id) && count == 2 {
+        let again = self.clicked.replace(id) == Some(id);
+        if count != 2 {
+            return TabAction::Activate(id);
+        }
+        self.clicks.reset();
+        if again {
             TabAction::Rename(id)
         } else {
             TabAction::Activate(id)
@@ -799,12 +813,19 @@ impl TabBar {
         }
         let at = Point::new(title.left, top);
         if let Some(field) = style.field {
+            // In the part of the title that the strip shows, where the clicks
+            // of the field go: see `text_area`.
+            let area = title.intersection(layout.strip());
             let selection = palette.selection;
-            let canvas = &mut canvas.clipped(title);
+            let canvas = &mut canvas.clipped(area);
+            let at = Point::new(area.left, top);
             self.draw_field(canvas, at, field, color, background, selection);
         } else {
-            let columns = (title.width() as i32 / width) as usize;
-            text::fit(tab.content().label(), columns, &mut self.cells);
+            text::fit(
+                tab.content().label(),
+                columns(title, width),
+                &mut self.cells,
+            );
             self.font.draw(
                 &mut canvas.clipped(title),
                 at,
@@ -826,27 +847,16 @@ impl TabBar {
         }
     }
 
-    /// Where the title of the tab at `index` goes: after `indicator`, if the
-    /// tab has one, and the title has room for it and a blank cell more.
-    /// Returns too, then, the slot of the indicator, its cells before the
-    /// blank one.
+    /// Where the title of the tab at `index` goes, after `indicator`, if the
+    /// tab has one, and the slot of the indicator: see [`split_title`].
     fn title(
         &self,
         index: usize,
         indicator: Option<Indicator>,
     ) -> (Rect, Option<(Indicator, Rect)>) {
-        let mut title = self.layout.title(index);
         // A cell is a few dozen pixels.
         let width = self.font.cell().width.max(1) as i32;
-        let columns = (title.width() as i32 / width) as usize;
-        let Some(indicator) = indicator.filter(|indicator| indicator.cells() < columns) else {
-            return (title, None);
-        };
-        let right = title.left + indicator.cells() as i32 * width;
-        let slot = Rect::new(title.left, title.top, right, title.bottom);
-        // And a blank cell between it and the title.
-        title.left = right + width;
-        (title, Some((indicator, slot)))
+        split_title(self.layout.title(index), width, indicator)
     }
 
     /// Draws `field`, where the name of a tab is edited, from `at`, the
@@ -1136,6 +1146,31 @@ impl TabBar {
     }
 }
 
+/// How many whole cells `width` pixels wide fit in `area`.
+fn columns(area: Rect, width: i32) -> usize {
+    (area.width() as i32 / width) as usize
+}
+
+/// Where a title goes in `title`, the area of the title of a tab, with cells
+/// `width` pixels wide: after `indicator`, if the tab has one, and the area
+/// has room for it and a blank cell more. Returns too, then, the slot of the
+/// indicator, its cells before the blank one.
+fn split_title(
+    mut title: Rect,
+    width: i32,
+    indicator: Option<Indicator>,
+) -> (Rect, Option<(Indicator, Rect)>) {
+    let fits = |indicator: &Indicator| indicator.cells() < columns(title, width);
+    let Some(indicator) = indicator.filter(fits) else {
+        return (title, None);
+    };
+    let right = title.left + indicator.cells() as i32 * width;
+    let slot = Rect::new(title.left, title.top, right, title.bottom);
+    // And a blank cell between it and the title.
+    title.left = right + width;
+    (title, Some((indicator, slot)))
+}
+
 /// Draws the lines from the two top corners of `rect` down at 45 degrees to
 /// its bottom, `stroke` pixels thick, as steps of a pixel: at 45 degrees
 /// they are as sharp as straight ones. In a square, they make a cross; in a
@@ -1400,20 +1435,32 @@ mod tests {
         };
         assert_eq!(click(&mut bar, 300, 0), Some(TabAction::Activate(second)));
         assert_eq!(click(&mut bar, 300, 400), Some(TabAction::Rename(second)));
-        // A third click is a first one again, and so is a click after the
-        // time of a double click, 500 ms by default.
+        // As in Windows, a third click is a first one again, and a fourth
+        // one a second one.
         assert_eq!(click(&mut bar, 300, 500), Some(TabAction::Activate(second)));
+        assert_eq!(click(&mut bar, 300, 600), Some(TabAction::Rename(second)));
+        // So is a click after the time of a double click, 500 ms by default.
         assert_eq!(
-            click(&mut bar, 300, 1100),
+            click(&mut bar, 300, 1200),
             Some(TabAction::Activate(second))
         );
-        assert_eq!(click(&mut bar, 300, 1200), Some(TabAction::Rename(second)));
-        // Near the last click, but on another tab.
+        assert_eq!(
+            click(&mut bar, 300, 1800),
+            Some(TabAction::Activate(second))
+        );
+        assert_eq!(click(&mut bar, 300, 1900), Some(TabAction::Rename(second)));
+        // Near the last click, but on another tab: for Windows, a double
+        // click all the same, after which a click is a first one.
         assert_eq!(click(&mut bar, 243, 3000), Some(TabAction::Activate(first)));
         assert_eq!(
             click(&mut bar, 245, 3100),
             Some(TabAction::Activate(second))
         );
+        assert_eq!(
+            click(&mut bar, 245, 3200),
+            Some(TabAction::Activate(second))
+        );
+        assert_eq!(click(&mut bar, 245, 3300), Some(TabAction::Rename(second)));
         // Another press between them: as in Windows, no double click.
         assert_eq!(
             click(&mut bar, 300, 5000),
@@ -1430,6 +1477,27 @@ mod tests {
             click(&mut bar, 303, 5300),
             Some(TabAction::Activate(second))
         );
+        // Nor with a press that the bar does not get between them, as on
+        // the terminal.
+        assert_eq!(
+            click(&mut bar, 300, 6000),
+            Some(TabAction::Activate(second))
+        );
+        bar.forget_clicks();
+        assert_eq!(
+            click(&mut bar, 300, 6100),
+            Some(TabAction::Activate(second))
+        );
+        // With the double-click time of Windows at 100 ms, two clicks 200 ms
+        // apart are two clicks.
+        bar.set_click_settings(ClickSettings {
+            time: 100 * ms,
+            ..ClickSettings::default()
+        });
+        let activate = Some(TabAction::Activate(second));
+        assert_eq!(click(&mut bar, 300, 7000), activate);
+        assert_eq!(click(&mut bar, 300, 7200), activate);
+        assert_eq!(click(&mut bar, 300, 7250), Some(TabAction::Rename(second)));
     }
 
     #[test]
@@ -1940,6 +2008,32 @@ mod tests {
     }
 
     #[test]
+    fn the_cells_of_an_area_are_whole_cells() {
+        assert_eq!(columns(Rect::new(10, 0, 45, 32), 10), 3);
+        assert_eq!(columns(Rect::new(10, 0, 50, 32), 10), 4);
+        assert_eq!(columns(Rect::new(10, 0, 19, 32), 10), 0);
+    }
+
+    #[test]
+    fn an_indicator_needs_room_for_itself_and_a_blank_cell() {
+        // Three cells of 10 pixels: the dot, a blank one and one of title.
+        let three = Rect::new(10, 4, 40, 32);
+        let dot = Some(Indicator::Activity);
+        let slot = Rect::new(10, 4, 20, 32);
+        let expected = (Rect::new(30, 4, 40, 32), Some((Indicator::Activity, slot)));
+        assert_eq!(split_title(three, 10, dot), expected);
+        // The bell, two cells, and the blank one: no room left for the title.
+        let bell = Some(Indicator::Bell);
+        let slot = Rect::new(10, 4, 30, 32);
+        let expected = (Rect::new(40, 4, 40, 32), Some((Indicator::Bell, slot)));
+        assert_eq!(split_title(three, 10, bell), expected);
+        // Without room for the blank cell, without an indicator.
+        let two = Rect::new(10, 4, 30, 32);
+        assert_eq!(split_title(two, 10, bell), (two, None));
+        assert_eq!(split_title(three, 10, None), (three, None));
+    }
+
+    #[test]
     fn the_field_of_a_name_goes_where_the_title_goes() {
         // The same tabs: the field goes after the indicator, and a blank
         // cell, as far as the strip shows it.
@@ -2105,6 +2199,40 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn the_field_of_a_tab_that_the_strip_cuts_starts_where_the_strip_does() {
+        // Three tenths of a notch of the wheel scroll the tabs 30 pixels:
+        // the title of the first one goes from 6 to 70, and the strip shows
+        // it from 28, where the clicks of the field find its first cell.
+        let (mut bar, tabs) = many(10);
+        bar.wheel(&tabs, -36, false);
+        assert_eq!(bar.text_area(0, None), Rect::new(28, 4, 70, 32));
+        let cell = bar.cell();
+        let (width, height) = (cell.width as i32, cell.height as i32);
+        let top = 4 + (28 - height) / 2;
+        let cells: Vec<CellChar> = text::cells("abc").collect();
+        let field = View {
+            cells: &cells,
+            shown: Shown {
+                caret: 0,
+                selection: 0..3,
+            },
+            caret: None,
+        };
+        let size = Size::new(983, bar.height());
+        let mut pixels = vec![0; size.area() as usize];
+        let mut canvas = Canvas::new(&mut pixels, size, 983).unwrap();
+        bar.draw(&mut canvas, &tabs, &Palette::MEIGA, Some((0, field)));
+        let palette = Palette::MEIGA;
+        let selected = Rect::new(28, top, 28 + 3 * width, top + height);
+        assert!(text_in(
+            &pixels,
+            selected,
+            palette.foreground,
+            palette.selection
+        ));
     }
 
     #[test]

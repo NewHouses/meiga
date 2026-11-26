@@ -204,6 +204,15 @@ impl Editor {
         self.changed = true;
     }
 
+    /// Windows has `settings` now, which can change while meiga runs, as
+    /// the ones of the terminal: the caret blinks, and the clicks count, as
+    /// they say.
+    pub fn set_settings(&mut self, settings: Settings) {
+        self.caret = settings.caret;
+        self.click_settings = settings.clicks;
+        self.set_dpi(settings.dpi);
+    }
+
     /// The keys of `keys` are down now: they do nothing until they go up.
     pub fn ignore(&mut self, keys: impl IntoIterator<Item = u16>) {
         self.stale.extend(keys);
@@ -373,7 +382,9 @@ impl Editor {
     }
 
     /// The cell of the field under `at`, from its first one, which can be
-    /// out of it, and the side of the cell: its right half from the middle.
+    /// out of it, and the side of the cell: the right one after the pixel at
+    /// half its width, as in the terminal
+    /// ([`cell_at`](meiga_core::mouse::cell_at)).
     fn column_at(&self, at: Point) -> (isize, Side) {
         let width = i64::from(self.place.cell.width.max(1));
         let x = i64::from(at.x) - i64::from(self.place.area.left);

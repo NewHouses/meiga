@@ -48,6 +48,15 @@
 //! terminal tells how the program ended; then, without a program, Enter
 //! starts it again in the same tab, and Ctrl+D closes the tab (ADR 0024).
 //!
+//! A double click on a tab, Ctrl+Shift+R or "Rename tab" in its menu edit
+//! the name of the tab, in a field in the place of its title, which gets
+//! the keys and its own clicks meanwhile (ADR 0031). Enter, or a button
+//! that goes down anywhere else, also where Windows drags or resizes the
+//! window, ends it with the name, which the tab and the window show instead
+//! of the titles of its program, also after it starts again and in its
+//! copies; Esc ends it without it. An empty name gives the tab back the
+//! titles of its program.
+//!
 //! A tab is shown as soon as it opens, at the start too: the writer thread
 //! of its session creates the pseudoconsole and the program, and the window
 //! never waits for Windows to create them (ADR 0028). Meanwhile, the tab
@@ -529,13 +538,18 @@ impl Tabs {
     /// The window gained or lost the focus, at `now`. Without it, the menu
     /// closes, and the buttons of the window on the bar look dimmer; the
     /// editing of a name goes on, without its caret, until the window gets
-    /// the focus again (ADR 0031). With it, the bar reads again how fast two
-    /// clicks are a double click, which can change while meiga runs.
+    /// the focus again (ADR 0031). With it, the bar and the editing read
+    /// again how fast two clicks are a double click, and the editing how its
+    /// caret blinks, which can change while meiga runs.
     pub fn focus(&mut self, window: &Window, focused: bool, now: Instant) {
         if !focused {
             self.close_menu(window);
         } else if !self.focused {
-            self.bar.set_click_settings(window::mouse_settings().clicks);
+            let settings = Settings::read(window.dpi());
+            self.bar.set_click_settings(settings.clicks);
+            if let Some(editor) = &mut self.editor {
+                editor.set_settings(settings);
+            }
         }
         self.focused = focused;
         if let Some(editor) = &mut self.editor {
@@ -647,17 +661,9 @@ impl Tabs {
 
     /// Opens the editing of the name of the tab `id`, at `now`, in its tab,
     /// which is shown first, and comes into view, with the text that it
-    /// shows, all of it selected (ADR 0031). One that is open for another tab
-    /// ends first with its name. Returns whether a frame has to show it.
+    /// shows, all of it selected (ADR 0031). An editing that may be open ends
+    /// first with its name. Returns whether a frame has to show it.
     fn rename(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
-        if self.tabs.index_of(id).is_none()
-            || self
-                .editor
-                .as_ref()
-                .is_some_and(|editor| editor.tab() == id)
-        {
-            return false;
-        }
         self.commit(window);
         if let Some(switch) = self.select(id) {
             self.show(window, switch, now);
@@ -683,13 +689,12 @@ impl Tabs {
     }
 
     /// Ends the editing of the name that may be open with the name in its
-    /// field, as Enter: a button went down outside it. Returns whether a
-    /// frame has to draw it.
-    fn commit(&mut self, window: &Window) -> bool {
-        let Some(done) = self.editor.as_ref().map(Editor::commit) else {
-            return false;
-        };
-        self.finish(window, done)
+    /// field, as Enter: a button went down outside it. The bar has the damage
+    /// that a frame draws.
+    fn commit(&mut self, window: &Window) {
+        if let Some(done) = self.editor.as_ref().map(Editor::commit) {
+            self.finish(window, done);
+        }
     }
 
     /// Ends the editing of the name as `done` says: its tab gets its new
@@ -861,7 +866,8 @@ impl Tabs {
 
     /// Does what a shortcut, a click or the menu asked for the tabs, at
     /// `now`. Returns whether a frame has to show it: the window shows
-    /// another tab, the bar changed, or the menu opened.
+    /// another tab, the bar changed, the menu opened, or the editing of a
+    /// name.
     pub fn act(&mut self, window: &Window, action: TabAction, now: Instant) -> bool {
         let active = self.tabs.active().id();
         let switch = match action {
@@ -1285,17 +1291,32 @@ impl Tabs {
             return self.bar_mouse(window, event, at);
         }
         self.bar.left(&self.tabs);
+        if let Event::MouseDown { .. } = event {
+            self.bar.forget_clicks();
+        }
         let mut response = self.view.mouse(window, &raised(event, top));
         response.redraw |= self.bar.has_damage();
         response
     }
 
+    /// A button of the mouse went down on the frame of the window, where
+    /// Windows drags it, resizes it or maximizes it, or it opens its menu:
+    /// as any button that goes down outside its field, it ends the editing
+    /// of a name that may be open with the name first (ADR 0031). Returns
+    /// whether a frame has to draw it.
+    pub fn frame_mouse_down(&mut self, window: &Window) -> bool {
+        self.bar.forget_clicks();
+        self.commit(window);
+        self.bar.has_damage()
+    }
+
     /// A mouse event while a name is edited (ADR 0031): in its field, and
     /// while the left button that went down in it is down, it is for the
-    /// field, whose pointer is the bar of text; the wheel on the bar does
-    /// nothing; and a button that goes down elsewhere ends the editing with
-    /// the name, and then does what it does. Returns `None` for the events
-    /// that go on to the bar or to the terminal.
+    /// field, whose pointer is the bar of text, unless the terminal holds
+    /// the mouse; the wheel on the bar does nothing; and a button that goes
+    /// down elsewhere ends the editing with the name, and then does what it
+    /// does. Returns `None` for the events that go on to the bar or to the
+    /// terminal.
     fn edit_mouse(&mut self, window: &Window, event: &Event) -> Option<Response> {
         let now = Instant::now();
         let editor = self.editor.as_mut()?;
@@ -1305,11 +1326,16 @@ impl Tabs {
                 at,
                 modifiers,
             } if editor.contains(at) => {
-                if editor.down(button, at, modifiers, now) {
+                // Only the left button does something in the field.
+                let pressed = editor.down(button, at, modifiers, now);
+                if pressed {
                     window.capture_mouse();
                 }
                 window.set_pointer(Pointer::Text);
-                Some(Response::REDRAW)
+                Some(Response {
+                    redraw: pressed,
+                    ..Response::default()
+                })
             }
             Event::MouseDown { .. } => {
                 self.commit(window);
@@ -1329,7 +1355,7 @@ impl Tabs {
                 }
                 Some(Response::default())
             }
-            Event::MouseMoved { at, .. } if editor.contains(at) => {
+            Event::MouseMoved { at, .. } if editor.contains(at) && !self.view.holds_mouse() => {
                 // As any move on the bar, but with the pointer of text.
                 let response = self.bar_mouse(window, event, at);
                 window.set_pointer(Pointer::Text);

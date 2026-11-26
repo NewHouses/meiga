@@ -21,8 +21,8 @@ const VK_V: u16 = 0x56;
 const VK_X: u16 = 0x58;
 const VK_F2: u16 = 0x71;
 
-/// A caret one pixel wide at 100 %, which blinks every 500 ms for 5 s, as
-/// the one of Windows by default.
+/// A caret one pixel wide at 100 %, which blinks every 500 ms for 5 s: as
+/// the one of Windows by default, which blinks every 530 ms.
 const CARET: CaretSettings = CaretSettings {
     blink: Some(Duration::from_millis(500)),
     timeout: Duration::from_secs(5),
@@ -105,8 +105,8 @@ fn shown(editor: &mut Editor) -> (String, usize, Range<usize>) {
     (text, view.shown.caret, view.shown.selection)
 }
 
-/// The left button goes down at `x`, in the middle of the height of the
-/// field, at `now`. Returns whether it is the field's.
+/// The left button goes down at `x`, 10 pixels below the top of the field,
+/// at `now`. Returns whether it is the field's.
 fn click(editor: &mut Editor, x: i32, now: Instant) -> bool {
     editor.down(Button::Left, Point::new(x, 10), Modifiers::default(), now)
 }
@@ -324,15 +324,23 @@ fn dragging_out_of_the_field_shows_more_of_the_text_again_and_again() {
     editor.moved(Point::new(100 + 6 * 8 + 2, 10), later);
     assert_eq!(shown(&mut editor), ("efghijklmn".to_owned(), 6, 0..6));
     assert_eq!(editor.update(later).1, Some(later + 500 * MS));
+    // Its first cell is in it too.
+    editor.moved(Point::new(100, 10), later);
+    assert_eq!(shown(&mut editor), ("efghijklmn".to_owned(), 0, 0..0));
+    assert_eq!(editor.update(later).1, Some(later + 500 * MS));
 
-    // Out on the left, in the left half of the cell before the first one;
-    // and the button goes up there.
+    // Out on the left, in the left half of the cell before the first one:
+    // again and again, while the pointer stays there; and the button goes
+    // up there.
     editor.moved(Point::new(95, 10), later);
     assert_eq!(shown(&mut editor), ("defghijklm".to_owned(), 0, 0..0));
     assert_eq!(editor.update(later).1, Some(later + DRAG_REPEAT));
+    let again = later + DRAG_REPEAT;
+    assert_eq!(editor.update(again), (true, Some(again + DRAG_REPEAT)));
+    assert_eq!(shown(&mut editor), ("cdefghijkl".to_owned(), 0, 0..0));
     editor.up(Button::Left);
-    assert_eq!(editor.update(later + DRAG_REPEAT).1, Some(later + 500 * MS));
-    assert_eq!(shown(&mut editor), ("defghijklm".to_owned(), 0, 0..0));
+    assert_eq!(editor.update(again + DRAG_REPEAT).1, Some(again + 500 * MS));
+    assert_eq!(shown(&mut editor), ("cdefghijkl".to_owned(), 0, 0..0));
 }
 
 #[test]
@@ -398,4 +406,36 @@ fn without_the_focus_from_the_start_the_caret_is_not_shown() {
     assert_eq!(caret(&mut editor), None);
     assert_eq!(editor.update(start), (true, None));
     assert_eq!(caret(&mut editor), None);
+}
+
+#[test]
+fn the_caret_and_the_clicks_follow_new_settings_of_windows() {
+    let start = Instant::now();
+    let mut editor = editor("pwsh dev", start);
+    editor.update(start);
+    // A caret 2 pixels wide that blinks every 300 ms, and double clicks of
+    // at most 100 ms.
+    editor.set_settings(Settings {
+        caret: CaretSettings {
+            blink: Some(300 * MS),
+            width: 2,
+            ..CARET
+        },
+        clicks: ClickSettings {
+            time: 100 * MS,
+            ..ClickSettings::default()
+        },
+        dpi: 96,
+    });
+    assert_eq!(editor.update(start), (true, Some(start + 300 * MS)));
+    assert_eq!(caret(&mut editor), Some(2));
+    // Two clicks 200 ms apart are two clicks, and 50 ms apart, a double
+    // click.
+    click(&mut editor, 109, start);
+    editor.up(Button::Left);
+    click(&mut editor, 109, start + 200 * MS);
+    editor.up(Button::Left);
+    assert_eq!(shown(&mut editor), ("pwsh dev".to_owned(), 1, 1..1));
+    click(&mut editor, 109, start + 250 * MS);
+    assert_eq!(shown(&mut editor), ("pwsh dev".to_owned(), 4, 0..4));
 }

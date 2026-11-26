@@ -740,6 +740,8 @@ impl Window {
     /// buttons, the band that resizes the window from its top edge and the
     /// frame. Returns whether Windows does what it does with the message
     /// too: drag the window, resize it, or maximize it with a double click.
+    /// A button that goes down elsewhere than on the buttons of the window
+    /// reaches the handler first, as [`Event::FrameMouseDown`].
     fn nonclient_mouse(&self, state: &State<'_>, mouse: NonClient) -> bool {
         self.hit.set(mouse.hit);
         let button = matches!(mouse.hit, HTMINBUTTON | HTMAXBUTTON | HTCLOSE);
@@ -789,6 +791,10 @@ impl Window {
                     modifiers,
                 });
                 false
+            }
+            Event::MouseDown { .. } => {
+                state.dispatch(Event::FrameMouseDown);
+                true
             }
             // Windows does nothing with the right button on the title bar of
             // meiga: the window opens its menu.
@@ -1624,7 +1630,7 @@ mod tests {
     use meiga_core::ui::tabbar::{CaptionButton, Layout};
     use windows_sys::Win32::Graphics::Gdi::HDC;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        HTBOTTOM, HTLEFT, SendMessageW, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP,
+        HTBOTTOM, HTLEFT, SendMessageW, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_NCRBUTTONDOWN,
     };
 
     use super::*;
@@ -1774,6 +1780,7 @@ mod tests {
         let layout = Layout::new(dpi, size.width, 3, band);
         let close = center(layout.caption(CaptionButton::Close));
         let left_frame = Point::new(-side / 2, 100);
+        let drag = Point::new(layout.captions().left - 1, side + 5);
         {
             let state = State {
                 window: &window,
@@ -1791,7 +1798,7 @@ mod tests {
                 (center(layout.caption(CaptionButton::Maximize)), HTMAXBUTTON),
                 (close, HTCLOSE),
                 (center(layout.tab(0)), HTCLIENT),
-                (Point::new(captions.left - 1, side + 5), HTCAPTION),
+                (drag, HTCAPTION),
                 (Point::new(captions.left - 1, 0), HTTOP),
                 (Point::new(corner, 0), HTTOP),
                 (Point::new(corner - 1, 0), HTTOPLEFT),
@@ -1809,6 +1816,10 @@ mod tests {
             // The frame, which resizes the window, is not of the handler.
             window.track_mouse_leave();
             send(&window, WM_NCMOUSEMOVE, HTLEFT, left_frame);
+            // But it learns first that a button went down on it, or on the
+            // room to drag the window, also as a double click.
+            send(&window, WM_NCRBUTTONDOWN, HTLEFT, left_frame);
+            send(&window, WM_NCMBUTTONDBLCLK, HTCAPTION, drag);
         }
         let modifiers = Modifiers::default();
         assert_eq!(
@@ -1825,6 +1836,8 @@ mod tests {
                     modifiers,
                 },
                 Event::MouseLeft,
+                Event::FrameMouseDown,
+                Event::FrameMouseDown,
             ]
         );
 

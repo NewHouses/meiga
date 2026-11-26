@@ -47,3 +47,32 @@ pub fn thickness(settings: CaretSettings, dpi: u32) -> u32 {
     let scaled = (settings.width.saturating_mul(dpi) + BASE_DPI / 2) / BASE_DPI;
     scaled.max(1)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+
+    fn caret(width: u32) -> CaretSettings {
+        CaretSettings {
+            blink: Some(Duration::from_millis(500)),
+            timeout: Duration::from_secs(5),
+            width,
+        }
+    }
+
+    #[test]
+    fn the_caret_is_as_wide_as_windows_says_at_the_scale_of_the_window() {
+        // Its width at 100 %, and at other scales the nearest pixel: 1.25,
+        // 1.5, 3.5 and 5.25 pixels.
+        assert_eq!(thickness(caret(1), 96), 1);
+        assert_eq!(thickness(caret(1), 120), 1);
+        assert_eq!(thickness(caret(1), 144), 2);
+        assert_eq!(thickness(caret(2), 168), 4);
+        assert_eq!(thickness(caret(3), 168), 5);
+        // At least one pixel.
+        assert_eq!(thickness(caret(0), 96), 1);
+        assert_eq!(thickness(caret(1), 24), 1);
+    }
+}

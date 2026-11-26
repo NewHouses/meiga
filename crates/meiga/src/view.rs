@@ -1220,8 +1220,9 @@ impl Caret {
 
     /// Whether `cursor` is shown at `now`, and when that changes next, while
     /// it blinks. It only blinks if Windows allows it, if the window has the
-    /// focus and if the program did not ask for a steady cursor, and only
-    /// until the timeout of the caret after the last activity.
+    /// focus, if no name is edited and if the program did not ask for a
+    /// steady cursor, and only until the timeout of the caret after the last
+    /// activity.
     fn phase(&self, cursor: Cursor, now: Instant) -> (bool, Option<Instant>) {
         let blinks =
             self.focused && !self.editing && cursor.blinking && cursor.shape != CursorShape::Hidden;
@@ -1234,7 +1235,7 @@ mod tests {
     use std::time::Duration;
 
     use meiga_core::color::{BACKGROUND, FOREGROUND};
-    use meiga_core::term::Color;
+    use meiga_core::term::{Color, Terminal};
     use meiga_render::{Line, pixel};
 
     use super::*;
@@ -1303,6 +1304,51 @@ mod tests {
         let (mut editing, now) = self::caret(Some(Duration::from_millis(500)));
         editing.editing = true;
         assert_eq!(editing.phase(BAR, now), (true, None));
+    }
+
+    #[test]
+    fn the_cursor_looks_as_without_the_focus_while_a_name_is_edited() {
+        // A steady bar at the start of a row of four cells of 9 × 19 pixels.
+        let mut terminal = Terminal::new(GridSize::new(4, 1));
+        terminal.feed(b"\x1b[6 q");
+        let mut screen = Screen::new();
+        terminal.copy_damage(&mut screen);
+        let fonts = FontSystem::new().unwrap();
+        let mut font = Font::new(&fonts, &FONT_FAMILIES, 12.0, 96).unwrap();
+        let mut draw = |caret: &Caret| {
+            let mut pixels = vec![0; 36 * 19];
+            let mut canvas = Canvas::new(&mut pixels, Size::new(36, 19), 36).unwrap();
+            draw_cursor(&mut canvas, &mut font, &screen, caret, Size::new(9, 19));
+            pixels
+        };
+        let at = |pixels: &[u32], x: usize, y: usize| pixels[y * 36 + x];
+        let cursor = pixel(Palette::MEIGA.cursor);
+        // With the focus, the bar, one pixel wide, on the left of the cell.
+        let (mut caret, _) = caret(None);
+        let bar = draw(&caret);
+        assert_eq!((at(&bar, 0, 0), at(&bar, 0, 18)), (cursor, cursor));
+        assert_eq!((at(&bar, 1, 0), at(&bar, 8, 18)), (0, 0));
+        // While a name is edited, the outline of the cell, as without the
+        // focus.
+        caret.editing = true;
+        let outline = draw(&caret);
+        assert_eq!((at(&outline, 8, 0), at(&outline, 8, 18)), (cursor, cursor));
+        assert_eq!(at(&outline, 4, 9), 0);
+        caret.editing = false;
+        caret.focused = false;
+        assert_eq!(draw(&caret), outline);
+    }
+
+    #[test]
+    fn the_cursor_is_as_wide_as_the_caret_at_the_scale_of_the_window() {
+        let (mut caret, _) = caret(None);
+        caret.set_dpi(192);
+        assert_eq!((caret.dpi, caret.thickness), (192, 2));
+        // The settings of Windows now, at that scale.
+        caret.thickness = 99;
+        caret.read_settings();
+        assert_eq!(caret.settings, window::caret_settings());
+        assert_eq!(caret.thickness, blink::thickness(caret.settings, 192));
     }
 
     #[test]

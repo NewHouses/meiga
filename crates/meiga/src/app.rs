@@ -263,6 +263,13 @@ impl Handler for App {
                     self.respond(window, response)?;
                 }
             }
+            Event::FrameMouseDown => {
+                if let Content::Terminal(tabs) = &mut self.content
+                    && tabs.frame_mouse_down(window)
+                {
+                    self.frames.changed(window, &mut self.content)?;
+                }
+            }
         }
         // Each event may move the parts of the tab bar, or open or close a
         // menu: Windows asks the window what is under the pointer.
