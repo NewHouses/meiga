@@ -109,6 +109,9 @@ jobs:
       - name: Check the menu of a tab
         run: ./tools/check-menu.ps1
 
+      - name: Check the editing of the name of a tab
+        run: ./tools/check-rename.ps1
+
       - name: Check the profiles and the configuration
         run: ./tools/check-profiles.ps1
 

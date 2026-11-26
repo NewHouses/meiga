@@ -1299,6 +1299,10 @@ mod tests {
         let (mut unfocused, now) = self::caret(Some(Duration::from_millis(500)));
         unfocused.focused = false;
         assert_eq!(unfocused.phase(BAR, now), (true, None));
+        // While the name of a tab is edited, whose caret blinks instead.
+        let (mut editing, now) = self::caret(Some(Duration::from_millis(500)));
+        editing.editing = true;
+        assert_eq!(editing.phase(BAR, now), (true, None));
     }
 
     #[test]

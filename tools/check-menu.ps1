@@ -28,8 +28,9 @@ from the frame that opens it. It checks that:
   down for it before the menu opened; and Ctrl, which goes down for it
   before the right button opens the menu, and repeats while it is open:
   the program gets it going up;
-- Enter chooses the highlighted item: "Duplicate tab", the first one, opens
-  a tab with the same command line, which is shown with one full frame;
+- Enter chooses the highlighted item: "Duplicate tab", the second one, after
+  Down from "Rename tab", the first one, opens a tab with the same command
+  line, which is shown with one full frame;
 - the right button opens the menu of the tab where it goes up, at the
   pointer, without showing the tab; the pointer on an item draws only its
   highlight; a click on "Duplicate tab" puts the copy right after the tab,
@@ -755,7 +756,7 @@ function Get-Bar([int]$Count) {
 }
 
 # The sizes of the menu of a tab, as meiga computes them (see
-# crates/meiga-core/src/ui/menu.rs): five items and a separator, between a
+# crates/meiga-core/src/ui/menu.rs): six items and a separator, between a
 # border with some space inside it. Its width depends on the font, and
 # comes from the frame that opens it.
 function Get-MenuSizes {
@@ -772,7 +773,7 @@ function Get-MenuSizes {
         Gap = $gap
         Item = $item
         Separator = $separator
-        Height = 2 * ($border + $padding) + 5 * $item + $separator
+        Height = 2 * ($border + $padding) + 6 * $item + $separator
         # Beside the text: the border, the space between it and the
         # highlight, and the one between the highlight and the text, on
         # each side.
@@ -799,17 +800,18 @@ function Get-MenuAt($Point) {
     Get-Menu $Point.X $Point.Y $Point.X $Point.Y
 }
 
-# The entries of $Menu: Duplicate tab, Restart tab, the separator, Close
-# tab, Close other tabs and Close tabs to the right. Each one with a point
-# in the middle of it, X and Y, and, for an item, its highlight, without the
-# space on its sides and above and below it. Restart tab is disabled while
-# the program of the tab runs, as in all this check.
+# The entries of $Menu: Rename tab, Duplicate tab, Restart tab, the
+# separator, Close tab, Close other tabs and Close tabs to the right. Each
+# one with a point in the middle of it, X and Y, and, for an item, its
+# highlight, without the space on its sides and above and below it. Restart
+# tab is disabled while the program of the tab runs, as in all this check.
 function Get-Entries($Menu) {
     $top = $Menu.Top + $sizes.Border + $sizes.Padding
     $left = $Menu.Left + $sizes.Border + $sizes.Side
     $right = $Menu.Right - $sizes.Border - $sizes.Side
     $x = [Math]::Floor(($Menu.Left + $Menu.Right) / 2)
-    foreach ($height in $sizes.Item, $sizes.Item, $sizes.Separator, $sizes.Item, $sizes.Item, $sizes.Item) {
+    $item = $sizes.Item
+    foreach ($height in $item, $item, $item, $sizes.Separator, $item, $item, $item) {
         [pscustomobject]@{
             X = $x
             Y = $top + [Math]::Floor($height / 2)
@@ -987,8 +989,8 @@ try {
     }
     $entries = @(Get-Entries $menu)
     Send-Mouse @(
-        Get-Mouse $WM_MOUSEMOVE 0 $entries[3]
-        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $entries[3]
+        Get-Mouse $WM_MOUSEMOVE 0 $entries[4]
+        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $entries[4]
     )
     Wait-For { (Get-Capture) -ne [IntPtr]::Zero } { 'A press on an item of the menu did not capture the mouse.' }
     Wait-Quiet 400
@@ -998,7 +1000,7 @@ try {
     if ((Get-Capture) -ne [IntPtr]::Zero) {
         throw 'Esc closed the menu while a button was down in it, and the window kept the mouse.'
     }
-    Send-Mouse (Get-Mouse $WM_LBUTTONUP 0 $entries[3])
+    Send-Mouse (Get-Mouse $WM_LBUTTONUP 0 $entries[4])
     Write-Host "OK: the Menu key opens the menu of the tab that is shown, below its tab ($menuWidth x $($sizes.Height) pixels, with cells $cell pixels wide), and draws only the menu; while it is open, nothing is drawn when nothing changes (1 s), nor when the program writes under it, and what it writes across its side is drawn; Esc closes it, also with a button down in it, and then the window lets the mouse go, and draws again what it covered."
 
     # 3. F10 alone goes to the program. Then Shift goes down for the
@@ -1019,7 +1021,7 @@ try {
     Send-Keys (Get-Key $VK_SHIFT $false)
     $start = @(Get-Log).Count
     Send-Press $VK_DOWN
-    $null = Assert-Inside $start (Get-Union @($entries[0].Highlight, $entries[3].Highlight)) 'Down on the menu'
+    $null = Assert-Inside $start (Get-Union @($entries[0].Highlight, $entries[1].Highlight)) 'Down on the menu'
     $start = @(Get-Log).Count
     Send-Press $VK_X
     Assert-Nothing $start 'X on the menu'
@@ -1044,9 +1046,11 @@ try {
     }
     Write-Host 'OK: F10 alone goes to the program, and Shift+F10 opens the menu; while it is open, Down draws only the highlights of the two items, and X draws nothing; the program gets none of those keys, neither going down nor going up, and it gets Shift going up, which went down for it before, and Ctrl going up, which went down for it before the right button opened the menu, and repeated while it was open.'
 
-    # 4. Enter on the first item, which the keyboard highlights: Duplicate
-    # tab.
+    # 4. Down, from the first item, which the keyboard highlights, Rename
+    # tab, and Enter on the second one: Duplicate tab.
     Send-Press $VK_APPS
+    Wait-Quiet 400
+    Send-Press $VK_DOWN
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Press $VK_RETURN
@@ -1054,7 +1058,7 @@ try {
     Wait-Shown $copy1 @($first) 'After Enter on Duplicate tab'
     Wait-CopyReady $copy1 'After Enter on Duplicate tab'
     Assert-OneFull $start 'Enter on Duplicate tab'
-    Write-Host 'OK: Enter chooses the item that is highlighted, Duplicate tab when the keyboard opens the menu, which opens a tab with the same command line, shown with one full frame.'
+    Write-Host 'OK: Enter chooses the item that is highlighted, Duplicate tab after Down from Rename tab, the first one, which the keyboard highlights; it opens a tab with the same command line, shown with one full frame.'
 
     # 5. The right button on the first tab, which is hidden: its menu opens
     # at the pointer, without showing the tab, and the pointer on its items
@@ -1077,12 +1081,12 @@ try {
     }
     $entries = @(Get-Entries $menu)
     $start = @(Get-Log).Count
-    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[0])
-    $null = Assert-Inside $start $entries[0].Highlight 'The pointer on Duplicate tab'
+    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[1])
+    $null = Assert-Inside $start $entries[1].Highlight 'The pointer on Duplicate tab'
     $start = @(Get-Log).Count
-    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[3])
-    $null = Assert-Inside $start $entries[3].Highlight 'The pointer on Close tab'
-    Send-Click $entries[0]
+    Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $entries[4])
+    $null = Assert-Inside $start $entries[4].Highlight 'The pointer on Close tab'
+    Send-Click $entries[1]
     $copy2 = Wait-Copy @($first, $copy1) 'A click on Duplicate tab'
     Wait-Shown $copy2 @($first, $copy1) 'After a click on Duplicate tab'
     Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The window kept the mouse after a click on an item of the menu.' }
@@ -1102,7 +1106,7 @@ try {
     Send-Click $point 'Right'
     Wait-Quiet 400
     $entries = @(Get-Entries $menu)
-    foreach ($disabled in $entries[1], $entries[5]) {
+    foreach ($disabled in $entries[2], $entries[6]) {
         $start = @(Get-Log).Count
         Send-Mouse (Get-Mouse $WM_MOUSEMOVE 0 $disabled)
         Assert-Nothing $start 'The pointer on a disabled item'
@@ -1135,7 +1139,7 @@ try {
     Send-Click $point 'Right'
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    Send-Click $entries[5]
+    Send-Click $entries[6]
     Wait-Ended $copy1 'The program of the last tab, after Close tabs to the right'
     Wait-For { @(Get-Consoles).Count -eq 2 } { "With two tabs left, $exe does not have two consoles." }
     Wait-Shown $copy2 @($first) 'After Close tabs to the right'
@@ -1198,6 +1202,7 @@ try {
     # shown.
     Send-Press $VK_APPS
     Wait-Quiet 400
+    Send-Press $VK_DOWN
     Send-Press $VK_RETURN
     $copy3 = Wait-Copy @($first, $copy2) 'Enter on Duplicate tab, on the first tab'
     Wait-Shown $copy3 @($first, $copy2) 'After Enter on Duplicate tab, on the first tab'
@@ -1213,7 +1218,7 @@ try {
     Send-Click $point 'Right'
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    Send-Click $entries[3]
+    Send-Click $entries[4]
     Wait-Ended $copy3 'The program of the tab of the menu, after Close tab'
     Wait-For { @(Get-Consoles).Count -eq 2 } { "With two tabs left, $exe does not have two consoles." }
     Wait-Shown $first @($copy2) 'After Close tab'
@@ -1232,7 +1237,7 @@ try {
     Send-Click $point 'Right'
     Wait-Quiet 400
     $start = @(Get-Log).Count
-    Send-Click $entries[4]
+    Send-Click $entries[5]
     Wait-Ended $first 'The program of the first tab, after Close other tabs'
     Wait-For { @(Get-Consoles).Count -eq 1 } { "With one tab left, $exe does not have one console." }
     Wait-Shown $copy2 @() 'After Close other tabs'
@@ -1241,16 +1246,16 @@ try {
     Write-Host 'OK: Close tab, on a tab that is hidden, closes it, and its program ends, and draws only the bar and what the menu covered: the tab that is shown stays; Close other tabs closes all the tabs but the one of the menu, also on its left, and their programs end; the tab of the menu is shown, with one full frame.'
 
     # 11. With one tab whose program runs, Restart tab, Close other tabs and
-    # Close tabs to the right are disabled: Down goes from Duplicate tab,
-    # over Restart tab and the separator, to Close tab, and from it, over
-    # the disabled items, round to Duplicate tab; then Up goes round, over
-    # the disabled items, to Close tab. Arrows that stopped on the separator
-    # or on the disabled items, or did not go round, would end on another
-    # entry: the separator, Restart tab, or Duplicate tab. Enter on Close
-    # tab closes the window.
+    # Close tabs to the right are disabled: Down goes from Rename tab to
+    # Duplicate tab, and then, over Restart tab and the separator, to Close
+    # tab, and from it, over the disabled items, round to Rename tab; then
+    # Up goes round, over the disabled items, to Close tab. Arrows that
+    # stopped on the separator or on the disabled items, or did not go
+    # round, would end on another entry: the separator, Restart tab,
+    # Duplicate tab or Rename tab. Enter on Close tab closes the window.
     Send-Keys @(Get-Key $VK_F10 $true; Get-Key $VK_F10 $false) $shiftKeys
     Wait-Quiet 400
-    foreach ($key in $VK_DOWN, $VK_DOWN, $VK_UP) {
+    foreach ($key in $VK_DOWN, $VK_DOWN, $VK_DOWN, $VK_UP) {
         Send-Press $key
     }
     Send-Press $VK_RETURN
