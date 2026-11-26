@@ -21,9 +21,10 @@
 //! writes the character of the code typed with it on the numeric keypad,
 //! when it goes up. Control characters never go in. A key that the keyboard
 //! repeats faster than the window takes it comes once with the count of its
-//! repeats, and does its work that many times. Enter, Esc, Tab, ↑, ↓ and
-//! the keys without a character do nothing: they are for the user of the
-//! field.
+//! repeats, and does its work that many times; but copying, cutting and
+//! pasting, once, because its user reads the clipboard once for each key.
+//! Enter, Esc, Tab, ↑, ↓ and the keys without a character do nothing: they
+//! are for the user of the field.
 
 use std::ops::Range;
 
@@ -144,8 +145,9 @@ impl Field {
 
     /// A UTF-16 code unit of a character typed `times` times. The first
     /// half of a character outside the Basic Multilingual Plane waits for
-    /// the second one, and a half alone goes away. A control character is
-    /// for the user of the field.
+    /// the second one: another first half, another character or a command
+    /// takes its place, and a second half without a first one goes away. A
+    /// control character is for the user of the field.
     fn typed(&mut self, unit: u16, times: u16) -> Reply {
         let character = match unit {
             0xd800..=0xdbff => {

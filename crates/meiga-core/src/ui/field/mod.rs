@@ -73,7 +73,8 @@ pub struct Changes {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Shown {
     /// The cell on whose left side the caret goes: always one of the cells
-    /// of the field, also at the end of a text that does not fit.
+    /// of the field, if it has any, also at the end of a text that does not
+    /// fit.
     pub caret: usize,
     /// The selected cells, empty without a selection.
     pub selection: Range<usize>,
@@ -82,7 +83,7 @@ pub struct Shown {
 /// What a button held down over the field selects when it moves.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 enum Drag {
-    /// Nothing: no button went down.
+    /// Nothing: no button went down, or the text changed while it was down.
     #[default]
     None,
     /// Up to the cluster under the pointer, after a click.
@@ -216,9 +217,9 @@ impl Field {
     pub fn show(&self, cells: &mut Vec<CellChar>) -> Shown {
         cells.clear();
         cells.extend(text::cells(&self.text).skip(self.scroll).take(self.columns));
-        if cells.len() == self.columns
-            && let Some(last @ CellChar::WideLeft(_)) = cells.last_mut()
-        {
+        // Only a wide character that the right side cuts ends in its left
+        // half.
+        if let Some(last @ CellChar::WideLeft(_)) = cells.last_mut() {
             *last = CellChar::Blank;
         }
         let shown = self.scroll..self.scroll + self.columns;
@@ -443,10 +444,10 @@ impl Field {
     /// Moves the part of the text that the field shows just enough to show
     /// the caret, which needs a cell after the text when it is at its end;
     /// never further than that, when the text gets shorter; and never with
-    /// half a wide character on the left.
+    /// half a wide character on the left. Without cells, the field shows
+    /// nothing, and the part stays where it was until it has them again.
     fn follow_caret(&mut self) {
         if self.columns == 0 {
-            self.scroll = 0;
             return;
         }
         let caret = text::width(&self.text[..self.caret]);

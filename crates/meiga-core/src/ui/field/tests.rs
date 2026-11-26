@@ -478,6 +478,23 @@ fn set_text_forgets_the_steps_to_undo() {
 }
 
 #[test]
+fn set_text_forgets_half_a_character_and_what_a_button_held_down_selects() {
+    // The second half of an emoji after it does not join the first one.
+    let [high, low] = halves('😀');
+    let mut field = make("ab|");
+    field.key(&event(VK_PACKET, high, none()));
+    field.set_text("cd");
+    field.key(&event(VK_PACKET, low, none()));
+    assert_eq!(state(&field), "cd|");
+    // And the button that went down before it selects nothing.
+    field.set_columns(10);
+    field.press(0, Side::Left, 1, false);
+    field.set_text("efgh");
+    field.drag(2, Side::Left);
+    assert_eq!(state(&field), "efgh|");
+}
+
+#[test]
 fn the_arrows_move_the_caret_one_cluster() {
     // A letter, a family, an e with an accent and an ideograph.
     let text = "a👨\u{200d}👩\u{200d}👧e\u{301}中";
@@ -1115,7 +1132,8 @@ impl Random {
 }
 
 /// What the random edits type: letters, digits and signs, an accent alone,
-/// ideographs, emoji, regional indicators and joiners.
+/// ideographs, emoji, regional indicators, a zero-width joiner and a
+/// zero-width space.
 const PIECES: [&str; 18] = [
     "a", "Z", "7", "_", " ", ".", "\\", "é", "e\u{301}", "\u{301}", "中", "😀", "👍🏽", "🇪", "🇸",
     "\u{200d}", "\u{200b}", "ñ",
@@ -1145,6 +1163,13 @@ fn check(field: &mut Field, before: &(String, usize, usize, usize, usize), conte
     assert!(cells.len() <= field.columns, "{context}: {cells:?}");
     assert!(shown.caret <= cells.len(), "{context}: {shown:?} {cells:?}");
     if field.columns > 0 {
+        // The caret is in sight: `show` puts it in the cells anyway.
+        let caret = text::width(&text[..field.caret]);
+        assert!(
+            (field.scroll..field.scroll + field.columns).contains(&caret),
+            "{context}: the caret on the cell {caret}, and the field from {}",
+            field.scroll
+        );
         assert!(shown.caret < field.columns, "{context}: {shown:?}");
         assert!(
             !matches!(cells.first(), Some(CellChar::WideRight(_))),

@@ -15,8 +15,8 @@ use std::ops::Range;
 use unicode_segmentation::GraphemeCursor;
 use unicode_width::UnicodeWidthChar;
 
-/// The end of the cluster that starts at `at`: the next place where the
-/// caret stops, or the end of `text`.
+/// The end of the cluster that starts at `at`, or that has `at` inside it:
+/// the next place where the caret stops, or the end of `text`.
 pub(super) fn next_cluster(text: &str, at: usize) -> usize {
     // With the whole text, the cursor never asks for more of it.
     GraphemeCursor::new(at, text.len(), true)
@@ -49,8 +49,9 @@ pub(super) fn is_stop(text: &str, at: usize) -> bool {
 pub(super) enum Class {
     /// A space, which separates words.
     Space,
-    /// A letter, a digit or `_`, which make words; and a mark, such as an
-    /// accent, without a letter before it.
+    /// A letter, a digit or `_`, which make words; and a character without
+    /// width at the start of a cluster, such as an accent without a letter
+    /// before it, or a zero-width space.
     Word,
     /// Any other sign, such as `.`, `\`, `-` or an emoji: each run of them is
     /// a word.
