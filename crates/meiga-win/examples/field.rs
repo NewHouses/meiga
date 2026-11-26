@@ -17,10 +17,11 @@
 //! Windows Terminal pastes with Ctrl+Shift+V and Shift+Insert, and often
 //! with Ctrl+V, and copies with Ctrl+C, Ctrl+Shift+C and Ctrl+Insert while
 //! it has a selection of its own; meiga pastes with Ctrl+V and
-//! Ctrl+Shift+V, and copies with Ctrl+C while it has a selection. They type
-//! what they paste, as keys. So F5 also asks the field to paste the
-//! clipboard. The field shows the characters without width, such as a
-//! combining accent, as meiga draws them until subphase 8.1: without a cell.
+//! Ctrl+Shift+V, and copies with Ctrl+C and Ctrl+Shift+C while it has a
+//! selection. They type what they paste, as keys. So F5 also asks the field
+//! to paste the clipboard. The field shows the characters without width,
+//! such as a combining accent, as meiga draws them until subphase 8.1:
+//! without a cell. The line under it names them by their code point.
 
 use std::env;
 use std::error::Error;
@@ -58,7 +59,8 @@ const VK_RETURN: u16 = 0x0d;
 const VK_ESCAPE: u16 = 0x1b;
 const VK_F5: u16 = 0x74;
 
-/// The cells that the copied text takes in the line under the field.
+/// The cells that a text copied or pasted takes in the line under the
+/// field.
 const PREVIEW: usize = 24;
 
 fn main() -> ExitCode {
@@ -132,9 +134,7 @@ fn run(options: &Options) -> Result<(), Box<dyn Error>> {
         title_bar: false,
     })?;
     let console = Console::open()?;
-    let columns = options
-        .columns
-        .min(console.width().saturating_sub(3).max(1));
+    let columns = field_columns(options.columns, console.width());
     let mut field = Field::new(options.limit);
     field.set_columns(columns);
     if let Some(text) = &options.text {
@@ -151,7 +151,11 @@ fn run(options: &Options) -> Result<(), Box<dyn Error>> {
     let mut status = "Type.".to_owned();
     let mut high = None;
     loop {
-        draw(&mut out, &field, columns, &status, console.width())?;
+        // The console can get narrower or wider while the example runs.
+        let width = console.width();
+        let columns = field_columns(options.columns, width);
+        field.set_columns(columns);
+        draw(&mut out, &field, columns, &status, width)?;
         let event = console.next_key()?;
         let reply = if event.down && event.key == VK_F5 {
             Reply::Paste
@@ -177,7 +181,9 @@ fn run(options: &Options) -> Result<(), Box<dyn Error>> {
             Reply::Ignored if !event.down => status,
             Reply::Ignored => match event.key {
                 VK_RETURN => {
-                    write!(out, "\r\x1b[2KIts text: «{}»\r\n", field.text())?;
+                    // The text can take more than a line: what was drawn
+                    // under the field goes away first.
+                    write!(out, "\r\x1b[JIts text: «{}»\r\n", field.text())?;
                     field.set_text("");
                     format!("{name}: the field starts again.")
                 }
@@ -191,10 +197,17 @@ fn run(options: &Options) -> Result<(), Box<dyn Error>> {
     }
 }
 
+/// The cells of a field of `wanted` cells in a console of `width` columns:
+/// fewer if they do not fit with the brackets and a free column, so that
+/// its line never wraps.
+fn field_columns(wanted: usize, width: usize) -> usize {
+    wanted.min(width.saturating_sub(3).max(1))
+}
+
 /// Draws the field, between brackets and with the selection in reverse
-/// video, and the line under it, over the ones drawn before; and puts the
-/// cursor of the console where the caret is, which the next drawing
-/// starts from.
+/// video, and the line under it, instead of what the console had from the
+/// line of its cursor down; and puts that cursor where the caret is, which
+/// the next drawing starts from.
 fn draw(
     out: &mut impl Write,
     field: &Field,
@@ -221,11 +234,7 @@ fn draw(
         &format!("{units} of {} UTF-16 code units · {status}", field.limit()),
         width.saturating_sub(1),
     );
-    write!(
-        out,
-        "\r\x1b[2K{line}\r\n\x1b[2K{under}\x1b[1A\x1b[{}G",
-        caret + 2
-    )?;
+    write!(out, "\r\x1b[J{line}\r\n{under}\x1b[1A\x1b[{}G", caret + 2)?;
     out.flush()
 }
 
@@ -265,6 +274,17 @@ fn preview(text: &str) -> String {
     fitted(&visible, PREVIEW)
 }
 
+/// `c` between quotes or, if it takes no cell, such as a combining accent,
+/// its code point, which shows something.
+fn quoted(c: char) -> String {
+    let mut utf8 = [0; 4];
+    if text::width(c.encode_utf8(&mut utf8)) == 0 {
+        format!("U+{:04X}", u32::from(c))
+    } else {
+        format!("«{c}»")
+    }
+}
+
 /// The name of the key of `event`, with its modifier keys, or the character
 /// that it writes. A character outside the Basic Multilingual Plane comes
 /// in two keys: `high` keeps its first half until the second one.
@@ -281,7 +301,7 @@ fn key_name(event: &KeyEvent, high: &mut Option<u16>) -> String {
                 .take()
                 .map(|high| char::decode_utf16([high, unit]).next());
             return match pair {
-                Some(Some(Ok(c))) => format!("«{c}»"),
+                Some(Some(Ok(c))) => quoted(c),
                 _ => "The second half of a character".to_owned(),
             };
         }
@@ -289,7 +309,7 @@ fn key_name(event: &KeyEvent, high: &mut Option<u16>) -> String {
             if let Some(c) =
                 char::from_u32(u32::from(unit)).filter(|c| *c != ' ' && !c.is_control())
             {
-                return format!("«{c}»");
+                return quoted(c);
             }
         }
         _ => {}
@@ -393,8 +413,7 @@ impl Console {
     /// The number of columns of the window of the console, or 80 if it does
     /// not say.
     fn width(&self) -> usize {
-        // SAFETY: the zeroed structure is valid: it only has integers.
-        let mut info: CONSOLE_SCREEN_BUFFER_INFO = unsafe { std::mem::zeroed() };
+        let mut info = CONSOLE_SCREEN_BUFFER_INFO::default();
         // SAFETY: the handle is the output of the console, and `info` is
         // valid to write.
         if unsafe { GetConsoleScreenBufferInfo(self.output, &mut info) } == 0 {
