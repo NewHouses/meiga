@@ -311,12 +311,12 @@ mod vk {
 const F5_TO_F12: [u16; 8] = [15, 17, 18, 19, 20, 21, 23, 24];
 
 /// Whether `unit` is nothing or a character that `key` writes by itself:
-/// only then the keys with a sequence send it. Another character is not of
-/// the key: the one of a dead key that does not join with Enter, Tab,
-/// Backspace or Esc, which Windows writes with them, or one of the numeric
-/// keypad that came alone, whose key comes from its scan code, such as
-/// Home for the 7.
-fn own_character(key: u16, unit: u16) -> bool {
+/// only then the keys with a sequence send it, and a text field does what
+/// the key does. Another character is not of the key: the one of a dead key
+/// that does not join with Enter, Tab, Backspace or Esc, which Windows
+/// writes with them, or one of the numeric keypad that came alone, whose
+/// key comes from its scan code, such as Home for the 7.
+pub(crate) fn own_character(key: u16, unit: u16) -> bool {
     match key {
         vk::BACK => matches!(unit, 0 | 0x08 | 0x7f),
         vk::TAB => matches!(unit, 0 | 0x09),

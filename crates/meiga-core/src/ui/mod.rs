@@ -2,6 +2,7 @@
 //! Windows: where each part goes, at the scale of the window, and what is
 //! under a point.
 
+pub mod field;
 pub mod menu;
 pub mod tabbar;
 pub mod titlebar;
