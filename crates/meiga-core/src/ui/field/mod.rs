@@ -446,13 +446,10 @@ impl Field {
         }
         let caret = text::width(&self.text[..self.caret]);
         let total = text::width(&self.text);
-        let mut scroll = self.scroll;
-        if caret < scroll {
-            scroll = caret;
-        } else if caret >= scroll + self.columns {
-            scroll = caret + 1 - self.columns;
-        }
-        scroll = scroll.min((total + 1).saturating_sub(self.columns));
+        let mut scroll = self
+            .scroll
+            .clamp((caret + 1).saturating_sub(self.columns), caret)
+            .min((total + 1).saturating_sub(self.columns));
         if matches!(
             text::cells(&self.text).nth(scroll),
             Some(CellChar::WideRight(_))
