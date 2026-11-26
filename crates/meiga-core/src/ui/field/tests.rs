@@ -218,6 +218,32 @@ fn typing_writes_at_the_caret_and_replaces_the_selection() {
 }
 
 #[test]
+fn the_letters_of_the_commands_write_themselves_without_ctrl() {
+    // With Ctrl, A, C, V, X, Y and Z are commands; alone or with Shift,
+    // they are text.
+    let mut field = make("|");
+    for (key, letter) in [
+        (VK_A, b'a'),
+        (VK_C, b'c'),
+        (VK_V, b'v'),
+        (VK_X, b'x'),
+        (VK_Y, b'y'),
+        (VK_Z, b'z'),
+    ] {
+        let upper = letter.to_ascii_uppercase();
+        assert_eq!(
+            field.key(&event(key, u16::from(letter), none())),
+            Reply::Taken
+        );
+        assert_eq!(
+            field.key(&event(key, u16::from(upper), shift())),
+            Reply::Taken
+        );
+    }
+    assert_eq!(state(&field), "aAcCvVxXyYzZ|");
+}
+
+#[test]
 fn altgr_writes_characters_and_alt_alone_does_not() {
     let mut field = make("|");
     // AltGr+E writes € in the Spanish and Galician layouts; AltGr+A, which
