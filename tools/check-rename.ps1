@@ -36,12 +36,14 @@ messages of the focus. It checks that:
   program back, and Enter without changing the text does not keep it as a
   name: the next title of the program is the title of the window;
 - "Duplicate tab" gives the copy the name of the tab, which the window keeps
-  as its title when the program of the copy gives its tab a title; a double
-  click on the first tab, which is hidden then, shows it and edits its name;
-- when the program of the tab whose name is edited ends, its tab closes, and
-  the editing with it: the program of the tab that is shown then gets the
-  keys again. Ctrl+Shift+W closes the last tab, and meiga.exe ends with exit
-  code 0.
+  as its title when the program of the copy gives its tab a title; "Rename
+  tab", in the menu that the right button opens on the first tab, which is
+  hidden then, shows it and edits its name;
+- a double click on the copy, which is hidden then, shows it and edits its
+  name; when the program of the tab whose name is edited ends, its tab
+  closes, and the editing with it: the program of the tab that is shown then
+  gets the keys again. Ctrl+Shift+W closes the last tab, and meiga.exe ends
+  with exit code 0.
 
 As check-menu.ps1 does, the check moves the pointer out of the window, posts
 its messages while the thread of the window is suspended, and does not count
@@ -305,7 +307,10 @@ $WM_KEYUP = 0x0101
 $WM_MOUSEMOVE = 0x0200
 $WM_LBUTTONDOWN = 0x0201
 $WM_LBUTTONUP = 0x0202
+$WM_RBUTTONDOWN = 0x0204
+$WM_RBUTTONUP = 0x0205
 $MK_LBUTTON = 0x0001
+$MK_RBUTTON = 0x0002
 $MAPVK_VK_TO_VSC = 0
 $SM_CARETBLINKINGENABLED = 0x2002
 $VK_RETURN = 0x0D
@@ -731,14 +736,32 @@ function Send-Posted([long[]]$Messages) {
     $api::PostAll($window, $thread, $Messages, $null)
 }
 
-# A click of the left button at $Point: the pointer moves there, and the
-# button goes down and up.
-function Send-Click($Point) {
+# A click of $Button at $Point: the pointer moves there, and the button goes
+# down and up.
+function Send-Click($Point, [string]$Button = 'Left') {
+    $down, $up, $keys = if ($Button -eq 'Right') {
+        $WM_RBUTTONDOWN, $WM_RBUTTONUP, $MK_RBUTTON
+    }
+    else {
+        $WM_LBUTTONDOWN, $WM_LBUTTONUP, $MK_LBUTTON
+    }
     Send-Posted @(
         Get-Mouse $WM_MOUSEMOVE 0 $Point
-        Get-Mouse $WM_LBUTTONDOWN $MK_LBUTTON $Point
-        Get-Mouse $WM_LBUTTONUP 0 $Point
+        Get-Mouse $down $keys $Point
+        Get-Mouse $up 0 $Point
     )
+}
+
+# A point in the middle of the height of the first item of the menu of a tab
+# that the right button opens at $Point, with its top-left corner there, as
+# meiga places it, where it fits (see crates/meiga-core/src/ui/menu.rs): below
+# its border and the space inside it, and a little on the right of its side.
+function Get-FirstItem($Point) {
+    $item = (Get-Scaled 28) + 2 * (Get-Scaled 2)
+    [pscustomobject]@{
+        X = $Point.X + (Get-Scaled 40)
+        Y = $Point.Y + (Get-Scaled 1) + (Get-Scaled 2) + [Math]::Floor($item / 2)
+    }
 }
 
 # A double click of the left button at $Point: the pointer moves there, and
@@ -997,8 +1020,8 @@ try {
 
     # 8. Duplicate tab, the second item of the menu, gives the copy the name
     # of the tab, which the window keeps when the program of the copy gives
-    # its title. A double click on the first tab, which is hidden then, shows
-    # it and edits its name.
+    # its title. Rename tab, in the menu that the right button opens on the
+    # first tab, which is hidden then, shows it and edits its name.
     Send-CtrlShift $VK_R
     Wait-Quiet 400
     Send-Text 'dup'
@@ -1013,22 +1036,28 @@ try {
     Wait-For { Test-Path -LiteralPath "$reports.$copy" } { 'After Duplicate tab, the program of the copy did not start.' }
     Assert-Title 'dup' 'After the program of the copy, which has the name of its tab, gave its title'
     $bar = Get-Bar 2
-    Move-Pointer
-    Send-DoubleClick (Get-TabPoint $bar.Tabs[0])
-    Wait-Shown $first @($copy) 'After a double click on the first tab'
+    $point = Get-TabPoint $bar.Tabs[0]
+    Send-Click $point 'Right'
+    Wait-Quiet 400
+    Send-Click (Get-FirstItem $point)
+    Wait-Shown $first @($copy) 'After Rename tab, in the menu of the first tab'
     Wait-Quiet 400
     Send-Text 'one'
     Send-Press $VK_RETURN
-    Wait-Title 'one' 'After a double click on the first tab, one and Enter'
+    Wait-Title 'one' 'After Rename tab, in the menu of the first tab, one and Enter'
     Assert-Keys '17+ 16+ 16- 17- 90+ 90-' 'After Ctrl+Shift+R, dup and Enter, Duplicate tab, and one and Enter on the first tab'
-    Write-Host 'OK: Duplicate tab gives the copy the name of the tab, which the window keeps when the program of the copy gives its title; a double click on a hidden tab shows it and edits its name.'
+    Write-Host 'OK: Duplicate tab gives the copy the name of the tab, which the window keeps when the program of the copy gives its title; Rename tab, in the menu of a hidden tab, shows it and edits its name.'
 
-    # 9. The field of the name of the copy, which a click shows, closes when
-    # its program ends, and its tab with it: the program of the first tab,
-    # which is shown then, gets the keys again.
-    Send-Click (Get-TabPoint $bar.Tabs[1])
-    Wait-Shown $copy @($first) 'After a click on the copy'
-    Wait-Title 'dup' 'After a click on the copy'
+    # 9. A double click on the copy, which is hidden, shows it and edits its
+    # name. Its field, open again with Ctrl+Shift+R, closes when its program
+    # ends, and its tab with it: the program of the first tab, which is shown
+    # then, gets the keys again.
+    Send-DoubleClick (Get-TabPoint $bar.Tabs[1])
+    Wait-Shown $copy @($first) 'After a double click on the copy'
+    Wait-Quiet 400
+    Send-Text 'two'
+    Send-Press $VK_RETURN
+    Wait-Title 'two' 'After a double click on the copy, two and Enter'
     Send-CtrlShift $VK_R
     Wait-Quiet 400
     Send-Text 'zz'
@@ -1037,7 +1066,7 @@ try {
     Wait-Shown $first @() 'After the tab of the copy closed'
     Wait-Title 'one' 'After the tab of the copy closed'
     Assert-Keys '90+ 90-' 'After the tab whose name was edited closed'
-    Write-Host 'OK: when the program of the tab whose name is edited ends, its tab closes, and the editing with it: the program of the tab that is shown then gets the keys again.'
+    Write-Host 'OK: a double click on a hidden tab shows it and edits its name; when the program of the tab whose name is edited ends, its tab closes, and the editing with it: the program of the tab that is shown then gets the keys again.'
 
     # 10. Ctrl+Shift+W closes the last tab, and the window.
     Send-CtrlShift $VK_W
