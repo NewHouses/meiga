@@ -1,6 +1,6 @@
-//! The parts of the interface that meiga draws itself, as layouts without
-//! Windows: where each part goes, at the scale of the window, and what is
-//! under a point.
+//! The parts of the interface that meiga draws itself, without Windows: the
+//! layouts, which say where each part goes, at the scale of the window, and
+//! what is under a point; and the text field, which edits a line of text.
 
 pub mod field;
 pub mod menu;
