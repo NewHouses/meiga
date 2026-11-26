@@ -266,6 +266,9 @@ pub enum Action {
     ProfileMenu,
     /// Open the menu of the tab that is shown, below its tab.
     TabMenu,
+    /// Rename the tab that is shown, as its menu: its name is edited in its
+    /// tab.
+    RenameTab,
     /// Duplicate the tab that is shown, as its menu.
     DuplicateTab,
     /// Close all the tabs but the one that is shown, as its menu.
@@ -294,7 +297,7 @@ pub enum Action {
 }
 
 /// The names of the actions without a number, as `config.toml` writes them.
-const ACTIONS: [(&str, Action); 21] = [
+const ACTIONS: [(&str, Action); 22] = [
     ("new_tab", Action::NewTab),
     ("close_tab", Action::CloseTab),
     ("next_tab", Action::NextTab),
@@ -302,6 +305,7 @@ const ACTIONS: [(&str, Action); 21] = [
     ("last_tab", Action::LastTab),
     ("profile_menu", Action::ProfileMenu),
     ("tab_menu", Action::TabMenu),
+    ("rename_tab", Action::RenameTab),
     ("duplicate_tab", Action::DuplicateTab),
     ("close_other_tabs", Action::CloseOtherTabs),
     ("close_tabs_to_the_right", Action::CloseTabsToTheRight),
@@ -431,9 +435,10 @@ impl Shortcuts {
 }
 
 /// The shortcuts of meiga: the ones of Windows Terminal for the tabs, the
-/// profiles, the menus, copying and pasting, the history and the zoom; and
-/// the ones of Chrome to show a tab by its place, the last one, the previous
-/// one and the next one. Ctrl+T and Ctrl+W go to the program.
+/// profiles, the menus, copying and pasting, the history and the zoom; the
+/// ones of Chrome to show a tab by its place, the last one, the previous
+/// one and the next one; and Ctrl+Shift+R, which renames the tab that is
+/// shown. Ctrl+T and Ctrl+W go to the program.
 fn defaults() -> Vec<(Chord, Action)> {
     const CTRL: u8 = Chord::CTRL;
     const SHIFT: u8 = Chord::SHIFT;
@@ -450,6 +455,7 @@ fn defaults() -> Vec<(Chord, Action)> {
         (Chord::new(0, VK_APPS), Action::TabMenu),
         (Chord::new(SHIFT, VK_APPS), Action::TabMenu),
         (Chord::new(SHIFT, VK_F10), Action::TabMenu),
+        (key(CTRL | SHIFT, b'R'), Action::RenameTab),
         (key(CTRL | SHIFT, b'D'), Action::DuplicateTab),
         (key(CTRL, b'C'), Action::Copy),
         (key(CTRL | SHIFT, b'C'), Action::Copy),
@@ -640,6 +646,8 @@ mod tests {
         assert_eq!(action("ctrl+shift+9"), Some(Action::Profile(8)));
         assert_eq!(action("ctrl+alt+1"), None);
         assert_eq!(action("ctrl+shift+d"), Some(Action::DuplicateTab));
+        assert_eq!(action("ctrl+shift+r"), Some(Action::RenameTab));
+        assert_eq!(action("ctrl+r"), None);
         assert_eq!(action("ctrl+shift+space"), Some(Action::ProfileMenu));
         assert_eq!(action("menu"), Some(Action::TabMenu));
         assert_eq!(action("shift+menu"), Some(Action::TabMenu));

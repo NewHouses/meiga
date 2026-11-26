@@ -5,11 +5,13 @@
 //! (ADR 0020 and 0022). It is always there, also with one tab.
 //!
 //! The pointer highlights the tab and the button under it. The left button
-//! shows a tab as soon as it goes down on it, as in Chrome. The buttons act
-//! when the left button goes up on the same button where it went down:
-//! moving away first takes the click back. The middle button closes the tab
-//! where it goes down and up, and the right one opens its menu, where it
-//! goes up, without showing it (ADR 0021). The other clicks do nothing yet.
+//! shows a tab as soon as it goes down on it, as in Chrome, and a double
+//! click on a tab edits its name, in a field in the place of its title (ADR
+//! 0031). The buttons act when the left button goes up on the same button
+//! where it went down: moving away first takes the click back. The middle
+//! button closes the tab where it goes down and up, and the right one opens
+//! its menu, where it goes up, without showing it (ADR 0021). The other
+//! clicks do nothing yet.
 //!
 //! When even the narrowest tabs do not fit, the bar scrolls them (ADR 0025):
 //! the wheel, forward and backward or to the sides, a tab for each of its
@@ -45,13 +47,14 @@ use std::mem;
 use std::time::{Duration, Instant};
 
 use meiga_core::color::{Palette, Rgb};
-use meiga_core::geometry::{Point, Rect};
+use meiga_core::geometry::{Point, Rect, Size};
 use meiga_core::model::{self, TabId};
-use meiga_core::mouse::Button;
+use meiga_core::mouse::{Button, ClickSettings, Clicks};
 use meiga_core::text::{self, CellChar};
 use meiga_core::ui::tabbar::{CaptionButton, Layout, Part, Side};
 use meiga_render::{Canvas, Error, Font, FontStyle, FontSystem};
 
+use crate::rename::View;
 use crate::tabs::TabAction;
 use crate::view::FONT_FAMILIES;
 
@@ -196,6 +199,16 @@ enum Look {
     Plain,
 }
 
+/// How a tab is drawn.
+struct Style<'a> {
+    look: Look,
+    /// Whether the separator on its left is drawn: between two plain tabs.
+    separator: bool,
+    /// The field where its name is edited, which goes in the place of its
+    /// title.
+    field: Option<&'a View<'a>>,
+}
+
 pub struct TabBar {
     /// The fonts of the system, for a new font when the scale changes.
     fonts: FontSystem,
@@ -227,6 +240,12 @@ pub struct TabBar {
     /// Whether the window has the focus: the glyphs of its buttons are
     /// dimmer without it.
     focused: bool,
+    /// When Windows takes two clicks as a double click.
+    click_settings: ClickSettings,
+    /// The clicks of the left button on the tabs, and the tab of the last
+    /// one: a double click on a tab edits its name.
+    clicks: Clicks,
+    clicked: Option<TabId>,
     /// The areas that changed since the last frame.
     damage: Vec<Rect>,
     /// The cells of a title, kept to avoid an allocation for each one.
@@ -260,6 +279,9 @@ impl TabBar {
             reveal: false,
             frame,
             focused: false,
+            click_settings: ClickSettings::default(),
+            clicks: Clicks::new(),
+            clicked: None,
             damage: Vec::new(),
             cells: Vec::new(),
         })
@@ -301,6 +323,20 @@ impl TabBar {
     /// The font of the titles, which the menus use too.
     pub const fn font_mut(&mut self) -> &mut Font {
         &mut self.font
+    }
+
+    /// The size of the cells of the titles.
+    pub const fn cell(&self) -> Size {
+        self.font.cell()
+    }
+
+    /// Where the title of the tab at `index` goes, after `indicator`, if the
+    /// tab has one, as far as the strip shows it: there goes the field where
+    /// its name is edited.
+    pub fn text_area(&self, index: usize, indicator: Option<Indicator>) -> Rect {
+        self.title(index, indicator)
+            .0
+            .intersection(self.layout.strip())
     }
 
     /// The window is `width` pixels wide now: the tabs get their width
@@ -362,6 +398,11 @@ impl TabBar {
         if mem::replace(&mut self.focused, focused) != focused && self.frame.buttons {
             self.damage(self.layout.captions());
         }
+    }
+
+    /// Windows takes two clicks as a double click as `settings` says.
+    pub const fn set_click_settings(&mut self, settings: ClickSettings) {
+        self.click_settings = settings;
     }
 
     /// Tabs opened or closed, but not one alone: [`TabBar::tab_closed`].
@@ -453,19 +494,32 @@ impl TabBar {
         }
     }
 
-    /// `button` went down where the pointer is. Returns what it asks of the
-    /// tabs: the left button shows the tab under it at once, and scrolls the
-    /// tabs on a button that scrolls them, if they can scroll. On a button,
-    /// or the middle or the right one on a tab, it waits until it goes up,
-    /// and the bar gets all the events of the mouse meanwhile.
-    pub fn down<T>(&mut self, tabs: &model::Window<T>, button: Button) -> Option<TabAction> {
+    /// `button` went down where the pointer is, at `now`. Returns what it
+    /// asks of the tabs: the left button shows the tab under it at once, or
+    /// edits its name if it is the second click on it in a row, a double
+    /// click; and scrolls the tabs on a button that scrolls them, if they
+    /// can scroll. On a button, or the middle or the right one on a tab, it
+    /// waits until it goes up, and the bar gets all the events of the mouse
+    /// meanwhile.
+    pub fn down<T>(
+        &mut self,
+        tabs: &model::Window<T>,
+        button: Button,
+        now: Instant,
+    ) -> Option<TabAction> {
         // Another button is already down on the bar.
         if self.pressed.is_some() {
             return None;
         }
         self.closing = None;
-        let press = match (button, self.hover?) {
-            (Button::Left, Target::Tab(id)) => return Some(TabAction::Activate(id)),
+        let target = self.hover?;
+        if let (Button::Left, Target::Tab(id)) = (button, target) {
+            return Some(self.click_tab(id, now));
+        }
+        // Another press between two clicks on a tab: as in Windows, they are
+        // not a double click.
+        self.clicks.reset();
+        let press = match (button, target) {
             (Button::Left, Target::Close(id)) => Press::Close(id),
             (Button::Left, Target::New) => Press::New,
             (Button::Left, Target::Profiles) => Press::Profiles,
@@ -485,6 +539,22 @@ impl TabBar {
         self.pressed = Some(press);
         self.damage_press(tabs, press);
         None
+    }
+
+    /// The left button went down on the tab `id` at `now`: it shows it, or
+    /// edits its name if it is the second click on it in a row.
+    fn click_tab(&mut self, id: TabId, now: Instant) -> TabAction {
+        let Some(at) = self.pointer else {
+            return TabAction::Activate(id);
+        };
+        let count = self
+            .clicks
+            .press(Button::Left, at, now, &self.click_settings);
+        if self.clicked.replace(id) == Some(id) && count == 2 {
+            TabAction::Rename(id)
+        } else {
+            TabAction::Activate(id)
+        }
     }
 
     /// `button` went up where the pointer is. Returns what its press asks
@@ -625,12 +695,15 @@ impl TabBar {
 
     /// Draws the part of the bar that is inside the clip of `canvas`: the
     /// tabs of `tabs` that the strip shows, cut to it, the active one with
-    /// the colours of the terminal, `palette`, and the buttons.
+    /// the colours of the terminal, `palette`, and the buttons. In the tab
+    /// at `editing.0`, if a name is edited, its field, `editing.1`, goes in
+    /// the place of the title.
     pub fn draw<T: Label>(
         &mut self,
         canvas: &mut Canvas<'_>,
         tabs: &model::Window<T>,
         palette: &Palette,
+        editing: Option<(usize, View<'_>)>,
     ) {
         let clip = canvas.clip();
         if !clip.intersects(self.layout.bar()) {
@@ -652,8 +725,15 @@ impl TabBar {
                 Look::Plain
             };
             if clip.intersects(self.layout.tab_area(index)) {
-                let separator = after_plain && look == Look::Plain;
-                self.draw_tab(&mut strip, index, tab, look, separator, palette);
+                let style = Style {
+                    look,
+                    separator: after_plain && look == Look::Plain,
+                    field: editing
+                        .as_ref()
+                        .filter(|(edited, _)| *edited == index)
+                        .map(|(_, field)| field),
+                };
+                self.draw_tab(&mut strip, index, tab, &style, palette);
             }
             after_plain = look == Look::Plain;
         }
@@ -682,56 +762,58 @@ impl TabBar {
         }
     }
 
-    /// Draws the tab at `index`, which looks as `look`, with the separator
-    /// on its left if `separator`, and its indicator, if it has one, before
-    /// its title.
+    /// Draws the tab at `index` as `style` says, with its indicator, if it
+    /// has one, before its title, or before the field where its name is
+    /// edited.
     fn draw_tab<T: Label>(
         &mut self,
         canvas: &mut Canvas<'_>,
         index: usize,
         tab: &model::Tab<T>,
-        look: Look,
-        separator: bool,
+        style: &Style<'_>,
         palette: &Palette,
     ) {
         let layout = self.layout;
-        let (background, color) = match look {
+        let (background, color) = match style.look {
             Look::Active => (palette.background, palette.foreground),
             Look::Hovered => (HOVERED_TAB, HOVERED_TEXT),
             Look::Plain => (BAR, TEXT),
         };
         let rect = layout.tab(index);
-        if look != Look::Plain {
+        if style.look != Look::Plain {
             canvas.fill(rect, background);
         }
-        if separator && let Some(line) = layout.separator(index) {
+        if style.separator
+            && let Some(line) = layout.separator(index)
+        {
             canvas.fill(line, SEPARATOR);
         }
 
-        let mut title = layout.title(index);
         let cell = self.font.cell();
         // A cell is a few dozen pixels.
         let (width, height) = (cell.width.max(1) as i32, cell.height as i32);
         let top = rect.top + (rect.height() as i32 - height) / 2;
-        let columns = |title: Rect| (title.width() as i32 / width) as usize;
-        if let Some(indicator) = tab.content().indicator()
-            && indicator.cells() < columns(title)
-        {
-            let right = title.left + indicator.cells() as i32 * width;
-            let slot = Rect::new(title.left, rect.top, right, rect.bottom);
+        let (title, indicator) = self.title(index, tab.content().indicator());
+        if let Some((indicator, slot)) = indicator {
             self.draw_indicator(canvas, indicator, slot, top, color, background);
-            // And a blank cell between it and the title.
-            title.left = right + width;
         }
-        text::fit(tab.content().label(), columns(title), &mut self.cells);
-        self.font.draw(
-            &mut canvas.clipped(title),
-            Point::new(title.left, top),
-            &self.cells,
-            FontStyle::REGULAR,
-            color,
-            background,
-        );
+        let at = Point::new(title.left, top);
+        if let Some(field) = style.field {
+            let selection = palette.selection;
+            let canvas = &mut canvas.clipped(title);
+            self.draw_field(canvas, at, field, color, background, selection);
+        } else {
+            let columns = (title.width() as i32 / width) as usize;
+            text::fit(tab.content().label(), columns, &mut self.cells);
+            self.font.draw(
+                &mut canvas.clipped(title),
+                at,
+                &self.cells,
+                FontStyle::REGULAR,
+                color,
+                background,
+            );
+        }
 
         let id = tab.id();
         if let Some(highlight) = layout.close_highlight(index)
@@ -741,6 +823,72 @@ impl TabBar {
         }
         if let Some(cross) = layout.cross(index) {
             draw_diagonals(canvas, cross, layout.stroke(), color);
+        }
+    }
+
+    /// Where the title of the tab at `index` goes: after `indicator`, if the
+    /// tab has one, and the title has room for it and a blank cell more.
+    /// Returns too, then, the slot of the indicator, its cells before the
+    /// blank one.
+    fn title(
+        &self,
+        index: usize,
+        indicator: Option<Indicator>,
+    ) -> (Rect, Option<(Indicator, Rect)>) {
+        let mut title = self.layout.title(index);
+        // A cell is a few dozen pixels.
+        let width = self.font.cell().width.max(1) as i32;
+        let columns = (title.width() as i32 / width) as usize;
+        let Some(indicator) = indicator.filter(|indicator| indicator.cells() < columns) else {
+            return (title, None);
+        };
+        let right = title.left + indicator.cells() as i32 * width;
+        let slot = Rect::new(title.left, title.top, right, title.bottom);
+        // And a blank cell between it and the title.
+        title.left = right + width;
+        (title, Some((indicator, slot)))
+    }
+
+    /// Draws `field`, where the name of a tab is edited, from `at`, the
+    /// top-left corner of its first cell, as the title of the tab, with
+    /// `color` on `background`, but its selected cells on `selection`, the
+    /// background of the selected cells of the terminal; and its caret,
+    /// while it is shown, a bar of `color` on the left side of its cell.
+    fn draw_field(
+        &mut self,
+        canvas: &mut Canvas<'_>,
+        at: Point,
+        field: &View<'_>,
+        color: Rgb,
+        background: Rgb,
+        selection: Rgb,
+    ) {
+        let cell = self.font.cell();
+        let x = |column: usize| at.x + column as i32 * cell.width as i32;
+        let cells = field.cells.len();
+        let selected = field.shown.selection.start.min(cells)..field.shown.selection.end.min(cells);
+        let runs = [
+            (0..selected.start, background),
+            (selected.clone(), selection),
+            (selected.end..cells, background),
+        ];
+        for (run, fill) in runs {
+            if !run.is_empty() {
+                let from = Point::new(x(run.start), at.y);
+                let style = FontStyle::REGULAR;
+                self.font
+                    .draw(canvas, from, &field.cells[run], style, color, fill);
+            }
+        }
+        if let Some(thickness) = field.caret {
+            let left = x(field.shown.caret);
+            let bar = Rect::new(
+                left,
+                at.y,
+                left + thickness as i32,
+                at.y + cell.height as i32,
+            );
+            canvas.fill(bar, color);
         }
     }
 
@@ -1110,7 +1258,7 @@ fn draw_restore(canvas: &mut Canvas<'_>, rect: Rect, offset: u32, stroke: u32, c
 
 #[cfg(test)]
 mod tests {
-    use meiga_core::geometry::Size;
+    use meiga_core::ui::field::Shown;
     use meiga_render::pixel;
 
     use super::*;
@@ -1164,6 +1312,13 @@ mod tests {
         areas
     }
 
+    /// `button` goes down where the pointer is, in a press of its own: it
+    /// is never the second click of a double click.
+    fn down<T>(bar: &mut TabBar, tabs: &model::Window<T>, button: Button) -> Option<TabAction> {
+        bar.clicks.reset();
+        bar.down(tabs, button, Instant::now())
+    }
+
     fn id<T>(tabs: &model::Window<T>, index: usize) -> TabId {
         tabs.tabs()[index].id()
     }
@@ -1172,7 +1327,7 @@ mod tests {
     /// pointer, which is the one of the tab at `index`, and the tab closes.
     fn close_with_mouse(bar: &mut TabBar, tabs: &mut model::Window<String>, index: usize) {
         let tab = id(tabs, index);
-        assert_eq!(bar.down(tabs, Button::Left), None);
+        assert_eq!(down(bar, tabs, Button::Left), None);
         assert_eq!(bar.up(tabs, Button::Left), Some(TabAction::CloseTab(tab)));
         assert!(tabs.close(tab).is_ok());
         bar.tab_closed(tabs, index);
@@ -1221,15 +1376,60 @@ mod tests {
     fn the_left_button_shows_a_tab_when_it_goes_down() {
         let (mut bar, tabs) = three();
         bar.moved(&tabs, Point::new(300, 20));
-        let action = bar.down(&tabs, Button::Left);
+        let action = down(&mut bar, &tabs, Button::Left);
         assert_eq!(action, Some(TabAction::Activate(id(&tabs, 1))));
         assert!(!bar.is_pressed());
         assert_eq!(bar.up(&tabs, Button::Left), None);
         // The empty bar does nothing: Windows drags the window from it.
         bar.moved(&tabs, Point::new(790, 20));
-        assert_eq!(bar.down(&tabs, Button::Left), None);
-        assert_eq!(bar.down(&tabs, Button::Right), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Right), None);
         assert!(!bar.is_pressed());
+    }
+
+    #[test]
+    fn a_double_click_on_a_tab_edits_its_name() {
+        // The second tab goes from 244 to 484, after the first one.
+        let (mut bar, tabs) = three();
+        let (first, second) = (id(&tabs, 0), id(&tabs, 1));
+        let start = Instant::now();
+        let ms = Duration::from_millis(1);
+        let click = |bar: &mut TabBar, x: i32, after: u32| {
+            bar.moved(&tabs, Point::new(x, 20));
+            bar.down(&tabs, Button::Left, start + after * ms)
+        };
+        assert_eq!(click(&mut bar, 300, 0), Some(TabAction::Activate(second)));
+        assert_eq!(click(&mut bar, 300, 400), Some(TabAction::Rename(second)));
+        // A third click is a first one again, and so is a click after the
+        // time of a double click, 500 ms by default.
+        assert_eq!(click(&mut bar, 300, 500), Some(TabAction::Activate(second)));
+        assert_eq!(
+            click(&mut bar, 300, 1100),
+            Some(TabAction::Activate(second))
+        );
+        assert_eq!(click(&mut bar, 300, 1200), Some(TabAction::Rename(second)));
+        // Near the last click, but on another tab.
+        assert_eq!(click(&mut bar, 243, 3000), Some(TabAction::Activate(first)));
+        assert_eq!(
+            click(&mut bar, 245, 3100),
+            Some(TabAction::Activate(second))
+        );
+        // Another press between them: as in Windows, no double click.
+        assert_eq!(
+            click(&mut bar, 300, 5000),
+            Some(TabAction::Activate(second))
+        );
+        bar.down(&tabs, Button::Right, start + 5100 * ms);
+        bar.up(&tabs, Button::Right);
+        assert_eq!(
+            click(&mut bar, 300, 5200),
+            Some(TabAction::Activate(second))
+        );
+        // Far from the first click of the pair: neither.
+        assert_eq!(
+            click(&mut bar, 303, 5300),
+            Some(TabAction::Activate(second))
+        );
     }
 
     #[test]
@@ -1237,11 +1437,11 @@ mod tests {
         let (mut bar, tabs) = three();
         bar.moved(&tabs, Point::new(460, 20));
         damage(&mut bar);
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(bar.is_pressed());
         assert_eq!(damage(&mut bar), [Rect::new(456, 6, 480, 30)]);
         // Other buttons do nothing meanwhile.
-        assert_eq!(bar.down(&tabs, Button::Middle), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Middle), None);
         assert_eq!(bar.up(&tabs, Button::Middle), None);
         assert!(bar.is_pressed());
         let action = bar.up(&tabs, Button::Left);
@@ -1251,13 +1451,13 @@ mod tests {
 
         // Moving away takes the click back.
         bar.moved(&tabs, Point::new(740, 10));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         bar.moved(&tabs, Point::new(740, 100));
         assert_eq!(bar.up(&tabs, Button::Left), None);
         assert!(!bar.is_pressed());
         // And coming back gives it again.
         bar.moved(&tabs, Point::new(740, 10));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         bar.moved(&tabs, Point::new(300, 10));
         bar.moved(&tabs, Point::new(745, 25));
         assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::New));
@@ -1266,16 +1466,16 @@ mod tests {
         // one that opens a tab, although they are joined.
         bar.moved(&tabs, Point::new(770, 10));
         damage(&mut bar);
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert_eq!(damage(&mut bar), [Rect::new(756, 4, 780, 32)]);
         bar.moved(&tabs, Point::new(750, 10));
         assert_eq!(bar.up(&tabs, Button::Left), None);
         bar.moved(&tabs, Point::new(760, 10));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         let action = bar.up(&tabs, Button::Left);
         assert_eq!(action, Some(TabAction::ProfileMenu { keyboard: false }));
         bar.moved(&tabs, Point::new(750, 10));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         bar.moved(&tabs, Point::new(760, 10));
         assert_eq!(bar.up(&tabs, Button::Left), None);
     }
@@ -1284,7 +1484,7 @@ mod tests {
     fn the_middle_button_closes_the_tab_where_it_goes_down_and_up() {
         let (mut bar, tabs) = three();
         bar.moved(&tabs, Point::new(100, 20));
-        assert_eq!(bar.down(&tabs, Button::Middle), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Middle), None);
         assert!(bar.is_pressed());
         // Its close button is part of the tab.
         bar.moved(&tabs, Point::new(220, 20));
@@ -1292,12 +1492,12 @@ mod tests {
         assert_eq!(action, Some(TabAction::CloseTab(id(&tabs, 0))));
         // Not on another tab.
         bar.moved(&tabs, Point::new(300, 20));
-        bar.down(&tabs, Button::Middle);
+        down(&mut bar, &tabs, Button::Middle);
         bar.moved(&tabs, Point::new(100, 20));
         assert_eq!(bar.up(&tabs, Button::Middle), None);
         // Not on the button that opens a tab.
         bar.moved(&tabs, Point::new(740, 20));
-        assert_eq!(bar.down(&tabs, Button::Middle), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Middle), None);
         assert!(!bar.is_pressed());
     }
 
@@ -1307,7 +1507,7 @@ mod tests {
         bar.moved(&tabs, Point::new(300, 20));
         damage(&mut bar);
         // It does not show the tab, and draws nothing.
-        assert_eq!(bar.down(&tabs, Button::Right), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Right), None);
         assert!(bar.is_pressed());
         assert!(!bar.has_damage());
         // The menu opens where the button goes up, also on the close button
@@ -1319,17 +1519,17 @@ mod tests {
         assert!(!bar.is_pressed());
         // Not on another tab, nor below the bar.
         bar.moved(&tabs, Point::new(100, 20));
-        bar.down(&tabs, Button::Right);
+        down(&mut bar, &tabs, Button::Right);
         bar.moved(&tabs, Point::new(300, 20));
         assert_eq!(bar.up(&tabs, Button::Right), None);
         bar.moved(&tabs, Point::new(100, 20));
-        bar.down(&tabs, Button::Right);
+        down(&mut bar, &tabs, Button::Right);
         bar.moved(&tabs, Point::new(100, 40));
         assert_eq!(bar.up(&tabs, Button::Right), None);
         // Not on the buttons that open a tab and the menu of the profiles.
         for x in [740, 770] {
             bar.moved(&tabs, Point::new(x, 20));
-            assert_eq!(bar.down(&tabs, Button::Right), None);
+            assert_eq!(down(&mut bar, &tabs, Button::Right), None);
             assert!(!bar.is_pressed());
         }
     }
@@ -1338,7 +1538,7 @@ mod tests {
     fn losing_the_mouse_takes_the_click_back() {
         let (mut bar, tabs) = three();
         bar.moved(&tabs, Point::new(220, 20));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         damage(&mut bar);
         bar.capture_lost(&tabs);
         assert!(!bar.is_pressed());
@@ -1432,13 +1632,13 @@ mod tests {
         // button highlights nothing, and the press does nothing.
         bar.moved(&tabs, Point::new(10, 20));
         assert_eq!(bar.hover, None);
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(!bar.is_pressed());
         // Towards the last one, until the first tab that the strip hides,
         // even in part, is all in it.
         bar.moved(&tabs, Point::new(720, 20));
         damage(&mut bar);
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(bar.is_pressed());
         assert_eq!(bar.layout.scroll(), 12);
         assert_eq!(damage(&mut bar), [WHOLE]);
@@ -1471,7 +1671,7 @@ mod tests {
         // Towards the first one, until the tab on the left of the first one
         // that is all in the strip is all in it too.
         bar.moved(&tabs, Point::new(10, 20));
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert_eq!(bar.layout.scroll(), 300);
         assert!(bar.tick(&tabs, after(1000)).is_some());
         // Losing the mouse ends the press.
@@ -1500,7 +1700,7 @@ mod tests {
         bar.moved(&tabs, Point::new(720, 20));
         assert_eq!(bar.hover, None);
         assert!(!bar.has_damage());
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(!bar.is_pressed());
         // Nor the wheel towards the last tab.
         bar.wheel(&tabs, -120, false);
@@ -1509,7 +1709,7 @@ mod tests {
         // Nor, towards the first one, while the middle button is down on a
         // tab: the middle button is the wheel.
         bar.moved(&tabs, Point::new(250, 20));
-        assert_eq!(bar.down(&tabs, Button::Middle), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Middle), None);
         bar.wheel(&tabs, 120, false);
         assert_eq!(bar.layout.scroll(), 312);
         assert!(bar.frozen);
@@ -1532,7 +1732,7 @@ mod tests {
         assert!(bar.layout.can_scroll(Side::Right));
         bar.moved(&tabs, Point::new(720, 20));
         assert_eq!(bar.hover, Some(Target::Scroll(Side::Right)));
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(!bar.frozen);
         assert!(!bar.layout.overflows());
         assert_eq!(bar.layout.tab_width(), 105);
@@ -1553,7 +1753,7 @@ mod tests {
         assert_eq!(damage(&mut bar), [WHOLE]);
         // So with the middle button, and then with the keyboard too.
         let third = id(&tabs, 2);
-        bar.down(&tabs, Button::Middle);
+        down(&mut bar, &tabs, Button::Middle);
         assert_eq!(
             bar.up(&tabs, Button::Middle),
             Some(TabAction::CloseTab(third))
@@ -1590,7 +1790,7 @@ mod tests {
         // Nor the mouse, once the pointer is out of the bar: a menu has it.
         bar.moved(&tabs, Point::new(200, 20));
         let tab = id(&tabs, 1);
-        bar.down(&tabs, Button::Middle);
+        down(&mut bar, &tabs, Button::Middle);
         assert_eq!(
             bar.up(&tabs, Button::Middle),
             Some(TabAction::CloseTab(tab))
@@ -1678,7 +1878,7 @@ mod tests {
         let pixels = draw(&mut bar, &tabs);
         assert_eq!(at(&pixels, 718, 6), pixel(BUTTON_HOVERED));
         assert_eq!(at(&pixels, 726, 14), pixel(HOVERED_TEXT));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         let pixels = draw(&mut bar, &tabs);
         assert_eq!(at(&pixels, 737, 29), pixel(BUTTON_PRESSED));
     }
@@ -1739,13 +1939,42 @@ mod tests {
         assert!(text_in(&pixels, title, TEXT, BAR));
     }
 
+    #[test]
+    fn the_field_of_a_name_goes_where_the_title_goes() {
+        // The same tabs: the field goes after the indicator, and a blank
+        // cell, as far as the strip shows it.
+        let mut tabs = model::Window::new(Marked("pwsh", None));
+        tabs.open(Marked("cmd", Some(Indicator::Ended)));
+        tabs.open(Marked("wsl", Some(Indicator::Activity)));
+        tabs.open(Marked("ssh", Some(Indicator::Bell)));
+        let fonts = FontSystem::new().unwrap();
+        let bar = TabBar::new(&fonts, 96, 983, tabs.tab_count(), MAXIMIZED).unwrap();
+        let cell = bar.cell().width as i32;
+        assert_eq!(bar.text_area(0, None), Rect::new(12, 4, 160, 32));
+        let ended = Some(Indicator::Ended);
+        assert_eq!(
+            bar.text_area(1, ended),
+            Rect::new(196 + 2 * cell, 4, 344, 32)
+        );
+        let bell = Some(Indicator::Bell);
+        assert_eq!(
+            bar.text_area(3, bell),
+            Rect::new(564 + 3 * cell, 4, 712, 32)
+        );
+        // Out of the strip, nothing. The first tab goes from 28 to 128, and
+        // its close button from 100.
+        let (bar, _) = many(10);
+        assert_eq!(bar.text_area(0, None), Rect::new(36, 4, 100, 32));
+        assert!(bar.text_area(7, None).is_empty());
+    }
+
     /// Draws the whole bar of `tabs` on a canvas of its size, and returns
     /// its pixels.
     fn draw<T: Label>(bar: &mut TabBar, tabs: &model::Window<T>) -> Vec<u32> {
         let size = Size::new(983, bar.height());
         let mut pixels = vec![0; size.area() as usize];
         let mut canvas = Canvas::new(&mut pixels, size, 983).unwrap();
-        bar.draw(&mut canvas, tabs, &Palette::MEIGA);
+        bar.draw(&mut canvas, tabs, &Palette::MEIGA, None);
         pixels
     }
 
@@ -1808,6 +2037,77 @@ mod tests {
     }
 
     #[test]
+    fn the_field_of_a_name_shows_its_selection_and_its_caret() {
+        // Tabs of 184 pixels: the title of the active one goes from 12 to
+        // 160, and its cells are in the middle of the height of the tab.
+        let (mut bar, tabs) = bar(&["pwsh", "cmd", "wsl", "ssh"]);
+        let cell = bar.cell();
+        let (width, height) = (cell.width as i32, cell.height as i32);
+        let top = 4 + (28 - height) / 2;
+        let cells: Vec<CellChar> = text::cells("abc").collect();
+        let field = View {
+            cells: &cells,
+            shown: Shown {
+                caret: 3,
+                selection: 0..2,
+            },
+            caret: Some(2),
+        };
+        let size = Size::new(983, bar.height());
+        let mut pixels = vec![0; size.area() as usize];
+        let mut canvas = Canvas::new(&mut pixels, size, 983).unwrap();
+        bar.draw(&mut canvas, &tabs, &Palette::MEIGA, Some((0, field)));
+        let palette = Palette::MEIGA;
+        // The selected cells on the background of the selection of the
+        // terminal, and the other one on the background of the tab, which is
+        // above and below them too.
+        let selected = Rect::new(12, top, 12 + 2 * width, top + height);
+        assert!(text_in(
+            &pixels,
+            selected,
+            palette.foreground,
+            palette.selection
+        ));
+        let other = Rect::new(12 + 2 * width, top, 12 + 3 * width, top + height);
+        assert!(text_in(
+            &pixels,
+            other,
+            palette.foreground,
+            palette.background
+        ));
+        assert_eq!(
+            at(&pixels, 12, (top - 1) as usize),
+            pixel(palette.background)
+        );
+        let below = (top + height) as usize;
+        assert_eq!(at(&pixels, 12, below), pixel(palette.background));
+        // The caret, two pixels wide, on the left side of the fourth cell, as
+        // high as a cell.
+        let caret = 12 + 3 * width;
+        for y in [top, top + height - 1] {
+            for x in [caret, caret + 1] {
+                assert_eq!(
+                    at(&pixels, x as usize, y as usize),
+                    pixel(palette.foreground)
+                );
+            }
+        }
+        assert_eq!(
+            at(&pixels, caret as usize, below),
+            pixel(palette.background)
+        );
+        // And nothing of the title after it.
+        for y in 4..32 {
+            for x in caret + 2..160 {
+                assert_eq!(
+                    at(&pixels, x as usize, y as usize),
+                    pixel(palette.background)
+                );
+            }
+        }
+    }
+
+    #[test]
     fn buttons_are_highlighted_under_the_pointer_and_while_pressed() {
         // The highlight of the close button of the second tab goes from
         // (458, 8) to (478, 28), the one of the button that opens a tab
@@ -1816,7 +2116,7 @@ mod tests {
         let (mut bar, tabs) = three();
         bar.moved(&tabs, Point::new(460, 20));
         assert_eq!(at(&draw(&mut bar, &tabs), 458, 8), pixel(BUTTON_HOVERED));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         assert_eq!(at(&draw(&mut bar, &tabs), 477, 27), pixel(BUTTON_PRESSED));
         // While it is pressed, no other button is highlighted.
         bar.moved(&tabs, Point::new(740, 10));
@@ -1833,7 +2133,7 @@ mod tests {
         assert_eq!(at(&pixels, 757, 6), pixel(BAR));
         assert_eq!(at(&pixels, 758, 6), pixel(BUTTON_HOVERED));
         assert_eq!(at(&pixels, 764, 16), pixel(HOVERED_TEXT));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         let pixels = draw(&mut bar, &tabs);
         assert_eq!(at(&pixels, 777, 29), pixel(BUTTON_PRESSED));
         assert_eq!(at(&pixels, 764, 16), pixel(HOVERED_TEXT));
@@ -1851,25 +2151,25 @@ mod tests {
             (Point::new(982, 0), TabAction::CloseWindow),
         ] {
             bar.moved(&tabs, at);
-            assert_eq!(bar.down(&tabs, Button::Left), None);
+            assert_eq!(down(&mut bar, &tabs, Button::Left), None);
             assert!(bar.is_pressed());
             assert_eq!(bar.up(&tabs, Button::Left), Some(action));
             assert!(!bar.is_pressed());
         }
         // Moving away takes the click back, also onto another button.
         bar.moved(&tabs, Point::new(960, 10));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         bar.moved(&tabs, Point::new(900, 10));
         assert_eq!(bar.up(&tabs, Button::Left), None);
         // And coming back gives it again.
         bar.moved(&tabs, Point::new(960, 10));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         bar.moved(&tabs, Point::new(960, 100));
         bar.moved(&tabs, Point::new(970, 30));
         assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::CloseWindow));
         // The other buttons of the mouse do nothing on them.
         for button in [Button::Middle, Button::Right] {
-            assert_eq!(bar.down(&tabs, button), None);
+            assert_eq!(down(&mut bar, &tabs, button), None);
             assert!(!bar.is_pressed());
         }
     }
@@ -1884,7 +2184,7 @@ mod tests {
         assert_eq!(damage(&mut bar), []);
         bar.moved(&tabs, Point::new(900, 20));
         assert_eq!(damage(&mut bar), [minimize, maximize]);
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         assert_eq!(damage(&mut bar), [maximize]);
         assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::ToggleMaximize));
         assert_eq!(damage(&mut bar), [maximize]);
@@ -1920,14 +2220,14 @@ mod tests {
         // of the tabs.
         bar.moved(&tabs, Point::new(300, 5));
         assert!(!bar.has_damage());
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(!bar.is_pressed());
         bar.moved(&tabs, Point::new(300, 10));
         assert_eq!(damage(&mut bar), [Rect::new(244, 8, 485, 40)]);
         // The buttons of the window are as high as the whole bar.
         bar.moved(&tabs, Point::new(960, 2));
         damage(&mut bar);
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         assert_eq!(damage(&mut bar), [Rect::new(937, 0, 983, 40)]);
         assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::CloseWindow));
         // Without the band again, the tabs keep their width.
@@ -1951,7 +2251,7 @@ mod tests {
         bar.set_focused(true);
         bar.moved(&tabs, Point::new(960, 10));
         assert!(!bar.has_damage());
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(!bar.is_pressed());
         let pixels = draw(&mut bar, &tabs);
         for (x, y) in [(865, 15), (911, 11), (955, 11), (960, 10)] {
@@ -1960,7 +2260,7 @@ mod tests {
         // With it again, they are there, under the pointer.
         bar.set_frame(MAXIMIZED, &tabs);
         assert_eq!(damage(&mut bar), [WHOLE]);
-        assert_eq!(bar.down(&tabs, Button::Left), None);
+        assert_eq!(down(&mut bar, &tabs, Button::Left), None);
         assert!(bar.is_pressed());
         assert_eq!(bar.up(&tabs, Button::Left), Some(TabAction::CloseWindow));
     }
@@ -2048,7 +2348,7 @@ mod tests {
         assert_eq!(at(&pixels, 937, 0), pixel(CLOSE_HOVERED));
         assert_eq!(at(&pixels, 982, 31), pixel(CLOSE_HOVERED));
         assert_eq!(at(&pixels, 955, 11), pixel(CLOSE_GLYPH));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         let pixels = draw(&mut bar, &tabs);
         assert_eq!(at(&pixels, 937, 0), pixel(CLOSE_PRESSED));
         assert_eq!(at(&pixels, 955, 11), pixel(CLOSE_PRESSED_GLYPH));
@@ -2060,7 +2360,7 @@ mod tests {
         assert_eq!(at(&pixels, 865, 15), pixel(HOVERED_TEXT));
         assert_eq!(at(&pixels, 937, 0), pixel(BAR));
         assert_eq!(at(&pixels, 955, 11), pixel(TEXT));
-        bar.down(&tabs, Button::Left);
+        down(&mut bar, &tabs, Button::Left);
         let pixels = draw(&mut bar, &tabs);
         assert_eq!(at(&pixels, 890, 31), pixel(BUTTON_PRESSED));
         assert_eq!(at(&pixels, 865, 15), pixel(HOVERED_TEXT));

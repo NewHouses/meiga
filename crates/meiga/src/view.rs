@@ -21,11 +21,11 @@ use meiga_win::conpty::Input;
 use meiga_win::event::Event;
 use meiga_win::window::{self, CaretSettings, Window};
 
-use crate::clipboard;
 use crate::frames;
 use crate::mouse::{Context, Mouse, Response};
 use crate::session::{Exit, Shared, lock, store_title};
 use crate::tabs::TabAction;
+use crate::{blink, clipboard};
 
 /// The font: the first of these families that is installed, at 12 points,
 /// as in Windows Terminal. The zoom changes its size a point at a time,
@@ -38,9 +38,6 @@ const MAX_POINTS: u16 = 72;
 /// How far dim text (SGR 2) goes from its colour towards the one of its
 /// background: a third of the way, out of 255.
 const DIM: u8 = 85;
-
-/// The dots per inch at a scale of 100 %.
-const BASE_DPI: u32 = 96;
 
 /// Esc, which removes the selection, if there is one, before any shortcut.
 const VK_ESCAPE: u16 = 0x1b;
@@ -433,6 +430,13 @@ impl TerminalView {
             .any(|taken| taken.key == key && taken.shortcut)
     }
 
+    /// The keys that are down now, for the program or for meiga: the editing
+    /// of a name that opens meanwhile does nothing with their repeats, as
+    /// those of the Enter that chose "Rename tab" in a menu.
+    pub fn keys_down(&self) -> impl Iterator<Item = u16> + '_ {
+        self.held.iter().chain(&self.taken).map(|down| down.key)
+    }
+
     /// What a key that goes down does if meiga takes it: Esc removes the
     /// selection, if there is one, and the key of a shortcut does its
     /// action, if it can.
@@ -476,6 +480,7 @@ impl TerminalView {
             Action::Profile(index) => tab(TabAction::Profile(usize::from(index))),
             Action::ProfileMenu => tab(TabAction::ProfileMenu { keyboard: true }),
             Action::TabMenu => tab(TabAction::ActiveMenu),
+            Action::RenameTab => tab(TabAction::RenameActive),
             Action::DuplicateTab => tab(TabAction::DuplicateActive),
             Action::CloseOtherTabs => tab(TabAction::CloseAllButActive),
             Action::CloseTabsToTheRight => tab(TabAction::CloseRightOfActive),
@@ -679,6 +684,18 @@ impl TerminalView {
         self.caret.focused = focused;
         self.screen.mark_cursor_changed();
         self.tell_focus(focused);
+    }
+
+    /// The keys go to the name of a tab, which is edited, or not any more,
+    /// at `now`: meanwhile the cursor looks as without the focus, and does
+    /// not blink; and then it blinks again from the start. The program is not
+    /// told: the window keeps the focus (ADR 0031).
+    pub fn set_editing(&mut self, editing: bool, now: Instant) {
+        if editing != self.caret.editing {
+            self.caret.editing = editing;
+            self.caret.since = now;
+            self.screen.mark_cursor_changed();
+        }
     }
 
     /// Tells the program whether the window has the focus, if it asked.
@@ -1123,7 +1140,7 @@ fn draw_cursor(
     let palette = screen.palette();
     let color = palette.cursor;
     let thickness = caret.thickness as i32;
-    let shape = if caret.focused {
+    let shape = if caret.focused && !caret.editing {
         cursor.shape
     } else {
         CursorShape::HollowBlock
@@ -1159,13 +1176,6 @@ fn draw_cursor(
     }
 }
 
-/// The width of the caret of `settings` at `dpi`, rounded, and at least one
-/// pixel.
-fn thickness(settings: CaretSettings, dpi: u32) -> u32 {
-    let scaled = (settings.width.saturating_mul(dpi) + BASE_DPI / 2) / BASE_DPI;
-    scaled.max(1)
-}
-
 /// How the cursor looks and blinks.
 struct Caret {
     settings: CaretSettings,
@@ -1174,6 +1184,9 @@ struct Caret {
     /// pixels: the width of the caret of Windows, at the scale of the window.
     thickness: u32,
     focused: bool,
+    /// Whether the keys go to the name of a tab, which is edited: the cursor
+    /// looks then as without the focus, and does not blink (ADR 0031).
+    editing: bool,
     /// When it started to blink: at the last activity. It stops after the
     /// timeout of the caret, shown.
     since: Instant,
@@ -1187,8 +1200,9 @@ impl Caret {
         Self {
             settings,
             dpi,
-            thickness: thickness(settings, dpi),
+            thickness: blink::thickness(settings, dpi),
             focused: false,
+            editing: false,
             since: now,
             shown: true,
         }
@@ -1196,12 +1210,12 @@ impl Caret {
 
     fn read_settings(&mut self) {
         self.settings = window::caret_settings();
-        self.thickness = thickness(self.settings, self.dpi);
+        self.thickness = blink::thickness(self.settings, self.dpi);
     }
 
     fn set_dpi(&mut self, dpi: u32) {
         self.dpi = dpi;
-        self.thickness = thickness(self.settings, dpi);
+        self.thickness = blink::thickness(self.settings, dpi);
     }
 
     /// Whether `cursor` is shown at `now`, and when that changes next, while
@@ -1209,26 +1223,9 @@ impl Caret {
     /// focus and if the program did not ask for a steady cursor, and only
     /// until the timeout of the caret after the last activity.
     fn phase(&self, cursor: Cursor, now: Instant) -> (bool, Option<Instant>) {
-        let blinks = self.focused && cursor.blinking && cursor.shape != CursorShape::Hidden;
-        let Some(period) = self.settings.blink.filter(|_| blinks) else {
-            return (true, None);
-        };
-        let Some(end) = self.since.checked_add(self.settings.timeout) else {
-            return (true, None);
-        };
-        if now >= end || period.is_zero() {
-            return (true, None);
-        }
-        let elapsed = now.saturating_duration_since(self.since);
-        // The halves of a blink so far: fewer than ten with the defaults of
-        // Windows, and they fit in a u32 with any timeout of Windows, in
-        // milliseconds.
-        let halves = u32::try_from(elapsed.as_nanos() / period.as_nanos()).unwrap_or(u32::MAX);
-        let next = period
-            .checked_mul(halves.saturating_add(1))
-            .and_then(|offset| self.since.checked_add(offset))
-            .map_or(end, |next| next.min(end));
-        (halves.is_multiple_of(2), Some(next))
+        let blinks =
+            self.focused && !self.editing && cursor.blinking && cursor.shape != CursorShape::Hidden;
+        blink::phase(&self.settings, blinks, self.since, now)
     }
 }
 
@@ -1253,6 +1250,7 @@ mod tests {
             dpi: 96,
             thickness: 1,
             focused: true,
+            editing: false,
             since: now,
             shown: true,
         };
