@@ -250,9 +250,19 @@ fn fitted(text: &str, columns: usize) -> String {
     out
 }
 
-/// The start of `text`, for the line under the field.
+/// The start of `text`, for the line under the field, with its control
+/// characters in sight, as the symbols that Unicode has for them: a tab is
+/// ␉, and a line break, ␍␊.
 fn preview(text: &str) -> String {
-    fitted(text, PREVIEW)
+    let visible: String = text
+        .chars()
+        .map(|c| match c {
+            '\0'..='\x1f' => char::from_u32(0x2400 + u32::from(c)).unwrap_or(c),
+            '\x7f' => '\u{2421}',
+            c => c,
+        })
+        .collect();
+    fitted(&visible, PREVIEW)
 }
 
 /// The name of the key of `event`, with its modifier keys, or the character
