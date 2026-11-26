@@ -109,12 +109,13 @@ pub enum Event {
     /// ([`WindowOptions::title_bar`](crate::window::WindowOptions::title_bar))
     /// is also the title bar: once after each [`Window::track_mouse_leave`].
     MouseLeft,
-    /// A button of the mouse went down where Windows handles it, with the
-    /// title bar of meiga: on the title bar outside its buttons, on the band
-    /// of its top edge, or on the frame. Once the handler returns, Windows
-    /// does what it does with it: it drags or resizes the window, or
-    /// maximizes or restores it with a double click; and the right button
-    /// opens the menu of the window when it goes up on the title bar.
+    /// A button of the mouse went down where Windows handles it: with the
+    /// title bar of meiga, on the title bar outside its buttons, on the band
+    /// of its top edge, or on the frame; without it, anywhere on the title
+    /// bar or the frame of Windows. Once the handler returns, Windows does
+    /// what it does with it: it drags or resizes the window, or maximizes or
+    /// restores it with a double click; and the window opens its menu when
+    /// the right button goes up on the title bar.
     FrameMouseDown,
     /// A key went down or up, with the character that it writes, if any.
     /// Alt+F4 and Alt+Space never come as events: Windows handles them, to

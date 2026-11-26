@@ -38,9 +38,10 @@
 //! gets all the mouse, and the keys that go down; the ones that went down
 //! before go up for the program, which gets each key that it got go up too.
 //! What changes under it, all inside it, is not drawn until it closes. It
-//! closes when an item is chosen, and also when the window loses the focus,
-//! changes size or scale, starts moving, or is minimized; and the menu of a
-//! tab, when the tab closes.
+//! closes when an item is chosen, and also when a button goes down outside
+//! it, also on the frame of the window, where Windows handles the mouse,
+//! and when the window loses the focus, changes size or scale, starts
+//! moving, or is minimized; and the menu of a tab, when the tab closes.
 //!
 //! When the program of a tab ends with the exit code 0, the tab closes, as
 //! if the user had closed it, also while it is hidden: the last one closes
@@ -1301,31 +1302,37 @@ impl Tabs {
 
     /// A button of the mouse went down on the frame of the window, where
     /// Windows drags it, resizes it or maximizes it, or it opens its menu:
-    /// as any button that goes down outside its field, it ends the editing
-    /// of a name that may be open with the name first (ADR 0031). Returns
-    /// whether a frame has to draw it.
+    /// as any button that goes down outside them, it closes the menu that
+    /// may be open (ADR 0021), and ends the editing of a name that may be
+    /// open with the name (ADR 0031), first. Returns whether a frame has to
+    /// draw it.
     pub fn frame_mouse_down(&mut self, window: &Window) -> bool {
         self.bar.forget_clicks();
+        let closed = self.close_menu(window);
         self.commit(window);
-        self.bar.has_damage()
+        closed || self.bar.has_damage()
     }
 
     /// A mouse event while a name is edited (ADR 0031): in its field, and
     /// while the left button that went down in it is down, it is for the
-    /// field, whose pointer is the bar of text, unless the terminal holds
-    /// the mouse; the wheel on the bar does nothing; and a button that goes
+    /// field, whose pointer is the bar of text, unless the bar or the
+    /// terminal already holds the mouse with another button: then it is
+    /// theirs. The wheel on the bar does nothing; and a button that goes
     /// down elsewhere ends the editing with the name, and then does what it
     /// does. Returns `None` for the events that go on to the bar or to the
     /// terminal.
     fn edit_mouse(&mut self, window: &Window, event: &Event) -> Option<Response> {
         let now = Instant::now();
+        let held = self.bar.is_pressed() || self.view.holds_mouse();
         let editor = self.editor.as_mut()?;
         match *event {
+            Event::MouseDown { at, .. } if editor.contains(at) && held => None,
             Event::MouseDown {
                 button,
                 at,
                 modifiers,
             } if editor.contains(at) => {
+                self.bar.forget_clicks();
                 // Only the left button does something in the field.
                 let pressed = editor.down(button, at, modifiers, now);
                 if pressed {
@@ -1355,7 +1362,7 @@ impl Tabs {
                 }
                 Some(Response::default())
             }
-            Event::MouseMoved { at, .. } if editor.contains(at) && !self.view.holds_mouse() => {
+            Event::MouseMoved { at, .. } if editor.contains(at) && !held => {
                 // As any move on the bar, but with the pointer of text.
                 let response = self.bar_mouse(window, event, at);
                 window.set_pointer(Pointer::Text);
@@ -1424,7 +1431,10 @@ impl Tabs {
                     window.track_mouse_leave();
                 }
             }
-            Event::MouseDown { button, at, .. } => self.menu.down(button, at),
+            Event::MouseDown { button, at, .. } => {
+                self.bar.forget_clicks();
+                self.menu.down(button, at);
+            }
             Event::MouseUp { button, at, .. } => tab = self.menu.up(button, at),
             Event::MouseLeft => self.menu.left(),
             Event::CaptureLost => self.menu.capture_lost(),

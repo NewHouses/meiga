@@ -47,9 +47,10 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     TranslateMessage, USER_DEFAULT_SCREEN_DPI, USER_TIMER_MAXIMUM, USER_TIMER_MINIMUM, WM_CLOSE,
     WM_DESTROY, WM_DPICHANGED, WM_ENTERMENULOOP, WM_ENTERSIZEMOVE, WM_ERASEBKGND, WM_EXITMENULOOP,
     WM_EXITSIZEMOVE, WM_GETMINMAXINFO, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
-    WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCHITTEST, WM_NCMBUTTONDBLCLK, WM_NCMOUSELEAVE, WM_NCMOUSEMOVE,
-    WM_PAINT, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETCURSOR, WM_SYSCOMMAND, WM_TIMER,
-    WNDCLASSEXW, WS_OVERLAPPEDWINDOW, WindowFromPoint,
+    WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCHITTEST, WM_NCLBUTTONDBLCLK, WM_NCLBUTTONDOWN,
+    WM_NCMBUTTONDBLCLK, WM_NCMBUTTONDOWN, WM_NCMOUSELEAVE, WM_NCMOUSEMOVE, WM_NCRBUTTONDBLCLK,
+    WM_NCRBUTTONDOWN, WM_PAINT, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETCURSOR, WM_SYSCOMMAND,
+    WM_TIMER, WNDCLASSEXW, WS_OVERLAPPEDWINDOW, WindowFromPoint,
 };
 
 use crate::event::{
@@ -1545,6 +1546,16 @@ unsafe extern "system" fn window_proc(
             return unsafe { DefWindowProcW(window, message, wparam, lparam) };
         }
         WM_MOUSELEAVE => this.mouse_left(state),
+        // Without the title bar of meiga, the handler learns too that a
+        // button went down on the title bar or the frame of Windows, before
+        // Windows does what it does with it.
+        WM_NCLBUTTONDOWN | WM_NCLBUTTONDBLCLK | WM_NCMBUTTONDOWN | WM_NCMBUTTONDBLCLK
+        | WM_NCRBUTTONDOWN | WM_NCRBUTTONDBLCLK => {
+            state.dispatch(Event::FrameMouseDown);
+            // SAFETY: the arguments are the ones that Windows passed to this
+            // window procedure.
+            return unsafe { DefWindowProcW(window, message, wparam, lparam) };
+        }
         WM_NCMOUSELEAVE if this.custom => {
             this.mouse_left(state);
             // SAFETY: the arguments are the ones that Windows passed to this
@@ -1630,7 +1641,7 @@ mod tests {
     use meiga_core::ui::tabbar::{CaptionButton, Layout};
     use windows_sys::Win32::Graphics::Gdi::HDC;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        HTBOTTOM, HTLEFT, SendMessageW, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_NCRBUTTONDOWN,
+        HTBOTTOM, HTLEFT, SendMessageW, WM_NCLBUTTONUP,
     };
 
     use super::*;
@@ -1852,6 +1863,37 @@ mod tests {
                 i32::try_from(min.height + band).unwrap()
             )
         );
+    }
+
+    #[test]
+    fn without_the_title_bar_of_meiga_the_handler_learns_of_the_buttons_on_the_frame() {
+        let window = Window::create(&WindowOptions {
+            title: "meiga",
+            title_bar: false,
+        })
+        .unwrap();
+        assert!(!window.has_title_bar());
+        let mut recorder = Recorder::default();
+        {
+            let state = State {
+                window: &window,
+                handler: RefCell::new(&mut recorder),
+                failure: RefCell::new(None),
+                keyboard: Keyboard::default(),
+            };
+            let _installed = Installed::new(window.handle(), &state);
+            // On the title bar of Windows, above the client area, and on its
+            // frame, the buttons that go down reach the handler first, also
+            // as a double click; the moves and the buttons that go up do
+            // not.
+            let title = Point::new(50, -10);
+            let left_frame = Point::new(-2, 50);
+            send(&window, WM_NCMOUSEMOVE, HTCAPTION, title);
+            send(&window, WM_NCMBUTTONDOWN, HTCAPTION, title);
+            send(&window, WM_NCLBUTTONUP, HTCAPTION, title);
+            send(&window, WM_NCRBUTTONDBLCLK, HTLEFT, left_frame);
+        }
+        assert_eq!(recorder.0, [Event::FrameMouseDown, Event::FrameMouseDown]);
     }
 
     #[test]
