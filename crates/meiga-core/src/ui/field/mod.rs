@@ -353,7 +353,7 @@ impl Field {
         let removed = self.text[range.clone()].to_owned();
         let before = (self.anchor, self.caret);
         self.text.replace_range(range.clone(), with);
-        self.edited();
+        self.edited(removed != with);
         // What it inserted can join the text around it in another cluster:
         // the caret goes to its end, or, after deleting, to its start.
         let end = range.start + with.len();
@@ -375,10 +375,12 @@ impl Field {
         });
     }
 
-    /// The text changed: a button held down since before selects nothing
-    /// more, because the places that it took are not the same any more.
-    fn edited(&mut self) {
-        self.changes.text = true;
+    /// The text was edited, and is another one if `changed`: typing a
+    /// character over the same one leaves it as it was. A button held down
+    /// since before selects nothing more, because the places that it took
+    /// may not be the same any more.
+    fn edited(&mut self, changed: bool) {
+        self.changes.text |= changed;
         self.drag = Drag::None;
     }
 
@@ -394,9 +396,10 @@ impl Field {
             before,
             ..
         } = *edit;
+        let changed = removed != inserted;
         self.text.replace_range(at..at + inserted.len(), removed);
         (self.anchor, self.caret) = before;
-        self.edited();
+        self.edited(changed);
         true
     }
 
@@ -412,9 +415,10 @@ impl Field {
             after,
             ..
         } = *edit;
+        let changed = removed != inserted;
         self.text.replace_range(at..at + removed.len(), inserted);
         (self.anchor, self.caret) = (after, after);
-        self.edited();
+        self.edited(changed);
         true
     }
 

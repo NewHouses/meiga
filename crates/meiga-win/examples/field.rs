@@ -290,7 +290,9 @@ fn quoted(c: char) -> String {
 /// in two keys: `high` keeps its first half until the second one.
 fn key_name(event: &KeyEvent, high: &mut Option<u16>) -> String {
     let controls = event.controls;
-    let writes = !(controls.ctrl() || controls.alt()) || controls.alt_gr();
+    // Windows writes characters without Ctrl and Alt, or with both, which
+    // it takes as AltGr.
+    let writes = controls.ctrl() == controls.alt();
     match event.character {
         unit @ 0xd800..=0xdbff if writes => {
             *high = Some(unit);

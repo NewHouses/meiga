@@ -16,10 +16,11 @@
 //! | Ctrl+Z Alt+Backspace | undo |
 //! | Ctrl+Y Ctrl+Shift+Z Alt+Shift+Backspace | redo |
 //!
-//! The other keys write their characters, also with AltGr; Alt alone writes
-//! the character of the code typed with it on the numeric keypad, when it
-//! goes up. Control characters never go in. A key that the keyboard repeats
-//! faster than the window takes it comes once with the count of its
+//! The other keys write their characters, also with AltGr, or with Ctrl+Alt,
+//! which Windows takes as AltGr; with Alt alone, they write nothing, but Alt
+//! writes the character of the code typed with it on the numeric keypad,
+//! when it goes up. Control characters never go in. A key that the keyboard
+//! repeats faster than the window takes it comes once with the count of its
 //! repeats, and does its work that many times. Enter, Esc, Tab, ↑, ↓ and
 //! the keys without a character do nothing: they are for the user of the
 //! field.
@@ -68,21 +69,23 @@ impl Field {
             return self.typed(event.character, event.repeat);
         }
         let controls = event.controls;
-        // AltGr writes characters, and has no commands.
-        if !controls.alt_gr()
+        // AltGr, which is Ctrl+Alt for Windows, writes characters, and has
+        // no commands.
+        if !(controls.ctrl() && controls.alt())
             && let Some(reply) = self.command(event)
         {
             self.high_surrogate = None;
             return reply;
         }
-        // The characters with Alt alone are for the menus of the window.
-        if event.character == 0 || (controls.alt() && !controls.alt_gr()) {
+        // The characters with Alt alone are for the menus of the window;
+        // with Ctrl too, Windows takes Alt as AltGr.
+        if event.character == 0 || (controls.alt() && !controls.ctrl()) {
             return Reply::Ignored;
         }
         self.typed(event.character, event.repeat)
     }
 
-    /// What `event`, a key that goes down without AltGr, does, if it is a
+    /// What `event`, a key that goes down without Ctrl+Alt, does, if it is a
     /// command.
     fn command(&mut self, event: &KeyEvent) -> Option<Reply> {
         let controls = event.controls;

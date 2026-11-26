@@ -24,6 +24,7 @@ const VK_B: u16 = 0x42;
 const VK_C: u16 = 0x43;
 const VK_D: u16 = 0x44;
 const VK_E: u16 = 0x45;
+const VK_Q: u16 = 0x51;
 const VK_V: u16 = 0x56;
 const VK_X: u16 = 0x58;
 const VK_Y: u16 = 0x59;
@@ -260,6 +261,22 @@ fn altgr_writes_characters_and_alt_alone_does_not() {
     assert_eq!(tap(&mut field, VK_A, alt_gr()), Reply::Ignored);
     assert_eq!(tap(&mut field, VK_LEFT, alt_gr()), Reply::Ignored);
     assert_eq!(state(&field), "€æ|");
+}
+
+#[test]
+fn ctrl_and_alt_together_write_characters_as_altgr() {
+    // Windows takes any Ctrl with any Alt as AltGr: Ctrl+Alt+E writes € in
+    // the Spanish layout, and Ctrl+Alt+Q writes @ in the German one.
+    let mut field = make("|");
+    let left = ControlKeys::LEFT_CTRL | ControlKeys::LEFT_ALT;
+    let right = ControlKeys::RIGHT_CTRL | ControlKeys::RIGHT_ALT;
+    assert_eq!(field.key(&event(VK_E, unit('€'), left)), Reply::Taken);
+    assert_eq!(field.key(&event(VK_Q, unit('@'), right)), Reply::Taken);
+    assert_eq!(state(&field), "€@|");
+    // Without a character, they do nothing, not even a command.
+    assert_eq!(tap(&mut field, VK_A, left), Reply::Ignored);
+    assert_eq!(tap(&mut field, VK_LEFT, right), Reply::Ignored);
+    assert_eq!(state(&field), "€@|");
 }
 
 #[test]
@@ -1067,6 +1084,19 @@ fn the_changes_say_what_changed() {
     );
     field.set_columns(2);
     assert_eq!(field.take_changes(), Changes::default());
+    // An edit that leaves the same text, and undoing it, change the
+    // selection, but not the text.
+    let mut field = make("[a|]");
+    type_text(&mut field, "a");
+    tap(&mut field, VK_Z, ctrl());
+    assert_eq!(state(&field), "[a|]");
+    assert_eq!(
+        field.take_changes(),
+        Changes {
+            shown: true,
+            text: false
+        }
+    );
 }
 
 /// A generator of pseudorandom numbers (xorshift64), so that the test
@@ -1127,6 +1157,8 @@ fn check(field: &mut Field, before: &(String, usize, usize, usize, usize), conte
         "{context}: {shown:?} {cells:?}"
     );
     let changes = field.take_changes();
+    // An action can make more than one edit, and the last one can give back
+    // the text that there was: only what changed in the end must be told.
     if text != before.0 {
         assert!(changes.text, "{context}: {changes:?}");
     }
