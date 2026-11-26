@@ -23,7 +23,10 @@ use meiga_core::geometry::GridSize;
 use meiga_win::conpty::{self, Command, Conpty, Input, Output, Priority, Pty, Source};
 use meiga_win::{Error, profiles};
 use windows_sys::Win32::Foundation::{TRUE, WAIT_OBJECT_0};
-use windows_sys::Win32::System::Console::{CTRL_CLOSE_EVENT, SetConsoleCtrlHandler};
+use windows_sys::Win32::System::Console::{
+    CTRL_CLOSE_EVENT, ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode,
+    GetStdHandle, STD_OUTPUT_HANDLE, SetConsoleCtrlHandler, SetConsoleMode,
+};
 use windows_sys::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
     JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
@@ -538,6 +541,23 @@ fn the_program_gets_the_new_size() {
     pty.resize(GridSize::new(80, 25)).unwrap();
 }
 
+/// What [`titler`] writes: the sequences of the title that the terminal of
+/// meiga follows, or ignores, and a reset (ADR 0029).
+const TITLES: &str =
+    "\x1b]0;un\x07\x1b]2;dous\x1b\\\x1b[22t\x1b]1;icona\x07\x1b]21;dec\x1b\\\x1b[23t\x1bc";
+
+#[test]
+fn the_conpty_passes_the_titles_of_the_program_unchanged() {
+    let (_pty, mut transcript) = spawn_helper(&bundled(), "titler");
+    transcript.wait_for("titler-done");
+    let text = transcript.text();
+    // Whole, in order, and with nothing in between: a title that ConPTY gave
+    // by itself would change the one of the tab. After the reset, ConPTY
+    // turns on again the modes that it needs, without a title.
+    let expected = format!("{TITLES}\x1b[?1004h\x1b[?9001htitler-done");
+    assert!(text.contains(&expected), "{expected:?} is not in {text:?}");
+}
+
 /// Sends with each block of output the priority of the reader thread, which
 /// it reads on that thread, as it gives the block.
 struct Priorities(Sender<(i32, Vec<u8>)>);
@@ -831,6 +851,7 @@ fn helper() {
         Ok("closer") => closer(),
         Ok("slow") => slow(),
         Ok("exiter") => exiter(),
+        Ok("titler") => titler(),
         _ => {}
     }
 }
@@ -907,6 +928,23 @@ unsafe extern "system" fn wait_on_close(event: u32) -> BOOL {
         thread::sleep(SLOW_CLOSE);
     }
     TRUE
+}
+
+/// A program that writes [`TITLES`] as the programs that write control
+/// sequences do: with the processing of virtual terminal sequences turned
+/// on, which ConPTY needs to pass them to the terminal.
+fn titler() {
+    // SAFETY: the handle of the output of this process, which is the
+    // console of its session, and a mode that the call writes.
+    unsafe {
+        let output = GetStdHandle(STD_OUTPUT_HANDLE);
+        let mut mode = 0;
+        assert_ne!(GetConsoleMode(output, &mut mode), 0);
+        let mode = mode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        assert_ne!(SetConsoleMode(output, mode), 0);
+    }
+    print!("{TITLES}");
+    println!("titler-done");
 }
 
 /// A process that closes two sessions that are starting, waits for them,

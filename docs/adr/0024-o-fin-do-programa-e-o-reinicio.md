@@ -1,6 +1,6 @@
 # ADR 0024 · O fin do programa e o reinicio
 
-- **Estado:** Aceptado; concretado polos [ADR 0025](0025-moitas-tabs-e-os-indicadores.md) e [ADR 0028](0028-as-sesions-fora-do-fio-da-xanela.md)
+- **Estado:** Aceptado; concretado polos [ADR 0025](0025-moitas-tabs-e-os-indicadores.md), [ADR 0028](0028-as-sesions-fora-do-fio-da-xanela.md) e [ADR 0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md)
 - **Data:** 2026-11-17
 - **Relacionados:** [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0011](0011-fin-e-peche-das-sesions.md), [ADR 0013](0013-da-saida-a-pantalla.md), [ADR 0018](0018-o-modelo-das-tabs.md), [ADR 0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0022](0022-os-perfis-e-a-configuracion.md), [ADR 0023](0023-os-atallos-de-teclado.md)
 

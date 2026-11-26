@@ -1,5 +1,5 @@
 //! The terminal of `alacritty_terminal` as the parser sees it: it passes
-//! every action of the output to it, and when the program leaves the
+//! the actions of the output to it, and when the program leaves the
 //! alternate screen, or resets the terminal, it gives back the primary
 //! screen that a resize set aside ([`super::resize`]).
 //!
@@ -11,6 +11,10 @@
 //! region that starts below the first row of the screen scrolls: its rows do
 //! not go into the history, but `alacritty_terminal` moves the view up as if
 //! they did.
+//!
+//! And the title of the program, and the ones that it saves, go to the
+//! terminal, which keeps them ([`super::title`]), and not to
+//! `alacritty_terminal`, which empties them on a reset.
 
 use alacritty_terminal::grid::{Dimensions, Grid, Scroll};
 use alacritty_terminal::term::cell::Cell;
@@ -22,10 +26,11 @@ use alacritty_terminal::vte::ansi::{
     PrivateMode, Rgb, ScpCharPath, ScpUpdateMode, StandardCharset, TabulationClearMode,
 };
 
+use super::title::Titles;
 use super::{Listener, resize};
 
 /// The terminal, and the primary screen that a resize set aside while the
-/// alternate one is shown.
+/// alternate one is shown, with what the terminal keeps of the program.
 pub(super) struct Hooked<'a> {
     pub term: &'a mut Term<Listener>,
     pub primary: &'a mut Option<Grid<Cell>>,
@@ -33,6 +38,8 @@ pub(super) struct Hooked<'a> {
     /// screen. `alacritty_terminal` does not tell where it starts: it is
     /// followed here.
     pub region_below_top: &'a mut bool,
+    /// The title of the program, and the ones that it saved.
+    pub titles: &'a mut Titles,
 }
 
 impl Hooked<'_> {
@@ -100,7 +107,6 @@ macro_rules! pass {
 #[deny(clippy::missing_trait_methods)]
 impl Handler for Hooked<'_> {
     pass! {
-        fn set_title(&mut self, title: Option<String>);
         fn set_cursor_style(&mut self, style: Option<CursorStyle>);
         fn set_cursor_shape(&mut self, shape: CursorShape);
         fn goto(&mut self, line: i32, column: usize);
@@ -148,8 +154,6 @@ impl Handler for Hooked<'_> {
         fn clipboard_store(&mut self, clipboard: u8, base64: &[u8]);
         fn clipboard_load(&mut self, clipboard: u8, terminator: &str);
         fn decaln(&mut self);
-        fn push_title(&mut self);
-        fn pop_title(&mut self);
         fn text_area_size_pixels(&mut self);
         fn text_area_size_chars(&mut self);
         fn set_hyperlink(&mut self, hyperlink: Option<Hyperlink>);
@@ -161,6 +165,24 @@ impl Handler for Hooked<'_> {
         fn set_modify_other_keys(&mut self, mode: ModifyOtherKeys);
         fn report_modify_other_keys(&mut self);
         fn set_scp(&mut self, path: ScpCharPath, update: ScpUpdateMode);
+    }
+
+    /// OSC 0 and 2: the title of the tab.
+    #[inline]
+    fn set_title(&mut self, title: Option<String>) {
+        self.titles.set(title);
+    }
+
+    /// `CSI 22 t`: the program saves its title.
+    #[inline]
+    fn push_title(&mut self) {
+        self.titles.push();
+    }
+
+    /// `CSI 23 t`: the program gives again the last title that it saved.
+    #[inline]
+    fn pop_title(&mut self) {
+        self.titles.pop();
     }
 
     /// A character. After the last column, it goes to the next row, which
@@ -247,7 +269,7 @@ impl Handler for Hooked<'_> {
 
     /// `ESC c`: the reset also leaves the alternate screen, and empties the
     /// primary one, history included. The scrolling region is the whole
-    /// screen again.
+    /// screen again. The title, and the ones that the program saved, stay.
     #[inline]
     fn reset_state(&mut self) {
         <Term<Listener> as Handler>::reset_state(self.term);
