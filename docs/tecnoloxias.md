@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 3.1. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar. No M3 chegaron [§63](#63-crear-os-procesos-fóra-do-fío-da-interface), crear os procesos fóra do fío da interface, e [§64](#64-a-cobertura-e-os-mutantes), a cobertura e os mutantes; e na 3.1, [§65](#65-os-títulos-da-tab), os títulos da tab.
+> Estado: subfase 3.2. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar. No M3 chegaron [§63](#63-crear-os-procesos-fóra-do-fío-da-interface), crear os procesos fóra do fío da interface, e [§64](#64-a-cobertura-e-os-mutantes), a cobertura e os mutantes; na 3.1, [§65](#65-os-títulos-da-tab), os títulos da tab; e na 3.2, [§66](#66-os-grafemas-e-as-palabras-dun-campo-de-texto), os grafemas e as palabras dun campo de texto.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -1805,3 +1805,31 @@ No Windows Terminal, OSC 1 e OSC 21 cambian o título coma OSC 0 e OSC 2 ([`Acti
 | OSC 1 e OSC 21 non fan nada | `vte` non os pasa; collelos co escáner de meiga é traballo da 4.1 |
 
 O código explícase en [Código › meiga-core › `term/title.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermtitlers).
+
+## 66. Os grafemas e as palabras dun campo de texto
+
+**Que é un grafema.** O que unha persoa le coma un carácter pode ser varios puntos de código de Unicode: unha letra e un acento combinado (`e` e U+0301 fan `é`), un emoji co seu ton de pel (👍 e 🏽), unha secuencia de emoji unidos con ZWJ (👨‍👩‍👧, cinco puntos de código), dous indicadores rexionais que fan unha bandeira (🇪 e 🇸), unha sílaba coreana escrita en *jamo* ou un conxunto dos alfabetos da India (क्ष, tres puntos de código). O anexo 29 de Unicode, [*Text Segmentation*](https://www.unicode.org/reports/tr29/tr29-47.html) (UAX #29), chámalle *grapheme cluster* a cada un, e dá as regras para saber onde acaba un e empeza o seguinte: por exemplo, nunca antes dunha marca que estende o anterior (a regra GB9), entre dous emoji unidos con ZWJ (GB11) nin dentro dunha parella de indicadores rexionais (GB12 e GB13). Os *extended* son os que usan os editores de hoxe.
+
+**Por que nun campo de texto.** O cursor dun editor para entre grafemas: se parase entre unha letra e o seu acento, o que se escribise alí quedaría no medio dun carácter. Chrome móveo así, e borra con Supr o grafema seguinte ([`TextfieldModel::Delete`](https://github.com/chromium/chromium/blob/145.0.7632.45/ui/views/controls/textfield/textfield_model.cc#L449-L478)); en Windows, Retroceso borra só o último punto de código ([`RangeToDeleteBackwards`](https://github.com/chromium/chromium/blob/145.0.7632.45/ui/views/style/platform_style.cc#L49-L55)), así que un `é` escrito coma `e` e un acento perde só o acento, para corrixilo.
+
+**`unicode-segmentation`** é o crate dos mesmos autores ca `unicode-width` ([§29](#29-o-ancho-dos-caracteres-unicode-width)) coas regras de UAX #29 para os grafemas, as palabras e as frases, coas táboas de Unicode 17 ([documentación](https://docs.rs/unicode-segmentation/1.13.3/unicode_segmentation/)). Ten licenza MIT ou Apache-2.0, coma as outras dependencias ([ADR 0006](adr/0006-licenzas-e-dependencias.md)), e non depende de ningún outro crate. meiga usa dúas partes:
+
+- **`GraphemeCursor`**, que, nunha posición dun texto, dá o límite seguinte (`next_boundary`), o anterior (`prev_boundary`) ou se alí hai un (`is_boundary`). Recibe o texto a anacos, e pide outro se o necesita; meiga dállo enteiro, así que nunca pide máis.
+- **`grapheme_indices(true)`**, os grafemas dun texto, cada un co seu inicio; `true` pide os *extended*.
+
+**O que custa.** As táboas dos grafemas engaden uns 29,7 KB a `meiga.exe`, e as das palabras de UAX #29, que meiga non usa, uns 24 KB máis: medido cunha compilación de proba que as usaba. Co enlazado de todo o programa (LTO), só entran se algunha parte de `meiga.exe` usa o campo: na 3.2, ningunha; desde a 3.3, a tab.
+
+**As palabras.** UAX #29 tamén dá as palabras: un apóstrofo ou un punto entre letras, ou un punto entre números, non as separan. Chrome usa as de ICU, que son estas, con dicionarios para o chinés, o xaponés, o tailandés ou o khmer, e en Windows, Ctrl+→ e Ctrl+← paran ao principio dunha palabra ([`AdjacentWordSelectionModel`](https://github.com/chromium/chromium/blob/145.0.7632.45/ui/gfx/render_text_harfbuzz.cc#L1636-L1670)). Nun campo de meiga, que leva nomes e filtros de arquivos, as palabras son máis simples ([ADR 0030](adr/0030-o-campo-de-texto.md), decisión 3): as letras, os números e `_` fan palabras; cada grupo doutros signos, outra; e os espazos sepáranas. Cada grafema ten a clase do seu primeiro carácter (`char::is_whitespace` e `char::is_alphanumeric`), e unha marca sen letra antes, coma un acento solto, vai coas letras.
+
+| Texto | As palabras de UAX #29 | As de meiga |
+|---|---|---|
+| `main.rs` | `main.rs` | `main` · `.` · `rs` |
+| `can't` | `can't` | `can` · `'` · `t` |
+| `3.14` | `3.14` | `3` · `.` · `14` |
+| `foo_bar-baz` | `foo_bar` · `-` · `baz` | `foo_bar` · `-` · `baz` |
+| `C:\Users\x` | `C` · `:` · `\` · `Users` · `\` · `x` | `C` · `:\` · `Users` · `\` · `x` |
+| `中文` | `中` · `文` | `中文` |
+
+Ctrl+→ vai ao principio da palabra seguinte, despois do resto da palabra onde está o cursor e dos espazos que a seguen; Ctrl+← volta ao principio da anterior, coma en Windows. Nun filtro, `main.rs` e Ctrl+Retroceso borran `rs`, e non o nome enteiro.
+
+O código explícase en [Código › meiga-core › `ui/field/segment.rs`](codigo/meiga-core.md#cratesmeiga-coresrcuifieldsegmentrs).

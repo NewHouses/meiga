@@ -15,6 +15,9 @@ alacritty_terminal.workspace = true
 memchr.workspace = true
 # Reads config.toml.
 toml.workspace = true
+# The grapheme clusters of Unicode (UAX #29), between which the caret of a
+# text field stops (ADR 0030).
+unicode-segmentation.workspace = true
 # The width of each character in cells, as alacritty_terminal measures it.
 unicode-width.workspace = true
 

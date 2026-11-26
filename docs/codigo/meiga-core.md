@@ -1,12 +1,12 @@
 # Código › `meiga-core`
 
-> Estado: subfase 3.1. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, e o que é cada parte dela para Windows, coma barra de título da xanela, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, o título do programa e os que este garda, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato. Na 2.9, para as tabs na barra de título, a disposición da barra leva, coa xanela restaurada, unha banda enriba das tabs, onde se redimensiona a xanela, e, á dereita da barra, os botóns da xanela, minimizar, maximizar ou restaurar e pechar, cun sitio para arrastrar a xanela sempre antes deles, e di o ancho da barra máis estreita; e chegou o módulo `ui::titlebar`, que di que é cada parte da barra para Windows, a barra de título, o bordo de arriba e a súa esquina, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto, e o tamaño mínimo da área cliente. Na 2.10 e no M3 non cambiou o código. Na 3.1, para os títulos dinámicos, chegou ao terminal o módulo `term::title`: o terminal leva el mesmo o título do programa e os que este garda, e non `alacritty_terminal`, que os baleiraba sen avisar nun reinicio da pantalla (`ESC c`); `ESC c` mantén os dous, e `restart`, coma nun terminal novo, quítaos; garda como moito 10 títulos, ignora os de máis de 1000 unidades de UTF-16, e o mesmo título outra vez xa non é un cambio. Chegaron sete probas en `term/title.rs` e sete en `term/tests.rs`.
+> Estado: subfase 3.2. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, e o que é cada parte dela para Windows, coma barra de título da xanela, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o campo de texto (unha liña que se edita, co cursor entre os grafemas, as palabras, desfacer, o pegado, o límite, o rato e a parte do texto que se ve), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, o título do programa e os que este garda, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato. Na 2.9, para as tabs na barra de título, a disposición da barra leva, coa xanela restaurada, unha banda enriba das tabs, onde se redimensiona a xanela, e, á dereita da barra, os botóns da xanela, minimizar, maximizar ou restaurar e pechar, cun sitio para arrastrar a xanela sempre antes deles, e di o ancho da barra máis estreita; e chegou o módulo `ui::titlebar`, que di que é cada parte da barra para Windows, a barra de título, o bordo de arriba e a súa esquina, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto, e o tamaño mínimo da área cliente. Na 2.10 e no M3 non cambiou o código. Na 3.1, para os títulos dinámicos, chegou ao terminal o módulo `term::title`: o terminal leva el mesmo o título do programa e os que este garda, e non `alacritty_terminal`, que os baleiraba sen avisar nun reinicio da pantalla (`ESC c`); `ESC c` mantén os dous, e `restart`, coma nun terminal novo, quítaos; garda como moito 10 títulos, ignora os de máis de 1000 unidades de UTF-16, e o mesmo título outra vez xa non é un cambio. Chegaron sete probas en `term/title.rs` e sete en `term/tests.rs`. Na 3.2, para o campo de texto, chegou o módulo `ui::field`: unha liña de texto que se edita coma nos campos de texto de Chrome en Windows, sen xanela, e que usarán renomear as tabs e os grupos e o filtro do explorador. O cursor para entre os grafemas de Unicode, que dá unha dependencia nova, `unicode-segmentation`; Ctrl e as frechas van por palabras; desfai e refai ata 100 pasos; pega nunha liña; ten un límite en unidades de UTF-16; colle o rato en celas; e mostra a parte do texto onde está o cursor. `own_character`, de `input.rs`, pasou a ser `pub(crate)`, para que o campo saiba, coma o terminal, se o carácter dunha tecla é seu. Chegaron setenta e dúas probas, todas en `ui/field/`: 55 en `tests.rs`, once en `history.rs` e seis en `segment.rs`.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato, e, desde a subfase 2.6, os atallos de teclado; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
 | Arquivo | Contido |
 |---|---|
-| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr`, `toml` e `unicode-width`. |
+| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr`, `toml`, `unicode-segmentation`, desde a 3.2, e `unicode-width`. |
 | [`src/lib.rs`](#cratesmeiga-coresrclibrs) | A raíz do crate: os módulos. |
 | [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores, e `Palette`, as cores dun terminal: as 16 do esquema *Campbell*, as 256 do xterm e a da selección. |
 | [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; `GridSize`, o tamaño da grella en celas; e `GridPoint`, unha cela da grella. |
@@ -14,7 +14,7 @@
 | [`src/pacing.rs`](#cratesmeiga-coresrcpacingrs) | `FramePacer`: cando debuxar o seguinte fotograma. |
 | [`src/text.rs`](#cratesmeiga-coresrctextrs) | `CellChar` e `cells`: o texto como celas dunha grella; e `fit`, as celas dun texto que caben nunhas columnas, cortado con «…». |
 | [`src/shell.rs`](#cratesmeiga-coresrcshellrs) | `command_line`: a liña de comandos dun programa cos seus argumentos, entre comiñas segundo as regras de Windows; e `program_name`, o nome do programa dunha liña de comandos, o que mostra unha tab sen título. |
-| [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, coas súas teclas modificadoras, `ControlKeys`, que din tamén se o Ctrl e o Alt son os de AltGr; e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. |
+| [`src/input.rs`](#cratesmeiga-coresrcinputrs) | `KeyEvent`, unha tecla que baixa ou sobe, coas súas teclas modificadoras, `ControlKeys`, que din tamén se o Ctrl e o Alt son os de AltGr; e `KeyEncoder`, que a converte no que le o programa: en win32-input-mode ou en VT. Os eventos de foco. Desde a 3.2, o campo de texto usa tamén `own_character`, que di se o carácter dunha tecla é seu. |
 | [`src/mouse.rs`](#cratesmeiga-coresrcmousers) | O rato: `cell_at`, a cela debaixo do punteiro; `Clicks`, que conta os clics seguidos; `WheelTurns`, que suma os xiros da roda en partes, e `WheelRows`, en filas do historial; `report`, os informes para os programas que piden o rato, en SGR, en UTF-8 ou no formato do primeiro xterm; e `arrow_keys`, a roda coma frechas. |
 | [`src/paste.rs`](#cratesmeiga-coresrcpasters) | `Paste`: o texto que le o programa ao pegar, sen caracteres de control, cos fins de liña en CR e, se o pediu, entre as marcas do *bracketed paste*. |
 | [`src/config.rs`](#cratesmeiga-coresrcconfigrs) | `parse`: o arquivo de configuración, `config.toml`, lido sen serde, co perfil por defecto, as entradas dos perfís e, desde a 2.6, os atallos de `[shortcuts]`; e `Problem`, cada cousa que ignora, coa súa liña e a súa columna. |
@@ -34,10 +34,15 @@
 | [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
-| [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, coma disposicións sen Windows: a barra de tabs e os menús, e, desde a 2.9, o que é a barra de tabs para Windows, coma barra de título; e `scale`, que leva as súas medidas ao DPI da xanela. |
+| [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, sen Windows: as disposicións da barra de tabs e dos menús, e, desde a 2.9, o que é a barra de tabs para Windows, coma barra de título; `scale`, que leva as súas medidas ao DPI da xanela; e, desde a 3.2, o campo de texto, que edita unha liña de texto. |
 | [`src/ui/tabbar.rs`](#cratesmeiga-coresrcuitabbarrs) | `Layout`: onde van as tabs da barra, os seus títulos, os seus botóns de pechar e os separadores, e os botóns que abren unha tab e o menú dos perfís, ao DPI da xanela; desde a 2.8, o ancho mínimo das tabs e, cando nin así caben, a franxa entre os dous botóns que as desprazan, e o seu desprazamento; desde a 2.9, a banda enriba das tabs, os botóns da xanela e os seus glifos, o sitio para arrastrar a xanela e o ancho da barra máis estreita; e `Part`, a parte da barra que hai debaixo dun punto. |
 | [`src/ui/titlebar.rs`](#cratesmeiga-coresrcuititlebarrs) | `TitleBar`: a barra de tabs coma barra de título da xanela, e `Hit`, o que é para Windows cada punto dela: a barra de título, que arrastra a xanela, o bordo de arriba e a súa esquina, que a redimensionan, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto; onde se abre con Alt+Espazo o menú da xanela, `menu_corner`; e `min_client`, o tamaño mínimo da área cliente. |
 | [`src/ui/menu.rs`](#cratesmeiga-coresrcuimenurs) | `Menu`: as entradas dun menú, elementos, tamén en negra, e liñas, e o resalte, que moven o teclado e o punteiro; e `Layout`: onde van o menú e as súas entradas, ao DPI da xanela, e a entrada que hai debaixo dun punto. |
+| [`src/ui/field/mod.rs`](#cratesmeiga-coresrcuifieldmodrs) | Desde a 3.2, `Field`: o campo de texto sen xanela, unha liña que o usuario edita, co texto, o cursor e a selección entre os grafemas; `set_text`, `select_all` e `paste`, que pega nunha liña o que colla no límite; o rato en celas, con `press` e `drag`; `show`, a parte do texto que se ve, que segue o cursor, e onde van o cursor e a selección; e `take_changes`, o que cambiou. `Reply`, o que fixo unha tecla. |
+| [`src/ui/field/segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs) | Onde para o cursor dun campo de texto, entre os grafemas de Unicode, con `unicode-segmentation`; e as palabras, para Ctrl e as frechas e o dobre clic: as letras, os números e `_`, os outros signos e os espazos. |
+| [`src/ui/field/history.rs`](#cratesmeiga-coresrcuifieldhistoryrs) | `History`: os pasos para desfacer e refacer nun campo de texto, ata 100, e cando se xunta unha edición co paso anterior. |
+| [`src/ui/field/keys.rs`](#cratesmeiga-coresrcuifieldkeysrs) | `Field::key`: o que fai cada tecla nun campo de texto, coma nos de Chrome en Windows. |
+| [`src/ui/field/tests.rs`](#cratesmeiga-coresrcuifieldtestsrs) | As probas do campo de texto, unha delas con 300 series de 45 accións ao chou. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
 | [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
 | [`examples/tabs.rs`](#cratesmeiga-coreexamplestabsrs) | Un exemplo de consola para probar o modelo das tabs a man. |
@@ -62,6 +67,9 @@ alacritty_terminal.workspace = true
 memchr.workspace = true
 # Reads config.toml.
 toml.workspace = true
+# The grapheme clusters of Unicode (UAX #29), between which the caret of a
+# text field stops (ADR 0030).
+unicode-segmentation.workspace = true
 # The width of each character in cells, as alacritty_terminal measures it.
 unicode-width.workspace = true
 
@@ -76,9 +84,10 @@ workspace = true
   - desde a subfase 1.5, **`alacritty_terminal`**, o núcleo do terminal, que trae o seu parser, `vte` ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Só o usa o módulo `term`;
   - desde a 1.5, **`memchr`**, que busca un byte nun texto moitos bytes á vez, con instrucións SIMD: o escáner busca así o seguinte ESC. `vte` faino igual co mesmo crate, así que non engade ningún crate novo;
   - desde a 2.5, **`toml`**, o parser de TOML, sen serde: `default-features = false`, e só as *features* `parse` e `std` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 1). Só o usa o módulo `config`, que le con el o `config.toml`: o parser dá cada chave e cada valor co seu sitio no arquivo, e meiga colle a man o que coñece ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Compílanse catro crates máis: `toml_parser`, o parser; `winnow`, a biblioteca de parsers coa que está feito; `toml_datetime`, as datas de TOML; e `serde_spanned`, o `Spanned` que garda o sitio de cada valor, que sen as súas *features* non usa serde. En `meiga.exe`, o parser, con eles, ocupa uns 123 KB;
+  - desde a 3.2, **`unicode-segmentation`**, os grafemas de Unicode, segundo UAX #29 e coas táboas de Unicode 17: o cursor dun campo de texto para entre eles ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 2; [Tecnoloxías › Os grafemas e as palabras dun campo de texto](../tecnoloxias.md#66-os-grafemas-e-as-palabras-dun-campo-de-texto)). Só o usa o módulo `ui::field`: `GraphemeCursor`, en [`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs), e `grapheme_indices`, en [`mod.rs`](#cratesmeiga-coresrcuifieldmodrs). É dos mesmos autores ca `unicode-width`; non ten *features* por defecto que quitar, así que o `Cargo.toml` raíz pídeo sen `default-features = false`, nin depende de ningún outro crate; e a súa licenza, MIT ou Apache-2.0, coma a das outras, cumpre a política de licenzas ([ADR 0006](../adr/0006-licenzas-e-dependencias.md)). As súas táboas só chegan a `meiga.exe` cando o programa usa o campo, desde a 3.3: uns 29,7 KB, medidos cunha compilación de proba que o usaba;
   - desde a 1.3, **`unicode-width`**, que dá o ancho de cada carácter en celas, como o mide `alacritty_terminal` ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)).
 
-  Os catro son código Rust que non usa APIs de ningún sistema desde o que chama meiga, así que respectan as regras deste crate. `alacritty_terminal` ten tamén un PTY propio con código de Windows, que meiga non usa e que o ligador elimina.
+  Os cinco son código Rust que non usa APIs de ningún sistema desde o que chama meiga, así que respectan as regras deste crate. `alacritty_terminal` ten tamén un PTY propio con código de Windows, que meiga non usa e que o ligador elimina.
 - `[lints] workspace = true`: aplica as regras de calidade comúns.
 
 ## `crates/meiga-core/src/lib.rs`
@@ -565,7 +574,7 @@ pub fn width(text: &str) -> usize {
   - os de control (`None`) e os que non teñen ancho (`Some(0)`), como os acentos que se combinan coa letra anterior, ningunha. Xuntalos co carácter anterior, nun grafema, é traballo da subfase 8.1. As letras con acento xa compostas, como `á`, son un só carácter.
 - `flat_map` converte cada carácter en cero, unha ou dúas celas. `first.into_iter().chain(second)` encadea dous `Option`, que se percorren como listas de cero ou un elementos, sen reservar memoria: quen chama decide onde gardar as celas, por exemplo nun `Vec` con `collect`.
 - `impl Iterator<Item = CellChar> + '_`: devolve un iterador sen dicir o seu tipo exacto, que toma prestado o texto (`'_`).
-- **`width`** conta as celas que ocupa un texto. Desde a subfase 2.4, a disposición dos menús mide con ela os textos dos seus elementos ([`Layout::new`](#facer-o-menú-layoutnew)).
+- **`width`** conta as celas que ocupa un texto. Desde a subfase 2.4, a disposición dos menús mide con ela os textos dos seus elementos ([`Layout::new`](#facer-o-menú-layoutnew)). Desde a 3.2, o campo de texto mostra o seu texto con `cells`, e mide con `width` onde van o cursor, a selección e cada grafema ([`ui/field/mod.rs`](#cratesmeiga-coresrcuifieldmodrs)).
 
 ```rust
 pub fn fit(text: &str, columns: usize, out: &mut Vec<CellChar>) {
@@ -584,7 +593,7 @@ pub fn fit(text: &str, columns: usize, out: &mut Vec<CellChar>) {
 }
 ```
 
-**`fit`**, desde a subfase 2.3, pon en `out` as celas de `text` que caben en `columns` columnas: todas, se caben, e se non, as primeiras e unha elipse (`…`) na última columna ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). A barra de tabs corta así o título de cada tab, coas columnas que caben no seu sitio ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)), e, desde a 2.4, o menú do programa, os textos dos seus elementos, que só se cortan se a xanela é máis estreita ca o menú ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)). Paso a paso:
+**`fit`**, desde a subfase 2.3, pon en `out` as celas de `text` que caben en `columns` columnas: todas, se caben, e se non, as primeiras e unha elipse (`…`) na última columna ([ADR 0020](../adr/0020-a-barra-de-tabs.md), decisión 4). A barra de tabs corta así o título de cada tab, coas columnas que caben no seu sitio ([Código › meiga › `tabbar.rs`](meiga.md#cratesmeigasrctabbarrs)), e, desde a 2.4, o menú do programa, os textos dos seus elementos, que só se cortan se a xanela é máis estreita ca o menú ([Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)); e, desde a 3.2, o exemplo `field` de `meiga-win`, a liña de debaixo do campo ([Código › meiga-win › `examples/field.rs`](meiga-win.md#cratesmeiga-winexamplesfieldrs)). Paso a paso:
 
 1. Baleira `out` e colle as celas do texto, como moito unha máis das que caben: abonda para saber se o texto cabe, e `take` para o iterador alí, sen percorrer o resto dun título longo.
 2. Se caben todas, xa está.
@@ -832,7 +841,7 @@ Unha tecla que baixou ou subiu, coma a describe Windows:
 | `controls` | As teclas modificadoras e de bloqueo. |
 | `repeat` | Cantas veces baixou: máis dunha se o teclado a repetiu máis rápido do que a xanela a colleu. |
 
-É `Copy`, de 12 bytes: vai por valor no evento da xanela, `Event::Key` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)). Desde a subfase 1.8, a roda do rato tamén crea eventos de tecla: as frechas, na pantalla alternativa ([`arrow_keys`](#cratesmeiga-coresrcmousers)). E desde a 2.6, cada tecla que baixa ten a súa combinación, [`Chord::of`](#a-combinación-dunha-tecla-chordof), coa que a vista busca o seu atallo.
+É `Copy`, de 12 bytes: vai por valor no evento da xanela, `Event::Key` ([Código › meiga-win › `event.rs`](meiga-win.md#cratesmeiga-winsrceventrs)). Desde a subfase 1.8, a roda do rato tamén crea eventos de tecla: as frechas, na pantalla alternativa ([`arrow_keys`](#cratesmeiga-coresrcmousers)). E desde a 2.6, cada tecla que baixa ten a súa combinación, [`Chord::of`](#a-combinación-dunha-tecla-chordof), coa que a vista busca o seu atallo. E desde a 3.2, o campo de texto recibe os eventos enteiros, tamén os das teclas que soben ([`Field::key`](#key-a-entrada-das-teclas)).
 
 ### `KeyEncoder`
 
@@ -1131,7 +1140,7 @@ pub(crate) fn push_decimal(out: &mut Vec<u8>, value: u16) {
 - O módulo **`vk`** ten os códigos de tecla virtual que a codificación VT trata á parte, e `F5_TO_F12`, os números das teclas de función, que saltan algúns por razóns históricas. `meiga-core` non depende de `windows-sys`, así que define os seus.
 
 ```rust
-fn own_character(key: u16, unit: u16) -> bool {
+pub(crate) fn own_character(key: u16, unit: u16) -> bool {
     match key {
         vk::BACK => matches!(unit, 0 | 0x08 | 0x7f),
         vk::TAB => matches!(unit, 0 | 0x09),
@@ -1149,7 +1158,7 @@ fn push_utf8(out: &mut Vec<u8>, character: char) {
 }
 ```
 
-- **`own_character`** di se o carácter dun evento é da súa tecla, ou se non trae ningún: só entón envían a súa secuencia as teclas que a teñen ([`push_vt`](#keyencoder)). Retroceso escribe `BS`, e con Ctrl `DEL`; Tab, `HT`; Intro, `CR`, e con Ctrl `LF`; Esc, `ESC`; e Ctrl+Inter, `ETX`. As frechas, Inicio, Fin, Insert, Supr, RePáx, AvPáx, Pausa e as teclas de función non escriben ningún. As outras teclas non teñen secuencia, e envían sempre o seu carácter.
+- **`own_character`** di se o carácter dun evento é da súa tecla, ou se non trae ningún: só entón envían a súa secuencia as teclas que a teñen ([`push_vt`](#keyencoder)). Retroceso escribe `BS`, e con Ctrl `DEL`; Tab, `HT`; Intro, `CR`, e con Ctrl `LF`; Esc, `ESC`; e Ctrl+Inter, `ETX`. As frechas, Inicio, Fin, Insert, Supr, RePáx, AvPáx, Pausa e as teclas de función non escriben ningún. As outras teclas non teñen secuencia, e envían sempre o seu carácter. Desde a subfase 3.2 é `pub(crate)`, coma `push_decimal`, e o seu comentario di que tamén a usa o campo de texto, coa mesma regra: unha tecla que trae un carácter que non é seu escribe ese carácter, e a tecla chega despois co seu e fai o seu traballo ([`Field::key`](#key-a-entrada-das-teclas)).
 - **`push_utf8`** escribe o carácter en UTF-8 nun *array* de 4 bytes, sen reservar memoria. Úsano `encode`, para o carácter de Alt cando sobe, e `push_vt_character`.
 
 **Probas.** Doce:
@@ -5456,7 +5465,7 @@ pub enum Side {
   | `Words` | Dous | Palabras enteiras, que rematan nos caracteres de `WORD_DELIMITERS`. Nunha paréntese, un corchete, unha chave ou un ángulo, ata o que o pecha ou o abre; nos outros caracteres de `WORD_DELIMITERS`, ou nun destes sen parella, só a súa cela. |
   | `Lines` | Tres | Liñas enteiras, con todas as filas dunha liña que non colleu nunha. |
 
-- **`Side`**: unha metade dunha cela. Unha selección de celas empeza e remata nun lado dunha cela: unha cela entra nela cando se pasa da súa metade. Dáo [`cell_at`](#a-cela-debaixo-do-punteiro-cell_at), de `mouse.rs`.
+- **`Side`**: unha metade dunha cela. Unha selección de celas empeza e remata nun lado dunha cela: unha cela entra nela cando se pasa da súa metade. Dáo [`cell_at`](#a-cela-debaixo-do-punteiro-cell_at), de `mouse.rs`. Desde a 3.2, úsao tamén o campo de texto, para o lado da cela onde está o punteiro ([`press` e `drag`](#o-rato-press-e-drag)).
 - `alacritty_terminal` ten os seus propios tipos para isto, `SelectionType` e o seu `Side`, que é o seu `Direction`. meiga ten os seus para que eses non saian da fachada, e o `From<Side> for Direction` do final do arquivo converte o lado.
 
 ### Crear, mover e quitar a selección
@@ -5791,24 +5800,25 @@ As corenta e seis probas do terminal, nun arquivo aparte para que `mod.rs` sexa 
 
 ## `crates/meiga-core/src/ui/mod.rs`
 
-Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disposicións sen Windows: onde vai cada parte, á escala da xanela, e que parte hai debaixo dun punto ([ADR 0020](../adr/0020-a-barra-de-tabs.md) e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md)). Debuxalas e seguir o rato é traballo do programa, con `meiga-render`; eiquí só se calculan rectángulos, así que se proban con coordenadas exactas, sen xanela nin fontes (ADR 0020, decisión 2). Hai dúas: a barra de tabs e, desde a 2.4, os menús, que escalan as súas medidas coas mesmas funcións. Desde a 2.9, a barra de tabs é a barra de título da xanela, e `titlebar` di que é para Windows cada punto dela, coa súa disposición ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)): non ten medidas propias nin debuxa nada.
+Desde a subfase 2.3: as partes da interface que debuxa o propio meiga, coma disposicións sen Windows: onde vai cada parte, á escala da xanela, e que parte hai debaixo dun punto ([ADR 0020](../adr/0020-a-barra-de-tabs.md) e [ADR 0021](../adr/0021-os-menus-e-o-menu-da-tab.md)). Debuxalas e seguir o rato é traballo do programa, con `meiga-render`; eiquí só se calculan rectángulos, así que se proban con coordenadas exactas, sen xanela nin fontes (ADR 0020, decisión 2). Hai dúas: a barra de tabs e, desde a 2.4, os menús, que escalan as súas medidas coas mesmas funcións. Desde a 2.9, a barra de tabs é a barra de título da xanela, e `titlebar` di que é para Windows cada punto dela, coa súa disposición ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)): non ten medidas propias nin debuxa nada. Desde a 3.2, ten tamén o campo de texto, `field`, que non é unha disposición: edita unha liña de texto, coas súas teclas e o seu rato en celas, e di que parte do texto se ve nas súas celas ([ADR 0030](../adr/0030-o-campo-de-texto.md), [`ui/field/mod.rs`](#cratesmeiga-coresrcuifieldmodrs)).
 
 ```rust
-//! The parts of the interface that meiga draws itself, as layouts without
-//! Windows: where each part goes, at the scale of the window, and what is
-//! under a point.
+//! The parts of the interface that meiga draws itself, without Windows: the
+//! layouts, which say where each part goes, at the scale of the window, and
+//! what is under a point; and the text field, which edits a line of text.
 
+pub mod field;
 pub mod menu;
 pub mod tabbar;
 pub mod titlebar;
 ```
 
-- O comentario do módulo (`//!`) di para que é, coma o parágrafo de enriba.
-- `pub mod menu;`, `pub mod tabbar;` e, desde a 2.9, `pub mod titlebar;` declaran os submódulos, que están en `src/ui/menu.rs`, desde a 2.4, en `src/ui/tabbar.rs` e en `src/ui/titlebar.rs`, e fanos públicos: fóra do crate, os seus tipos úsanse co seu camiño, coma `meiga_core::ui::tabbar::Layout` ou `meiga_core::ui::titlebar::TitleBar`. Ao contrario ca `model`, `ui` non reexporta nada con `pub use`: as dúas disposicións chámanse `Layout`, e lense co nome do seu módulo diante, `tabbar::Layout` e `menu::Layout`. `titlebar` usa a da barra, con `use super::tabbar::…`.
+- O comentario do módulo (`//!`) di para que é, coma o parágrafo de enriba. Desde a 3.2 fala tamén do campo de texto, que non é unha disposición.
+- `pub mod field;`, desde a 3.2, `pub mod menu;`, `pub mod tabbar;` e, desde a 2.9, `pub mod titlebar;` declaran os submódulos, que están en `src/ui/field/mod.rs`, nun cartafol porque ten os seus propios submódulos, en `src/ui/menu.rs`, desde a 2.4, en `src/ui/tabbar.rs` e en `src/ui/titlebar.rs`, e fanos públicos: fóra do crate, os seus tipos úsanse co seu camiño, coma `meiga_core::ui::tabbar::Layout`, `meiga_core::ui::titlebar::TitleBar` ou `meiga_core::ui::field::Field`. Ao contrario ca `model`, `ui` non reexporta nada con `pub use`: as dúas disposicións chámanse `Layout`, e lense co nome do seu módulo diante, `tabbar::Layout` e `menu::Layout`. `titlebar` usa a da barra, con `use super::tabbar::…`.
 
 ### Os axudantes: `BASE_DPI`, `scale` e `coord`
 
-Desde a subfase 2.4 están eiquí, e non en `tabbar.rs`, porque os usan a barra e os menús: os dous submódulos tráenos con `use super::{coord, scale};`. `titlebar`, desde a 2.9, non os usa: as medidas que necesita xa veñen escaladas na disposición da barra. Son privados, pero os submódulos de `ui` venos, porque en Rust un módulo ve o que é privado nos seus antepasados; fóra de `ui`, non se ven.
+Desde a subfase 2.4 están eiquí, e non en `tabbar.rs`, porque os usan a barra e os menús: os dous submódulos tráenos con `use super::{coord, scale};`. `titlebar`, desde a 2.9, non os usa: as medidas que necesita xa veñen escaladas na disposición da barra. `field`, desde a 3.2, tampouco: conta en celas, e non en píxeles. Son privados, pero os submódulos de `ui` venos, porque en Rust un módulo ve o que é privado nos seus antepasados; fóra de `ui`, non se ven.
 
 ```rust
 const BASE_DPI: u32 = 96;
@@ -7573,6 +7583,1937 @@ No exemplo, `the_pointer_is_on_an_item_anywhere_in_its_room` comproba:
 | `a_menu_without_items_to_choose_highlights_nothing` | Cun elemento desactivado e unha liña, `Next` e `Last` non resaltan nada; e `label` dá o texto do elemento, e nada na liña. |
 
 Os elementos en negra, desde a 2.5, non teñen proba eiquí, porque a negra non cambia ningún rectángulo: próbaa o menú do programa, que debuxa o mesmo texto en normal e en negra, e comproba que o da negra se aparta máis do fondo, polo menos un 10 % (`the_text_of_a_bold_item_is_bold`, en [Código › meiga › `menu.rs`](meiga.md#cratesmeigasrcmenurs)).
+
+## `crates/meiga-core/src/ui/field/mod.rs`
+
+Desde a subfase 3.2: un campo de texto, unha liña que o usuario escribe e edita, coma o nome dunha tab (a subfase 3.3), o dun grupo (a 6.3) ou o filtro do explorador (a 5.3) ([ADR 0030](../adr/0030-o-campo-de-texto.md), [Arquitectura › O campo de texto](../arquitectura.md#o-campo-de-texto), [Tecnoloxías › Os grafemas e as palabras dun campo de texto](../tecnoloxias.md#66-os-grafemas-e-as-palabras-dun-campo-de-texto)). Coma a barra de tabs e os menús, vai en dúas metades. Esta é a que non depende de Windows, e próbase sen xanela: o texto, o cursor e a selección, o que fan con eles as teclas e o rato, e a parte do texto que se ve nas celas do campo. A outra, a vista, debúxao, pásalle o teclado e o rato, e le e escribe o portapapeis por el; chega na 3.3, co primeiro uso do campo, na tab (ADR 0030, decisión 1). Ata entón, un exemplo de consola próbao a man, coas teclas de verdade e o portapapeis de Windows ([Código › meiga-win › `examples/field.rs`](meiga-win.md#cratesmeiga-winexamplesfieldrs)). O campo non ten fíos nin temporizadores, e non traballa nos fotogramas: só cando chega unha tecla ou o rato.
+
+**Coma Chrome en Windows.** O campo edita coma os campos de texto de Chrome 145 en Windows (`views::Textfield`), que o ADR compara coa caixa que renomea as tabs no Windows Terminal, o control `EDIT` de Win32, WezTerm, Kitty e Alacritty: o cursor para entre os grafemas, Retroceso borra un punto de código e Supr un grafema, Ctrl e as frechas van ao principio das palabras, e desfai e refai coma el. Tres cousas son distintas: as palabras son máis simples, o pegado vai nunha liña, e o texto ten un límite (decisións 3, 5 e 6).
+
+O módulo vai no cartafol `src/ui/field/`, con catro submódulos:
+
+| Arquivo | Que ten |
+|---|---|
+| `mod.rs` | `Field`, cos seus datos e os seus métodos, menos as teclas: o texto, a selección, o pegado, o rato, o que mostra e os cambios; e as funcións do pegado e do límite. |
+| [`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs) | Onde para o cursor, entre os grafemas, e onde empezan as palabras. |
+| [`history.rs`](#cratesmeiga-coresrcuifieldhistoryrs) | Os pasos para desfacer e refacer. |
+| [`keys.rs`](#cratesmeiga-coresrcuifieldkeysrs) | O que fai cada tecla: `Field::key`. |
+| [`tests.rs`](#cratesmeiga-coresrcuifieldtestsrs) | As probas do campo. |
+
+Os estados do campo escríbense coma nas probas: `|` é o cursor, e `[` e `]` os extremos da selección. `a[bc|]d` é o texto `abcd`, con `bc` seleccionado e o cursor despois do `c`.
+
+```rust
+//! A text field: a line of text that the user edits, such as the name of a
+//! tab (subphase 3.3), the name of a group (6.3) or the filter of the
+//! explorer (5.3) (ADR 0030). This is the field without a window: its text,
+//! its caret and its selection, what the keys and the mouse do with them,
+//! and the part of the text that it shows in its cells. The window draws
+//! it, and reads and writes the clipboard for it.
+//!
+//! It edits as the text fields of Chrome on Windows:
+//! - the caret stops between the grapheme clusters of Unicode (UAX #29), and
+//!   moves by words with Ctrl ([`segment`]); Backspace deletes the last code
+//!   point before the caret, so that `é` written as `e` and an accent loses
+//!   only the accent, and Delete the cluster after it;
+//! - with a selection, typing replaces it, and Backspace and Delete delete
+//!   it; the arrows without Shift go to its edge;
+//! - undoing goes back one step at a time ([`history`]);
+//! - a paste becomes a single line: the whitespace at its ends goes away;
+//!   each line break and each tab, a space; and the other control
+//!   characters, away. A paste of only whitespace is a space.
+//!
+//! The field holds at most a number of UTF-16 code units, as Windows counts
+//! them, that its user chooses: a character that does not fit is not
+//! typed, and a paste puts what fits, without splitting a cluster. Its text
+//! never has control characters.
+//!
+//! It shows its text in a row of cells of the grid, as the rest of the
+//! text that meiga draws ([`crate::text::cells`]): if the text does not
+//! fit, it shows the part where the caret is, and moves it just enough to
+//! keep the caret in sight.
+
+mod history;
+mod keys;
+mod segment;
+
+use std::mem;
+use std::ops::Range;
+
+use unicode_segmentation::UnicodeSegmentation;
+
+use self::history::{Edit, History, Kind};
+use self::segment::{is_stop, next_cluster, previous_cluster, word_at};
+use crate::term::Side;
+use crate::text::{self, CellChar};
+```
+
+- O comentario do módulo (`//!`) di o mesmo ca os parágrafos de enriba, e resume as regras: o cursor para entre os grafemas de UAX #29, e vai por palabras con Ctrl ([`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs)); Retroceso borra o último punto de código, e Supr o grafema seguinte; cunha selección, escribir cámbiaa, Retroceso e Supr bórrana e as frechas van ao seu bordo; desfacer volta paso a paso ([`history.rs`](#cratesmeiga-coresrcuifieldhistoryrs)); o pegado vai nunha liña; o texto ten un límite en unidades de UTF-16, e nunca caracteres de control; e móstrase en celas, coma o resto do texto que debuxa meiga ([`text::cells`](#cratesmeiga-coresrctextrs)), coa parte onde está o cursor.
+- **Os submódulos son privados** (`mod`, sen `pub`): fóra de `field` non se ve nada deles. `keys.rs` engádelle métodos a `Field` noutro bloque `impl`, entre eles o público `key`, que fóra se usa coma calquera outro método. A privacidade de Rust vai por módulos: un método privado de `keys.rs`, coma `command`, só se ve en `field::keys`; e os privados de `mod.rs`, coma `select`, `replace` ou `track`, vense tamén nos submódulos, porque un módulo ve o que é privado nos seus antepasados, coma `scale` en [`ui`](#cratesmeiga-coresrcuimodrs).
+- `use std::mem;` trae `mem::take`, para os cambios, e `Range`, os rangos da selección e das palabras.
+- `use unicode_segmentation::UnicodeSegmentation;` trae o *trait* que lle dá a `str` o método `grapheme_indices`, cos grafemas dun texto e o principio de cada un: con el percorren o texto `stop_at`, `word_under` e `fitting`. O resto dos grafemas está en [`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs).
+- `use self::history::…` e `use self::segment::…` traen o que usa este arquivo dos seus submódulos (`self` é este módulo). `Side` é o lado dunha cela, o mesmo tipo ca o da selección do terminal ([`term::Side`](#word_delimiters-selectionkind-e-side)). E de `text` veñen `text::cells` e `text::width`, as celas dun texto e cantas son, e `CellChar`, o que mostra cada cela ([`text.rs`](#cratesmeiga-coresrctextrs)).
+
+### `Reply`: o que fixo unha tecla
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Reply {
+    Ignored,
+    Taken,
+    Copy(String),
+    Paste,
+}
+```
+
+[`key`](#key-a-entrada-das-teclas) responde a cada tecla cun `Reply`:
+
+| Variante | Que fixo o campo |
+|---|---|
+| `Ignored` | Nada: a tecla non é do campo, e decide quen o usa (ADR 0030, decisión 7). Son Intro, Esc, Tab, ↑ e ↓ sen Maiús, as teclas sen carácter, coma F2 ou Maiús soa, as que soben, os caracteres de control e os de Alt sen Ctrl. Esc desbotará a edición enteira (3.3), e o filtro do explorador moverase pola lista con ↑ e ↓. |
+| `Taken` | Colleuna, aínda que non cambiase nada: unha frecha no extremo do texto, Retroceso ao principio, un carácter que non cabe ou Ctrl+C sen selección. A tecla non lle chega a ninguén máis. |
+| `Copy(texto)` | Colleuna, e quen o usa pon o texto no portapapeis: a selección, con Ctrl+C ou Ctrl+Insert, que copian, ou con Ctrl+X ou Maiús+Supr, que cortan, e que xa a quitaron do campo. |
+| `Paste` | Colleuna, e quen o usa lle dá a [`paste`](#cambiar-o-texto-set_text-select_all-e-paste) o texto do portapapeis: Ctrl+V e Maiús+Insert. |
+
+- **O campo non toca o portapapeis.** Para escribir nel, Windows quere unha xanela que o abra (`OpenClipboard`), e o campo non ten ningunha: o texto vai e vén coma un `String`, e quen o usa leo e escríbeo coas funcións de `meiga-win` ([Código › meiga-win › `clipboard.rs`](meiga-win.md#cratesmeiga-winsrcclipboardrs)), coma o exemplo, que ten unha xanela oculta só para iso.
+- O comentario de `Copy` chámalle `text` ao texto, que a variante leva sen nome. Ata `b96fa25` nomeaba só Ctrl+C e Ctrl+X; desde entón, nomea as catro teclas ([`command`](#as-ordes-command-e-repeat)).
+- Deriva `Clone`, `Debug`, `PartialEq` e `Eq`, e non `Copy`, porque leva un `String`. As probas comparan as respostas con `assert_eq!`.
+
+### `Changes` e `Shown`: o que cambiou e o que se mostra
+
+```rust
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Changes {
+    pub shown: bool,
+    pub text: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Shown {
+    pub caret: usize,
+    pub selection: Range<usize>,
+}
+```
+
+**`Changes`**: o que cambiou no campo desde que se colleron os seus cambios por última vez, con [`take_changes`](#os-cambios-e-as-celas-take_changes-e-set_columns):
+
+| Campo | Que cambiou |
+|---|---|
+| `shown` | O que mostra: o texto, o cursor, a selección, as súas celas ou a parte do texto nelas. Quen o usa debúxao outra vez. |
+| `text` | O texto, se é outro. O filtro do explorador filtrará outra vez a lista. |
+
+- Un cambio do texto é sempre tamén un cambio do que mostra: [`track`](#seguir-o-cursor-track-e-follow_caret) márcao.
+- Só se marcan cando algo é outro: unha frecha no extremo do texto non é un cambio, nin o mesmo texto outra vez con `set_text`, nin o mesmo número de celas. Tampouco unha edición que deixa o mesmo texto, coma escribir un `a` enriba dun `a` seleccionado, ou desfacela: é un cambio do que mostra, porque a selección se vai ou volta, pero non do texto ([`edited`](#editar-replace-e-edited)).
+- `Copy` e `Default`: dous `bool`, e `Changes::default()` é «nada cambiou».
+
+**`Shown`**: o que mostra o campo nas súas celas, ademais do texto, que dá [`show`](#o-que-mostra-show):
+
+| Campo | Que é |
+|---|---|
+| `caret` | A cela do campo en cuxo lado esquerdo vai o cursor, contando desde a primeira: sempre unha das celas do campo, se ten algunha, tamén ao final dun texto que non cabe, porque o campo deixa entón unha cela libre para o cursor ([`follow_caret`](#seguir-o-cursor-track-e-follow_caret)). Sen celas, 0. |
+| `selection` | As celas seleccionadas, das que mostra o campo. Baleiro sen selección, ou se a selección queda fóra da parte que se ve. |
+
+- Non é `Copy`, porque un `Range` de Rust non o é: un rango é tamén un iterador.
+
+### `Drag`: o que selecciona o botón abaixo
+
+```rust
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+enum Drag {
+    #[default]
+    None,
+    Clusters,
+    Words(Range<usize>),
+    All,
+}
+```
+
+O que selecciona un botón premido sobre o campo cando se move o punteiro ([`drag`](#o-rato-press-e-drag)):
+
+| Variante | Que selecciona |
+|---|---|
+| `None` | Nada: non baixou ningún botón, ou houbo despois unha edición, aínda que deixase o mesmo texto ([`edited`](#editar-replace-e-edited)). É o valor por defecto (`#[default]`), o dun campo novo. |
+| `Clusters` | Despois dun clic: desde onde empezou a selección ata o grafema debaixo do punteiro. |
+| `Words(rango)` | Despois dun dobre clic: palabras enteiras, desde a do dobre clic, o rango que garda, ata a que está debaixo do punteiro. O comentario chámalle `.0`, o primeiro campo da variante. |
+| `All` | Despois dun triplo clic: todo, e mover o punteiro non cambia nada. |
+
+- É privado: fóra só se ven `press` e `drag`.
+- **O campo non sabe cando sobe o botón.** Quen o usa só chama a `drag` mentres está abaixo, coma di o seu comentario, e o seguinte clic cambia o `Drag`. Unha edición remátao antes (ADR 0030, decisión 7).
+- Deriva `Clone`, e non `Copy`, polo rango: `drag` cópiao antes de miralo, porque os seus casos chaman a `select`, que cambia o campo.
+
+### `Field`
+
+```rust
+#[derive(Clone, Debug)]
+pub struct Field {
+    text: String,
+    anchor: usize,
+    caret: usize,
+    limit: usize,
+    history: History,
+    high_surrogate: Option<u16>,
+    drag: Drag,
+    columns: usize,
+    scroll: usize,
+    changes: Changes,
+}
+```
+
+| Campo | Que é |
+|---|---|
+| `text` | O texto, nunha liña: sen caracteres de control, e como moito con `limit` unidades de UTF-16. |
+| `anchor` | Onde empezou a selección: o extremo que non moven Maiús nin o arrastre. |
+| `caret` | O cursor, o outro extremo, que pode ir antes ou despois de `anchor`. Sen selección, os dous son o mesmo. |
+| `limit` | As unidades de UTF-16 que pode ter o texto, como moito: as que diga quen o usa, ao facelo. Non cambia. |
+| `history` | Os pasos para desfacer e refacer ([`History`](#edit-e-history)). |
+| `high_surrogate` | A primeira metade dun carácter de fóra do plano básico de Unicode, coma a maioría dos emoji, mentres espera pola segunda, que chega coa tecla seguinte ([`typed`](#os-caracteres-typed-e-type_character)). |
+| `drag` | O que selecciona o botón abaixo ([`Drag`](#drag-o-que-selecciona-o-botón-abaixo)). |
+| `columns` | Cantas celas mostra o campo: 0 ata que llo diga quen o usa ([`set_columns`](#os-cambios-e-as-celas-take_changes-e-set_columns)). |
+| `scroll` | A primeira cela do texto que mostra: o desprazamento horizontal, en celas. |
+| `changes` | O que cambiou desde que se colleron os cambios por última vez. |
+
+- **As posicións son bytes.** `anchor` e `caret` son desprazamentos en bytes do texto, que un `String` de Rust garda en UTF-8: `&self.text[..self.caret]` é o texto antes do cursor, sen copialo. E sempre están nun sitio onde pode parar o cursor: entre dous grafemas, ou nun extremo do texto ([`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs)). Nunca entre unha letra e o seu acento, nin no medio dun carácter, onde cortar o texto sería un *panic*. Todo o que os move mantén esta regra: as frechas, Inicio, Fin e o rato só van a eses sitios; cada edición leva o cursor a un deles ([`replace`](#editar-replace-e-edited)); e desfacer volta pór os que había. A proba ao chou compróbao despois de cada acción ([`tests.rs`](#a-proba-ao-chou-random_edits_keep_the_field_whole_and_undo_to_the_start)).
+- **As celas saen do texto.** A cela dunha posición son as celas do texto antes dela, `text::width`: dúas posicións poden estar na mesma cela, coma as de antes e de despois dun grafema sen ancho.
+- Os campos son privados: só os cambian os métodos, que manteñen as regras. Deriva `Clone` e `Debug`; `PartialEq` non, que as probas non o necesitan: comparan o texto, o cursor e a selección.
+
+### Facer o campo e lelo: `new`, `text`, `limit`, `caret`, `selection` e `selected_text`
+
+```rust
+pub fn new(limit: usize) -> Self {
+    Self {
+        text: String::new(),
+        anchor: 0,
+        caret: 0,
+        limit,
+        history: History::default(),
+        high_surrogate: None,
+        drag: Drag::None,
+        columns: 0,
+        scroll: 0,
+        changes: Changes::default(),
+    }
+}
+
+pub fn text(&self) -> &str {
+    &self.text
+}
+
+pub const fn limit(&self) -> usize {
+    self.limit
+}
+
+pub const fn caret(&self) -> usize {
+    self.caret
+}
+
+pub fn selection(&self) -> Range<usize> {
+    self.anchor.min(self.caret)..self.anchor.max(self.caret)
+}
+
+pub fn selected_text(&self) -> &str {
+    &self.text[self.selection()]
+}
+```
+
+- **`new`**: un campo baleiro que garda como moito `limit` unidades de UTF-16, sen selección, sen pasos e sen celas: non mostra nada ata que sabe cantas ten. A 3.3 porá 1000, coma os títulos ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 6); o exemplo, 1000 ou o que diga `--limit`.
+- **`text`**: o texto, prestado.
+- **`limit`** e **`caret`**: o límite, e o cursor, coma un desprazamento en bytes do texto. Son `const fn`.
+- **`selection`**: a selección, coma un rango de bytes, sempre de esquerda a dereita, estea o cursor no extremo que estea: `min` e `max` ordenan `anchor` e `caret`. Sen selección, un rango baleiro onde está o cursor.
+- **`selected_text`**: o texto seleccionado, prestado. Copiar e cortar dan unha copia del.
+
+### Cambiar o texto: `set_text`, `select_all` e `paste`
+
+```rust
+pub fn set_text(&mut self, text: &str) {
+    let line = one_line(text);
+    let line = fitting(&line, self.limit);
+    self.track(|field| {
+        if field.text != line {
+            field.text = line.to_owned();
+            field.changes.text = true;
+        }
+        let end = field.text.len();
+        (field.anchor, field.caret) = (end, end);
+        field.history.clear();
+        field.high_surrogate = None;
+        field.drag = Drag::None;
+    });
+}
+
+pub fn select_all(&mut self) {
+    let end = self.text.len();
+    self.select(0, end);
+}
+
+pub fn paste(&mut self, clipboard: &str) {
+    let line = one_line(clipboard);
+    if line.is_empty() {
+        return;
+    }
+    let trimmed = line.trim();
+    let text = if trimmed.is_empty() { " " } else { trimmed };
+    let text = fitting(text, self.room());
+    if text.is_empty() {
+        return;
+    }
+    self.track(|field| field.replace(field.selection(), text, Kind::Other));
+}
+```
+
+**`set_text`** pon `text` no campo, en vez do que tiña, co cursor ao final:
+
+1. [`one_line`](#pegar-nunha-liña-one_line-fitting-e-units) déixao nunha liña, e [`fitting`](#pegar-nunha-liña-one_line-fitting-e-units) córtao ao límite, en grafemas enteiros.
+2. Dentro de [`track`](#seguir-o-cursor-track-e-follow_caret), que move a parte que se mostra e anota os cambios: se o texto é outro, cámbiao e anota o cambio; pon o cursor ao final, sen selección; e esquece os pasos, a metade dun carácter que esperaba e o arrastre.
+
+- **Non se desfai.** Desfacer non trae o que había: o campo empeza de novo, coma un campo novo con ese texto. O exemplo pono así ao principio, e despois selecciona todo; e, con Intro, baleira o campo con `set_text("")`.
+- **Ao contrario ca `paste`,** non quita os espazos dos extremos: o texto queda coma é, menos os caracteres de control e o que non cabe.
+- O mesmo texto outra vez, co cursor xa ao final, non é un cambio.
+- Que esquece a metade dun carácter e o arrastre compróbao, desde `50d2379`, `set_text_forgets_half_a_character_and_what_a_button_held_down_selects`; ata entón, ningunha proba o vía.
+
+**`select_all`** selecciona todo, co cursor ao final: así, nun texto longo, o campo mostra o final. Úsana Ctrl+A e o triplo clic. Coma calquera cambio da selección, pecha o paso que se estaba a escribir ([`select`](#seleccionar-select)).
+
+**`paste`** pega `clipboard`, o texto do portapapeis, en vez da selección ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisións 5 e 6). Quen usa o campo chámao cando unha tecla responde `Paste`, co texto que leu do portapapeis; o exemplo, tamén con F5. Paso a paso:
+
+1. [`one_line`](#pegar-nunha-liña-one_line-fitting-e-units) déixao nunha liña: cada salto de liña e cada tabulador, un espazo, e os outros caracteres de control, fóra. Se non queda nada, porque o portapapeis non tiña texto ou só tiña caracteres de control, non pega nada.
+2. `trim` quita os espazos dos extremos, coma Chrome: tamén os que eran saltos de liña ou tabuladores, e os de Unicode, coma o que non parte (U+00A0) ou o ideográfico (U+3000). Se só había espazos, pega un.
+3. [`fitting`](#pegar-nunha-liña-one_line-fitting-e-units) colle o que cabe en vez da selección ([`room`](#o-límite-room)), en grafemas enteiros. Se non cabe nada, non cambia nada: nin sequera quita a selección.
+4. [`replace`](#editar-replace-e-edited) pono en vez da selección, co cursor despois, nun paso propio (`Kind::Other`), dentro de `track`.
+
+| No portapapeis | Pega |
+|---|---|
+| `"plain"` | `plain` |
+| `"  a\r\nb\tc\u{7}d\u{85}e\u{2028}f\u{2029}g\u{b}h\u{c}i\r\n"` | `a b cd e f g h i`: cada salto de liña e o tabulador, un espazo; o BEL (`\u{7}`), fóra; e os espazos e os saltos de liña dos extremos, tamén. |
+| `"un\ndous\rtres\r\ncatro"` | `un dous tres catro` |
+| `"a\n\rb"` | `a  b`: un LF e despois un CR son dous saltos de liña. |
+| `"a   b"` | `a   b`: os espazos do medio quedan. |
+| `"\u{a0}x\u{3000}"` | `x` |
+| `"\u{1b}[31mred"` | `[31mred`: o ESC vaise, e o resto da secuencia queda coma texto. |
+| `" \r\n\t "` | Un espazo. |
+| `""`, ou `"\u{7}\u{1b}\u{0}"` | Nada. |
+
+### Os cambios e as celas: `take_changes` e `set_columns`
+
+```rust
+pub fn take_changes(&mut self) -> Changes {
+    mem::take(&mut self.changes)
+}
+
+pub fn set_columns(&mut self, columns: usize) {
+    self.track(|field| field.columns = columns);
+}
+```
+
+- **`take_changes`**: os cambios desde a última vez que se colleron, que esquece: `mem::take` devolve o valor e deixa `Changes::default()`, coma [`take_changed`](#o-cambio-take_changed-e-replace) cos títulos. Despois de pasarlle unha tecla ou o rato, quen usa o campo pregúntao, e só o debuxa outra vez se cambiou o que mostra.
+- **`set_columns`**: o campo mostra `columns` celas. Dentro de [`track`](#seguir-o-cursor-track-e-follow_caret): con outro número de celas, a parte que se mostra móvese o xusto para que se vexa o cursor. Outro número de celas é un cambio de `shown`, porque o campo mostra máis ou menos texto; o mesmo, non. Con 0 celas, o campo non mostra nada.
+- **Desde `b96fa25`.** Ata entón, `track` non miraba as celas, e `set_columns` só era un cambio se se movía a parte do texto que se ve: un campo que pasaba de 0 celas a 2, e de non mostrar nada a mostrar `ab`, dicía que nada cambiara, ao contrario do que di o comentario de `shown`. Atopouno o axente da documentación de `meiga-win`, ao documentar o exemplo ([Código › meiga-win › `examples/field.rs`](meiga-win.md#cratesmeiga-winexamplesfieldrs)).
+
+### O que mostra: `show`
+
+```rust
+pub fn show(&self, cells: &mut Vec<CellChar>) -> Shown {
+    cells.clear();
+    cells.extend(text::cells(&self.text).skip(self.scroll).take(self.columns));
+    // Only a wide character that the right side cuts ends in its left
+    // half.
+    if let Some(last @ CellChar::WideLeft(_)) = cells.last_mut() {
+        *last = CellChar::Blank;
+    }
+    let shown = self.scroll..self.scroll + self.columns;
+    let cell =
+        |at: usize| text::width(&self.text[..at]).clamp(shown.start, shown.end) - shown.start;
+    let selection = self.selection();
+    Shown {
+        caret: cell(self.caret),
+        selection: cell(selection.start)..cell(selection.end),
+    }
+}
+```
+
+**`show`** pon en `cells` as celas do texto que mostra o campo, en vez do que tiña, e devolve onde van o cursor e a selección ([`Shown`](#changes-e-shown-o-que-cambiou-e-o-que-se-mostra)). Paso a paso:
+
+1. `clear` baleira `cells` sen soltar a súa memoria, e `extend` pon as celas do texto desde a `scroll`, como moito `columns`: [`text::cells`](#cratesmeiga-coresrctextrs) dá as celas unha a unha, `skip` salta as de antes, e `take` para despois da última que cabe, sen percorrer o resto do texto. Se quen usa o campo garda o vector entre un debuxo e outro, coma a barra cos títulos ([`fit`](#cratesmeiga-coresrctextrs)), mostrar o campo non reserva memoria.
+2. **Á dereita, nunca media letra ancha.** Se a última cela é a metade esquerda dun carácter ancho, a súa metade dereita quedou fóra: coma di o comentario, só pode acabar así un carácter ancho que corta o lado dereito do campo. Esa cela vai en branco (ADR 0030, decisión 7). `if let Some(last @ CellChar::WideLeft(_))` colle a referencia á última cela, se é desa clase, para cambiala no seu sitio. Á esquerda, o campo nunca empeza na metade dereita dun: dío [`follow_caret`](#seguir-o-cursor-track-e-follow_caret).
+3. `shown` son as celas do texto que se ven, e `cell` dá a cela do campo dunha posición do texto: as celas do texto antes dela, dentro das que se ven (`clamp`), contadas desde a primeira. Unha posición antes da parte que se ve dá 0, e unha despois, `columns`.
+4. O cursor e os dous extremos da selección, en celas do campo.
+
+- `&self`: mostrar non cambia nada. A parte que se ve decidiuna `track`, cando cambiou algo.
+- **Desde `50d2379`.** Ata entón, `show` miraba tamén que as celas enchesen o campo antes de deixar en branco a última, cousa que sempre pasa cando acaba nunha metade esquerda. Atopouno o axente da documentación.
+- **Por exemplo**, coas probas: `a中中` co cursor ao final, en catro celas, mostra só `中` e a cela libre do cursor, porque unha cela antes mostraría a metade dereita do primeiro `中`; e `ab中` co cursor ao principio, en tres celas, mostra `ab` e unha cela en branco.
+- Cada chamada mide o texto ata o cursor e ata os extremos da selección (`text::width`): nunha liña de como moito 1000 unidades, pouco.
+
+### O rato: `press` e `drag`
+
+```rust
+pub fn press(&mut self, column: usize, side: Side, clicks: u8, shift: bool) {
+    let column = isize::try_from(column).unwrap_or(isize::MAX);
+    match clicks {
+        2 => {
+            let word = self.word_under(column);
+            self.select(word.start, word.end);
+            self.drag = Drag::Words(word);
+        }
+        3 => {
+            self.select_all();
+            self.drag = Drag::All;
+        }
+        _ => {
+            let at = self.stop_at(column, side);
+            if shift {
+                self.select(self.anchor, at);
+            } else {
+                self.select(at, at);
+            }
+            self.drag = Drag::Clusters;
+        }
+    }
+}
+
+pub fn drag(&mut self, column: isize, side: Side) {
+    match self.drag.clone() {
+        Drag::None | Drag::All => {}
+        Drag::Clusters => {
+            let at = self.stop_at(column, side);
+            self.select(self.anchor, at);
+        }
+        Drag::Words(word) => {
+            let under = self.word_under(column);
+            if under.start >= word.start {
+                self.select(word.start, under.end.max(word.end));
+            } else {
+                self.select(word.end, under.start);
+            }
+        }
+    }
+}
+```
+
+O rato chega en celas: quen usa o campo converte o punto nunha cela e un lado, e conta os clics seguidos ([`Clicks`](#os-clics-seguidos-clicksettings-e-clicks), que despois do terceiro dá outra vez 1). O lado é o mesmo tipo ca o da selección do terminal, que dá [`cell_at`](#a-cela-debaixo-do-punteiro-cell_at) para a súa grella (ADR 0030, decisión 7).
+
+**`press`**: o botón baixou na cela `column` do campo, contando desde a primeira, no lado `side`; é o clic número `clicks` seguido, con Maiús (`shift`) ou sen ela:
+
+| Clics | Que fai | E despois, ao arrastrar |
+|---|---|---|
+| 1 | Leva o cursor ao sitio máis preto ([`stop_at`](#do-rato-ao-texto-stop_at-word_under-e-cell_of)), sen selección; con Maiús, move ata alí o final da selección, desde onde empezou. | `Clusters` |
+| 2 | Selecciona a palabra, o grupo de signos ou o de espazos debaixo do punteiro ([`word_under`](#do-rato-ao-texto-stop_at-word_under-e-cell_of)), co cursor ao final; despois do final do texto, a última palabra. Sen texto con ancho, nada. | `Words(palabra)` |
+| 3 | Selecciona todo. | `All` |
+
+- `column` é un `usize`: o botón baixa dentro do campo. `isize::try_from` convérteo no tipo de `drag`, que pode ser negativo; un número que non cabe, imposíbel nunha xanela, queda en `isize::MAX`.
+- Maiús só conta co clic simple. Calquera outro número de clics, que `Clicks` non dá, é coma un.
+- Cada `select` que cambia algo pecha o paso que se estaba a escribir; un clic onde xa está o cursor non cambia nada, e o escrito segue no mesmo paso (`a_click_somewhere_else_ends_the_step_of_the_typing`).
+
+**`drag`**: o punteiro moveuse á cela `column`, no lado `side`, co botón abaixo desde `press`. A cela pode estar fóra do campo, antes da primeira, cun número negativo, ou despois da última:
+
+- **`Clusters`**: a selección vai desde onde empezou ata o sitio máis preto do punteiro, tamén cara atrás.
+- **`Words(word)`**: palabras enteiras, coma Chrome. Se o punteiro está na palabra do dobre clic ou despois dela, a selección vai desde o principio desta ata o final da palabra debaixo do punteiro; se está antes, desde o final da do dobre clic ata o principio da do punteiro, co cursor á esquerda. A palabra do dobre clic queda sempre enteira.
+- **`None`** e **`All`**: nada.
+- **Fóra do campo, mostra máis.** `drag` non despraza nada el mesmo: leva o cursor a un sitio fóra da parte que se ve, e `track` móvea o xusto para velo ([`follow_caret`](#seguir-o-cursor-track-e-follow_caret)). Como a cela se conta desde a primeira que se mostra, que acaba de moverse, cada chamada fóra do campo vai un pouco máis alá. O campo non ten temporizador: Chrome move o texto mentres o punteiro está quedo fóra da caixa; o campo, só cando quen o usa chama a `drag`.
+- `self.drag.clone()`: o `Drag` cópiase antes, porque os casos chaman a `select`, que cambia o campo.
+
+### Seleccionar: `select`
+
+```rust
+fn select(&mut self, anchor: usize, caret: usize) -> bool {
+    if (anchor, caret) == (self.anchor, self.caret) {
+        return false;
+    }
+    self.track(|field| {
+        (field.anchor, field.caret) = (anchor, caret);
+        field.history.close();
+    });
+    true
+}
+```
+
+**`select`** move o principio da selección a `anchor` e o cursor a `caret`. Se xa estaban alí, non fai nada e devolve `false`. Se non, dentro de [`track`](#seguir-o-cursor-track-e-follow_caret), móveos e pecha o paso de desfacer: calquera movemento do cursor ou da selección fai que a seguinte edición empece outro paso ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 4). Devolve `true`.
+
+- Pasan por ela todos os movementos: `select_all`, o rato (`press` e `drag`) e as teclas ([`move_caret`](#mover-o-cursor-step-go_to_end-e-move_caret)). As teclas devólvenlle a súa resposta a [`repeat`](#as-ordes-command-e-repeat), que para cando xa non cambia nada.
+- Non mira se as posicións son sitios onde para o cursor: quen a chama sempre as dá así.
+
+### Do rato ao texto: `stop_at`, `word_under` e `cell_of`
+
+```rust
+fn stop_at(&self, column: isize, side: Side) -> usize {
+    let Some(cell) = self.cell_of(column) else {
+        return 0;
+    };
+    // In halves of a cell.
+    let half = 2 * cell + usize::from(side == Side::Right);
+    let mut start = 0;
+    for (at, cluster) in self.text.grapheme_indices(true) {
+        let width = text::width(cluster);
+        if half < 2 * start + width {
+            return at;
+        }
+        start += width;
+    }
+    self.text.len()
+}
+```
+
+**`stop_at`** dá o sitio onde para o cursor máis preto do lado `side` da cela `column` do campo, que pode estar fóra del:
+
+- [`cell_of`](#do-rato-ao-texto-stop_at-word_under-e-cell_of) dá a cela do texto. Antes do principio do texto, o principio.
+- **En metades de cela.** Cada cela ten dúas metades, a esquerda, `2 × cela`, e a dereita, `2 × cela + 1`: `half` é a do punteiro. Un grafema que empeza na cela `start` e ocupa `width` celas vai da metade `2 × start` á `2 × (start + width)`, e o seu medio está en `2 × start + width`. Se o punteiro está antes dese medio, o cursor vai antes do grafema (`at`); se non, despois, e a busca segue co seguinte.
+- Despois do último grafema, o final do texto.
+
+Así, o cursor vai antes ou despois de cada grafema segundo a metade da cela onde está o punteiro:
+
+| Grafema | Antes del | Despois del |
+|---|---|---|
+| Dunha cela, coma `a` | A metade esquerda. | A dereita. |
+| Dun carácter ancho, coma `中`, de dúas celas | As dúas metades da primeira cela. | As dúas da segunda. |
+| De varias celas, coma unha familia de emoji, que ata a 8.1 ocupa as celas de cada emoji | As metades da primeira metade das súas celas. | As da segunda. |
+| Sen ancho, coma o espazo de ancho cero (U+200B) | Ningunha. | Todas: un clic vai despois del. |
+
+Na proba `a_click_puts_the_caret_on_the_nearest_side_of_the_cell`, co texto `a中b`, que ocupa catro celas:
+
+| Cela e lado | Cursor | Por que |
+|---|---|---|
+| 0, esquerdo | 0 | Na metade esquerda do `a`: antes del. |
+| 0, dereito | 1 | Na dereita: despois. |
+| 1, esquerdo ou dereito | 1 | Na primeira cela de `中`: antes del. |
+| 2, esquerdo ou dereito | 4 | Na segunda: despois. |
+| 3, esquerdo | 4 | Na metade esquerda do `b`. |
+| 3, dereito | 5 | Na dereita: o final. |
+| 4 ou 9 | 5 | Despois do texto. |
+
+- `grapheme_indices(true)` dá os grafemas estendidos, os de UAX #29, cada un co byte onde empeza; e [`text::width`](#cratesmeiga-coresrctextrs), as celas de cada un, a suma das dos seus caracteres.
+
+```rust
+fn word_under(&self, column: isize) -> Range<usize> {
+    let cell = self.cell_of(column).unwrap_or(0);
+    let mut start = 0;
+    let mut last = None;
+    for (at, cluster) in self.text.grapheme_indices(true) {
+        let width = text::width(cluster);
+        if width > 0 {
+            last = Some(at);
+            if cell < start + width {
+                break;
+            }
+        }
+        start += width;
+    }
+    last.map_or(self.text.len()..self.text.len(), |at| {
+        word_at(&self.text, at)
+    })
+}
+
+fn cell_of(&self, column: isize) -> Option<usize> {
+    self.scroll.checked_add_signed(column)
+}
+```
+
+- **`word_under`**: o grupo de grafemas da mesma clase ca o da cela `column`, o que selecciona un dobre clic: unha palabra, un grupo de signos ou un de espazos ([`word_at`](#as-palabras-next_word-previous_word-e-word_at)). Percorre os grafemas con ancho, os que poden estar debaixo do punteiro: `last` é o último visto, e o percorrido para no que ten a cela. Antes do principio do texto, a cela é a 0, e o grafema, o primeiro; despois do final, `last` queda no último. Sen ningún grafema con ancho, un rango baleiro ao final: nada.
+- **`cell_of`**: a cela do texto que está na cela `column` do campo, `scroll` máis `column`. `checked_add_signed` súmalle a un `usize` un número con signo, e dá `None` se o resultado sería negativo: antes do principio do texto.
+
+### Editar: `replace` e `edited`
+
+```rust
+fn replace(&mut self, range: Range<usize>, with: &str, kind: Kind) {
+    let removed = self.text[range.clone()].to_owned();
+    let before = (self.anchor, self.caret);
+    self.text.replace_range(range.clone(), with);
+    self.edited(removed != with);
+    // What it inserted can join the text around it in another cluster:
+    // the caret goes to its end, or, after deleting, to its start.
+    let end = range.start + with.len();
+    let caret = if is_stop(&self.text, end) {
+        end
+    } else if with.is_empty() {
+        previous_cluster(&self.text, end)
+    } else {
+        next_cluster(&self.text, end)
+    };
+    (self.anchor, self.caret) = (caret, caret);
+    self.history.record(Edit {
+        at: range.start,
+        removed,
+        inserted: with.to_owned(),
+        before,
+        after: caret,
+        kind,
+    });
+}
+
+fn edited(&mut self, changed: bool) {
+    self.changes.text |= changed;
+    self.drag = Drag::None;
+}
+```
+
+**`replace`** cambia o rango `range` do texto por `with`, e garda a edición para desfacela. Por ela pasan todas as edicións, menos desfacer e refacer: escribir, borrar e pegar. Quen a chama xa mirou que `with` cabe, e envólvea en [`track`](#seguir-o-cursor-track-e-follow_caret). Paso a paso:
+
+1. Garda unha copia do que quita, `removed`, e a selección de antes, `before`.
+2. `replace_range` cambia o texto no seu sitio.
+3. [`edited`](#editar-replace-e-edited) anota se o texto é outro, se o que quitou e o que puxo non son iguais, e remata o arrastre.
+4. **O cursor**, ao final do que puxo: `range.start + with.len()`, que ao borrar, con `with` baleiro, é o principio do rango. Pero o que puxo, ou o oco que deixou, pode xuntar o texto de arredor noutro grafema, e entón ese sitio xa non é un onde pare o cursor ([`is_stop`](#onde-para-o-cursor-next_cluster-previous_cluster-e-is_stop)). Ao poñer texto, o cursor vai ao final dese grafema ([`next_cluster`](#onde-para-o-cursor-next_cluster-previous_cluster-e-is_stop)); e ao borrar, ao seu principio ([`previous_cluster`](#onde-para-o-cursor-next_cluster-previous_cluster-e-is_stop)).
+5. Sen selección: o principio da selección vai co cursor.
+6. [`record`](#gardar-unha-edición-record-e-close) garda a edición: onde, o que quitou e o que puxo, a selección de antes, o cursor de despois e o seu tipo, `kind`, que di se a seguinte se pode xuntar con ela.
+
+| Antes | Tecla | Despois | Por que |
+|---|---|---|---|
+| `e\|x` | Un acento combinado (U+0301), escrito | `e\u{301}\|x` | O acento xúntase co `e` nun grafema, `é`, e despois del o cursor pode parar. |
+| `\|🇪🇸` | 🇫, escrito | `🇫🇪\|🇸` | O 🇫 fai unha bandeira co 🇪, e o 🇸 queda só: o cursor vai despois da bandeira nova. |
+| `🇪🇸\|🇫🇷` | Retroceso | `\|🇪🇫🇷` | Sen o 🇸, o 🇪 e o 🇫 fan unha bandeira: o cursor vai antes dela. |
+| `🇪\|x🇸` | Supr | `\|🇪🇸` | Sen o `x`, os dous indicadores fan unha bandeira. |
+
+- **Cando o cursor salta, o paso pecha.** Se o cursor saltou ao final ou ao principio dun grafema, a seguinte edición xa non empeza onde acabou esta, e [`join`](#xuntar-dúas-edicións-join) non as xunta.
+- **«`range` ou `with` non está baleiro»**, coma di o comentario: toda edición quita ou pon algo. `delete` mira que o rango non estea baleiro, `paste` que o texto que pega tampouco, e escribir sempre pon un carácter. Ata `67295da` había unha garda para unha edición que non fixese nin unha cousa nin a outra; a cobertura das probas mostrou que ningunha chamada chegaba a ela, e quitouse.
+
+**`edited`**: o texto editouse, e é outro se `changed`. Escribir un carácter enriba do mesmo, seleccionado, déixao coma estaba, e entón non é un cambio do texto, coma co mesmo texto en `set_text`; `|=` marca o cambio, e nunca desmarca outro de antes que aínda non se colleu. E remata o que selecciona o botón abaixo: os sitios que colleu, coma a palabra dun dobre clic, poden non ser xa os mesmos, coma di o seu comentario. Chámana `replace`, `undo` e `redo`; `set_text` fai o mesmo el só.
+
+- **Desde `a99de8c`.** Ata entón, calquera edición era un cambio do texto, tamén a que o deixaba igual, ao contrario de `set_text`. Atopouno a revisión independente do código, e compróbao o final de `the_changes_say_what_changed`, que falla sen o arranxo.
+- **O arrastre.** A proba ao chou atopou este fallo mentres se escribía o campo: despois dun dobre clic, se o texto cambiaba co botón abaixo, o arrastre seguía seleccionando cos extremos da primeira palabra nun texto que xa non era o mesmo, onde podían quedar no medio dun grafema ou despois do final. Agora compróbao `a_change_of_the_text_ends_what_the_button_held_down_selects`.
+
+### Desfacer e refacer: `undo` e `redo`
+
+```rust
+fn undo(&mut self) -> bool {
+    let Some(edit) = self.history.undo() else {
+        return false;
+    };
+    let Edit {
+        at,
+        ref removed,
+        ref inserted,
+        before,
+        ..
+    } = *edit;
+    let changed = removed != inserted;
+    self.text.replace_range(at..at + inserted.len(), removed);
+    (self.anchor, self.caret) = before;
+    self.edited(changed);
+    true
+}
+
+fn redo(&mut self) -> bool {
+    let Some(edit) = self.history.redo() else {
+        return false;
+    };
+    let Edit {
+        at,
+        ref removed,
+        ref inserted,
+        after,
+        ..
+    } = *edit;
+    let changed = removed != inserted;
+    self.text.replace_range(at..at + removed.len(), inserted);
+    (self.anchor, self.caret) = (after, after);
+    self.edited(changed);
+    true
+}
+```
+
+- **`undo`** desfai o último paso: [`History::undo`](#os-pasos-desfeitos-undo-redo-e-clear) dállo, e pásao aos que se poden refacer. Pon outra vez o que quitou, `removed`, en vez do que puxo, `inserted`, e a selección de antes do paso, `before`: desfacer o escrito enriba dunha selección volta seleccionala ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 4).
+- **`redo`** refai o último paso desfeito: pon outra vez `inserted` en vez de `removed`, e o cursor onde quedou despois do paso, `after`, sen selección.
+- **`changed`**: o paso cambia o texto se o que quitou e o que puxo non son iguais. Desfacer ou refacer o escrito enriba do mesmo texto non é un cambio do texto, desde `a99de8c` ([`edited`](#editar-replace-e-edited)).
+- Os dous devolven se había un paso: [`undo_or_redo`](#o-portapapeis-e-desfacer-copy-cut-e-undo_or_redo), que os envolve en `track`, e as repeticións das teclas paran cando xa non hai máis.
+- `let Edit { at, ref removed, ref inserted, before, .. } = *edit;` desfai nos seus campos a edición prestada: `at` e `before` cópianse, e `ref` presta os textos sen copialos. Rust deixa ler a edición, que é de `self.history`, mentres cambia `self.text`, porque son campos distintos.
+- Os sitios que volta pór son os que había antes ou despois do paso, no mesmo texto, así que seguen sendo sitios onde para o cursor.
+
+### O límite: `room`
+
+```rust
+fn room(&self) -> usize {
+    let selected = units(self.selected_text());
+    self.limit.saturating_sub(units(&self.text) - selected)
+}
+```
+
+**`room`**: as unidades de UTF-16 que caben en vez da selección: o límite menos as do texto que queda, todo menos o seleccionado ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 6). As unidades cóntanse coma as conta Windows, e coma as conta [`MAX_TITLE`](#os-límites-saved_titles-e-max_title) cos títulos: `x`, `ñ` ou `中`, unha; un emoji de fóra do plano básico, coma `😀`, dúas. Pregúntano escribir ([`type_character`](#os-caracteres-typed-e-type_character)) e pegar; `set_text` corta ao límite enteiro. `saturating_sub` daría 0 se o texto pasase do límite, que nunca pasa.
+
+### Seguir o cursor: `track` e `follow_caret`
+
+```rust
+fn track<R>(&mut self, change: impl FnOnce(&mut Self) -> R) -> R {
+    let before = (self.anchor, self.caret, self.scroll, self.columns);
+    let result = change(self);
+    self.follow_caret();
+    if self.changes.text || (self.anchor, self.caret, self.scroll, self.columns) != before {
+        self.changes.shown = true;
+    }
+    result
+}
+```
+
+**`track`** fai un cambio, `change`, e despois pon ao día a parte do texto que se mostra ([`follow_caret`](#seguir-o-cursor-track-e-follow_caret)) e anota se cambiou o que se mostra: o texto, o principio da selección, o cursor, a primeira cela que se ve ou, desde `b96fa25`, o número de celas ([`set_columns`](#os-cambios-e-as-celas-take_changes-e-set_columns)). Todos os cambios do campo pasan por ela: `set_text`, `set_columns`, `select`, as edicións das teclas e de `paste`, e desfacer e refacer. É xenérica no resultado do cambio, `R`, que devolve: así `undo_or_redo` sabe se había un paso.
+
+```rust
+fn follow_caret(&mut self) {
+    if self.columns == 0 {
+        return;
+    }
+    let caret = text::width(&self.text[..self.caret]);
+    let total = text::width(&self.text);
+    let mut scroll = self
+        .scroll
+        .clamp((caret + 1).saturating_sub(self.columns), caret)
+        .min((total + 1).saturating_sub(self.columns));
+    if matches!(
+        text::cells(&self.text).nth(scroll),
+        Some(CellChar::WideRight(_))
+    ) {
+        scroll += 1;
+    }
+    self.scroll = scroll;
+}
+```
+
+**`follow_caret`** move a parte do texto que se mostra o xusto para que se vexa o cursor ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 7). Todo en celas: `caret`, as do texto antes do cursor, e `total`, as do texto. O campo mostra `columns` celas desde `scroll`, e o cursor vai no lado esquerdo da súa cela, así que se ve se `scroll ≤ caret ≤ scroll + columns − 1`. Paso a paso:
+
+1. **O xusto para ver o cursor.** `clamp` deixa `scroll` entre `caret + 1 − columns` e `caret`: se o cursor quedou á esquerda da parte que se ve, esta empeza nel; se quedou á dereita, avanza ata que o cursor está na última cela; e se se ve, non se move. Ao final do texto, esa última cela é unha cela libre despois do texto, para o cursor. `saturating_sub` dá 0 ao principio.
+2. **Nunca máis alá do final.** `min` non deixa que empece despois de `total + 1 − columns`: as celas do texto, a cela libre, e nada máis. Cando o texto se fai máis curto, con Retroceso ao final ou borrando unha selección, a parte que se ve volta cara atrás, e non quedan celas baleiras á dereita mentres hai texto á esquerda.
+3. **Á esquerda, nunca media letra ancha.** Se a primeira cela que se ve é a metade dereita dun carácter ancho, empeza na seguinte: o campo mostra unha cela menos de texto. O cursor nunca está entre as dúas metades, así que segue á vista.
+
+- **Sen celas,** o campo non mostra nada, e a parte do texto queda onde estaba ata que volta ter celas, coma di o seu comentario: entón móvese desde alí. A volta antes de facer as contas segue facendo falta: con 0 celas, o mínimo do `clamp`, `caret + 1`, pasaría do máximo, `caret`, e entón `clamp` falla (*panic*). Ata `50d2379`, sen celas, a parte que se ve voltaba ao principio, algo que nada podía ver; atopouno o axente da documentación.
+- **Un `clamp`, desde `cc18533`.** Antes eran dúas comparacións, e un mutante, `<` por `<=` en `caret < scroll`, sobrevivía ás probas: co cursor na primeira cela que se ve, `scroll = caret` non cambiaba nada, así que era equivalente. O `clamp` di o mesmo nun paso, sen esa comparación ([Tecnoloxías › A cobertura e os mutantes](../tecnoloxias.md#64-a-cobertura-e-os-mutantes)).
+- Cada chamada mide o texto enteiro (`text::width`) e busca a primeira cela que se ve (`nth`): nunha liña de como moito 1000 unidades, pouco.
+
+Por exemplo, nun campo de cinco celas, escribindo `abcdefgh` (`a_text_that_does_not_fit_shows_the_part_with_the_caret`):
+
+| Texto e cursor | `scroll` | O campo mostra |
+|---|---|---|
+| `abcd\|` | 0 | `abcd`, e o cursor na cela libre. |
+| `abcde\|` | 1 | `bcde`, e o cursor na cela libre. |
+| `abcdefgh\|` | 4 | `efgh`, e o cursor na cela libre. |
+| Inicio: `\|abcdefgh` | 0 | `abcde`, co cursor na primeira cela. |
+| Fin e catro veces ←: `abcd\|efgh` | 4 | `efgh`, co cursor na primeira cela. |
+| Outra ←: `abc\|defgh` | 3 | `defgh`, co cursor na primeira cela. |
+
+### Pegar nunha liña: `one_line`, `fitting` e `units`
+
+```rust
+fn one_line(text: &str) -> String {
+    let mut line = String::with_capacity(text.len());
+    let mut after_cr = false;
+    for c in text.chars() {
+        match c {
+            '\n' if after_cr => {}
+            '\r' | '\n' | '\t' | '\u{b}' | '\u{c}' | '\u{85}' | '\u{2028}' | '\u{2029}' => {
+                line.push(' ');
+            }
+            c if c.is_control() => {}
+            c => line.push(c),
+        }
+        after_cr = c == '\r';
+    }
+    line
+}
+```
+
+**`one_line`**: `text` nunha liña ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 5). Úsana `set_text` e `paste`:
+
+| Carácter | Queda |
+|---|---|
+| CR LF | Un espazo. |
+| CR, LF, VT, FF, NEL (U+0085), o separador de liñas (LS, U+2028) e o de parágrafos (PS, U+2029) | Un espazo cada un. |
+| O tabulador | Un espazo. |
+| Os outros caracteres de control (`char::is_control`: de U+0000 a U+001F e de U+007F a U+009F), coma ESC ou BEL | Nada. |
+| O resto | Tal cal. |
+
+- `after_cr` lembra se o carácter anterior era un CR: o LF que o segue é o mesmo salto de liña, o CR LF de Windows, e non deixa outro espazo. Un LF e despois un CR son dous.
+- Os caracteres de formato, coma U+200B ou o ZWJ, non son de control: quedan. O ZWJ xunta os emoji, coma nunha familia.
+- `with_capacity(text.len())`: a liña nunca é máis longa ca o texto, porque cada salto de liña ocupa polo menos un byte e queda nun. Non reserva memoria máis dunha vez.
+- Percorre o texto enteiro, aínda que despois `fitting` só colla o que cabe.
+
+```rust
+fn fitting(text: &str, room: usize) -> &str {
+    let mut units_so_far = 0;
+    let mut end = 0;
+    for (at, cluster) in text.grapheme_indices(true) {
+        units_so_far += units(cluster);
+        if units_so_far > room {
+            break;
+        }
+        end = at + cluster.len();
+    }
+    &text[..end]
+}
+
+fn units(text: &str) -> usize {
+    text.chars().map(char::len_utf16).sum()
+}
+```
+
+- **`fitting`**: o principio máis longo de `text`, en grafemas enteiros, que ten como moito `room` unidades de UTF-16. Suma as unidades de cada grafema, e para no primeiro que xa non cabe, sen percorrer o resto. Por exemplo, con sitio para tres, de `cd👍🏽e` colle `cd`: o 👍🏽, o polgar co ton de pel, son catro unidades, e non cabe; e o `e`, aínda que cabería, vén despois. Úsana `set_text`, co límite, e `paste`, co sitio que queda.
+- **`units`**: as unidades de UTF-16 de `text`, sen codificalo: `len_utf16` dá 1 ou 2 por carácter.
+
+**Probas.** As do campo están en [`tests.rs`](#cratesmeiga-coresrcuifieldtestsrs) (`#[cfg(test)] mod tests;`, ao final do arquivo); as dos grafemas e as palabras, en [`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs), e as dos pasos, en [`history.rs`](#cratesmeiga-coresrcuifieldhistoryrs).
+
+## `crates/meiga-core/src/ui/field/segment.rs`
+
+Desde a subfase 3.2: onde para o cursor dun campo de texto, e onde empezan as súas palabras ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisións 2 e 3; [Tecnoloxías › Os grafemas e as palabras dun campo de texto](../tecnoloxias.md#66-os-grafemas-e-as-palabras-dun-campo-de-texto)). Son funcións sen estado, que reciben un texto e unha posición en bytes. Os grafemas dáos `unicode-segmentation`, coas regras de UAX #29 de Unicode 17; as palabras teñen regras propias, máis simples ca as de UAX #29, para os nomes e os filtros de arquivos: `main.rs` son tres palabras, e Ctrl+Retroceso borra `rs`, e non o nome enteiro.
+
+```rust
+//! Where the caret of a text field stops, and where its words start.
+//!
+//! The caret stops between the grapheme clusters of Unicode (UAX #29), the
+//! extended ones, as in Chrome: never between a letter and its accent, nor
+//! inside an emoji with a skin tone, a flag or a sequence joined with a
+//! zero-width joiner (ZWJ).
+//!
+//! A word is a run of clusters of the same class: letters, digits and `_`
+//! make words; each run of other signs is another word; and the spaces
+//! separate them. So `main.rs` is three words, and `C:\Users\x` five. Each
+//! cluster has the class of its first character.
+
+use std::ops::Range;
+
+use unicode_segmentation::GraphemeCursor;
+use unicode_width::UnicodeWidthChar;
+```
+
+- O comentario do módulo resume as dúas cousas: o cursor para entre os grafemas estendidos de UAX #29, coma en Chrome, e nunca entre unha letra e o seu acento, nin dentro dun emoji cun ton de pel, dunha bandeira ou dunha secuencia unida cun ZWJ; e unha palabra é un grupo de grafemas da mesma clase, a do seu primeiro carácter. `C:\Users\x` son cinco: `C`, `:\`, `Users`, `\` e `x`.
+- `GraphemeCursor`, de `unicode-segmentation`, busca os límites dos grafemas; e `UnicodeWidthChar`, de `unicode-width`, dá o ancho dun carácter, para a súa clase.
+- O que usan os outros arquivos é `pub(super)`: só o ven `field` e os seus submódulos. `class` é privada.
+
+### Onde para o cursor: `next_cluster`, `previous_cluster` e `is_stop`
+
+```rust
+pub(super) fn next_cluster(text: &str, at: usize) -> usize {
+    // With the whole text, the cursor never asks for more of it.
+    GraphemeCursor::new(at, text.len(), true)
+        .next_boundary(text, 0)
+        .ok()
+        .flatten()
+        .unwrap_or(text.len())
+}
+
+pub(super) fn previous_cluster(text: &str, at: usize) -> usize {
+    GraphemeCursor::new(at, text.len(), true)
+        .prev_boundary(text, 0)
+        .ok()
+        .flatten()
+        .unwrap_or(0)
+}
+
+pub(super) fn is_stop(text: &str, at: usize) -> bool {
+    GraphemeCursor::new(at, text.len(), true)
+        .is_boundary(text, 0)
+        .unwrap_or(true)
+}
+```
+
+| Función | Que dá | Quen a usa |
+|---|---|---|
+| `next_cluster` | O final do grafema que empeza en `at`, ou que ten `at` dentro: o seguinte sitio onde para o cursor, ou o final do texto. | → e Maiús+→, Supr, as palabras, e o cursor despois de poñer texto ([`replace`](#editar-replace-e-edited)). |
+| `previous_cluster` | O principio do grafema que acaba en `at`, ou que ten `at` dentro: o sitio anterior onde para o cursor, ou 0. | ← e Maiús+←, as palabras, e o cursor despois de borrar. |
+| `is_stop` | Se o cursor pode parar en `at`: entre dous grafemas, ou nun extremo do texto. | `replace`, e as probas. |
+
+- **`GraphemeCursor`** é un cursor sobre un texto de `text.len()` bytes, en `at`. `true` pide os grafemas estendidos, os que usan os editores de hoxe: cos antigos (*legacy*), o signo vogal de `हि` quedaría fóra da súa consoante. `next_boundary` dá o seguinte límite, `prev_boundary` o anterior, e `is_boundary` di se en `at` hai un.
+- **O texto enteiro, nun anaco.** O cursor recibe o texto a anacos, e pide outro, cun erro (`GraphemeIncomplete`), se o necesita para decidir: por exemplo, cantos indicadores rexionais hai antes. O campo dálle o texto enteiro, desde 0, así que nunca pide máis, coma di o comentario. `ok().flatten()` converte o `Result<Option<usize>>` nun `Option<usize>`, que é `None` nos extremos do texto: entón, o final ou 0. E `is_stop` daría `true` cun erro que non pode chegar.
+- **Desde dentro dun grafema.** `replace` chama a `next_cluster` cun sitio onde o cursor non para, e recibe o final do grafema que o ten dentro. Os comentarios das dúas din os dous casos; o de `next_cluster`, desde `50d2379`, cando o atopou o axente da documentación.
+- Cada chamada fai un cursor novo, que mira os caracteres arredor de `at`, sen reservar memoria. `at` ten que ser o límite dun carácter, e sempre o é.
+
+### As clases: `Class`, `class`, `class_after` e `class_before`
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Class {
+    Space,
+    Word,
+    Sign,
+}
+
+fn class(cluster: &str) -> Class {
+    match cluster.chars().next() {
+        Some(c) if c.is_whitespace() => Class::Space,
+        Some(c) if c.is_alphanumeric() || c == '_' || c.width() == Some(0) => Class::Word,
+        _ => Class::Sign,
+    }
+}
+
+pub(super) fn class_after(text: &str, at: usize) -> Option<Class> {
+    (at < text.len()).then(|| class(&text[at..next_cluster(text, at)]))
+}
+
+pub(super) fn class_before(text: &str, at: usize) -> Option<Class> {
+    (at > 0).then(|| class(&text[previous_cluster(text, at)..at]))
+}
+```
+
+Cada grafema ten unha clase, a do seu primeiro carácter ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 3):
+
+| Clase | Os grafemas que empezan por | Por exemplo |
+|---|---|---|
+| `Space` | Un espazo de Unicode (`char::is_whitespace`). | O espazo, o tabulador, o espazo que non parte (U+00A0) e o ideográfico (U+3000). |
+| `Word` | Unha letra ou un número de calquera alfabeto (`char::is_alphanumeric`), `_`, ou un carácter sen ancho (`width() == Some(0)`). | `a`, `Ñ`, `7`, `_`, `中`, `ά`, e un acento combinado só. |
+| `Sign` | Calquera outro. | `.`, `\`, `-`, `😀` e `€`. |
+
+- **A clase do primeiro carácter.** Un `é` escrito coma `e` e un acento é `Word`, coma o `e`; un 👍🏽 é `Sign`, coma o 👍; e un espazo cun acento detrás, que UAX #29 xunta nun grafema, é `Space`.
+- **Os caracteres sen ancho.** Coma di o comentario de `Word`, `class` pon en `Word` calquera carácter sen ancho ao principio dun grafema. Un acento combinado case nunca empeza un: só ao principio do texto, ou despois dun carácter que fai un grafema propio; en calquera outro sitio, xúntase co carácter anterior. O espazo de ancho cero (U+200B), en cambio, fai sempre un grafema propio, así que `a\u{200b}b` é unha palabra. Ata `50d2379`, o comentario só falaba dos acentos sen letra antes; atopouno o axente da documentación.
+- **`class_after`**: a clase do grafema que empeza en `at`, ou `None` ao final do texto. **`class_before`**: a do que acaba en `at`, ou `None` ao principio. `bool::then` só calcula a clase se a condición se cumpre.
+
+### As palabras: `next_word`, `previous_word` e `word_at`
+
+```rust
+pub(super) fn next_word(text: &str, at: usize) -> usize {
+    let mut at = at;
+    if let Some(class) = class_after(text, at).filter(|&class| class != Class::Space) {
+        while class_after(text, at) == Some(class) {
+            at = next_cluster(text, at);
+        }
+    }
+    while class_after(text, at) == Some(Class::Space) {
+        at = next_cluster(text, at);
+    }
+    at
+}
+
+pub(super) fn previous_word(text: &str, at: usize) -> usize {
+    let mut at = at;
+    while class_before(text, at) == Some(Class::Space) {
+        at = previous_cluster(text, at);
+    }
+    if let Some(class) = class_before(text, at) {
+        while class_before(text, at) == Some(class) {
+            at = previous_cluster(text, at);
+        }
+    }
+    at
+}
+
+pub(super) fn word_at(text: &str, at: usize) -> Range<usize> {
+    let Some(class) = class_after(text, at) else {
+        return at..at;
+    };
+    let mut start = at;
+    while class_before(text, start) == Some(class) {
+        start = previous_cluster(text, start);
+    }
+    let mut end = at;
+    while class_after(text, end) == Some(class) {
+        end = next_cluster(text, end);
+    }
+    start..end
+}
+```
+
+- **`next_word`**, para Ctrl+→ e Ctrl+Supr: se `at` está ao principio ou no medio dunha palabra ou dun grupo de signos, pasa o que queda del; despois, os espazos. Queda no principio da palabra seguinte, coma en Windows e en Chrome en Windows, ou no final do texto. Desde uns espazos, só os pasa. `filter` colle a clase só se non é `Space`.
+- **`previous_word`**, para Ctrl+← e Ctrl+Retroceso: volta por riba dos espazos de antes, e despois do grupo que hai antes deles, ata o seu principio; ou ata o principio do texto.
+- **`word_at`**, para o dobre clic: o grupo da mesma clase ca o grafema que empeza en `at`, cara atrás e cara a diante. Ao final do texto, nada.
+- Cada paso pregunta a clase dun grafema e despois busca o seu final, así que busca dúas veces o mesmo límite: nunha liña, abonda.
+
+Onde paran Ctrl+→, desde o principio, e Ctrl+←, desde o final, que son os mesmos sitios, marcados con `|` (`ctrl_and_the_arrows_stop_at_the_start_of_each_word`):
+
+```text
+|foo |bar|
+|  |foo   |bar  |
+|main|.|rs|
+|C|:\|Users|\|x|
+|foo_bar|-|baz|
+|...!|
+|olá|, |mundo|
+|a |😀😀 |b|
+```
+
+O dobre clic do terminal ten outras palabras: alí unha ruta ou un enderezo enteiros son unha, para copialos enteiros ([`word_at`](#o-dobre-clic-word_at), de `term/selection.rs`; [ADR 0030 › Alternativas consideradas](../adr/0030-o-campo-de-texto.md#alternativas-consideradas)).
+
+**Probas.** Seis, coas funcións soas, sen campo. Tres axudantes: `stops` dá os sitios onde para o cursor desde o principio ata o final, un grafema cada vez, con `next_cluster`; `stops_back`, os mesmos desde o final, con `previous_cluster`; e `words`, onde para Ctrl+→ desde o principio, e onde para Ctrl+← desde o final.
+
+| Proba | Que comproba |
+|---|---|
+| `the_caret_stops_between_clusters_in_both_directions` | Os sitios onde para o cursor, cara a diante e cara atrás, e `is_stop` en cada límite de carácter, en once textos: un baleiro; `ab`; `olá`, coa `á` xa composta, un só carácter; `e` e `n` con acentos combinados, dous grafemas; `中文`; 👍 cun ton de pel, e `!`; unha familia (home, ZWJ, muller, ZWJ e nena) e `x`; dúas bandeiras, 🇪🇸 e 🇬🇧, que van de dous en dous indicadores rexionais; ❤ co selector de variación dos emoji, e `a`; o conxunto devanágari `क्ष` (KA, VIRAMA e SSA), un só grafema; e tres *jamo* coreanos que fan unha sílaba. |
+| `inside_a_cluster_the_caret_goes_to_its_ends` | Dentro dunha familia de emoji, despois do home, `previous_cluster` dá o principio da familia, e `next_cluster`, o seu final; e entre un `e` e o seu acento, 0 e 3. |
+| `letters_digits_and_underscores_make_words_and_other_signs_another` | As clases, por diante e por detrás: o espazo, o tabulador, o espazo que non parte e o ideográfico, `Space`; `a`, `Ñ`, `7`, `_`, `中`, `ά` e un acento combinado só, `Word`; e `.`, `\`, `-`, `😀` e `€`, `Sign`. E ningunha despois do final nin antes do principio. |
+| `ctrl_and_the_arrows_stop_at_the_start_of_each_word` | Os sitios de Ctrl+→ desde o principio, e os de Ctrl+← desde o final, que son os mesmos, en nove textos: os oito de enriba, e un baleiro. |
+| `ctrl_and_the_arrows_go_from_the_middle_of_a_word_to_its_ends` | Desde o medio de `foo`, Ctrl+→ vai a `bar`; desde o medio de `bar`, Ctrl+← vai ao seu principio; e desde os espazos entre `foo` e `bar`, Ctrl+→ vai a `bar`, e Ctrl+← ao principio de `foo`. |
+| `a_double_click_takes_the_run_of_its_class` | En `foo  bar.rs`, `word_at` en cada sitio: `foo` desde o seu principio e desde o seu medio, os dous espazos desde cada un, `bar`, `.`, `rs`, e nada ao final. Un grafema nunca se parte: en `x éé y`, cos acentos combinados, os dous `é` enteiros. E nada nun texto baleiro. |
+
+## `crates/meiga-core/src/ui/field/history.rs`
+
+Desde a subfase 3.2: os pasos que percorren desfacer e refacer nun campo de texto, coma os garda Chrome no seu `TextfieldModel` ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 4). O campo garda cada edición con `record`, pecha o paso con `close` cando se move o cursor ou a selección, e colle os pasos con `undo` e `redo` para desfacelos e refacelos no texto ([`undo` e `redo`](#desfacer-e-refacer-undo-e-redo)). O historial non coñece o campo: só garda edicións, cos seus sitios e os seus textos, e próbase só.
+
+```rust
+//! The steps that undoing and redoing go through in a text field, as Chrome
+//! keeps them (`TextfieldModel`): what each edit removed and inserted, and
+//! the selection before it.
+//!
+//! An edit joins the one before it while nothing else happens between them:
+//! the characters typed in a row are one step; so are the Backspaces in a
+//! row, and the Deletes in a row. A paste, a cut, and deleting a selection
+//! or a word are a step each. Moving the caret, selecting and undoing close
+//! the last step: the next edit starts another.
+
+use std::collections::VecDeque;
+```
+
+- O comentario do módulo di as regras: unha edición xúntase coa anterior mentres non pasa nada entre elas. Os caracteres escritos seguidos son un paso; os Retrocesos seguidos, outro; e os Supr seguidos, outro. Pegar, cortar e borrar unha selección ou unha palabra son un paso cada un. Mover o cursor, seleccionar e desfacer pechan o paso: a seguinte edición empeza outro. Refacer tamén o pecha.
+- `VecDeque`, unha cola dobre, para os pasos feitos: os novos entran por un extremo, e o máis vello sae polo outro, sen mover os demais, coma os títulos gardados ([`Titles`](#titles)).
+
+### `STEPS` e `Kind`
+
+```rust
+pub(super) const STEPS: usize = 100;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Kind {
+    Typing,
+    Backspace,
+    Delete,
+    Other,
+}
+```
+
+- **`STEPS`**: os pasos que se poden desfacer, como moito 100 (decisión 4): un máis quita o máis vello. Cada paso garda o texto que quitou e o que puxo: cun límite de 1000 unidades de UTF-16, cada un deles ocupa como moito 3000 bytes, así que os 100 pasos dun campo, no peor caso, pegando unha e outra vez un texto enteiro en vez doutro, ocupan uns 600 KB; escribindo, moito menos.
+- **`Kind`**, o tipo dunha edición, que di que se pode xuntar con ela:
+
+| Tipo | Que edición | Que se xunta con ela |
+|---|---|---|
+| `Typing` | Escribir, tamén enriba dunha selección. | O seguinte carácter escrito onde acabou. |
+| `Backspace` | Retroceso sen selección. | O seguinte Retroceso, xusto antes. |
+| `Delete` | Supr sen selección. | O seguinte Supr, no mesmo sitio. |
+| `Other` | Calquera outra: pegar, cortar, e borrar unha selección ou unha palabra. | Nada. |
+
+### `Edit` e `History`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct Edit {
+    pub at: usize,
+    pub removed: String,
+    pub inserted: String,
+    pub before: (usize, usize),
+    pub after: usize,
+    pub kind: Kind,
+}
+
+#[derive(Clone, Debug, Default)]
+pub(super) struct History {
+    done: VecDeque<Edit>,
+    undone: Vec<Edit>,
+    open: bool,
+}
+```
+
+**`Edit`**: unha edición. En `at`, o texto tiña `removed`, e agora ten `inserted`:
+
+| Campo | Que é |
+|---|---|
+| `at` | Onde empeza a edición: un desprazamento en bytes do texto. |
+| `removed` | O texto que quitou; baleiro se só puxo. |
+| `inserted` | O texto que puxo; baleiro se só quitou. |
+| `before` | O principio da selección e o cursor antes da edición, que volta pór desfacela. |
+| `after` | O cursor despois da edición, que volta pór refacela. |
+| `kind` | O seu tipo. |
+
+- Os campos son `pub` nun tipo `pub(super)`: lense desde `field`, que desfai e refai coas edicións.
+
+**`History`**: os pasos.
+
+| Campo | Que é |
+|---|---|
+| `done` | Os pasos feitos, que se poden desfacer: o máis vello primeiro. |
+| `undone` | Os desfeitos, que se poden refacer: o último desfeito, ao final. |
+| `open` | Se o último paso feito pode coller a seguinte edición. |
+
+- Cada paso é unha `Edit`: as edicións que se xuntan fan unha soa, máis longa.
+- `Default`: un historial baleiro, o dun campo novo. `Clone` e `Debug`, porque `Field` os deriva.
+
+### Gardar unha edición: `record` e `close`
+
+```rust
+pub fn record(&mut self, edit: Edit) {
+    self.undone.clear();
+    let open = edit.kind != Kind::Other;
+    if self.open
+        && let Some(last) = self.done.back_mut()
+        && join(last, &edit)
+    {
+        return;
+    }
+    if self.done.len() == STEPS {
+        self.done.pop_front();
+    }
+    self.done.push_back(edit);
+    self.open = open;
+}
+
+pub fn close(&mut self) {
+    self.open = false;
+}
+```
+
+**`record`** garda `edit`, xa feita no texto:
+
+1. Os pasos desfeitos xa non se poden refacer: unha edición nova esquéceos (`a_new_edit_forgets_the_steps_undone`).
+2. Se o último paso está aberto, e [`join`](#xuntar-dúas-edicións-join) pode xuntarlle `edit`, xa está: o paso medra.
+3. Se non, `edit` é un paso novo, ao final; se xa había 100, antes sae o máis vello (`pop_front`). O paso novo queda aberto se se lle pode xuntar algo: se non é `Other`.
+
+- `if self.open && let Some(last) = … && join(last, &edit)` encadea tres condicións (*let chains*, da edición 2024): `back_mut` dá o último paso para cambialo, e `join` só se chama se está aberto.
+
+**`close`**: a seguinte edición empeza outro paso. Chámaa [`select`](#seleccionar-select), con cada movemento do cursor ou da selección.
+
+### Os pasos desfeitos: `undo`, `redo` e `clear`
+
+```rust
+pub fn undo(&mut self) -> Option<&Edit> {
+    self.open = false;
+    let edit = self.done.pop_back()?;
+    self.undone.push(edit);
+    self.undone.last()
+}
+
+pub fn redo(&mut self) -> Option<&Edit> {
+    self.open = false;
+    let edit = self.undone.pop()?;
+    self.done.push_back(edit);
+    self.done.back()
+}
+
+pub fn clear(&mut self) {
+    *self = Self::default();
+}
+```
+
+- **`undo`** pecha o paso, colle o último feito, e pásao aos desfeitos; devolve unha referencia a el, para que o campo o desfaga no texto. Sen ningún, `None`: `?` volta antes.
+- **`redo`** pecha o paso, colle o último desfeito, e pásao outra vez aos feitos.
+- Os dous pechan o paso tamén se non había nada: escribir, Ctrl+Y sen nada que refacer, e escribir outra vez, son dous pasos (`undoing_and_redoing_close_the_last_step`). `redo` non mira o límite de 100: só volta pór o que `undo` quitou.
+- **`clear`** esquece todo: `Self::default()`, un historial novo, que solta a memoria dos pasos. Chámaa [`set_text`](#cambiar-o-texto-set_text-select_all-e-paste).
+
+### Xuntar dúas edicións: `join`
+
+```rust
+fn join(last: &mut Edit, next: &Edit) -> bool {
+    match (last.kind, next.kind) {
+        (Kind::Typing, Kind::Typing)
+            if next.removed.is_empty() && last.at + last.inserted.len() == next.at =>
+        {
+            last.inserted.push_str(&next.inserted);
+            last.after = next.after;
+        }
+        (Kind::Backspace, Kind::Backspace) if next.at + next.removed.len() == last.at => {
+            last.removed.insert_str(0, &next.removed);
+            last.at = next.at;
+            last.after = next.after;
+        }
+        (Kind::Delete, Kind::Delete) if next.at == last.at => {
+            last.removed.push_str(&next.removed);
+            last.after = next.after;
+        }
+        _ => return false,
+    }
+    true
+}
+```
+
+**`join`** xunta `next` ao paso `last`, se o continúa, e di se o fixo:
+
+| O paso | A edición seguinte | Xúntanse se | O paso queda |
+|---|---|---|---|
+| `Typing` | `Typing`, sen quitar nada | Empeza onde acaba o que puxo o paso: `last.at + last.inserted.len() == next.at`. | Co texto novo despois do que puxo. |
+| `Backspace` | `Backspace` | O que quita acaba onde empeza o paso: `next.at + next.removed.len() == last.at`. | Co texto que quita diante do que quitou, e empezando onde empeza a nova. |
+| `Delete` | `Delete` | No mesmo sitio: `next.at == last.at`. | Co texto que quita despois do que quitou. |
+| Calquera outro par | | Nunca. | |
+
+- O paso colle sempre o cursor de despois da nova (`after`), e mantén a selección de antes da primeira (`before`): desfacer un paso volta pór a selección de antes de todo el.
+- **Cando o cursor saltou** a outro grafema ([`replace`](#editar-replace-e-edited)), a edición seguinte xa non empeza onde tocaría, e non se xunta: empeza outro paso.
+- **Cada tipo, só co seu:** escribir e despois Retroceso son dous pasos, e Retroceso e despois Supr, tamén.
+- **A garda de `Typing`,** `next.removed.is_empty()`: escribir enriba dunha selección empeza un paso, e o que se escribe despois xúntase con el (`typing_over_a_selection_takes_the_next_characters`); pero un escrito que quita algo nunca continúa un paso, senón que empeza o seu. Desde o campo non chega ningún así, porque calquera selección pecha antes o paso; pero `History` ten as súas propias probas, que pasan pola garda, e esta mantén o que promete o historial por si só.
+
+**Probas.** Once, co historial só, sen campo. `edit(tipo, at, quitado, posto)` fai unha edición coa selección de antes en `at` e o cursor de despois ao final do que puxo; `steps` desfai todos os pasos e dáos, o último primeiro, coma (`at`, quitado, posto); e `step` escribe un.
+
+| Proba | Que comproba |
+|---|---|
+| `typing_in_a_row_is_one_step` | `o`, `l` e `á`, escritos seguidos, son un paso, `olá`. |
+| `typing_over_a_selection_takes_the_next_characters` | `x`, escrito enriba de `abc`, e `y` despois son un paso: quita `abc`, pon `xy`, volta pór a selección de antes, (0, 3), e deixa o cursor despois do `y`. |
+| `typing_somewhere_else_or_after_a_move_is_another_step` | Despois de `a`, `b` no mesmo sitio, e non onde acabou o `a`, é outro paso, e `c` xúntase con el; e `d`, despois de `close`, outro. |
+| `backspaces_in_a_row_are_one_step_and_deletes_another` | Tres Retrocesos seguidos, que quitan `f`, `e` e `d`, son un paso, `def`. Un Supr despois deles, outro; un Supr noutro sitio, outro, e un máis no mesmo sitio xúntase con el, `bx`; e un Retroceso despois dos Supr, outro. |
+| `a_backspace_that_does_not_end_where_the_last_one_started_is_another_step` | Dous Retrocesos que non se tocan, en 5 e en 2, son dous pasos. |
+| `other_edits_are_one_step_each_and_nothing_joins_them` | `a` escrito, `pasted` pegado (`Other`), `b` escrito onde acabou o pegado, e dous `Other` máis, borrar todo e poñer `x`, son cinco pasos: nada se xunta cun `Other`. |
+| `different_kinds_do_not_join` | Escribir e Retroceso, Retroceso e escribir, Supr e escribir, e escribir e Supr, no mesmo sitio, son dous pasos. |
+| `undone_steps_can_be_redone_until_another_edit` | Dous pasos desfanse do último ao primeiro, e despois non hai máis; refacer trae o primeiro; e unha edición nova esquece o segundo, que xa non se pode refacer. |
+| `undoing_and_redoing_close_the_last_step` | Despois de desfacer e refacer `ab`, `c` é outro paso; e despois dun `redo` sen nada que refacer, tamén. |
+| `only_the_last_100_steps_can_be_undone` | De 101 pasos, desfanse 100, e o primeiro xa non está. |
+| `clearing_forgets_everything` | Despois de `clear`, nin desfacer nin refacer dan nada, e o seguinte escrito non se xunta con ningún paso. |
+
+## `crates/meiga-core/src/ui/field/keys.rs`
+
+Desde a subfase 3.2: o que fan as teclas nun campo de texto, coma nos campos de texto de Chrome en Windows ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisións 2, 3, 4 e 7). O campo recibe os eventos enteiros da xanela, as teclas que baixan e as que soben ([`KeyEvent`](#keyevent)): a tecla virtual, o carácter que escribe, en UTF-16, as teclas modificadoras e cantas veces se repetiu ([ADR 0014](../adr/0014-o-teclado.md); [Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)). Así ve o mesmo ca o terminal: as teclas mortas, AltGr, os códigos de Alt, e o texto dun IME ou do panel de emoji, sen tecla. E responde cun [`Reply`](#reply-o-que-fixo-unha-tecla).
+
+| Teclas | O que fan |
+|---|---|
+| ← → | Moven o cursor un grafema; sen Maiús, unha selección vaise, e o cursor queda no seu bordo dese lado. |
+| Ctrl+← Ctrl+→ | Móveno ao principio da palabra anterior ou da seguinte. |
+| Inicio Fin | Ao principio ou ao final do texto. |
+| Maiús coas de enriba, Maiús+↑ Maiús+↓ | Seleccionan ata alí. |
+| Retroceso Supr | Borran a selección, ou o último punto de código antes do cursor, ou o grafema despois del. |
+| Ctrl+Retroceso Ctrl+Supr | Borran a selección, ou ata o principio da palabra anterior ou da seguinte. |
+| Ctrl+A | Selecciona todo. |
+| Ctrl+C Ctrl+Insert | Copian a selección. |
+| Ctrl+X Maiús+Supr | Cortan a selección. |
+| Ctrl+V Maiús+Insert | Pegan. |
+| Ctrl+Z Alt+Retroceso | Desfán. |
+| Ctrl+Y Ctrl+Maiús+Z Alt+Maiús+Retroceso | Refán. |
+
+O arquivo engádelle métodos a `Field`, nun bloque `impl` propio, e só `key` é público. Os privados, coma `command` ou `typed`, defínense en `field::keys`, e só os ve este módulo; eles, en cambio, usan os privados de `mod.rs`, coma `select`, `replace` ou `track`.
+
+```rust
+//! What the keys do in a text field, as in the text fields of Chrome on
+//! Windows (ADR 0030).
+//!
+//! | Keys | What they do |
+//! |---|---|
+//! | ← → | move the caret a cluster; without Shift, a selection goes away from its edge on that side |
+//! | Ctrl+← Ctrl+→ | move it to the start of the previous or the next word |
+//! | Home End | move it to the start or the end of the text |
+//! | Shift and the keys above, Shift+↑ Shift+↓ | select up to there |
+//! | Backspace Delete | delete the selection, or the last code point before the caret, or the cluster after it |
+//! | Ctrl+Backspace Ctrl+Delete | delete the selection, or up to the start of the previous or the next word |
+//! | Ctrl+A | select all |
+//! | Ctrl+C Ctrl+Insert | copy the selection |
+//! | Ctrl+X Shift+Delete | cut the selection |
+//! | Ctrl+V Shift+Insert | paste |
+//! | Ctrl+Z Alt+Backspace | undo |
+//! | Ctrl+Y Ctrl+Shift+Z Alt+Shift+Backspace | redo |
+//!
+//! The other keys write their characters, also with AltGr, or with Ctrl+Alt,
+//! which Windows takes as AltGr; with Alt alone, they write nothing, but Alt
+//! writes the character of the code typed with it on the numeric keypad,
+//! when it goes up. Control characters never go in. A key that the keyboard
+//! repeats faster than the window takes it comes once with the count of its
+//! repeats, and does its work that many times; but copying, cutting and
+//! pasting, once, because its user reads the clipboard once for each key.
+//! Enter, Esc, Tab, ↑, ↓ and the keys without a character do nothing: they
+//! are for the user of the field.
+
+use std::ops::Range;
+
+use super::history::Kind;
+use super::segment::{next_cluster, next_word, previous_cluster, previous_word};
+use super::{Field, Reply};
+use crate::input::{KeyEvent, own_character};
+```
+
+- O comentario do módulo ten a táboa de enriba e o resto: as outras teclas escriben os seus caracteres, tamén con AltGr, ou con Ctrl+Alt, que Windows toma coma AltGr; con Alt só non escriben nada, pero Alt escribe, ao subir, o carácter do código que se escribiu con el no teclado numérico; os caracteres de control nunca entran; unha tecla que o teclado repite máis rápido do que a colle a xanela chega unha vez coa conta das súas repeticións, e fai o seu traballo tantas veces, menos copiar, cortar e pegar, que se fan unha vez, porque quen usa o campo le o portapapeis unha vez por tecla; e Intro, Esc, Tab, ↑, ↓ e as teclas sen carácter non fan nada, que son de quen usa o campo.
+- `use crate::input::{KeyEvent, own_character};`: o evento, e a regra que di se o carácter dunha tecla é seu ([`own_character`](#os-axudantes-das-secuencias)), a mesma ca a do terminal, que desde a 3.2 é `pub(crate)` para o campo.
+
+### Os códigos das teclas
+
+```rust
+const VK_BACK: u16 = 0x08;
+const VK_MENU: u16 = 0x12;
+const VK_END: u16 = 0x23;
+const VK_HOME: u16 = 0x24;
+const VK_LEFT: u16 = 0x25;
+const VK_UP: u16 = 0x26;
+const VK_RIGHT: u16 = 0x27;
+const VK_DOWN: u16 = 0x28;
+const VK_INSERT: u16 = 0x2d;
+const VK_DELETE: u16 = 0x2e;
+const VK_A: u16 = 0x41;
+const VK_C: u16 = 0x43;
+const VK_V: u16 = 0x56;
+const VK_X: u16 = 0x58;
+const VK_Y: u16 = 0x59;
+const VK_Z: u16 = 0x5a;
+```
+
+Os códigos de tecla virtual de Windows (`VK_…`) das teclas que usa o campo: Retroceso, Alt (`VK_MENU`), Fin, Inicio, as frechas, Insert, Supr e as letras das ordes, cuxos códigos son os das súas maiúsculas en ASCII. `meiga-core` non depende de `windows-sys`: coma `input.rs`, que ten os seus nun módulo privado, `vk`, o campo define os seus. O comentario do primeiro vale para todos.
+
+### `key`: a entrada das teclas
+
+```rust
+pub fn key(&mut self, event: &KeyEvent) -> Reply {
+    if !event.down {
+        // Of the keys that go up, only Alt writes a character: the one
+        // of the code typed with it on the numeric keypad.
+        if event.key == VK_MENU && event.character != 0 {
+            return self.typed(event.character, 1);
+        }
+        return Reply::Ignored;
+    }
+    // A character that is not of its key goes in as a character: the
+    // one of a dead key that does not join with Backspace, Enter, Tab or
+    // Esc, which Windows writes with them. The key comes next, with its
+    // own character.
+    if event.character != 0 && !own_character(event.key, event.character) {
+        return self.typed(event.character, event.repeat);
+    }
+    let controls = event.controls;
+    // AltGr, which is Ctrl+Alt for Windows, writes characters, and has
+    // no commands.
+    if !(controls.ctrl() && controls.alt())
+        && let Some(reply) = self.command(event)
+    {
+        self.high_surrogate = None;
+        return reply;
+    }
+    // The characters with Alt alone are for the menus of the window;
+    // with Ctrl too, Windows takes Alt as AltGr.
+    if event.character == 0 || (controls.alt() && !controls.ctrl()) {
+        return Reply::Ignored;
+    }
+    self.typed(event.character, event.repeat)
+}
+```
+
+**`key`** atende unha tecla que baixou ou subiu mentres o campo ten o teclado. Paso a paso:
+
+1. **As teclas que soben** non fan nada, menos Alt cun carácter: o do código que se escribiu con el no teclado numérico, coma Alt+0241, que escribe `ñ` ao soltar Alt. Windows dálle ese carácter a Alt cando sobe, e as teclas do teclado numérico non escriben nada ([Código › meiga-win › `keyboard.rs`](meiga-win.md#cratesmeiga-winsrckeyboardrs)); co Alt abaixo, o campo non as colle (paso 4). O campo escribe o carácter que Windows lle dá a Alt ao subir tamén co Bloq Num desactivado, coma Chrome e o Bloc de notas; o terminal en VT, en cambio, só o envía co Bloq Num activado, coma o Windows Terminal ([`encode`](#keyencoder)). Na proba, Alt sobe sen o Bloq Num, e as teclas do código non fan nada nin co Bloq Num activado, coma o 0 e o 2 do teclado numérico, nin desactivado, cando chegan coma Insert, ↓, ← e Fin.
+2. **Un carácter que non é da súa tecla** entra coma un carácter ([`own_character`](#os-axudantes-das-secuencias)). Pasa cunha tecla morta que non se xunta con Retroceso, Intro, Tab ou Esc: Windows escribe o acento con esa tecla, e despois a tecla chega outra vez co seu carácter. Así, ´ e Retroceso escriben ´ e despois bórrano, e ´ e Intro escriben ´ e deixan Intro para quen usa o campo. E pasa cun carácter do teclado numérico que chega só, coa tecla do seu código de exploración, coma o 7 coa tecla Inicio. Vai antes das ordes: se non, Retroceso borraría en vez de escribir o acento.
+3. **As ordes, sen Ctrl+Alt.** Se a tecla é unha orde ([`command`](#as-ordes-command-e-repeat)), faina, e perde a primeira metade dun carácter que esperaba. Ctrl e Alt xuntos, de calquera lado, son AltGr para Windows, que escribe con eles os caracteres de AltGr, e non teñen ordes: AltGr+A escribe `æ` nalgunhas distribucións, e con Ctrl só seleccionaría todo. Windows dá AltGr coma o Ctrl esquerdo e o Alt dereito.
+4. **Sen carácter, ou con Alt sen Ctrl,** non fai nada: as teclas sen carácter, coma ↑ e ↓ sen Maiús, F2 ou Maiús soa, e os caracteres con Alt só, que son dos menús da xanela, coma Alt+A. Con Ctrl e Alt, en cambio, escríbense, coma no terminal en VT ([`push_vt_character`](#keyencoder)): Ctrl+Alt+E, co Ctrl e o Alt esquerdos, escribe `€` na distribución española, igual ca AltGr+E.
+5. **O resto escribe o seu carácter** ([`typed`](#os-caracteres-typed-e-type_character)), tantas veces coma se repetiu a tecla.
+
+- **Desde `a99de8c`.** Ata entón, o campo só tomaba por AltGr o Ctrl esquerdo co Alt dereito, as teclas exactas de AltGr ([`alt_gr`](#controlkeys)), e tiraba os caracteres dos outros Ctrl+Alt, coma se fosen de Alt só: Ctrl+Alt+E cos esquerdos, ou cos dereitos, non escribía nada. Atopouno a revisión independente do código, cunha proba que falla sen o arranxo, `ctrl_and_alt_together_write_characters_as_altgr`. O campo xa non usa `alt_gr`.
+
+| Evento | Resposta | O campo |
+|---|---|---|
+| A, con `a` | `Taken` | Escribe `a`. |
+| Ctrl+A, con `0x01` | `Taken` | Selecciona todo. Windows escribe con Ctrl e unha letra un carácter de control, que é da tecla. |
+| AltGr+E, con `€` | `Taken` | Escribe `€`. |
+| Ctrl+Alt+E, cos esquerdos, con `€` | `Taken` | Escribe `€`, coma AltGr. |
+| AltGr+←, sen carácter | `Ignored` | Nada: Ctrl+Alt non ten ordes. |
+| Alt+A, con `a` | `Ignored` | Nada: é dos menús da xanela. |
+| Intro, con CR | `Ignored` | Nada: o CR é un carácter de control. |
+| Retroceso con `´`, e despois Retroceso con BS | `Taken` e `Taken` | Escribe `´`, e despois bórrao. |
+| Intro con `´`, e despois Intro con CR | `Taken` e `Ignored` | Escribe `´`, e Intro queda para quen usa o campo. |
+| Inicio, con `7` | `Taken` | Escribe `7`. |
+| Alt, ao subir, con `ñ` | `Taken` | Escribe `ñ`. |
+| Sen tecla, coas dúas metades de `😀` | `Taken` e `Taken` | A primeira espera, e a segunda escribe `😀`. |
+
+### As ordes: `command` e `repeat`
+
+```rust
+fn command(&mut self, event: &KeyEvent) -> Option<Reply> {
+    let controls = event.controls;
+    let (ctrl, alt, shift) = (controls.ctrl(), controls.alt(), controls.shift());
+    let times = event.repeat;
+    let reply = match event.key {
+        VK_LEFT | VK_RIGHT if !alt => {
+            let right = event.key == VK_RIGHT;
+            self.repeat(times, |field| field.step(right, ctrl, shift))
+        }
+        VK_HOME | VK_END if !alt => {
+            self.go_to_end(event.key == VK_END, shift);
+            Reply::Taken
+        }
+        VK_UP | VK_DOWN if shift && !alt => {
+            self.go_to_end(event.key == VK_DOWN, true);
+            Reply::Taken
+        }
+        VK_BACK if alt && !ctrl => self.repeat(times, |field| field.undo_or_redo(shift)),
+        VK_BACK if !alt => self.repeat(times, |field| {
+            if ctrl {
+                field.delete_word(false)
+            } else {
+                field.backspace()
+            }
+        }),
+        VK_DELETE if !alt && ctrl => self.repeat(times, |field| field.delete_word(true)),
+        VK_DELETE if !alt && shift => self.cut(),
+        VK_DELETE if !alt => self.repeat(times, Self::delete_forward),
+        VK_INSERT if !alt && ctrl && !shift => self.copy(),
+        VK_INSERT if !alt && shift && !ctrl => Reply::Paste,
+        VK_A if ctrl && !alt => {
+            self.select_all();
+            Reply::Taken
+        }
+        VK_C if ctrl && !alt => self.copy(),
+        VK_X if ctrl && !alt => self.cut(),
+        VK_V if ctrl && !alt => Reply::Paste,
+        VK_Z if ctrl && !alt => self.repeat(times, |field| field.undo_or_redo(shift)),
+        VK_Y if ctrl && !alt => self.repeat(times, |field| field.undo_or_redo(true)),
+        _ => return None,
+    };
+    Some(reply)
+}
+
+fn repeat(&mut self, times: u16, mut action: impl FnMut(&mut Self) -> bool) -> Reply {
+    for _ in 0..times.max(1) {
+        if !action(self) {
+            break;
+        }
+    }
+    Reply::Taken
+}
+```
+
+**`command`**: o que fai `event`, unha tecla que baixa sen Ctrl+Alt, se é unha orde; se non, `None`. `ctrl`, `alt` e `shift` valen co Ctrl e o Alt de calquera lado:
+
+| Tecla | Con | Fai | Repítese |
+|---|---|---|---|
+| ← → | Sen Alt; con Ctrl, por palabras; con Maiús, seleccionando | [`step`](#mover-o-cursor-step-go_to_end-e-move_caret) | Si |
+| Inicio Fin | Sen Alt; con Maiús, seleccionando; Ctrl dá igual | [`go_to_end`](#mover-o-cursor-step-go_to_end-e-move_caret) | — |
+| ↑ ↓ | Maiús, sen Alt | `go_to_end`, seleccionando | — |
+| Retroceso | Alt, sen Ctrl; con Maiús, refai | [`undo_or_redo`](#o-portapapeis-e-desfacer-copy-cut-e-undo_or_redo) | Si |
+| Retroceso | Sen Alt; con Ctrl, por palabras; Maiús dá igual | [`delete_word`](#borrar-backspace-delete_forward-delete_word-e-delete) ou [`backspace`](#borrar-backspace-delete_forward-delete_word-e-delete) | Si |
+| Supr | Ctrl, sen Alt; Maiús dá igual | `delete_word`, cara a diante | Si |
+| Supr | Maiús, sen Ctrl nin Alt | [`cut`](#o-portapapeis-e-desfacer-copy-cut-e-undo_or_redo) | — |
+| Supr | Sen Ctrl, Maiús nin Alt | `delete_forward` | Si |
+| Insert | Ctrl, sen Maiús nin Alt | [`copy`](#o-portapapeis-e-desfacer-copy-cut-e-undo_or_redo) | — |
+| Insert | Maiús, sen Ctrl nin Alt | `Reply::Paste` | — |
+| A | Ctrl, sen Alt | [`select_all`](#cambiar-o-texto-set_text-select_all-e-paste) | — |
+| C | Ctrl, sen Alt | `copy` | — |
+| X | Ctrl, sen Alt | `cut` | — |
+| V | Ctrl, sen Alt | `Reply::Paste` | — |
+| Z | Ctrl, sen Alt; con Maiús, refai | `undo_or_redo` | Si |
+| Y | Ctrl, sen Alt | `undo_or_redo`, refacendo | Si |
+
+- **A orde dos casos conta.** Supr mira Ctrl antes ca Maiús: Ctrl+Maiús+Supr borra unha palabra, coma Ctrl+Supr. E non son ordes Ctrl+Maiús+Insert, Insert só, ↑ e ↓ sen Maiús, nin ningunha tecla con Alt que non sexa Retroceso.
+- **As letras, só con Ctrl.** Windows escribe con Ctrl e unha letra un carácter de control (Ctrl+A, `0x01`; Ctrl+C, `0x03`…), que é da tecla: a orde vai igual (`the_commands_work_with_the_characters_that_windows_gives_their_keys`). Sen Ctrl, ou só con Maiús, as letras escríbense (`the_letters_of_the_commands_write_themselves_without_ctrl`, desde `88dd960`).
+- `self.repeat(times, Self::delete_forward)` pasa o método coma unha función, `fn(&mut Self) -> bool`.
+
+**`repeat`** fai `action` `times` veces, ou unha se a conta é 0, mentres cambie algo: unha frecha no extremo, Retroceso ao principio ou desfacer sen máis pasos paran. Unha tecla que o teclado repite máis rápido do que a colle a xanela chega unha vez coa conta das súas repeticións, e fai así o seu traballo tantas veces coma se repetiu ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 7). Devolve sempre `Taken`. Copiar, cortar e pegar fanse unha vez, tamén cunha conta: quen usa o campo le o portapapeis unha vez por tecla, e `Reply::Paste` non leva conta. As outras ordes que non se repiten farían o mesmo unha ou moitas veces. Ata `50d2379`, o comentario do módulo non dicía que copiar, cortar e pegar se fan unha vez; atopouno o axente da documentación.
+
+### Os caracteres: `typed` e `type_character`
+
+```rust
+fn typed(&mut self, unit: u16, times: u16) -> Reply {
+    let character = match unit {
+        0xd800..=0xdbff => {
+            self.high_surrogate = Some(unit);
+            return Reply::Taken;
+        }
+        0xdc00..=0xdfff => match self.high_surrogate.take() {
+            Some(high) => char::decode_utf16([high, unit]).next().and_then(Result::ok),
+            None => return Reply::Taken,
+        },
+        _ => {
+            self.high_surrogate = None;
+            char::from_u32(u32::from(unit))
+        }
+    };
+    match character {
+        Some(character) if !character.is_control() => {
+            self.repeat(times, |field| field.type_character(character))
+        }
+        _ => Reply::Ignored,
+    }
+}
+
+fn type_character(&mut self, character: char) -> bool {
+    if character.len_utf16() > self.room() {
+        return false;
+    }
+    let mut buffer = [0; 4];
+    let text = &*character.encode_utf8(&mut buffer);
+    self.track(|field| field.replace(field.selection(), text, Kind::Typing));
+    true
+}
+```
+
+**`typed`**: unha unidade de UTF-16 dun carácter escrito `times` veces:
+
+| Unidade | Que fai |
+|---|---|
+| A primeira metade dun carácter de fóra do plano básico (de U+D800 a U+DBFF) | Gárdaa, e espera pola segunda. Unha primeira metade que xa esperaba pérdese. |
+| A segunda metade (de U+DC00 a U+DFFF) | Coa primeira gardada, `char::decode_utf16` xúntaas no carácter enteiro. Sen ela, pérdese. |
+| Outra | Unha primeira metade que esperaba pérdese, e `char::from_u32` dá o carácter. |
+
+- Un carácter de control, coma o CR de Intro, o HT de Tab, o ESC de Esc ou o `0x02` de Ctrl+B, non entra: `Ignored`, para quen usa o campo. Os outros escríbense con [`type_character`](#os-caracteres-typed-e-type_character), repetidos.
+- **As metades** chegan en dous eventos, coma os emoji do panel de emoji ou dun IME ([`KeyEvent`](#keyevent)). As dúas responden `Taken`, e só a segunda cambia o campo. Coma di o comentario desde `50d2379`, outra primeira metade, outro carácter ou unha orde (en `key`) ocupan o sitio da que espera, e unha segunda metade sen primeira pérdese. Unha tecla que o campo non colle e que non ten carácter, coma ↑ ou Maiús, déixaa esperando; `set_text`, en cambio, esquécea.
+
+**`type_character`** escribe `character` en vez da selección, se cabe ([`room`](#o-límite-room)): se non, non fai nada, e devolve `false`, e as repeticións paran. `encode_utf8` escribe o carácter nun *array* de 4 bytes, sen reservar memoria, e [`replace`](#editar-replace-e-edited) pono no texto, dentro de `track`, coma `Typing`: o escrito seguido, tamén enriba dunha selección, é un paso.
+
+### Mover o cursor: `step`, `go_to_end` e `move_caret`
+
+```rust
+fn step(&mut self, right: bool, word: bool, extend: bool) -> bool {
+    let selection = self.selection();
+    // Without Shift, a selection goes away, from its edge on that side.
+    let from = match (extend || selection.is_empty(), right) {
+        (true, _) => self.caret,
+        (false, true) => selection.end,
+        (false, false) => selection.start,
+    };
+    let text = &self.text;
+    let at = match (word, right) {
+        (true, true) => next_word(text, from),
+        (true, false) => previous_word(text, from),
+        _ if !extend && !selection.is_empty() => from,
+        (false, true) => next_cluster(text, from),
+        (false, false) => previous_cluster(text, from),
+    };
+    self.move_caret(at, extend)
+}
+
+fn go_to_end(&mut self, end: bool, extend: bool) {
+    let at = if end { self.text.len() } else { 0 };
+    self.move_caret(at, extend);
+}
+
+fn move_caret(&mut self, at: usize, extend: bool) -> bool {
+    let anchor = if extend { self.anchor } else { at };
+    self.select(anchor, at)
+}
+```
+
+**`step`**: ← ou →, por palabras con Ctrl (`word`), seleccionando con Maiús (`extend`):
+
+1. **Desde onde.** Con Maiús, ou sen selección, desde o cursor. Sen Maiús e cunha selección, desde o seu bordo do lado da frecha: o principio con ←, e o final con →.
+2. **Ata onde.** Con Ctrl, ao principio da palabra seguinte ou da anterior, desde alí ([`next_word` e `previous_word`](#as-palabras-next_word-previous_word-e-word_at)). Sen Ctrl, sen Maiús e cunha selección, ao mesmo bordo, e a selección vaise. E se non, ao grafema seguinte ou ao anterior ([`next_cluster` e `previous_cluster`](#onde-para-o-cursor-next_cluster-previous_cluster-e-is_stop)).
+3. [`move_caret`](#mover-o-cursor-step-go_to_end-e-move_caret) leva alí o cursor.
+
+| Antes | Tecla | Despois |
+|---|---|---|
+| `ab\|cd` | Maiús+→ dúas veces | `ab[cd\|]` |
+| `ab\|cd` | Maiús+→ e Maiús+← | `ab\|cd`: onde empezou, sen selección |
+| `a[bc\|]d` ou `a[\|bc]d` | ← | `a\|bcd` |
+| `a[bc\|]d` ou `a[\|bc]d` | → | `abc\|d` |
+| `[fo\|]o bar` | Ctrl+→ | `foo \|bar`: desde o final da selección |
+| `foo b[\|ar]` | Ctrl+← | `foo \|bar`: desde o principio |
+| `\|foo bar` | Ctrl+Maiús+→ | `[foo \|]bar` |
+
+**`go_to_end`**: Inicio ou Fin, seleccionando con Maiús. **`move_caret`** leva o cursor a `at`, e con el o principio da selección, se non se selecciona; se se selecciona, o principio queda onde estaba. [`select`](#seleccionar-select) pecha o paso se cambia algo, e di se cambiou.
+
+### Borrar: `backspace`, `delete_forward`, `delete_word` e `delete`
+
+```rust
+fn backspace(&mut self) -> bool {
+    let selection = self.selection();
+    if !selection.is_empty() {
+        return self.delete(selection, Kind::Other);
+    }
+    match self.text[..self.caret].chars().next_back() {
+        Some(last) => self.delete(self.caret - last.len_utf8()..self.caret, Kind::Backspace),
+        None => false,
+    }
+}
+
+fn delete_forward(&mut self) -> bool {
+    let selection = self.selection();
+    if !selection.is_empty() {
+        return self.delete(selection, Kind::Other);
+    }
+    let end = next_cluster(&self.text, self.caret);
+    self.delete(self.caret..end, Kind::Delete)
+}
+
+fn delete_word(&mut self, forward: bool) -> bool {
+    let selection = self.selection();
+    let range = if !selection.is_empty() {
+        selection
+    } else if forward {
+        self.caret..next_word(&self.text, self.caret)
+    } else {
+        previous_word(&self.text, self.caret)..self.caret
+    };
+    self.delete(range, Kind::Other)
+}
+
+fn delete(&mut self, range: Range<usize>, kind: Kind) -> bool {
+    if range.is_empty() {
+        return false;
+    }
+    self.track(|field| field.replace(range, "", kind));
+    true
+}
+```
+
+| Método | Tecla | Cunha selección | Sen selección | Tipo, sen selección |
+|---|---|---|---|---|
+| `backspace` | Retroceso | Bórraa. | O último punto de código antes do cursor. | `Backspace` |
+| `delete_forward` | Supr | Bórraa. | O grafema despois do cursor. | `Delete` |
+| `delete_word` | Ctrl+Retroceso e Ctrl+Supr | Bórraa. | Ata o principio da palabra anterior, ou da seguinte. | `Other` |
+
+- **Retroceso borra un punto de código, e Supr un grafema,** coma Chrome en Windows ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 2). `chars().next_back()` dá o último carácter antes do cursor, e `len_utf8`, os seus bytes. Así, un `é` escrito coma `e` e un acento perde só o acento, para corrixilo; un emoji, que é un punto de código, aínda que en UTF-16 vai en dúas metades, vaise enteiro; e unha familia de emoji perde o seu último membro, e despois o ZWJ que o unía.
+- **Cunha selección,** os tres bórrana nun paso propio (`Other`).
+- **O cursor despois de borrar** vai ao principio do grafema onde quedou ([`replace`](#editar-replace-e-edited)).
+- **Os pasos:** os Retrocesos seguidos son un paso, e os Supr seguidos, outro; borrar unha selección ou unha palabra, un paso cada vez (decisión 4).
+- **`delete`** borra `range` coma `kind`, e di se borrou algo: un rango baleiro, coma Retroceso ao principio ou Supr ao final, non fai nada, nin pecha o paso. Se non, `replace` co texto baleiro, dentro de `track`.
+
+### O portapapeis e desfacer: `copy`, `cut` e `undo_or_redo`
+
+```rust
+fn copy(&self) -> Reply {
+    match self.selected_text() {
+        "" => Reply::Taken,
+        selected => Reply::Copy(selected.to_owned()),
+    }
+}
+
+fn cut(&mut self) -> Reply {
+    let reply = self.copy();
+    self.delete(self.selection(), Kind::Other);
+    reply
+}
+
+fn undo_or_redo(&mut self, redo: bool) -> bool {
+    if redo {
+        self.track(Self::redo)
+    } else {
+        self.track(Self::undo)
+    }
+}
+```
+
+- **`copy`**, Ctrl+C e Ctrl+Insert: a selección vai ao portapapeis, coma `Reply::Copy`, que quen usa o campo escribe nel. Sen selección, `Taken`: non fai nada, e a tecla non lle chega a ninguén máis (decisión 7). `&self`: non cambia nada.
+- **`cut`**, Ctrl+X e Maiús+Supr: copia, e despois borra a selección, nun paso propio. Desfacelo trae o texto outra vez, seleccionado. Sen selección, nada.
+- **`undo_or_redo`**: desfai o último paso, ou, con `redo`, refai o último desfeito, dentro de `track`, e di se había un. `Self::undo` e `Self::redo` pásanse coma funcións.
+
+## `crates/meiga-core/src/ui/field/tests.rs`
+
+Desde a subfase 3.2: as cincuenta e cinco probas do campo, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `field` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve os seus campos e métodos privados, coma `anchor`, `scroll`, `undo` ou `redo`; os privados de `keys.rs`, non: as teclas próbanse a través de `key`, coma as recibirá o campo. As outras dezasete do campo están cos seus módulos: seis en [`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs) e once en [`history.rs`](#cratesmeiga-coresrcuifieldhistoryrs).
+
+```rust
+//! The tests of the text field, with its state written as text: `|` is the
+//! caret, and `[` and `]` the ends of the selection, as in `a[bc|]d`.
+
+use super::*;
+use crate::input::{ControlKeys, KeyEvent};
+```
+
+- **O estado coma texto.** Coma di o comentario do módulo, as probas escriben o estado do campo coma un texto: `|` é o cursor, e `[` e `]` os extremos da selección. `a[bc|]d` é `abcd` con `bc` seleccionado e o cursor despois do `c`; e `a[|bc]d`, o mesmo co cursor antes do `b`.
+- `use super::*;` trae todo o de `mod.rs`, tamén o privado e o que este importa, coma `CellChar`, `Side` ou `segment`; e o outro `use`, `ControlKeys` e `KeyEvent`, para facer as teclas.
+
+### As teclas das probas
+
+Os códigos de tecla virtual que usan as probas son os de `keys.rs` e outros: Tab, Intro, Maiús, Esc, RePáx (`VK_PRIOR`), B, D, E, Q, o 0, o 1, o 2 e o 4 do teclado numérico, F2 e `VK_PACKET` (`0xE7`), a tecla dos caracteres que outros programas escriben coma teclas, coma o panel de emoji. E as teclas modificadoras: `none`, ningunha; `ctrl`, o Ctrl esquerdo; `shift`; `alt`, o Alt esquerdo; `ctrl_shift` e `alt_shift`; e `alt_gr`, o Ctrl esquerdo e o Alt dereito, coma dá Windows AltGr.
+
+```rust
+fn event(key: u16, character: u16, controls: ControlKeys) -> KeyEvent {
+    KeyEvent {
+        key,
+        scan: 0,
+        character,
+        down: true,
+        controls,
+        repeat: 1,
+    }
+}
+
+fn unit(c: char) -> u16 {
+    let mut buffer = [0; 2];
+    c.encode_utf16(&mut buffer)[0]
+}
+
+fn halves(c: char) -> [u16; 2] {
+    let mut buffer = [0; 2];
+    c.encode_utf16(&mut buffer);
+    buffer
+}
+```
+
+- **`event`**: unha tecla que baixa, unha vez, sen código de exploración, que o campo non mira.
+- **`unit`**: a unidade de UTF-16 dun carácter do plano básico; e **`halves`**, as dúas metades dun de fóra.
+
+### O estado coma texto: `make_with`, `make`, `state` e `shown`
+
+```rust
+fn make_with(state: &str, limit: usize) -> Field {
+    let mut text = String::new();
+    let (mut caret, mut start, mut end) = (None, None, None);
+    for c in state.chars() {
+        match c {
+            '|' => caret = Some(text.len()),
+            '[' => start = Some(text.len()),
+            ']' => end = Some(text.len()),
+            c => text.push(c),
+        }
+    }
+    let mut field = Field::new(limit);
+    field.set_text(&text);
+    assert_eq!(field.text(), text, "{state:?} does not fit");
+    let caret = caret.unwrap_or(text.len());
+    field.anchor = match (start, end) {
+        (Some(start), Some(end)) if caret == start => end,
+        (Some(start), Some(_)) => start,
+        _ => caret,
+    };
+    field.caret = caret;
+    field.take_changes();
+    field
+}
+
+fn make(state: &str) -> Field {
+    make_with(state, 1000)
+}
+
+fn state(field: &Field) -> String {
+    let text = field.text();
+    let selection = field.selection();
+    let mut out = String::new();
+    let chars = text.char_indices().map(|(at, c)| (at, Some(c)));
+    for (at, c) in chars.chain([(text.len(), None)]) {
+        if !selection.is_empty() && at == selection.start {
+            out.push('[');
+        }
+        if at == field.caret() {
+            out.push('|');
+        }
+        if !selection.is_empty() && at == selection.end {
+            out.push(']');
+        }
+        out.extend(c);
+    }
+    out
+}
+
+fn shown(field: &Field) -> String {
+    let mut cells = Vec::new();
+    let Shown { caret, selection } = field.show(&mut cells);
+    let mut out = String::new();
+    for index in 0..=cells.len() {
+        if !selection.is_empty() && index == selection.start {
+            out.push('[');
+        }
+        if index == caret {
+            out.push('|');
+        }
+        if !selection.is_empty() && index == selection.end {
+            out.push(']');
+        }
+        match cells.get(index) {
+            Some(CellChar::Blank) => out.push(' '),
+            Some(CellChar::Narrow(c) | CellChar::WideLeft(c)) => out.push(*c),
+            Some(CellChar::WideRight(_)) | None => {}
+        }
+    }
+    out
+}
+```
+
+- **`make_with(estado, límite)`**: un campo cun límite, co texto, o cursor e a selección de `estado`. Quita as marcas, pon o texto con `set_text` e comproba que cabe; despois pon o cursor onde está o `|`, ou ao final, e o principio da selección no outro extremo, se hai `[` e `]`. Cambia os campos privados directamente, sen pasar por `select`, e colle os cambios: o campo empeza sen cambios, sen pasos e sen celas. **`make`**: o mesmo cun límite de 1000.
+- **`state`**: o estado do campo escrito igual, coma o len os seus métodos públicos: o texto, con `[` e `]` nos extremos da selección e `|` no cursor. Percorre o texto carácter a carácter, e despois o final.
+- **`shown`**: o que mostra o campo, escrito igual: as súas celas, unha en branco coma un espazo e unha ancha co seu carácter, unha vez; `|` antes da cela do cursor; e as celas seleccionadas entre `[` e `]`. A cela libre despois do texto non ten nada, así que `efgh|` é un campo que mostra `efgh` co cursor na cela seguinte.
+
+### As accións: `tap`, `type_text` e `after`
+
+```rust
+fn tap(field: &mut Field, key: u16, controls: ControlKeys) -> Reply {
+    field.key(&event(key, 0, controls))
+}
+
+fn type_text(field: &mut Field, text: &str) {
+    for unit in text.encode_utf16() {
+        field.key(&event(0, unit, none()));
+    }
+}
+
+fn after(start: &str, keys: &[(u16, ControlKeys)]) -> String {
+    let mut field = make(start);
+    for &(key, controls) in keys {
+        tap(&mut field, key, controls);
+    }
+    state(&field)
+}
+```
+
+- **`tap`**: preme `key` coas teclas modificadoras, sen carácter: as frechas, Supr ou Ctrl+Z, sen o carácter de control que lles daría Windows, que o campo non necesita.
+- **`type_text`**: escribe un texto coma un IME: cada unidade de UTF-16 nun evento sen tecla virtual, e as dúas metades dun emoji en dous.
+- **`after`**: o estado dun campo despois dunhas teclas, para comparalo nunha liña, coma `after("ab|cd", &[(VK_HOME, shift())])`, que dá `[|ab]cd`.
+
+### As probas, unha a unha
+
+| Proba | Que comproba |
+|---|---|
+| `a_new_field_is_empty_and_shows_nothing_until_it_has_cells` | Un campo novo, cun límite de 10: sen texto, co cursor en 0, sen selección, sen celas e sen cambios. |
+| `typing_writes_at_the_caret_and_replaces_the_selection` | A tecla X con `x` escribe no cursor e responde `Taken`; e `xy`, escrito cunha selección de `bc` cara a diante ou cara atrás, cámbiaa: `axy\|d`. |
+| `the_letters_of_the_commands_write_themselves_without_ctrl` | Desde `88dd960`. A, C, V, X, Y e Z, soas e con Maiús, escriben as súas letras, `aAcCvVxXyYzZ`, e responden `Taken`: só son ordes con Ctrl. Colle sete mutantes que antes sobrevivían. |
+| `altgr_writes_characters_and_alt_alone_does_not` | AltGr+E escribe `€`, e AltGr+A, `æ`, en vez de seleccionar todo; Alt+A é `Ignored`; e AltGr+A e AltGr+← sen carácter non fan nada, nin unha orde. |
+| `ctrl_and_alt_together_write_characters_as_altgr` | Desde `a99de8c`. Ctrl+Alt+E, co Ctrl e o Alt esquerdos, escribe `€`, coma na distribución española, e Ctrl+Alt+Q, cos dereitos, `@`, coma na alemá; e sen carácter, A e ← con eles non fan nada, nin unha orde. Co código de antes, que tiraba eses caracteres, falla. |
+| `alt_writes_the_character_of_its_code_when_it_goes_up` | Alt+0241: as teclas do código, o 0, o 2, o 4 e o 1 do teclado numérico e, co Bloq Num desactivado, Insert, ↓, ← e Fin, todas con Alt, son `Ignored`; Alt, ao subir con `ñ`, escribe `ñ`. Outra tecla que sobe co seu carácter, e Alt ao subir sen ningún, non escriben nada. |
+| `control_characters_never_go_in` | Intro (CR), Ctrl+Intro (LF), Esc, Tab, Ctrl+B (`0x02`), DEL, NEL e o CSI de C1 (`0x9B`) son `Ignored`, e non cambian nada. |
+| `characters_outside_the_basic_multilingual_plane_come_in_two_halves` | `😀` en dúas metades: a primeira non cambia nada, e a segunda escríbeo. Unha segunda metade soa pérdese; e unha primeira seguida doutro carácter, ou dunha orde, coma ←, tamén. |
+| `characters_without_a_key_go_in_as_the_ones_of_an_ime_or_the_emoji_panel` | `中文`, sen tecla, coma dun IME, e `👍` en dúas metades coa tecla `VK_PACKET`, coma do panel de emoji, escríbense. |
+| `a_dead_key_that_does_not_join_writes_its_accent_before_the_key` | Retroceso con `´` escribe `´`, e despois Retroceso co seu BS bórrao; Intro, Esc e Tab con `´` escriben `´`, e despois, co seu carácter, son `Ignored`. E un `7` do teclado numérico que chega coa tecla Inicio escríbese. |
+| `a_key_that_repeats_does_its_work_once_per_repeat` | A tecla A repetida tres veces escribe `aaa`; ← dúas veces move o cursor dous grafemas; Retroceso cinco veces borra só o `a` que había antes do cursor; Ctrl+Z dúas veces desfai os dous pasos; Ctrl+Y dúas veces refaios; e Supr cunha conta de 0, que Windows nunca dá, borra unha vez. |
+| `an_accent_typed_after_a_letter_joins_it` | Un acento combinado escrito despois dun `e` xúntase con el: o cursor queda despois do `é`, e ← vai antes del. |
+| `what_joins_the_text_after_it_leaves_the_caret_after_the_whole_cluster` | 🇫 escrito antes de 🇪🇸 fai unha bandeira co 🇪: o cursor queda despois dela, `🇫🇪\|🇸`. |
+| `a_character_that_does_not_fit_is_not_typed` | Cun límite de 3, `d` despois de `abc` non se escribe, sen cambios, pero a tecla responde `Taken`; en vez dunha selección, cabe; e despois de `ab`, `😀`, de dúas unidades, non cabe, e `ñ`, dunha, si. |
+| `set_text_puts_a_single_line_cut_to_the_limit` | `set_text` cun tabulador, un CR LF e un BEL deixa `a b c`, cos dous cambios; os espazos dos extremos quedan; cun límite de 3, `ab` e un `é` co acento combinado, e `ab👍`, quedan en `ab`, en grafemas enteiros; e o mesmo texto outra vez, co cursor xa ao final, non é un cambio. |
+| `set_text_forgets_the_steps_to_undo` | Despois de escribir `abc` e de `set_text("xyz")`, Ctrl+Z non fai nada. |
+| `set_text_forgets_half_a_character_and_what_a_button_held_down_selects` | Desde `50d2379`. A primeira metade dun `😀`, `set_text("cd")` e a segunda metade: a segunda non se xunta coa primeira, e o texto queda `cd`. E un clic, `set_text("efgh")` co botón aínda abaixo, e un arrastre: o arrastre non selecciona nada. |
+| `the_arrows_move_the_caret_one_cluster` | En `a`, unha familia de emoji, `é` cun acento combinado e `中`, → para nos bytes 1, 19, 22 e 25, e queda alí; e ← en 22, 19, 1 e 0. |
+| `ctrl_and_the_arrows_move_by_words_and_home_and_end_to_the_ends` | En `foo bar.rs`, Ctrl+→ para antes de `bar` e de `.`; Ctrl+← antes de `rs` e, despois de tres veces, de `bar`; e Inicio e Fin, con e sen Ctrl, van aos extremos. |
+| `shift_selects_from_where_the_selection_started` | Maiús coas frechas, Inicio, Fin, ↑ e ↓, e Ctrl+Maiús con Inicio e coas frechas, seleccionan desde onde empezou a selección; e voltar alí deixa o campo sen selección. |
+| `without_shift_the_arrows_end_a_selection_at_its_edge` | Cunha selección cara a diante ou cara atrás, ← e → levan o cursor ao seu bordo dese lado, e Inicio e Fin, aos extremos; e Ctrl+→ e Ctrl+← saltan desde o bordo. |
+| `the_keys_of_the_user_of_the_field_change_nothing` | ↑, ↓, RePáx, F2, Maiús soa, Alt+←, Alt+→, Alt+Inicio, Alt+Maiús+↑, Insert, Ctrl+Maiús+Insert, Alt+Supr, Ctrl+Alt+Retroceso e Alt+Z son `Ignored`, sen cambios. |
+| `backspace_deletes_the_last_code_point_and_delete_the_next_cluster` | Retroceso despois dun `é` escrito coma `e` e un acento borra só o acento; despois de `b`, o `b`; ao principio, nada; despois de `😀`, o emoji enteiro; e despois dunha familia de dous, o segundo membro, e queda o ZWJ. Supr antes do `é` borra o grafema enteiro; antes da familia, toda; e ao final, nada. |
+| `after_deleting_the_caret_goes_to_the_start_of_the_cluster_that_it_is_in` | Retroceso en `🇪🇸\|🇫🇷` deixa `\|🇪🇫🇷`, e Supr en `🇪\|x🇸`, `\|🇪🇸`: o cursor vai ao principio da bandeira nova. |
+| `backspace_and_delete_delete_the_selection_also_with_ctrl` | Retroceso e Supr, con e sen Ctrl, borran unha selección cara a diante ou cara atrás. |
+| `ctrl_backspace_and_ctrl_delete_delete_up_to_the_start_of_a_word` | Ctrl+Retroceso en `foo bar\|` deixa `foo \|`, e outra vez, nada; Ctrl+Supr en `\|foo bar` deixa `\|bar`; Ctrl+Retroceso en `main.r\|s`, `main.\|s`, e dous en `C:\Users\x\|`, `C:\Users\|`; nun campo baleiro, nada; e con Maiús, igual. |
+| `ctrl_c_and_ctrl_insert_copy_the_selection` | Ctrl+C, Ctrl+Maiús+C e Ctrl+Insert dan `Copy("bc")`, sen cambiar nada; e sen selección, `Taken`. |
+| `ctrl_x_and_shift_delete_cut_the_selection` | Ctrl+X, Ctrl+Maiús+X e Maiús+Supr dan `Copy("bc")` e bórrano; Ctrl+Z tráeo outra vez, seleccionado; e sen selección, `Taken`, sen cambios. |
+| `ctrl_v_and_shift_insert_ask_for_the_clipboard` | Ctrl+V, Ctrl+Maiús+V e Maiús+Insert dan `Paste`, sen cambiar nada. |
+| `the_commands_work_with_the_characters_that_windows_gives_their_keys` | As ordes cos caracteres que lles dá Windows: Ctrl+Retroceso con DEL, Retroceso con BS, e Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+Z e Ctrl+Y cos seus caracteres de control. |
+| `undoing_goes_back_a_step_and_redoing_forward` | Despois de escribir `foo`, ← e `x`: Ctrl+Z desfai o `x`, Alt+Retroceso o `foo`, e outro Ctrl+Z non fai nada, pero responde `Taken`; Ctrl+Y refai `foo`, Ctrl+Maiús+Z o `x`, e Alt+Maiús+Retroceso, xa sen nada que refacer, nada; e despois dun Ctrl+Z, Alt+Maiús+Retroceso refai o `x`. |
+| `undoing_typing_over_a_selection_brings_the_selection_back` | `xy` escrito enriba de `bc`: Ctrl+Z trae `bc` seleccionado, e Ctrl+Y, `xy` outra vez. |
+| `backspaces_in_a_row_and_deletes_in_a_row_are_a_step_each` | Dous Retrocesos e dous Supr seguidos son dous pasos; e cada palabra borrada con Ctrl+Retroceso, un. |
+| `a_paste_is_a_step_of_its_own` | `c` escrito, `de` pegado e `f` escrito son tres pasos. |
+| `a_new_edit_forgets_the_steps_undone` | Despois de desfacer `a`, escribir `b` esquéceo: Ctrl+Y xa non o trae. |
+| `a_paste_becomes_a_single_line` | Os sete primeiros textos da táboa de [`paste`](#cambiar-o-texto-set_text-select_all-e-paste), pegados entre `<` e `>`. |
+| `a_paste_of_only_whitespace_is_a_space_and_of_nothing_nothing` | Uns espazos, un CR LF e un tabulador pegan un espazo en vez da selección; e un texto baleiro, ou só con BEL, ESC e NUL, non pega nada nin cambia nada. |
+| `a_paste_puts_what_fits_in_whole_clusters` | Cun límite de 5 e `ab`, de `cd👍🏽e` só entra `cd`: o 👍🏽, de catro unidades, non cabe. En vez dunha selección de `ab`, cun límite de 6, entra `cd👍🏽`. E se non cabe nada, nin un emoji nin un espazo, nada cambia: tampouco a selección. |
+| `a_click_puts_the_caret_on_the_nearest_side_of_the_cell` | Os clics da táboa de [`stop_at`](#do-rato-ao-texto-stop_at-word_under-e-cell_of), en `a中b`, sen selección. |
+| `a_click_with_shift_moves_the_end_of_the_selection` | Maiús e un clic moven o cursor e deixan o principio da selección onde estaba, cara a diante e cara atrás. |
+| `dragging_selects_from_where_the_button_went_down` | Un clic e un arrastre seleccionan desde onde baixou o botón, cara a diante e cara atrás; e un arrastre sen botón, nada. |
+| `a_double_click_selects_a_word_and_dragging_whole_words` | En `foo  bar.rs baz`, o dobre clic selecciona `foo`, os dous espazos, o `.` e, despois do final, `baz`. E arrastrar despois dun dobre clic en `bar` selecciona palabras enteiras: ata `rs`; cara atrás, ata `foo`, co `bar` enteiro; e outra vez só `bar`. |
+| `a_triple_click_selects_everything_and_dragging_keeps_it` | O triplo clic selecciona todo, e arrastrar non o cambia. |
+| `a_double_click_without_text_selects_nothing` | Nun campo baleiro, ou só cun espazo de ancho cero, o dobre clic e o arrastre non seleccionan nada. |
+| `a_change_of_the_text_ends_what_the_button_held_down_selects` | Despois dun dobre clic en `bar`, co botón abaixo, escribir `x` remata o arrastre: arrastrar xa non selecciona. E igual desfacendo e refacendo. É a proba do fallo que atopou a proba ao chou ([`edited`](#editar-replace-e-edited)). |
+| `a_click_somewhere_else_ends_the_step_of_the_typing` | Un clic onde está o cursor non pecha o paso, e `c` xúntase con `ab`; dous clics que van a outro sitio e voltan pechan o paso, e `d` é outro. |
+| `a_text_that_does_not_fit_shows_the_part_with_the_caret` | A táboa de [`follow_caret`](#seguir-o-cursor-track-e-follow_caret): escribir `abcdefgh` nun campo de cinco celas, e despois Inicio, Fin e ←. |
+| `a_shorter_text_brings_back_the_part_that_the_field_shows` | En cinco celas, `abcdefgh` co cursor ao final mostra `efgh`; despois de Retroceso, `defg`; despois de borrar dúas letras seleccionadas, `bcde`; e despois de borralo todo, nada. |
+| `the_field_never_shows_half_a_wide_character` | `a中中` co cursor ao final, en catro celas, mostra só `中`; e `ab中` co cursor ao principio, en tres, `ab` e unha cela en branco. |
+| `the_selection_shows_in_the_cells_that_the_field_shows` | En tres celas, Maiús+Inicio desde o final de `abcdef` mostra `abc` seleccionado; e Ctrl+A, `ef` seleccionado e o cursor despois. |
+| `clusters_without_width_take_no_cell` | Un espazo de ancho cero non ocupa cela: o campo mostra o cursor xusto antes do `x`. |
+| `a_field_without_cells_shows_nothing` | Despois de pasar a 0 celas, `show` baleira o vector e dá un `Shown` por defecto. |
+| `dragging_out_of_the_field_shows_more_on_that_side` | En cinco celas, arrastrar desde o principio á cela 7 mostra `defgh`, con `defg` seleccionado, e á 9, `efgh` seleccionado e o cursor na cela libre; e cara atrás, desde o final, ás celas −2 e −5, `cdefg`, con `cdef` seleccionado, e `abcde`, todo seleccionado. |
+| `the_changes_say_what_changed` | Escribir cambia o texto e o que se mostra; coller os cambios esquéceos; ← só cambia o que se mostra; unha frecha no extremo do texto, nada; desde `b96fa25`, dúas celas nun campo que non tiña ningunha cambian o que se mostra, e as mesmas outra vez, nada; e, desde `a99de8c`, escribir `a` enriba dun `a` seleccionado, e desfacelo, cambian o que se mostra, pero non o texto. Ata `b96fa25`, comprobaba o contrario coas celas: que esas dúas non eran un cambio, porque a primeira cela que se vía seguía sendo a mesma. |
+| `random_edits_keep_the_field_whole_and_undo_to_the_start` | 300 series de 45 accións ao chou, e o que o campo sempre mantén despois de cada unha ([máis abaixo](#a-proba-ao-chou-random_edits_keep_the_field_whole_and_undo_to_the_start)). |
+
+### A proba ao chou: `random_edits_keep_the_field_whole_and_undo_to_the_start`
+
+```rust
+struct Random(u64);
+
+impl Random {
+    fn below(&mut self, n: usize) -> usize {
+        let mut x = self.0;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        self.0 = x;
+        (x % n as u64) as usize
+    }
+}
+
+const PIECES: [&str; 18] = [
+    "a", "Z", "7", "_", " ", ".", "\\", "é", "e\u{301}", "\u{301}", "中", "😀", "👍🏽", "🇪", "🇸",
+    "\u{200d}", "\u{200b}", "ñ",
+];
+
+const KEYS: [u16; 16] = [
+    VK_LEFT, VK_RIGHT, VK_HOME, VK_END, VK_UP, VK_DOWN, VK_BACK, VK_DELETE, VK_INSERT, VK_A, VK_C,
+    VK_V, VK_X, VK_Y, VK_Z, VK_RETURN,
+];
+```
+
+- **`Random`**: un xerador de números pseudoaleatorios *xorshift64*, coma nas probas do modelo, de `damage.rs` e do escáner: cada semente dá sempre a mesma secuencia, así que, se a proba falla, falla sempre igual. `below(n)` dá un número de 0 a `n − 1`.
+- **`PIECES`**: o que escriben as edicións ao chou: dúas letras, un número, `_`, un espazo, dous signos, `é` composto e escrito coma `e` e un acento, un acento só, un ideograma, dous emoji, un deles cun ton de pel, dous indicadores rexionais, o ZWJ, o espazo de ancho cero e `ñ`. Así se xuntan e se parten grafemas en todos os sitios.
+- **`KEYS`**: as teclas que preme: as frechas, Inicio, Fin, Retroceso, Supr, Insert, as letras das ordes e Intro.
+
+```rust
+fn check(field: &mut Field, before: &(String, usize, usize, usize, usize), context: &str) {
+    let text = field.text().to_owned();
+    for at in [field.anchor, field.caret] {
+        assert!(
+            text.is_char_boundary(at) && segment::is_stop(&text, at),
+            "{context}: {at} in {text:?}"
+        );
+    }
+    assert!(units(&text) <= field.limit(), "{context}: {text:?}");
+    assert!(!text.chars().any(char::is_control), "{context}: {text:?}");
+    let mut cells = Vec::new();
+    let shown = field.show(&mut cells);
+    assert!(cells.len() <= field.columns, "{context}: {cells:?}");
+    assert!(shown.caret <= cells.len(), "{context}: {shown:?} {cells:?}");
+    if field.columns > 0 {
+        // The caret is in sight: `show` puts it in the cells anyway.
+        let caret = text::width(&text[..field.caret]);
+        assert!(
+            (field.scroll..field.scroll + field.columns).contains(&caret),
+            "{context}: the caret on the cell {caret}, and the field from {}",
+            field.scroll
+        );
+        assert!(shown.caret < field.columns, "{context}: {shown:?}");
+        assert!(
+            !matches!(cells.first(), Some(CellChar::WideRight(_))),
+            "{context}: {cells:?}"
+        );
+    }
+    let selection = &shown.selection;
+    assert!(
+        selection.start <= selection.end && selection.end <= cells.len(),
+        "{context}: {shown:?} {cells:?}"
+    );
+    let changes = field.take_changes();
+    // An action can make more than one edit, and the last one can give back
+    // the text that there was: only what changed in the end must be told.
+    if text != before.0 {
+        assert!(changes.text, "{context}: {changes:?}");
+    }
+    if (text, field.anchor, field.caret, field.scroll, field.columns) != *before {
+        assert!(changes.shown, "{context}: {changes:?}");
+    }
+}
+```
+
+**`check`** comproba, despois de cada acción, o que o campo sempre mantén:
+
+1. O cursor e o principio da selección están no límite dun carácter, e nun sitio onde para o cursor.
+2. O texto ten como moito o límite de unidades de UTF-16, e ningún carácter de control.
+3. `show` dá como moito tantas celas coma ten o campo, e o cursor nunha delas ou xusto despois da última. Con celas, o cursor vese: a súa cela no texto, `text::width(&text[..field.caret])`, está entre a primeira que se ve, `scroll`, e a última, `scroll + columns − 1`; a cela que dá `show` é unha das do campo; e a primeira nunca é a metade dereita dun carácter ancho. A selección está dentro das celas.
+4. Se o texto é outro ao final, `Changes::text`; e se o texto, o principio da selección, o cursor, a primeira cela que se ve ou, desde `b96fa25`, o número de celas son outros, `Changes::shown`.
+
+- **O cursor á vista, desde `50d2379`.** Ata entón, a proba só miraba a cela do cursor que dá `show`, que, coma di o comentario, mete o cursor nas celas que se ven igual: un cursor á esquerda da parte que se ve daba a cela 0, e pasaba. Agora mide a súa cela no texto. Atopouno o axente da documentación.
+- **Non comproba o contrario,** que un cambio anotado sexa un cambio ao final, coma di o seu comentario: unha acción pode facer máis dunha edición, e a última pode devolver o texto que había. Escribir `👍🏽` enriba dun `👍🏽` seleccionado son dúas edicións: o `👍` cambia o texto, e o ton de pel volta deixalo coma estaba. O texto cambiou polo medio, e `Changes::text` dío, aínda que ao final sexa o mesmo.
+
+```rust
+#[test]
+fn random_edits_keep_the_field_whole_and_undo_to_the_start() {
+    let controls = [none(), shift(), ctrl(), ctrl_shift(), alt(), alt_shift()];
+    let sides = [Side::Left, Side::Right];
+    for seed in 1..=300_u64 {
+        let mut random = Random(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15));
+        let mut field = Field::new(4 + random.below(12));
+        let mut clipboard = String::new();
+        // At most two edits each, which are fewer than the steps that can be
+        // undone.
+        for step in 0..45 {
+            let before = (
+                field.text.clone(),
+                field.anchor,
+                field.caret,
+                field.scroll,
+                field.columns,
+            );
+            let action = random.below(10);
+            match action {
+                0..=3 => type_text(&mut field, PIECES[random.below(PIECES.len())]),
+                4..=6 => {
+                    let key = KEYS[random.below(KEYS.len())];
+                    match tap(&mut field, key, controls[random.below(controls.len())]) {
+                        Reply::Copy(text) => clipboard = text,
+                        Reply::Paste => field.paste(&clipboard),
+                        Reply::Ignored | Reply::Taken => {}
+                    }
+                }
+                7 => {
+                    let clicks = 1 + random.below(3) as u8;
+                    let side = sides[random.below(2)];
+                    field.press(random.below(14), side, clicks, random.below(2) == 1);
+                }
+                8 => field.drag(random.below(20) as isize - 4, sides[random.below(2)]),
+                _ => field.set_columns(random.below(12)),
+            }
+            check(
+                &mut field,
+                &before,
+                &format!("seed {seed}, step {step}, action {action}"),
+            );
+        }
+        // Redoing what was undone, and then undoing and redoing everything,
+        // goes from the last text to the empty one and back.
+        while field.redo() {}
+        let last = field.text.clone();
+        while field.undo() {}
+        assert_eq!(field.text(), "", "seed {seed}");
+        while field.redo() {}
+        assert_eq!(field.text, last, "seed {seed}");
+    }
+}
+```
+
+**A proba** fai 300 series de 45 accións, cada unha cun campo novo cun límite ao chou, de 4 a 15 unidades, para que o límite se alcance a miúdo. A semente multiplícase por `0x9e37_79b9_7f4a_7c15`, a razón áurea en 64 bits, para que as 300 secuencias empecen ben distintas, e ningunha é 0, coa que *xorshift* só daría ceros.
+
+| Acción | Cantas veces | Que fai |
+|---|---|---|
+| Escribir | 4 de 10 | Unha peza de `PIECES`. |
+| Unha tecla | 3 de 10 | Unha de `KEYS`, soa, con Maiús, Ctrl, Ctrl+Maiús, Alt ou Alt+Maiús. Se copia ou corta, o texto vai a un portapapeis da proba; e se pide pegar, pega o que ten. |
+| Un clic | 1 de 10 | Simple, dobre ou triplo, con Maiús ou sen ela, nun lado dunha das celas da 0 á 13, que poden estar fóra do campo. |
+| Arrastrar | 1 de 10 | Ata unha cela da −4 á 15, tamén fóra do campo, polos dous lados. |
+| Outras celas | 1 de 10 | De 0 a 11. |
+
+- Despois de cada acción, `check`, cun contexto que di a semente, o paso e a acción, para repetir un fallo.
+- **Ao final, desfacer todo volta ao principio.** Refai o que quedou desfeito, e garda o texto; desfai todos os pasos, e o texto ten que ser o baleiro, o do campo novo; e refaios todos, e ten que ser outra vez o último. Cada acción fai como moito dúas edicións, coma di o comentario, así que as 45 fan como moito 90, menos ca os 100 pasos: ningún se perde. Así comproba que os sitios e os textos de todos os pasos, xuntos ou non, encaixan uns cos outros.
+- **Atopou un fallo** mentres se escribía o campo: o arrastre por palabras despois dun dobre clic seguía coa palabra do texto de antes ([`edited`](#editar-replace-e-edited)).
+
+**Como se comproba.** Só coas probas, a cobertura das liñas de `history.rs`, `keys.rs`, `segment.rs` e `mod.rs` é do 100 %: a primeira medida atopou en `replace` unha garda á que non chegaba ningunha chamada, e quitouse (`67295da`) ([Tecnoloxías › A cobertura e os mutantes](../tecnoloxias.md#64-a-cobertura-e-os-mutantes)). `cargo mutants --in-diff`, co *diff* da 3.2, fixo 323 mutantes: 252, collidos polas probas; 22, que fan que as probas non rematen, cun bucle sen fin ao camiñar polos grafemas ou polas palabras (*timeout*); 41, que non compilan (*unviable*); e 8, que sobrevivían (*missed*). Un mutante que sobrevivía, `<` por `<=` en `follow_caret`, era equivalente, e `follow_caret` usa agora un `clamp`, sen esa comparación (`cc18533`). Outros sete sobrevivían no mapa das teclas: coas gardas de C, V e Y sempre certas, ou con `||` en vez de `&&` nas de C, V, Y e Z, as letras soas copiaban, pegaban, desfacían ou refacían, e ningunha proba o vía, porque ningunha escribía esas letras coas súas teclas; `the_letters_of_the_commands_write_themselves_without_ctrl` (`88dd960`) cólleos os sete. E o exemplo de consola probouse enteiro a través dun ConPTY, con teclas enteiras ([Código › meiga-win › `examples/field.rs`](meiga-win.md#cratesmeiga-winexamplesfieldrs)); documentándoo, atopouse que outro número de celas non era un cambio ([`set_columns`](#os-cambios-e-as-celas-take_changes-e-set_columns), `b96fa25`). Despois, a revisión independente do código atopou dous fallos máis, arranxados en `a99de8c`, cadanseu cunha proba que falla sen o arranxo: o campo tiraba os caracteres de Ctrl+Alt que non eran do AltGr exacto ([`key`](#key-a-entrada-das-teclas)), e unha edición que deixaba o mesmo texto era un cambio do texto ([`edited`](#editar-replace-e-edited)). E, documentando o código, o axente da documentación atopou o resto do que arranxou `50d2379`: a proba ao chou non vía un cursor fóra da vista ([`check`](#a-proba-ao-chou-random_edits_keep_the_field_whole_and_undo_to_the_start)); ningunha proba comprobaba que `set_text` esquece a metade dun carácter e o arrastre; `show` miraba unha condición que sempre se cumpría, e `follow_caret` movía sen celas unha parte do texto que nada podía ver; e algúns comentarios dicían menos ca o código. Despois de cada arranxo, outra vez os mutantes das funcións que cambiaron: os 74 de `command` e `follow_caret`, collidos todos; os 26 de `key`, `edited`, `replace`, `undo`, `redo` e `track`, 25 collidos e un que non compila; e os 12 de `show`, `follow_caret` e `set_text`, collidos todos.
 
 ## `crates/meiga-core/tests/recordings.rs`
 

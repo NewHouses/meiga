@@ -88,6 +88,13 @@ Another console example of `meiga-core` tries the logic of the tabs by hand. Typ
 cargo run -p meiga-core --example tabs
 ```
 
+The console example `field` of `meiga-win` tries the text field that the names of the tabs will use, with the keys of your keyboard and the clipboard of Windows: type, select with Shift, move by words with Ctrl, copy, cut, paste and undo. A line under the field tells what each key did. Enter shows the text, and Esc ends; F5 pastes too, because the terminal where it runs keeps keys such as Ctrl+V and Shift+Insert for itself:
+
+```powershell
+cargo run -p meiga-win --example field
+cargo run -p meiga-win --example field -- --columns 12 --limit 30 meiga
+```
+
 The latest build of each pull request can be downloaded from the artifacts of its CI run.
 
 ## Running

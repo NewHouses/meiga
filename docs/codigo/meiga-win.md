@@ -1,6 +1,6 @@
 # Código › `meiga-win`
 
-> Estado: subfase 3.1. Contén a xanela, que o programa tamén pode pechar, minimizar, maximizar e restaurar, coa barra de título de meiga, da que o programa lle di que é cada parte, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, entre eles o de que a xanela xa está na pantalla e pintada, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar e a que só avisa, o portapapeis, as sesións de ConPTY, que crea o seu fío escritor, co cartafol e o contorno do seu programa, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, tamén mentres se crean, e a lista das sesións pechadas, polas que agarda un proceso antes de saír, cun exemplo que as mostra e as grava, as shells instaladas, que atopa sen lanzar ningún proceso, o contorno de meiga e o cartafol do sistema, e o tipo dos erros de Windows. Na 2.3 e na 2.4 non cambiou o código. Na 2.5 chegaron `profiles.rs`, coas shells instaladas, o contorno de meiga e o cartafol do sistema; `Command`, co que unha sesión recibe tamén o cartafol onde empeza o seu programa e o seu contorno; `Event::Shown`, o aviso de que a xanela xa está na pantalla e pintada; e `Window::alert`, a caixa de mensaxe que só avisa. Na 2.6, na 2.7 e na 2.8 non cambiou o código. No M2, o fío escritor dunha sesión pechada ve rematar cada un dos programas que tiña, e unha sesión bloqueada remata 10 s despois do último deles, e non 10 ou 20 s despois de pecharse; o `Pty` garda o seu fío escritor e, ao pecharse a sesión, pásao á lista `CLOSING`, pola que agarda `wait_for_closed_sessions`: meiga chámaa antes de saír, e o exemplo `conpty` tamén; co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, que ninguén agarda, porque antes de Windows 11 24H2 ese peche agarda a que remate o ConPTY, cunha proba unitaria; e chegaron dúas probas de integración, que lanzan coma axudante o propio programa das probas. Na 2.9, a xanela quita a barra de título de Windows, e o programa dille que é cada parte da súa barra de tabs, que é a barra de título, para que ela llo diga a Windows ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)): os botóns da xanela, que debuxa o programa, minimizan, maximizan ou restauran e pechan coma os de Windows; o botón dereito nas partes libres da barra abre o menú da xanela, e Alt+Espazo ábreo debaixo da barra; a banda enriba das tabs redimensiona a xanela restaurada; a xanela maximizada deixa sitio para a barra de tarefas que se oculta, e a máis pequena ten sitio para a barra máis estreita; e o aviso da saída do punteiro chega cando sae da xanela, e non cando pasa a unha parte da barra que non é área cliente para Windows. Chegaron catro probas unitarias, dúas en `event.rs` e dúas en `window.rs`. Na 2.10 non cambiou o código. No M3, o fío escritor de cada sesión crea a pseudoconsola e o programa, e `spawn` volta no momento, sen agardar por Windows ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md)): mentres tanto, a sesión garda a entrada e o tamaño, e o fío lector xa está, coa súa prioridade; un programa que non arranca dío o lector, co método novo `Output::failed`; a función nova `conpty::spawn`, a que usa meiga, usa o ConPTY que está ao lado do executábel, que carga unha vez o primeiro escritor; os fíos reciben o número do programa no seu nome cando este arranca, e `Pty::process_id` é opcional; e chegaron vinte probas unitarias en `conpty.rs`, a maioría con ConPTY falsos, e oito de integración. Na 3.1 non cambiou o código do crate: chegou unha proba de integración, que comproba que o ConPTY empaquetado lle pasa ao terminal sen cambios as secuencias do título dun programa e o reinicio da pantalla, cun programa axudante novo, `titler` ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md)).
+> Estado: subfase 3.2. Contén a xanela, que o programa tamén pode pechar, minimizar, maximizar e restaurar, coa barra de título de meiga, da que o programa lle di que é cada parte, o bucle de mensaxes co temporizador dos fotogramas, os eventos que recibe o programa, entre eles o de que a xanela xa está na pantalla e pintada, o teclado, que converte as mensaxes das teclas en eventos coma os da consola, o rato, cos seus tres botóns, a roda, as teclas modificadoras, a súa captura, a forma do punteiro e o aviso de cando sae da xanela, o DPI da xanela, tamén cando cambia, e o seu título, se está en primeiro plano, o aviso que a esperta desde outro fío, cun número que di quen avisa, os axustes do cursor e do rato de Windows, a caixa de mensaxe que pregunta antes de pegar e a que só avisa, o portapapeis, as sesións de ConPTY, que crea o seu fío escritor, co cartafol e o contorno do seu programa, ás que se lles pode cambiar o tamaño e a prioridade do fío lector, tamén mentres se crean, e a lista das sesións pechadas, polas que agarda un proceso antes de saír, cun exemplo que as mostra e as grava, as shells instaladas, que atopa sen lanzar ningún proceso, o contorno de meiga e o cartafol do sistema, o tipo dos erros de Windows e un exemplo que proba na consola o campo de texto de `meiga-core`. Na 2.3 e na 2.4 non cambiou o código. Na 2.5 chegaron `profiles.rs`, coas shells instaladas, o contorno de meiga e o cartafol do sistema; `Command`, co que unha sesión recibe tamén o cartafol onde empeza o seu programa e o seu contorno; `Event::Shown`, o aviso de que a xanela xa está na pantalla e pintada; e `Window::alert`, a caixa de mensaxe que só avisa. Na 2.6, na 2.7 e na 2.8 non cambiou o código. No M2, o fío escritor dunha sesión pechada ve rematar cada un dos programas que tiña, e unha sesión bloqueada remata 10 s despois do último deles, e non 10 ou 20 s despois de pecharse; o `Pty` garda o seu fío escritor e, ao pecharse a sesión, pásao á lista `CLOSING`, pola que agarda `wait_for_closed_sessions`: meiga chámaa antes de saír, e o exemplo `conpty` tamén; co ConPTY de Windows, o escritor pecha a pseudoconsola nun fío propio, que ninguén agarda, porque antes de Windows 11 24H2 ese peche agarda a que remate o ConPTY, cunha proba unitaria; e chegaron dúas probas de integración, que lanzan coma axudante o propio programa das probas. Na 2.9, a xanela quita a barra de título de Windows, e o programa dille que é cada parte da súa barra de tabs, que é a barra de título, para que ela llo diga a Windows ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md)): os botóns da xanela, que debuxa o programa, minimizan, maximizan ou restauran e pechan coma os de Windows; o botón dereito nas partes libres da barra abre o menú da xanela, e Alt+Espazo ábreo debaixo da barra; a banda enriba das tabs redimensiona a xanela restaurada; a xanela maximizada deixa sitio para a barra de tarefas que se oculta, e a máis pequena ten sitio para a barra máis estreita; e o aviso da saída do punteiro chega cando sae da xanela, e non cando pasa a unha parte da barra que non é área cliente para Windows. Chegaron catro probas unitarias, dúas en `event.rs` e dúas en `window.rs`. Na 2.10 non cambiou o código. No M3, o fío escritor de cada sesión crea a pseudoconsola e o programa, e `spawn` volta no momento, sen agardar por Windows ([ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md)): mentres tanto, a sesión garda a entrada e o tamaño, e o fío lector xa está, coa súa prioridade; un programa que non arranca dío o lector, co método novo `Output::failed`; a función nova `conpty::spawn`, a que usa meiga, usa o ConPTY que está ao lado do executábel, que carga unha vez o primeiro escritor; os fíos reciben o número do programa no seu nome cando este arranca, e `Pty::process_id` é opcional; e chegaron vinte probas unitarias en `conpty.rs`, a maioría con ConPTY falsos, e oito de integración. Na 3.1 non cambiou o código do crate: chegou unha proba de integración, que comproba que o ConPTY empaquetado lle pasa ao terminal sen cambios as secuencias do título dun programa e o reinicio da pantalla, cun programa axudante novo, `titler` ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md)). Na 3.2 non cambiou o código do crate: chegou un exemplo, `field`, que proba a man na consola o campo de texto de `meiga-core` ([ADR 0030](../adr/0030-o-campo-de-texto.md)), coas teclas que dá a consola, que son as que recibe meiga, e co portapapeis de Windows, a través dunha xanela do crate que nunca se mostra.
 
 **Responsabilidade:** a capa de plataforma. Envolve todo o que é específico de Windows: ConPTY, a detección das shells instaladas e o contorno dos seus programas, o sistema de arquivos, o portapapeis, a xanela Win32 e a xestión do DPI. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
@@ -18,10 +18,11 @@
 | [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) | Probas de integración: programas de verdade nos dous ConPTY, tamén nun cartafol e cun contorno; e, desde o M2, unha sesión que tarda en pecharse e un proceso que agarda polas súas sesións antes de saír; e, desde o M3, o que pasa mentres o escritor crea a sesión, os programas que non arrancan, o ConPTY que está ao lado do executábel e os erros do empaquetado; e, desde a 3.1, as secuencias do título e o reinicio da pantalla, que o ConPTY empaquetado pasa sen cambios. |
 | [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs) | Probas de integración: as shells do equipo onde corren e o contorno do programa da proba. |
 | [`examples/conpty.rs`](#cratesmeiga-winexamplesconptyrs) | Un programa de consola que mostra o que escribe un programa nunha pseudoconsola, e envíalle o que se teclea. Desde o M2, se pecha a sesión, agarda a que remate antes de saír. Desde o M3, se o programa non arranca, dío e sae co código 2. |
+| [`examples/field.rs`](#cratesmeiga-winexamplesfieldrs) | Desde a subfase 3.2, un programa de consola que proba a man o campo de texto de `meiga-core`: móstrao nunha liña, coas teclas da consola, que son as que recibe meiga, e copia e pega co portapapeis de Windows. |
 
-Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); o rato, en [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows); o portapapeis e a caixa que pregunta antes de pegar, en [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows) e [› Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste); o cambio de escala e a saída do punteiro, en [Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged) e [› O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent); o marco da xanela e a barra de título de meiga, en [Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título); o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos), e o cambio do tamaño dunha pseudoconsola, en [Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor); a prioridade dos fíos, en [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority); a creación das sesións fóra do fío da xanela, e os nomes dos fíos, en [Tecnoloxías › Crear os procesos fóra do fío da interface](../tecnoloxias.md#63-crear-os-procesos-fóra-do-fío-da-interface); o que fai o ConPTY cos títulos dun programa, que comproba unha proba de integración, en [Tecnoloxías › Os títulos da tab](../tecnoloxias.md#65-os-títulos-da-tab); e as shells instaladas, o rexistro de Windows e o contorno e o cartafol dos programas, en [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows). O camiño dun clic, da xanela á selección, ao portapapeis ou ao programa, está en [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); o dun cambio de tamaño, da xanela ao ConPTY, en [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom); e o dun perfil, do arquivo de configuración e das shells instaladas á sesión dunha tab, en [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración); e o da barra de título de meiga, do programa a Windows, en [Arquitectura › As tabs na barra de título](../arquitectura.md#as-tabs-na-barra-de-título). As tabs, cada unha coa súa sesión, e o que fan as que non se ven, coa prioridade do seu fío lector máis baixa, decídense no [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md); e os perfís, coas shells que atopa meiga e o contorno e o cartafol dos seus programas, no [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md); e a barra de tabs coma barra de título, no [ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md); e as sesións que crea o seu fío escritor, fóra do fío da xanela, no [ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md).
+Os conceptos de Win32 (xanelas, clases, mensaxes, bucle de mensaxes) explícanse en [Tecnoloxías › Xanelas Win32](../tecnoloxias.md#22-xanelas-win32-e-o-bucle-de-mensaxes); os temporizadores, en [Tecnoloxías › Temporizadores](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface); os avisos desde outros fíos, en [Tecnoloxías › Avisar á xanela desde outro fío](../tecnoloxias.md#36-avisar-á-xanela-desde-outro-fío-postmessage); o cursor, o foco e o título, en [Tecnoloxías › O cursor de Windows](../tecnoloxias.md#38-o-cursor-de-windows-pestanexo-tempo-e-grosor) e [› O foco e o título](../tecnoloxias.md#39-o-foco-e-o-título-da-xanela); o teclado, en [Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows); o rato, en [Tecnoloxías › O rato en Windows](../tecnoloxias.md#44-o-rato-en-windows); o portapapeis e a caixa que pregunta antes de pegar, en [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows) e [› Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste); o cambio de escala e a saída do punteiro, en [Tecnoloxías › A escala cambia](../tecnoloxias.md#50-a-escala-cambia-wm_dpichanged) e [› O punteiro sae da xanela](../tecnoloxias.md#51-o-punteiro-sae-da-xanela-trackmouseevent); o marco da xanela e a barra de título de meiga, en [Tecnoloxías › O marco da xanela e a barra de título](../tecnoloxias.md#62-o-marco-da-xanela-e-a-barra-de-título); o ConPTY, os procesos e as tubaxes, en [Tecnoloxías › ConPTY](../tecnoloxias.md#31-conpty-a-pseudoconsola-de-windows) e [Tecnoloxías › Procesos, tubaxes e eventos](../tecnoloxias.md#32-procesos-tubaxes-e-eventos), e o cambio do tamaño dunha pseudoconsola, en [Tecnoloxías › Cambiar o tamaño do ConPTY](../tecnoloxias.md#48-cambiar-o-tamaño-do-conpty-o-seu-reflow-e-a-pregunta-polo-cursor); a prioridade dos fíos, en [Tecnoloxías › A prioridade dos fíos](../tecnoloxias.md#54-a-prioridade-dos-fíos-setthreadpriority); a creación das sesións fóra do fío da xanela, e os nomes dos fíos, en [Tecnoloxías › Crear os procesos fóra do fío da interface](../tecnoloxias.md#63-crear-os-procesos-fóra-do-fío-da-interface); o que fai o ConPTY cos títulos dun programa, que comproba unha proba de integración, en [Tecnoloxías › Os títulos da tab](../tecnoloxias.md#65-os-títulos-da-tab); os eventos de tecla da consola, que le o exemplo `field`, en [Tecnoloxías › As teclas no terminal](../tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt), e os grafemas e as palabras do campo de texto que proba, en [Tecnoloxías › Os grafemas e as palabras dun campo de texto](../tecnoloxias.md#66-os-grafemas-e-as-palabras-dun-campo-de-texto); e as shells instaladas, o rexistro de Windows e o contorno e o cartafol dos programas, en [Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows). O camiño dun clic, da xanela á selección, ao portapapeis ou ao programa, está en [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis); o dun cambio de tamaño, da xanela ao ConPTY, en [Arquitectura › O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom); e o dun perfil, do arquivo de configuración e das shells instaladas á sesión dunha tab, en [Arquitectura › Os perfís e a configuración](../arquitectura.md#os-perfís-e-a-configuración); e o da barra de título de meiga, do programa a Windows, en [Arquitectura › As tabs na barra de título](../arquitectura.md#as-tabs-na-barra-de-título); e o do campo de texto, en [Arquitectura › O campo de texto](../arquitectura.md#o-campo-de-texto). As tabs, cada unha coa súa sesión, e o que fan as que non se ven, coa prioridade do seu fío lector máis baixa, decídense no [ADR 0019](../adr/0019-varias-sesions-e-tabs-en-segundo-plano.md); e os perfís, coas shells que atopa meiga e o contorno e o cartafol dos seus programas, no [ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md); e a barra de tabs coma barra de título, no [ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md); e as sesións que crea o seu fío escritor, fóra do fío da xanela, no [ADR 0028](../adr/0028-as-sesions-fora-do-fio-da-xanela.md); e o campo de texto, que proba o exemplo `field`, no [ADR 0030](../adr/0030-o-campo-de-texto.md).
 
-O crate ten 51 probas unitarias nos arquivos de `src/`, vinte delas novas no M3, en `conpty.rs` (31 na 2.9, que trouxo catro, dúas en `event.rs` e dúas en `window.rs`; 27 no M2, que trouxo unha en `conpty.rs`; 26 na 2.5, que trouxo unha en `conpty.rs` e dúas en `profiles.rs`; e 23 na 2.4, as mesmas ca na subfase 1.9), e 25 de integración: as 23 de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (22 no M3, 14 ata a 2.10, 12 ata a 2.8, 10 na 2.4 e 9 na 1.9) e as 2 de [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs), novas na 2.5. `cargo test -p meiga-win` córreas todas. Desde o M2, `tests/conpty.rs` ten ademais `helper`, unha proba ignorada que non comproba nada: é a entrada dos programas axudantes das outras, e Cargo non a corre: cóntaa á parte (`23 passed; 1 ignored`).
+O crate ten 51 probas unitarias nos arquivos de `src/`, vinte delas novas no M3, en `conpty.rs` (31 na 2.9, que trouxo catro, dúas en `event.rs` e dúas en `window.rs`; 27 no M2, que trouxo unha en `conpty.rs`; 26 na 2.5, que trouxo unha en `conpty.rs` e dúas en `profiles.rs`; e 23 na 2.4, as mesmas ca na subfase 1.9), e 25 de integración: as 23 de [`tests/conpty.rs`](#cratesmeiga-wintestsconptyrs) (22 no M3, 14 ata a 2.10, 12 ata a 2.8, 10 na 2.4 e 9 na 1.9) e as 2 de [`tests/profiles.rs`](#cratesmeiga-wintestsprofilesrs), novas na 2.5. `cargo test -p meiga-win` córreas todas. Desde o M2, `tests/conpty.rs` ten ademais `helper`, unha proba ignorada que non comproba nada: é a entrada dos programas axudantes das outras, e Cargo non a corre: cóntaa á parte (`23 passed; 1 ignored`). A 3.2 non trouxo ningunha proba: o seu exemplo, [`field`](#cratesmeiga-winexamplesfieldrs), próbase a man. `cargo test` compila tamén os dous exemplos, sen correlos, e a CI revísaos con Clippy (`--all-targets`).
 
 ## `crates/meiga-win/Cargo.toml`
 
@@ -87,7 +88,7 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 | `Win32_Graphics_Gdi` | GDI, a API clásica de debuxo. | `BeginPaint`, `EndPaint`, `InvalidateRect`, `ValidateRect` e `UpdateWindow`. Desde a 1.8, tamén `ScreenToClient`, que pasa o punto da roda á área cliente. Desde a 2.9, `MonitorFromRect`, `GetMonitorInfoW`, `MONITORINFO` e `MONITOR_DEFAULTTONEAREST`, o monitor da xanela maximizada ([a barra de tarefas que se oculta](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)); e `ClientToScreen`, que pasa un punto da área cliente á pantalla, para o menú que abre Alt+Espazo ([`screen_point`](#o-menú-co-teclado-keyboard_menu-screen_point-e-is_alt_space)) e nas probas. |
 | `Win32_Security` | A seguridade dos obxectos de Windows. | Nada directamente: `CreateWaitableTimerExW`, `CreatePipe`, `CreateEventW`, `CreateJobObjectW` e `CreateProcessW` reciben uns `SECURITY_ATTRIBUTES`, e `windows-sys` só declara cada función se existen os tipos que usa. Por iso vai co comentario. |
 | `Win32_Storage_FileSystem` | Os arquivos e o que se le e escribe coma eles. | `ReadFile` e `WriteFile`, para as tubaxes, desde a subfase 1.4; e, desde a 2.5, `GetFileAttributesW`, `INVALID_FILE_ATTRIBUTES` e `FILE_ATTRIBUTE_DIRECTORY`, que din se un programa existe ([`is_file`](#is_file)). |
-| `Win32_System_Console` | A consola. | `CreatePseudoConsole`, `ClosePseudoConsole`, `HPCON` e `COORD`, desde a 1.4, e `ResizePseudoConsole`, desde a 1.9. Desde o M2, nas probas de integración, `SetConsoleCtrlHandler` e `CTRL_CLOSE_EVENT`, cos que os programas axudantes atenden o peche da súa consola. Desde a 3.1, tamén nas probas de integración, `GetStdHandle`, `STD_OUTPUT_HANDLE`, `GetConsoleMode`, `SetConsoleMode`, `ENABLE_PROCESSED_OUTPUT` e `ENABLE_VIRTUAL_TERMINAL_PROCESSING`, cos que o axudante `titler` activa na súa consola o procesamento das secuencias de control. |
+| `Win32_System_Console` | A consola. | `CreatePseudoConsole`, `ClosePseudoConsole`, `HPCON` e `COORD`, desde a 1.4, e `ResizePseudoConsole`, desde a 1.9. Desde o M2, nas probas de integración, `SetConsoleCtrlHandler` e `CTRL_CLOSE_EVENT`, cos que os programas axudantes atenden o peche da súa consola. Desde a 3.1, tamén nas probas de integración, `GetStdHandle`, `STD_OUTPUT_HANDLE`, `GetConsoleMode`, `SetConsoleMode`, `ENABLE_PROCESSED_OUTPUT` e `ENABLE_VIRTUAL_TERMINAL_PROCESSING`, cos que o axudante `titler` activa na súa consola o procesamento das secuencias de control. Desde a 3.2, no exemplo [`field`](#cratesmeiga-winexamplesfieldrs): a entrada da consola, con `STD_INPUT_HANDLE`, `ReadConsoleInputW`, `INPUT_RECORD`, `KEY_EVENT` e `KEY_EVENT_RECORD`; os modos que quita da entrada, `ENABLE_PROCESSED_INPUT`, `ENABLE_LINE_INPUT`, `ENABLE_ECHO_INPUT` e `ENABLE_VIRTUAL_TERMINAL_INPUT`, co seu tipo, `CONSOLE_MODE`; o ancho da consola, con `GetConsoleScreenBufferInfo` e `CONSOLE_SCREEN_BUFFER_INFO`; e, coma o `titler`, `GetStdHandle`, `STD_OUTPUT_HANDLE`, `GetConsoleMode`, `SetConsoleMode` e `ENABLE_VIRTUAL_TERMINAL_PROCESSING`. |
 | `Win32_System_DataExchange` | O intercambio de datos entre programas, coma o portapapeis. | `OpenClipboard`, `CloseClipboard`, `EmptyClipboard`, `GetClipboardData` e `SetClipboardData`, desde a subfase 1.8. |
 | `Win32_System_Environment` | As variábeis de contorno. | `GetEnvironmentStringsW` e `FreeEnvironmentStringsW`, desde a subfase 2.5: o bloque co contorno de meiga ([`environment`](#environment)). |
 | `Win32_System_IO` | A E/S solapada. | Nada directamente: `ReadFile` e `WriteFile` reciben un `OVERLAPPED`, que meiga pasa nulo. O comentario de `Win32_Storage_FileSystem` explícao. |
@@ -104,7 +105,7 @@ Os metadatos e as regras de calidade son os comúns, como en [`meiga-render`](me
 
 Algunhas constantes defínense no propio código en vez de activar a súa *feature*, que traería milleiros de declaracións por uns poucos números: os bits dos botóns e das teclas modificadoras nas mensaxes do rato (`MK_LBUTTON`…), de `Win32_System_SystemServices` (ver [`event.rs`](#cratesmeiga-winsrceventrs)); desde a subfase 1.8, o formato do texto no portapapeis, `CF_UNICODETEXT`, de `Win32_System_Ole` (ver [`clipboard.rs`](#cratesmeiga-winsrcclipboardrs)); e, desde a 1.9, a mensaxe que chega cando o punteiro sae da xanela, `WM_MOUSELEAVE`, de `Win32_UI_Controls` (ver [`decode`](#decode)); e, desde o M2, os obxectos que agarda como moito `WaitForMultipleObjects`, `MAXIMUM_WAIT_OBJECTS`, tamén de `Win32_System_SystemServices` (ver [`conpty.rs`](#constantes-e-tipos)); e, desde a 2.9, a estrutura `APPBARDATA` e as constantes de `SHAppBarMessage` (`ABM_GETSTATE`…), de `Win32_UI_Shell` (ver [a barra de tarefas que se oculta](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)). Outra, `WHEEL_PAGE`, o `WHEEL_PAGESCROLL` de Windows, non está en `windows-sys` (ver [`mouse_settings`](#mousesettings-e-mouse_settings)). O tipo `HRESULT` está en `windows_sys::core`, que non necesita ningunha *feature*, coma `BOOL`, que usan desde o M2 as probas de integración, e `PWSTR`, o texto que dá `GetThreadDescription` nas probas unitarias de `conpty.rs`, desde o M3.
 
-A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes. A 2.3 e a 2.4 non cambiaron o crate. A 2.5 necesitou tres, coma din os seus comentarios: `Win32_System_Environment`, para o contorno de meiga, que reciben os programas das tabs con poucos cambios; `Win32_System_Registry`, para o rexistro, onde WSL garda as súas distribucións e Git for Windows o seu cartafol; e `Win32_System_SystemInformation`, para `GetSystemDirectoryW`, o cartafol de `cmd.exe`, `wsl.exe` e Windows PowerShell. O resto xa estaba: `GetFileAttributesW`, en `Win32_Storage_FileSystem`, coma `ReadFile`; `ERROR_SUCCESS` e `ERROR_MORE_DATA`, en `Win32_Foundation`; e `CREATE_UNICODE_ENVIRONMENT`, en `Win32_System_Threading`, con `CreateProcessW`. A 2.6, a 2.7 e a 2.8 non cambiaron o crate. O M2 non necesitou ningunha *feature* nova: `WaitForMultipleObjects` xa estaba en `Win32_System_Threading`; e o que usan as súas probas de integración, en `Win32_System_Console`, coas funcións das pseudoconsolas, en `Win32_System_JobObjects`, coas dos *jobs*, e en `Win32_Foundation`. A 2.9 tampouco: as mensaxes do marco, `WM_GETMINMAXINFO`, `WM_SYSCOMMAND`, as respostas de `WM_NCHITTEST`, o menú da xanela e as súas ordes, `SWP_FRAMECHANGED`, `IsZoomed`, `GetCursorPos`, `WindowFromPoint` e `GetWindowRect` están en `Win32_UI_WindowsAndMessaging`; `GetSystemMetricsForDpi`, en `Win32_UI_HiDpi`, con `GetDpiForWindow`; `TME_NONCLIENT`, en `Win32_UI_Input_KeyboardAndMouse`, con `TME_LEAVE`; o monitor da xanela, en `Win32_Graphics_Gdi`; e `ERROR_CLASS_ALREADY_EXISTS`, en `Win32_Foundation`. `Win32_UI_Shell`, a de `SHAppBarMessage`, non: meiga carga a función ela mesma, e define a súa estrutura e as súas constantes. A 2.10 non cambiou o crate. O M3 non necesitou ningunha *feature* nova: `SetThreadDescription`, `GetThreadDescription` e `QueryFullProcessImageNameW` están en `Win32_System_Threading`, coas outras funcións dos fíos e dos procesos; e `LocalFree`, en `Win32_Foundation`. A 3.1 tampouco: o que usa a súa proba de integración para o modo da consola está en `Win32_System_Console`, coas funcións das pseudoconsolas.
+A subfase 1.6 non necesitou ningunha *feature* nova: `PostMessageW`, `SetWindowTextW`, `GetCaretBlinkTime`, `SystemParametersInfoW`, `WM_APP` e as mensaxes do foco están todas en `Win32_UI_WindowsAndMessaging`. A 1.7 tampouco: as funcións do teclado están en `Win32_UI_Input_KeyboardAndMouse`, que xa estaba pola captura do rato, e as súas mensaxes (`WM_KEYUP`, `WM_CHAR`…) e `PeekMessageW`, en `Win32_UI_WindowsAndMessaging`. A 1.8 necesitou dúas, para o portapapeis: `Win32_System_DataExchange`, coas súas funcións, e `Win32_System_Memory`, coa memoria global onde vai o texto. O resto xa estaba nas que había: as mensaxes do rato, `WM_SETCURSOR`, `SetCursor`, `GetForegroundWindow`, as medidas do dobre clic e as preferencias da roda (`SM_CXDOUBLECLK`, `SPI_GETWHEELSCROLLLINES`…) e as opcións das caixas de mensaxe, en `Win32_UI_WindowsAndMessaging`; `GetKeyState` e `GetDoubleClickTime`, en `Win32_UI_Input_KeyboardAndMouse`; e `ScreenToClient`, en `Win32_Graphics_Gdi`. A 1.9 non necesitou ningunha: `ResizePseudoConsole` está en `Win32_System_Console`, coas outras funcións das pseudoconsolas; `TrackMouseEvent`, en `Win32_UI_Input_KeyboardAndMouse`, coma a captura do rato; e as funcións que usa a proba do cambio de escala, `SendMessageW` e `GetWindowRect`, en `Win32_UI_WindowsAndMessaging`. A 2.2 tampouco: `SetThreadPriority`, as prioridades dos fíos, `GetCurrentThread` e `GetThreadPriority` están en `Win32_System_Threading`, coas outras funcións dos fíos; e `WM_CLOSE`, a mensaxe coa que o programa pecha a xanela, en `Win32_UI_WindowsAndMessaging`, coas outras mensaxes. A 2.3 e a 2.4 non cambiaron o crate. A 2.5 necesitou tres, coma din os seus comentarios: `Win32_System_Environment`, para o contorno de meiga, que reciben os programas das tabs con poucos cambios; `Win32_System_Registry`, para o rexistro, onde WSL garda as súas distribucións e Git for Windows o seu cartafol; e `Win32_System_SystemInformation`, para `GetSystemDirectoryW`, o cartafol de `cmd.exe`, `wsl.exe` e Windows PowerShell. O resto xa estaba: `GetFileAttributesW`, en `Win32_Storage_FileSystem`, coma `ReadFile`; `ERROR_SUCCESS` e `ERROR_MORE_DATA`, en `Win32_Foundation`; e `CREATE_UNICODE_ENVIRONMENT`, en `Win32_System_Threading`, con `CreateProcessW`. A 2.6, a 2.7 e a 2.8 non cambiaron o crate. O M2 non necesitou ningunha *feature* nova: `WaitForMultipleObjects` xa estaba en `Win32_System_Threading`; e o que usan as súas probas de integración, en `Win32_System_Console`, coas funcións das pseudoconsolas, en `Win32_System_JobObjects`, coas dos *jobs*, e en `Win32_Foundation`. A 2.9 tampouco: as mensaxes do marco, `WM_GETMINMAXINFO`, `WM_SYSCOMMAND`, as respostas de `WM_NCHITTEST`, o menú da xanela e as súas ordes, `SWP_FRAMECHANGED`, `IsZoomed`, `GetCursorPos`, `WindowFromPoint` e `GetWindowRect` están en `Win32_UI_WindowsAndMessaging`; `GetSystemMetricsForDpi`, en `Win32_UI_HiDpi`, con `GetDpiForWindow`; `TME_NONCLIENT`, en `Win32_UI_Input_KeyboardAndMouse`, con `TME_LEAVE`; o monitor da xanela, en `Win32_Graphics_Gdi`; e `ERROR_CLASS_ALREADY_EXISTS`, en `Win32_Foundation`. `Win32_UI_Shell`, a de `SHAppBarMessage`, non: meiga carga a función ela mesma, e define a súa estrutura e as súas constantes. A 2.10 non cambiou o crate. O M3 non necesitou ningunha *feature* nova: `SetThreadDescription`, `GetThreadDescription` e `QueryFullProcessImageNameW` están en `Win32_System_Threading`, coas outras funcións dos fíos e dos procesos; e `LocalFree`, en `Win32_Foundation`. A 3.1 tampouco: o que usa a súa proba de integración para o modo da consola está en `Win32_System_Console`, coas funcións das pseudoconsolas. A 3.2 tampouco: o exemplo `field` usa a consola, en `Win32_System_Console`; a espera coas mensaxes, `MsgWaitForMultipleObjects`, `PeekMessageW` e `DispatchMessageW`, en `Win32_UI_WindowsAndMessaging`, coma o bucle de mensaxes da xanela; `HANDLE` e `WAIT_OBJECT_0`, en `Win32_Foundation`; e `INFINITE`, en `Win32_System_Threading`.
 
 **As DLL.** Cada función de `windows-sys` di de que DLL vén, e `meiga.exe` importa as DLL das funcións que usa. As do rexistro (`RegOpenKeyExW`, `RegEnumKeyExW`, `RegGetValueW` e `RegCloseKey`) están en `advapi32.dll`, que `meiga.exe` non importaba ata a 2.5; as outras funcións novas, `GetEnvironmentStringsW`, `FreeEnvironmentStringsW`, `GetSystemDirectoryW` e `GetFileAttributesW`, en `kernel32.dll`, coma as dos procesos e as tubaxes. Desde a 2.5, [`check-imports.ps1`](ferramentas.md#toolscheck-importsps1) mostra `meiga.exe imports: kernel32.dll, dwrite.dll, ntdll.dll, oleaut32.dll, combase.dll, api-ms-win-core-synch-l1-2-0.dll, gdi32.dll, user32.dll, advapi32.dll`: todas son do sistema ([Código › meiga](meiga.md#comprobacións-feitas)). A 2.9 non engade ningunha: as súas funcións novas están en `user32.dll`, coma as outras das xanelas, tamén as do monitor e `GetSystemMetricsForDpi`. `SHAppBarMessage` está en `shell32.dll`, que non vai na táboa de importacións: meiga cárgaa mentres corre, só do cartafol do sistema, e só a primeira vez que se maximiza unha xanela ([`app_bar_message`](#a-barra-de-tarefas-que-se-oculta-appbardata-app_bar_message-e-leave_room_for_hidden_taskbars)). `dwmapi.dll` segue sen cargarse: meiga non estende o marco do DWM na área cliente ([ADR 0027](../adr/0027-a-barra-de-tabs-coma-barra-de-titulo.md), decisión 11). O M3 tampouco engade ningunha: `SetThreadDescription` está en `kernel32.dll`, coma as outras funcións dos fíos.
 
@@ -3117,7 +3118,7 @@ O resto deste arquivo necesita a xanela de meiga funcionando, co seu bucle de me
 
 ## `crates/meiga-win/src/clipboard.rs`
 
-Desde a subfase 1.8. O **portapapeis** de Windows, con texto: `read_text` le o que ten, e `write_text` pon un texto novo ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)). O programa úsaas para copiar a selección, para pegar e para o texto que copia un programa da sesión con OSC 52 ([Código › meiga › `clipboard.rs`](meiga.md#cratesmeigasrcclipboardrs), [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis)). As dúas reciben a [`Window`](#windowoptions-e-window), porque o portapapeis ábrese para unha xanela, e só se poden chamar desde o fío dela: unha referencia a unha `Window` non pode ir a outro fío. Os fragmentos de código levan os comentarios `// SAFETY:`, coma os do [teclado](#cratesmeiga-winsrckeyboardrs): explican de quen é a memoria en cada momento.
+Desde a subfase 1.8. O **portapapeis** de Windows, con texto: `read_text` le o que ten, e `write_text` pon un texto novo ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)). O programa úsaas para copiar a selección, para pegar e para o texto que copia un programa da sesión con OSC 52 ([Código › meiga › `clipboard.rs`](meiga.md#cratesmeigasrcclipboardrs), [Arquitectura › O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis)). Desde a subfase 3.2, úsaas tamén o exemplo [`field`](#cratesmeiga-winexamplesfieldrs), cunha xanela que nunca mostra. As dúas reciben a [`Window`](#windowoptions-e-window), porque o portapapeis ábrese para unha xanela, e só se poden chamar desde o fío dela: unha referencia a unha `Window` non pode ir a outro fío. Os fragmentos de código levan os comentarios `// SAFETY:`, coma os do [teclado](#cratesmeiga-winsrckeyboardrs): explican de quen é a memoria en cada momento.
 
 ### `CF_UNICODETEXT` e `RETRIES`
 
@@ -3297,7 +3298,7 @@ impl Drop for Global {
 - **`Global`** é unha memoria global, que se libera con `GlobalFree` cando se destrúe, se non é nula. Así, `write_text` non a perde en ningún dos seus erros e, cando a memoria pasa a ser do portapapeis, `mem::forget` evita liberala.
 - `HGLOBAL` e `GlobalFree` están en `Win32_Foundation`, e o resto da memoria global, en `Win32_System_Memory` (ver [`Cargo.toml`](#cratesmeiga-wincargotoml)).
 
-**Proba.** `lines_end_with_cr_lf_and_the_text_with_nul`: `units` converte `un\ndous\r\ntrés €\n😀` en `un\r\ndous\r\ntrés €\r\n😀` cun NUL ao final: os LF sós levan un CR antes, o CR LF queda igual, e o é, o € e o 😀, que ocupa dúas unidades, pasan tal cal. Un texto baleiro é só o NUL. O resto do módulo necesita o portapapeis de verdade: compróbao [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1), que mira o que copia meiga no portapapeis, e pega o que pon nel.
+**Proba.** `lines_end_with_cr_lf_and_the_text_with_nul`: `units` converte `un\ndous\r\ntrés €\n😀` en `un\r\ndous\r\ntrés €\r\n😀` cun NUL ao final: os LF sós levan un CR antes, o CR LF queda igual, e o é, o € e o 😀, que ocupa dúas unidades, pasan tal cal. Un texto baleiro é só o NUL. O resto do módulo necesita o portapapeis de verdade: compróbao [`check-mouse.ps1`](ferramentas.md#toolscheck-mouseps1), que mira o que copia meiga no portapapeis, e pega o que pon nel; e, desde a 3.2, pódese probar a man co exemplo [`field`](#cratesmeiga-winexamplesfieldrs).
 
 ## `crates/meiga-win/src/conpty.rs`
 
@@ -7106,3 +7107,698 @@ Con `--record`, ao final engade unha liña coa gravación: `Recorded 6 blocks, 5
 - O fío principal le as liñas da consola e envíaas co `\r` de Intro. Ctrl+Z e Intro, o fin da entrada en Windows, pechan a sesión (`drop(pty)`). Despois, o fío principal espera (`thread::park`, nun bucle, porque pode voltar sen motivo) a que o fío lector remate o exemplo, desde o M2 despois de agardar polo fío escritor.
 - Se a entrada estándar xa está pechada ao arrancar, por exemplo con `< nul`, o exemplo pecha a sesión no primeiro instante. Desde o M3, iso adoita pasar antes de que o escritor arranque o programa, que xa non arranca: a sesión remata sen código de saída, e o exemplo, co código 1. Se o escritor xa o arrancou, o programa aínda se está a conectar á consola, coma sempre ata a 2.10: é o caso no que o fío escritor remata o programa, cando pasan 10 s sen que remate ningún, ou no que o programa remata só co código `0xC0000142`.
 - `bundled` busca o ConPTY coma as probas, desde `target\debug\examples\`. Se non o atopa, o exemplo remata co código 2 e unha mensaxe que pide executar `fetch-conpty.ps1` ou usar `--system`.
+
+## `crates/meiga-win/examples/field.rs`
+
+Desde a subfase 3.2, outro exemplo, para probar a man o campo de texto de `meiga-core` ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 1): mostra o campo nunha liña da consola, dálle as teclas que dá a consola, que son as que recibe meiga, e copia e pega co portapapeis de Windows. Serve para probar coas teclas de verdade o que as probas do campo comproban con eventos feitos a man, coma as teclas mortas, AltGr, os códigos de Alt, o panel de emoji, os IME e as teclas que se repiten, e o portapapeis de Windows, que as probas non tocan. O campo explícase en [Código › meiga-core › `ui/field/mod.rs`](meiga-core.md#cratesmeiga-coresrcuifieldmodrs), e as súas teclas, en [`ui/field/keys.rs`](meiga-core.md#cratesmeiga-coresrcuifieldkeysrs); o seu sitio na arquitectura, en [Arquitectura › O campo de texto](../arquitectura.md#o-campo-de-texto). O exemplo vai en `meiga-win`, e non en `meiga-core` coma o das [tabs](meiga-core.md#cratesmeiga-coreexamplestabsrs), porque usa a consola e o portapapeis de Windows.
+
+```powershell
+cargo run -p meiga-win --example field                                   # 20 celas e 1000 unidades
+cargo run -p meiga-win --example field -- --columns 12 --limit 30 meiga  # 12 celas, 30 unidades e un texto
+```
+
+| Opción | Que fai |
+|---|---|
+| `--columns N` | As celas do campo, de 1 a 500: 20 se non se di, ou menos se non caben na consola, que pode cambiar de ancho mentres corre o exemplo. |
+| `--limit N` | As unidades de UTF-16 que garda o campo como moito, de 1 a 100 000: 1000 se non se di, as mesmas que porá a 3.3 nos nomes das tabs ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 6). |
+| *texto* | O texto do principio, todo seleccionado: os argumentos que non son opcións, xuntos con espazos. |
+
+Con `--columns 12 --limit 30 meiga`, ao empezar:
+
+```text
+A field of 12 cells and at most 30 UTF-16 code units. Enter shows its text, Esc ends, and F5 pastes.
+[meiga       ]
+5 of 30 UTF-16 code units · Type.
+```
+
+`meiga` vai seleccionado, en inverso, e o cursor da consola está despois del, onde está o cursor do campo. Despois de escribir `ola`, que substitúe a selección, e Intro, o texto queda na liña do campo, e o campo empeza baleiro debaixo:
+
+```text
+A field of 12 cells and at most 30 UTF-16 code units. Enter shows its text, Esc ends, and F5 pastes.
+Its text: «ola»
+[            ]
+0 of 30 UTF-16 code units · Enter: the field starts again.
+```
+
+A liña de debaixo do campo di cantas unidades ten o texto e o que fixo a última tecla:
+
+| Despois das unidades | Cando |
+|---|---|
+| `«a»: the field took it.` | O campo colleu a tecla (`Reply::Taken`), que escribe `a`. Un carácter sen cela, coma un acento combinado escrito só, vai co seu punto de código: `U+0301: the field took it.` Unha tecla que non escribe vai co seu nome e as súas modificadoras: `Ctrl+Shift+←: the field took it.` Tamén cando non cambia nada, coma ← ao principio do texto. |
+| `Ctrl+C: «ola» went to the clipboard.` | O campo pediu copiar a selección (`Reply::Copy`), con Ctrl+C ou Ctrl+Insert, ou cortala, con Ctrl+X ou Maiús+Supr, e o exemplo púxoa no portapapeis. |
+| `F5: «un␉dous» came from the clipboard.` | O campo pediu pegar (`Reply::Paste`), con Ctrl+V ou Maiús+Insert, ou pediuno F5, e o exemplo deulle ao campo o texto do portapapeis, que eiquí leva á vista os seus caracteres de control: este, cun tabulador, pégase coma `un dous`. |
+| `F5: the clipboard has no text.` | O portapapeis non ten texto: por exemplo, ten unha imaxe. |
+| `Ctrl+C: the clipboard is busy: …` | Non se puido escribir ou ler o portapapeis, e despois vai o erro de Windows: por exemplo, porque outro programa o tiña aberto. |
+| `↑: not a key of the field.` | Unha tecla que baixa e que o campo non colle (`Reply::Ignored`), coma ↑ e ↓ sen Maiús, Tab ou RePáx. |
+| `Enter: the field starts again.` | Intro: o texto foi á liña de enriba, e o campo está baleiro. |
+
+Esc remata o exemplo, e unha tecla que sobe e que o campo non colle deixa a liña coma estaba.
+
+O exemplo non usa o rato da consola, cuxos eventos salta: o clic, o arrastre e os dobres e triplos clics do campo (`press` e `drag`) só os comproban as probas, ata que a vista da 3.3 lle pase o rato da xanela. Tampouco usa `take_changes`, que lle dirá á vista se ten que debuxar o campo outra vez ([Arquitectura › O campo de texto](../arquitectura.md#o-campo-de-texto)): o exemplo debúxao despois de cada evento.
+
+Na 3.2, o exemplo probouse de principio a fin a través dun ConPTY, con eventos de tecla enteiros: escribir, Ctrl+←, Maiús+Fin, escribir enriba da selección, Ctrl+Retroceso, unha tecla morta (á), Alt+0241 (ñ, ao soltar Alt), un emoji en dúas metades, Ctrl+Z, Ctrl+Y, un texto longo que se despraza cunha cela libre para o cursor, Inicio, ↑, que o campo non colle, Intro e Esc. Tamén se comprobou que, despois de Intro cun texto que ocupa dúas liñas da consola, non queda nada da liña de abaixo de antes; que, cando a consola se fai máis estreita ca o campo, o campo colle o ancho novo coa seguinte tecla, e enriba del só pode quedar unha fila do campo de antes, que a consola partiu ao estreitarse, ata que sae da pantalla; e que un acento combinado escrito só aparece coma `U+0301: the field took it.`
+
+### O comentario do módulo
+
+```rust
+//! Tries the text field of meiga by hand, in the console: the field of
+//! `meiga_core::ui::field`, which the names of the tabs will use, drawn as a
+//! line of text, with the keys that the console gives, which are the ones
+//! that meiga gets, and with the clipboard of Windows.
+//!
+//! ```text
+//! cargo run -p meiga-win --example field -- [--columns N] [--limit N] [text]
+//! ```
+//!
+//! The field shows N cells, 20 by default, or fewer if the console is
+//! narrower, and holds at most N UTF-16 code units, 1000 by default. With
+//! `text`, it starts with it, all selected. Enter shows its text, and starts
+//! again with an empty field; Esc ends. Under the field, a line says how many
+//! code units it has, and what the last key did.
+//!
+//! The terminal where it runs takes some keys of the field for itself:
+//! Windows Terminal pastes with Ctrl+Shift+V and Shift+Insert, and often
+//! with Ctrl+V, and copies with Ctrl+C, Ctrl+Shift+C and Ctrl+Insert while
+//! it has a selection of its own; meiga pastes with Ctrl+V and
+//! Ctrl+Shift+V, and copies with Ctrl+C and Ctrl+Shift+C while it has a
+//! selection. They type what they paste, as keys. So F5 also asks the field
+//! to paste the clipboard. The field shows the characters without width,
+//! such as a combining accent, as meiga draws them until subphase 8.1:
+//! without a cell. The line under it names them by their code point.
+```
+
+- **O que fai.** Mostra o campo de `meiga_core::ui::field`, que usarán os nomes das tabs, coma unha liña de texto, coas teclas que dá a consola e co portapapeis de Windows. O bloque `text` é o uso, e o resto di o que se ve enriba: as celas e as unidades por defecto, o texto do principio, Intro, Esc e a liña de abaixo.
+- **As teclas que colle o terminal.** O exemplo corre nun terminal, que colle para si algunhas teclas do campo antes de que cheguen á consola. O Windows Terminal pega con Ctrl+Maiús+V e Maiús+Insert, e moitas veces con Ctrl+V, e copia con Ctrl+C, Ctrl+Maiús+C e Ctrl+Insert mentres ten unha selección súa. meiga pega con Ctrl+V e Ctrl+Maiús+V, e copia con Ctrl+C e Ctrl+Maiús+C mentres ten unha selección ([Código › meiga-core › `shortcut.rs`](meiga-core.md#cratesmeiga-coresrcshortcutrs)).
+- **Pegan teclas.** Os terminais envían o texto que pegan coma se se tecleara ([Tecnoloxías › Pegar no terminal](../tecnoloxias.md#47-pegar-no-terminal-o-filtro-e-o-bracketed-paste)): o campo recibiríao coma escrito, sen pasar por `paste`, que o deixa nunha liña ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 5), e cada salto de liña sería un Intro, que no exemplo mostra o texto e empeza outra vez. Por iso F5 tamén lle pide ao campo que pegue o portapapeis: así se proba `paste` en calquera terminal.
+- **Os caracteres sen ancho**, coma un acento combinado, móstraos o campo coma os debuxa meiga ata a subfase 8.1: sen cela ([Código › meiga-core › `text.rs`](meiga-core.md#cratesmeiga-coresrctextrs)). Un `é` escrito coma `e` e un acento vese coma `e`, pero o cursor do campo salta os dous á vez, porque son un grafema, e Retroceso borra só o acento ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 2). A liña de abaixo nomea eses caracteres polo seu punto de código, que si se ve ([`quoted`](#o-nome-dunha-tecla-quoted-e-key_name)).
+
+### As importacións e as constantes
+
+```rust
+use std::env;
+use std::error::Error;
+use std::io::{self, Write};
+use std::iter;
+use std::ops::RangeInclusive;
+use std::process::ExitCode;
+use std::ptr;
+
+use meiga_core::input::{ControlKeys, KeyEvent};
+use meiga_core::text::{self, CellChar};
+use meiga_core::ui::field::{Field, Reply, Shown};
+use meiga_win::clipboard;
+use meiga_win::window::{Window, WindowOptions};
+use windows_sys::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
+use windows_sys::Win32::System::Console::{
+    CONSOLE_MODE, CONSOLE_SCREEN_BUFFER_INFO, ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT,
+    ENABLE_PROCESSED_INPUT, ENABLE_VIRTUAL_TERMINAL_INPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
+    GetConsoleMode, GetConsoleScreenBufferInfo, GetStdHandle, INPUT_RECORD, KEY_EVENT,
+    KEY_EVENT_RECORD, ReadConsoleInputW, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode,
+};
+use windows_sys::Win32::System::Threading::INFINITE;
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    DispatchMessageW, MSG, MsgWaitForMultipleObjects, PM_REMOVE, PeekMessageW, QS_ALLINPUT,
+};
+
+const USAGE: &str =
+    "Usage: cargo run -p meiga-win --example field -- [--columns N] [--limit N] [text]";
+
+/// The exit code when the command line is wrong, as in meiga.
+const USAGE_ERROR: u8 = 2;
+
+/// The keys that the example takes for itself.
+const VK_RETURN: u16 = 0x0d;
+const VK_ESCAPE: u16 = 0x1b;
+const VK_F5: u16 = 0x74;
+
+/// The cells that a text copied or pasted takes in the line under the
+/// field.
+const PREVIEW: usize = 24;
+```
+
+- **De `meiga-core`:** o campo, `Field`, a súa resposta a cada tecla, `Reply`, e o que mostra, `Shown` ([`ui/field/mod.rs`](meiga-core.md#cratesmeiga-coresrcuifieldmodrs)); os eventos de tecla, [`KeyEvent`](meiga-core.md#keyevent), coas súas teclas modificadoras, [`ControlKeys`](meiga-core.md#controlkeys); e o texto en celas, `text` e `CellChar` ([`text.rs`](meiga-core.md#cratesmeiga-coresrctextrs)). **De `meiga-win`:** o [portapapeis](#cratesmeiga-winsrcclipboardrs) e a [xanela](#windowoptions-e-window), coma os usaría outro crate.
+- **De `windows-sys`:** a consola, a espera e as mensaxes. Un exemplo pode usar as dependencias do seu crate, e `meiga-win` xa tiña as *features* de todo o que usa ([`Cargo.toml`](#cratesmeiga-wincargotoml)): `Win32_Foundation`, `Win32_System_Console`, `Win32_System_Threading` e `Win32_UI_WindowsAndMessaging`.
+- **`USAGE` e `USAGE_ERROR`:** o uso, que se mostra cunha liña de comandos que non vale, e o código de saída de entón, 2, coma en meiga ([Código › meiga › `main.rs`](meiga.md#cratesmeigasrcmainrs)).
+- **`VK_RETURN`, `VK_ESCAPE` e `VK_F5`:** os códigos de tecla virtual de Intro, Esc e F5, as teclas que colle o exemplo ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)).
+- **`PREVIEW`:** as celas que ocupa na liña de abaixo un texto copiado ou pegado, 24 ([`preview`](#a-liña-de-abaixo-fitted-e-preview)).
+
+### A liña de comandos: `main`, `Options` e `number`
+
+```rust
+fn main() -> ExitCode {
+    let options = match Options::parse(env::args().skip(1)) {
+        Ok(options) => options,
+        Err(error) => {
+            eprintln!("{error}\n\n{USAGE}");
+            return ExitCode::from(USAGE_ERROR);
+        }
+    };
+    match run(&options) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("{error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// What the command line asks for.
+struct Options {
+    columns: usize,
+    limit: usize,
+    text: Option<String>,
+}
+
+impl Options {
+    fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
+        let mut options = Self {
+            columns: 20,
+            limit: 1000,
+            text: None,
+        };
+        let mut words = Vec::new();
+        while let Some(arg) = args.next() {
+            match arg.as_str() {
+                "--columns" => options.columns = number(args.next(), "--columns", 1..=500)?,
+                "--limit" => options.limit = number(args.next(), "--limit", 1..=100_000)?,
+                _ => words.push(arg),
+            }
+        }
+        if !words.is_empty() {
+            options.text = Some(words.join(" "));
+        }
+        Ok(options)
+    }
+}
+
+/// The number of an option, which has to be in `range`.
+fn number(
+    value: Option<String>,
+    option: &str,
+    range: RangeInclusive<usize>,
+) -> Result<usize, String> {
+    value
+        .and_then(|value| value.parse().ok())
+        .filter(|number| range.contains(number))
+        .ok_or_else(|| {
+            format!(
+                "{option} needs a number from {} to {}.",
+                range.start(),
+                range.end()
+            )
+        })
+}
+```
+
+- **`main`** le as opcións, corre o exemplo e devolve o código de saída: 0, se remata con Esc; 1, se `run` falla, co erro na saída de erros, por exemplo sen consola; e 2, cunha liña de comandos que non vale, co erro e o uso. O exemplo non chama a `process::exit`, que sae sen destruír nada: `run` volta, e o seu `Console` deixa a consola cos modos de antes ([`Drop`](#os-modos-de-antes-drop)).
+- **`Options::parse`** recibe os argumentos sen o primeiro, o nome do programa (`skip(1)`). `--columns` e `--limit` levan o seu número no argumento seguinte, que `args.next()` colle do mesmo iterador, dentro do bucle: por iso `args` é `mut`. As opcións poden ir en calquera sitio, e os outros argumentos son o texto, xuntos con espazos: tamén os que empezan por `--` e non son unha opción.
+- **`number`** dá o número dunha opción, se está no seu rango. `and_then` dá `None` se a opción vai ao final, sen valor, ou se o valor non é un número (`parse().ok()`); `filter`, se está fóra do rango; e `ok_or_else` converte o `None` na mensaxe, cos dous extremos do rango: `--limit needs a number from 1 to 100000.` `1..=500` é un `RangeInclusive`, que inclúe o 500.
+
+### O bucle: `run` e `field_columns`
+
+```rust
+fn run(options: &Options) -> Result<(), Box<dyn Error>> {
+    // The clipboard needs a window of this thread: this one, never shown.
+    let window = Window::create(&WindowOptions {
+        title: "meiga: the text field",
+        title_bar: false,
+    })?;
+    let console = Console::open()?;
+    let columns = field_columns(options.columns, console.width());
+    let mut field = Field::new(options.limit);
+    field.set_columns(columns);
+    if let Some(text) = &options.text {
+        field.set_text(text);
+        field.select_all();
+    }
+    let mut out = io::stdout().lock();
+    writeln!(
+        out,
+        "A field of {columns} cells and at most {} UTF-16 code units. Enter shows its text, Esc \
+         ends, and F5 pastes.",
+        options.limit
+    )?;
+    let mut status = "Type.".to_owned();
+    let mut high = None;
+    loop {
+        // The console can get narrower or wider while the example runs.
+        let width = console.width();
+        let columns = field_columns(options.columns, width);
+        field.set_columns(columns);
+        draw(&mut out, &field, columns, &status, width)?;
+        let event = console.next_key()?;
+        let reply = if event.down && event.key == VK_F5 {
+            Reply::Paste
+        } else {
+            field.key(&event)
+        };
+        let name = key_name(&event, &mut high);
+        status = match reply {
+            Reply::Copy(text) => match clipboard::write_text(&window, &text) {
+                Ok(()) => format!("{name}: «{}» went to the clipboard.", preview(&text)),
+                Err(error) => format!("{name}: the clipboard is busy: {error}"),
+            },
+            Reply::Paste => match clipboard::read_text(&window) {
+                Ok(Some(text)) => {
+                    field.paste(&text);
+                    format!("{name}: «{}» came from the clipboard.", preview(&text))
+                }
+                Ok(None) => format!("{name}: the clipboard has no text."),
+                Err(error) => format!("{name}: the clipboard is busy: {error}"),
+            },
+            Reply::Taken => format!("{name}: the field took it."),
+            // A key that goes up and does nothing: the line stays.
+            Reply::Ignored if !event.down => status,
+            Reply::Ignored => match event.key {
+                VK_RETURN => {
+                    // The text can take more than a line: what was drawn
+                    // under the field goes away first.
+                    write!(out, "\r\x1b[JIts text: «{}»\r\n", field.text())?;
+                    field.set_text("");
+                    format!("{name}: the field starts again.")
+                }
+                VK_ESCAPE => {
+                    write!(out, "\r\n\r\n")?;
+                    return Ok(());
+                }
+                _ => format!("{name}: not a key of the field."),
+            },
+        };
+    }
+}
+
+/// The cells of a field of `wanted` cells in a console of `width` columns:
+/// fewer if they do not fit with the brackets and a free column, so that
+/// its line never wraps.
+fn field_columns(wanted: usize, width: usize) -> usize {
+    wanted.min(width.saturating_sub(3).max(1))
+}
+```
+
+Paso a paso:
+
+1. **A xanela.** O portapapeis ábrese para unha xanela do fío que o usa ([`Open`](#open-e-global)), e copiar fai dela a súa dona. O exemplo crea unha [`Window`](#windowcreate) só para iso, sen a barra de título de meiga: `create` déixaa oculta, e só a mostraría [`run`](#windowrun), que o exemplo non chama. Nunca se ve, nin na barra de tarefas. Sen `run` non ten *handler*, e o [*window procedure*](#window_proc) pásalle case todas as súas mensaxes a `DefWindowProcW`.
+2. **A consola** ([`Console::open`](#a-consola-console-open-e-width)): a súa entrada dá os eventos de tecla enteiros, e a súa saída entende as secuencias VT.
+3. **As celas do campo** ao empezar, con `field_columns`, máis abaixo: as de `--columns`, ou menos se non caben na consola.
+4. **O campo.** `Field::new` crea un campo baleiro co límite, que non mostra nada ata que sabe cantas celas ten: `set_columns`. Cun texto, `set_text` pono, nunha liña e cortado ao límite, co cursor ao final, e `select_all` selecciónao todo.
+5. **A saída estándar**, bloqueada para este fío mentres dura o exemplo (`lock`), recibe a liña do principio, coas celas de entón.
+6. **O bucle.** Antes de cada debuxo, mide outra vez a consola, que pode estreitarse ou ensancharse mentres corre o exemplo, coma di o comentario, e dálle ao campo as celas que caben agora, con `set_columns`: se son as mesmas, nada cambia, e se non, a parte do texto que mostra o campo móvese o xusto para que se vexa o cursor. Despois debuxa o campo ([`draw`](#o-campo-na-consola-draw-e-push_cell)), agarda a seguinte tecla ([`next_key`](#a-espera-next_key)), dálla ao campo con `Field::key` e garda para a liña de abaixo o que fixo, co nome da tecla ([`key_name`](#o-nome-dunha-tecla-quoted-e-key_name)). Cada evento, tamén o dunha tecla que sobe, debuxa o campo outra vez. O `columns` do bucle tapa o de fóra, que só serve para empezar.
+
+O que fai o exemplo con cada resposta do campo:
+
+| Resposta | Que fai o exemplo |
+|---|---|
+| `Copy(text)` | Pon `text` no portapapeis, con [`write_text`](#write_text-e-units). Chega con Ctrl+C e Ctrl+Insert, que copian a selección, e con Ctrl+X e Maiús+Supr, que a cortan: o campo xa a quitou do texto. |
+| `Paste` | Le o portapapeis con [`read_text`](#read_text) e dálle o texto a `Field::paste`, que o pega nunha liña, no canto da selección, e só o que colle (ADR 0030, decisións 5 e 6). Chega con Ctrl+V e Maiús+Insert; con F5, que baixa, dáa o propio exemplo, sen pasarlle a tecla ao campo. |
+| `Taken` | Nada máis: o campo xa fixo o seu traballo. |
+| `Ignored`, cunha tecla que sobe | Nada: a liña de abaixo queda coma estaba. |
+| `Ignored`, con Intro | Borra desde a liña do campo ata o final da pantalla (`ESC [ J`) e escribe alí o texto, que pode ocupar máis dunha liña, coma di o comentario: así non queda nada da liña de abaixo. Despois pasa á liña seguinte, onde irá o campo, e baleira o campo con `set_text("")`, que tamén esquece o que había para desfacer. |
+| `Ignored`, con Esc | Baixa dúas liñas, ata debaixo da liña de abaixo, e remata. |
+| `Ignored`, con outra tecla | Di que non é unha tecla do campo: ↑ e ↓ sen Maiús, Tab, RePáx e AvPáx, as teclas F, as modificadoras soas, coma Maiús ao baixar, as letras con Alt só, que o campo deixa para os menús da xanela, e as de Ctrl que non son ordes, coma Ctrl+B. |
+
+- **`field_columns`** dá as celas dun campo de `wanted` celas nunha consola de `width` columnas: como moito as que caben cos dous corchetes e unha columna libre (`width - 3`), e polo menos unha. Así a liña do campo nunca se parte, coma di o comentario: se se partise, `ESC [ 1 A` subiría á súa segunda fila, e o seguinte debuxo empezaría alí ([`draw`](#o-campo-na-consola-draw-e-push_cell)).
+- **F5** pega con calquera tecla modificadora, e o campo non recibe esa tecla ao baixar.
+- **Intro e Esc** fan o seu con ou sen modificadoras: o campo non colle ningún dos dous.
+- **Os erros do portapapeis** non rematan o exemplo: van á liña de abaixo, sexa porque outro programa o ten aberto ou por outro fallo (`the clipboard is busy`). Os da consola e da saída, si: `?` devólveos a `main`.
+- **`status`** é o texto da liña de abaixo, e garda o da tecla anterior: `Reply::Ignored if !event.down => status` volta deixalo igual. O `match` move o `String` á mesma variábel, sen copialo.
+- **`high`** garda a primeira metade dun carácter de fóra do plano básico, para o seu nome ([`key_name`](#o-nome-dunha-tecla-quoted-e-key_name)); o campo garda a súa.
+
+### O campo na consola: `draw` e `push_cell`
+
+```rust
+/// Draws the field, between brackets and with the selection in reverse
+/// video, and the line under it, instead of what the console had from the
+/// line of its cursor down; and puts that cursor where the caret is, which
+/// the next drawing starts from.
+fn draw(
+    out: &mut impl Write,
+    field: &Field,
+    columns: usize,
+    status: &str,
+    width: usize,
+) -> io::Result<()> {
+    let mut cells = Vec::new();
+    let Shown { caret, selection } = field.show(&mut cells);
+    let mut line = String::from("[");
+    for (index, &cell) in cells.iter().enumerate() {
+        if index == selection.start && !selection.is_empty() {
+            line.push_str("\x1b[7m");
+        }
+        push_cell(&mut line, cell);
+        if index + 1 == selection.end && !selection.is_empty() {
+            line.push_str("\x1b[27m");
+        }
+    }
+    line.extend(iter::repeat_n(' ', columns.saturating_sub(cells.len())));
+    line.push(']');
+    let units: usize = field.text().chars().map(char::len_utf16).sum();
+    let under = fitted(
+        &format!("{units} of {} UTF-16 code units · {status}", field.limit()),
+        width.saturating_sub(1),
+    );
+    write!(out, "\r\x1b[J{line}\r\n{under}\x1b[1A\x1b[{}G", caret + 2)?;
+    out.flush()
+}
+
+/// Adds what `cell` shows to `line`: the right half of a wide character is
+/// already there.
+fn push_cell(line: &mut String, cell: CellChar) {
+    match cell {
+        CellChar::Blank => line.push(' '),
+        CellChar::Narrow(c) | CellChar::WideLeft(c) => line.push(c),
+        CellChar::WideRight(_) => {}
+    }
+}
+```
+
+- **As celas.** `Field::show` pon en `cells` as celas da parte do texto que mostra o campo, como moito tantas coma as súas, e devolve o resto do que mostra (`Shown`): a cela onde vai o cursor, sempre unha das do campo, tamén ao final dun texto que non cabe; e as celas seleccionadas, ningunha sen selección. Se o texto non cabe, mostra a parte onde está o cursor, e unha letra ancha que corta o lado dereito vai coma unha cela baleira (ADR 0030, decisión 7). `let Shown { caret, selection } = …` desestrutura o resultado nas súas dúas partes.
+- **A liña do campo** vai entre corchetes, coa selección en inverso: `ESC [ 7 m` antes da súa primeira cela, e `ESC [ 27 m`, que o quita, despois da última ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)). Despois do texto, espazos ata completar as celas: `iter::repeat_n` dá un espazo tantas veces coma celas faltan.
+- **`push_cell`** engade o que mostra cada cela: un espazo nunha baleira, o carácter nunha estreita ou na metade esquerda dunha ancha, e nada na metade dereita, porque o carácter ancho xa ocupa as dúas columnas na consola.
+- **A liña de abaixo:** as unidades de UTF-16 do texto, que o exemplo conta coma o campo (`char::len_utf16`, 1 ou 2 por carácter), porque o campo non as publica; o límite; e o que fixo a última tecla. Córtaa [`fitted`](#a-liña-de-abaixo-fitted-e-preview) ao ancho da consola menos unha columna, que queda libre, coma despois do campo.
+- **As secuencias**, nunha soa escritura: `\r` volta ao principio da liña do campo, e `ESC [ J` borra desde alí ata o final da pantalla: a liña do campo, a de abaixo e o que quedase debaixo delas, coma di o comentario. Despois van a liña do campo, `\r\n` e a liña de abaixo; `ESC [ 1 A` sobe á liña do campo; e `ESC [ n G` leva o cursor da consola á columna *n*, contada desde 1: a do cursor do campo, `caret + 2`, porque a primeira é a do corchete. Así, o cursor da consola fai de cursor do campo, e o seguinte debuxo empeza na liña do campo, no sitio do anterior.
+- **`flush`.** A saída estándar garda o que se escribe ata cada salto de liña, e o debuxo remata despois do último: `flush` envía o resto á consola no momento.
+
+### A liña de abaixo: `fitted` e `preview`
+
+```rust
+/// `text`, cut to `columns` cells with an ellipsis.
+fn fitted(text: &str, columns: usize) -> String {
+    let mut cells = Vec::new();
+    text::fit(text, columns, &mut cells);
+    let mut out = String::new();
+    for cell in cells {
+        push_cell(&mut out, cell);
+    }
+    out
+}
+
+/// The start of `text`, for the line under the field, with its control
+/// characters in sight, as the symbols that Unicode has for them: a tab is
+/// ␉, and a line break, ␍␊.
+fn preview(text: &str) -> String {
+    let visible: String = text
+        .chars()
+        .map(|c| match c {
+            '\0'..='\x1f' => char::from_u32(0x2400 + u32::from(c)).unwrap_or(c),
+            '\x7f' => '\u{2421}',
+            c => c,
+        })
+        .collect();
+    fitted(&visible, PREVIEW)
+}
+```
+
+- **`fitted`** corta un texto ás celas que se lle dan, cun `…` na última se non cabe, con [`text::fit`](meiga-core.md#cratesmeiga-coresrctextrs), coma os títulos das tabs e os textos dos menús, e volta facer un texto coas celas, con `push_cell`. Os caracteres sen ancho, coma os de control ou un acento combinado, non teñen cela, así que non chegan á liña: por iso `preview` cambia os de control polos seus símbolos, e `quoted` nomea polo seu punto de código o carácter sen ancho dunha tecla.
+- **`preview`** é o principio do texto que vai ao portapapeis ou vén del, en 24 celas (`PREVIEW`). Antes de cortalo, cambia cada carácter de control polo símbolo que lle dá Unicode, no bloque *Control Pictures*, coma o exemplo [`conpty`](#cratesmeiga-winexamplesconptyrs): os de U+0000 a U+001F, polo de U+2400 máis o seu número, e DEL, U+007F, por ␡, U+2421. Así se ven o tabulador, ␉, e os saltos de liña, coma CR LF, ␍␊: o que o campo converte en espazos ao pegar, ou quita (ADR 0030, decisión 5). Un portapapeis con `un`, un tabulador e `dous` móstrase `un␉dous`, e o campo pega `un dous`. O texto que se copia nunca leva caracteres de control, porque o campo non os garda.
+- `char::from_u32` dá un `Option`, porque non todos os números son un carácter; os de U+2400 a U+241F si o son, e `unwrap_or(c)` só evita un `unwrap`, que Clippy non permite ([Tecnoloxías › *Lints*](../tecnoloxias.md#7-lints-rustc-e-clippy)).
+- Os caracteres de control de U+0080 a U+009F, coma NEL (U+0085), que o campo tamén converte nun espazo, non cambian: seguen sen cela, e non se ven.
+
+### O nome dunha tecla: `quoted` e `key_name`
+
+```rust
+/// `c` between quotes or, if it takes no cell, such as a combining accent,
+/// its code point, which shows something.
+fn quoted(c: char) -> String {
+    let mut utf8 = [0; 4];
+    if text::width(c.encode_utf8(&mut utf8)) == 0 {
+        format!("U+{:04X}", u32::from(c))
+    } else {
+        format!("«{c}»")
+    }
+}
+
+/// The name of the key of `event`, with its modifier keys, or the character
+/// that it writes. A character outside the Basic Multilingual Plane comes
+/// in two keys: `high` keeps its first half until the second one.
+fn key_name(event: &KeyEvent, high: &mut Option<u16>) -> String {
+    let controls = event.controls;
+    // Windows writes characters without Ctrl and Alt, or with both, which
+    // it takes as AltGr.
+    let writes = controls.ctrl() == controls.alt();
+    match event.character {
+        unit @ 0xd800..=0xdbff if writes => {
+            *high = Some(unit);
+            return "The first half of a character".to_owned();
+        }
+        unit @ 0xdc00..=0xdfff if writes => {
+            let pair = high
+                .take()
+                .map(|high| char::decode_utf16([high, unit]).next());
+            return match pair {
+                Some(Some(Ok(c))) => quoted(c),
+                _ => "The second half of a character".to_owned(),
+            };
+        }
+        unit if writes => {
+            if let Some(c) =
+                char::from_u32(u32::from(unit)).filter(|c| *c != ' ' && !c.is_control())
+            {
+                return quoted(c);
+            }
+        }
+        _ => {}
+    }
+    let mut name = String::new();
+    let modifier = matches!(event.key, 0x10..=0x12);
+    if !modifier {
+        if controls.alt_gr() {
+            name.push_str("AltGr+");
+        } else {
+            if controls.ctrl() {
+                name.push_str("Ctrl+");
+            }
+            if controls.alt() {
+                name.push_str("Alt+");
+            }
+        }
+        if controls.shift() {
+            name.push_str("Shift+");
+        }
+    }
+    let key = match event.key {
+        0x08 => "Backspace".to_owned(),
+        0x09 => "Tab".to_owned(),
+        0x0d => "Enter".to_owned(),
+        0x10 => "Shift".to_owned(),
+        0x11 => "Ctrl".to_owned(),
+        0x12 => "Alt".to_owned(),
+        0x1b => "Esc".to_owned(),
+        0x20 => "Space".to_owned(),
+        0x21 => "Page Up".to_owned(),
+        0x22 => "Page Down".to_owned(),
+        0x23 => "End".to_owned(),
+        0x24 => "Home".to_owned(),
+        0x25 => "←".to_owned(),
+        0x26 => "↑".to_owned(),
+        0x27 => "→".to_owned(),
+        0x28 => "↓".to_owned(),
+        0x2d => "Insert".to_owned(),
+        0x2e => "Delete".to_owned(),
+        key @ 0x70..=0x87 => format!("F{}", key - 0x6f),
+        key @ (0x30..=0x39 | 0x41..=0x5a) => char::from(key as u8).to_string(),
+        key => format!("the key {key:#04x}"),
+    };
+    name + &key
+}
+```
+
+- **`quoted`** pon un carácter entre comiñas, `«a»`, ou, se non ocupa ningunha cela, coma un acento combinado, un selector de variante ou o ZWJ dun emoji, o seu punto de código, `U+0301`, que si se ve na liña de abaixo. `encode_utf8` escribe o carácter en UTF-8 nun *array* de catro bytes, sen reservar memoria, para medilo con [`text::width`](meiga-core.md#cratesmeiga-coresrctextrs); e `{:04X}` escribe o número en hexadecimal, en maiúsculas e con polo menos catro cifras, coma se escriben os puntos de código.
+- **Se a tecla escribe un carácter,** o nome é o carácter, con `quoted`. Para o nome, escribe sen Ctrl nin Alt, ou cos dous, coma di o comentario: Windows toma calquera Ctrl con calquera Alt coma AltGr, e o Ctrl esquerdo e o Alt esquerdo con E escriben € no teclado español ([Tecnoloxías › O teclado en Windows](../tecnoloxias.md#41-o-teclado-en-windows)). O campo tamén escribe eses caracteres ([`ui/field/keys.rs`](meiga-core.md#cratesmeiga-coresrcuifieldkeysrs)). Con Ctrl só ou con Alt só, o nome é o da tecla, coas súas modificadoras: `Ctrl+B`, `Alt+F`. O espazo e os caracteres de control, coma o de Intro ou o de Tab, van co nome da tecla: `char::from_u32` converte a unidade nun carácter, e `filter` quítaos.
+- **As dúas metades** dun carácter de fóra do plano básico, coma a maioría dos emoji, chegan en dúas teclas ([`KeyEvent`](meiga-core.md#keyevent)). A primeira chámase `The first half of a character`, e queda en `high`; coa segunda, `char::decode_utf16` xúntaas, e o nome é o carácter enteiro, tamén con `quoted`: `«😀»`. Unha segunda metade sen a primeira é `The second half of a character`. `take` saca a primeira metade e deixa `high` baleiro. Ao contrario ca o campo, `key_name` non esquece a primeira metade se chega outra tecla antes da segunda: unha segunda metade solta que chegase despois levaría o nome do carácter das dúas, que o campo non escribiu.
+- **As outras teclas** van co seu nome, coas modificadoras diante: `AltGr+`, se son o Ctrl esquerdo e o Alt dereito, coma os dá AltGr ([`alt_gr`](meiga-core.md#controlkeys)), ou `Ctrl+` e `Alt+`; e despois `Shift+`. As modificadoras soas, os códigos `0x10` a `0x12` (Maiús, Ctrl e Alt), van sen elas: `Shift`, e non `Shift+Shift`.
+- **Os nomes** van en inglés, coma as outras mensaxes de meiga: Retroceso é `Backspace`, Supr é `Delete`, e as frechas, `←`, `↑`, `→` e `↓`. As teclas F, de F1 a F24 (`0x70` a `0x87`), levan o seu número; os números e as letras, o seu carácter, porque o seu código é o do carácter en ASCII; e as demais, o código: `the key 0xdb`. `{key:#04x}` escribe o número en hexadecimal, con `0x` e polo menos dúas cifras.
+
+### A consola: `Console`, `open` e `width`
+
+```rust
+/// The console of the example: its input gives whole key events, and its
+/// output understands VT sequences, until it is dropped, which gives them
+/// back the modes that they had.
+struct Console {
+    input: HANDLE,
+    output: HANDLE,
+    modes: Option<(CONSOLE_MODE, CONSOLE_MODE)>,
+}
+
+impl Console {
+    fn open() -> io::Result<Self> {
+        // SAFETY: GetStdHandle has no preconditions.
+        let (input, output) = unsafe {
+            (
+                GetStdHandle(STD_INPUT_HANDLE),
+                GetStdHandle(STD_OUTPUT_HANDLE),
+            )
+        };
+        let mut console = Self {
+            input,
+            output,
+            modes: None,
+        };
+        let (mut input_mode, mut output_mode) = (0, 0);
+        // SAFETY: GetConsoleMode fails for a handle that is not of a
+        // console, and the modes are valid to write.
+        let console_handles = unsafe {
+            GetConsoleMode(input, &mut input_mode) != 0
+                && GetConsoleMode(output, &mut output_mode) != 0
+        };
+        if !console_handles {
+            return Err(io::Error::other(
+                "The example needs a console: run it in one, without redirecting its input or its \
+                 output.",
+            ));
+        }
+        console.modes = Some((input_mode, output_mode));
+        let keys = input_mode
+            & !(ENABLE_PROCESSED_INPUT
+                | ENABLE_LINE_INPUT
+                | ENABLE_ECHO_INPUT
+                | ENABLE_VIRTUAL_TERMINAL_INPUT);
+        // SAFETY: both handles are of the console, as GetConsoleMode said.
+        let set = unsafe {
+            SetConsoleMode(input, keys) != 0
+                && SetConsoleMode(output, output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0
+        };
+        if !set {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(console)
+    }
+```
+
+- **`Console`** garda os *handles* da entrada e da saída da consola, e os modos que tiñan ao abrila, para devolvérllelos ao final.
+- **Os *handles*.** `GetStdHandle` dá os da entrada e da saída estándar do proceso. Se van redirixidos a un arquivo ou a unha tubaxe, non son dunha consola, e `GetConsoleMode`, que le o modo dunha consola, falla: o exemplo remata cun erro que pide unha consola.
+- **Os modos de antes** gárdanse en `modes` antes de cambialos: se `SetConsoleMode` falla, o `return` destrúe o `Console`, e o seu [`Drop`](#os-modos-de-antes-drop) volta pór os dous. O erro lese antes, con `last_os_error`, porque o valor do `return` calcúlase antes de destruír nada; e, se o primeiro `SetConsoleMode` falla, `&&` non chama ao segundo.
+
+[`SetConsoleMode`](https://learn.microsoft.com/windows/console/setconsolemode) cambia o que fai a consola coa entrada e coa saída. O exemplo quita catro modos da entrada, pon un na saída, e deixa o resto coma estaba:
+
+| Modo | Que fai | No exemplo |
+|---|---|---|
+| `ENABLE_PROCESSED_INPUT` | Ctrl+C non chega coma tecla: é un sinal, que por defecto remata o programa. | Fóra: Ctrl+C chega coma tecla, e copia no campo. |
+| `ENABLE_LINE_INPUT` e `ENABLE_ECHO_INPUT` | `ReadFile` e `ReadConsole` dan liñas enteiras, e a consola mostra o que se escribe. | Fóra. `ReadConsoleInputW`, coa que le o exemplo, non os usa. |
+| `ENABLE_VIRTUAL_TERMINAL_INPUT` | A consola converte as teclas nas secuencias VT dun terminal de Unix ([Tecnoloxías › As teclas no terminal](../tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt)). | Fóra: as teclas chegan coma eventos enteiros. |
+| `ENABLE_VIRTUAL_TERMINAL_PROCESSING`, da saída | A consola interpreta as secuencias VT que escribe o programa. | Dentro: o exemplo debuxa con elas. |
+
+```rust
+    /// The number of columns of the window of the console, or 80 if it does
+    /// not say.
+    fn width(&self) -> usize {
+        let mut info = CONSOLE_SCREEN_BUFFER_INFO::default();
+        // SAFETY: the handle is the output of the console, and `info` is
+        // valid to write.
+        if unsafe { GetConsoleScreenBufferInfo(self.output, &mut info) } == 0 {
+            return 80;
+        }
+        let window = info.srWindow;
+        usize::try_from(i32::from(window.Right) - i32::from(window.Left) + 1).unwrap_or(80)
+    }
+```
+
+- **`width`** dá as columnas da xanela da consola, a parte do seu búfer que se ve (`srWindow`), con [`GetConsoleScreenBufferInfo`](https://learn.microsoft.com/windows/console/getconsolescreenbufferinfo): o búfer pode ser máis ancho ca a xanela. Os dous bordos cóntanse, de aí o `+ 1`. Se a función falla, 80; e tamén se a resta non dese un número que `usize::try_from` acepte.
+- `CONSOLE_SCREEN_BUFFER_INFO::default()` dá a estrutura chea de ceros, coma `INPUT_RECORD::default()` e `MSG::default()` en [`next_key`](#a-espera-next_key): só a chamada a Windows vai nun bloque `unsafe`.
+- O exemplo pregúntao antes de cada debuxo, para as celas do campo e para a liña de abaixo ([`run`](#o-bucle-run-e-field_columns)).
+
+### A espera: `next_key`
+
+```rust
+    /// The next key that goes down or up, as meiga gets it. Meanwhile, the
+    /// window of the thread gets its messages: after a copy, it owns the
+    /// clipboard, and another program that takes it waits for the window
+    /// to get a message.
+    fn next_key(&self) -> io::Result<KeyEvent> {
+        loop {
+            // SAFETY: the handle is the input of the console, which stays
+            // while the example runs.
+            let woken =
+                unsafe { MsgWaitForMultipleObjects(1, &self.input, 0, INFINITE, QS_ALLINPUT) };
+            if woken == WAIT_OBJECT_0 {
+                let mut record = INPUT_RECORD::default();
+                let mut read = 0;
+                // SAFETY: the record has room for one event, and `read` is
+                // valid to write.
+                if unsafe { ReadConsoleInputW(self.input, &mut record, 1, &mut read) } == 0 {
+                    return Err(io::Error::last_os_error());
+                }
+                if read == 1 && u32::from(record.EventType) == KEY_EVENT {
+                    // SAFETY: the record is of a key, so its union holds a
+                    // KEY_EVENT_RECORD.
+                    return Ok(key_event(unsafe { &record.Event.KeyEvent }));
+                }
+            } else if woken == WAIT_OBJECT_0 + 1 {
+                let mut message = MSG::default();
+                // SAFETY: `message` is valid for PeekMessageW to fill in.
+                while unsafe { PeekMessageW(&mut message, ptr::null_mut(), 0, 0, PM_REMOVE) } != 0 {
+                    // SAFETY: `message` holds the message that PeekMessageW
+                    // took.
+                    unsafe { DispatchMessageW(&message) };
+                }
+            } else {
+                return Err(io::Error::last_os_error());
+            }
+        }
+    }
+}
+```
+
+- **Dúas cousas á vez.** Mentres agarda unha tecla, o fío trata tamén as mensaxes da súa xanela. Despois dun copiar, a xanela é a dona do portapapeis, e cando outro programa o baleira con `EmptyClipboard`, para copiar el, Windows envíalle [`WM_DESTROYCLIPBOARD`](https://learn.microsoft.com/windows/win32/dataxchg/wm-destroyclipboard): coma di o comentario, ese programa agarda a que a xanela reciba a mensaxe ([Tecnoloxías › O portapapeis de Windows](../tecnoloxias.md#46-o-portapapeis-de-windows)).
+- **A espera.** [`MsgWaitForMultipleObjects`](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-msgwaitformultipleobjects) agarda polas dúas, coma a xanela agarda polo temporizador e polas mensaxes ([Tecnoloxías › A espera do fío da interface](../tecnoloxias.md#26-temporizadores-e-a-espera-do-fío-da-interface)): o *handle* da entrada da consola, que está sinalado mentres ten eventos sen ler, e calquera mensaxe da cola do fío (`QS_ALLINPUT`), sen límite de tempo (`INFINITE`). Mentres tanto, o fío dorme. Devolve `WAIT_OBJECT_0` se é a consola, e `WAIT_OBJECT_0 + 1`, o número seguinte ao do último obxecto, se é unha mensaxe ([Tecnoloxías › O fin dun proceso e dos seus fíos](../tecnoloxias.md#61-o-fin-dun-proceso-e-dos-seus-fíos), *Agardar por varios obxectos á vez*).
+- **Un evento da consola.** [`ReadConsoleInputW`](https://learn.microsoft.com/windows/console/readconsoleinput) le un, nun [`INPUT_RECORD`](https://learn.microsoft.com/windows/console/input-record-str): unha tecla, o rato, un cambio de tamaño, o foco ou un menú. O tipo, `EventType`, di que campo da unión `Event` vale. O exemplo só quere as teclas (`KEY_EVENT`), e salta o resto.
+- **As mensaxes.** `PeekMessageW` con `PM_REMOVE` saca da cola cada mensaxe do fío, de calquera das súas xanelas ou do propio fío (o `HWND` nulo), e `DispatchMessageW` lévaa ao seu *window procedure*, ata que a cola queda baleira: a espera só esperta coas mensaxes que chegan despois da última vez que o fío mirou a cola, e unha que quedase nela non a espertaría. As que envía outro programa, coma `WM_DESTROYCLIPBOARD`, non van na cola: `PeekMessageW` trátaas antes de mirala, chamando con elas ao *window procedure*. Non hai `TranslateMessage`, porque a xanela nunca ten o teclado.
+- **Os erros** da espera ou da lectura rematan o exemplo.
+
+### Os modos de antes: `Drop`
+
+```rust
+impl Drop for Console {
+    fn drop(&mut self) {
+        if let Some((input, output)) = self.modes {
+            // SAFETY: both handles are of the console, as GetConsoleMode
+            // said when it gave these modes.
+            unsafe {
+                SetConsoleMode(self.input, input);
+                SetConsoleMode(self.output, output);
+            }
+        }
+    }
+}
+```
+
+- Ao destruírse o `Console`, ao final de `run`, tamén cun erro, a consola volta ter os modos que tiña, e a shell que lanzou o exemplo atópaa coma a deixou. Se `open` non chegou a gardalos, porque os *handles* non eran dunha consola, non toca nada.
+- Non pasa se o proceso remata sen destruír nada: con Ctrl+Break, que sempre é un sinal, tamén sen `ENABLE_PROCESSED_INPUT` ([*CTRL+C and CTRL+BREAK Signals*](https://learn.microsoft.com/windows/console/ctrl-c-and-ctrl-break-signals)), Windows remata o proceso no medio da espera, e a consola queda cos modos do exemplo.
+
+### O evento de tecla: `key_event`
+
+```rust
+/// A key event of the console, as meiga gets it: the console gives the
+/// same members, and the same bits of the modifier keys.
+fn key_event(record: &KEY_EVENT_RECORD) -> KeyEvent {
+    let controls = [
+        ControlKeys::RIGHT_ALT,
+        ControlKeys::LEFT_ALT,
+        ControlKeys::RIGHT_CTRL,
+        ControlKeys::LEFT_CTRL,
+        ControlKeys::SHIFT,
+        ControlKeys::NUM_LOCK,
+        ControlKeys::SCROLL_LOCK,
+        ControlKeys::CAPS_LOCK,
+        ControlKeys::ENHANCED,
+    ]
+    .into_iter()
+    .filter(|keys| record.dwControlKeyState & u32::from(keys.bits()) != 0)
+    .fold(ControlKeys::empty(), |all, keys| all | keys);
+    KeyEvent {
+        key: record.wVirtualKeyCode,
+        scan: record.wVirtualScanCode,
+        // SAFETY: ReadConsoleInputW gives the character in UTF-16; any
+        // value is a code unit.
+        character: unsafe { record.uChar.UnicodeChar },
+        down: record.bKeyDown != 0,
+        controls,
+        repeat: record.wRepeatCount,
+    }
+}
+```
+
+- **Os mesmos datos.** Un evento de tecla da consola, [`KEY_EVENT_RECORD`](https://learn.microsoft.com/windows/console/key-event-record-str), leva o mesmo ca un [`KeyEvent`](meiga-core.md#keyevent), con outros nomes: a tecla virtual, o código de exploración, o carácter en UTF-16, se baixa, as teclas modificadoras e as repeticións ([Tecnoloxías › As teclas no terminal](../tecnoloxias.md#42-as-teclas-no-terminal-win32-input-mode-e-vt)). O [teclado da xanela](#cratesmeiga-winsrckeyboardrs) fai os eventos de meiga coma estes, e meiga envíaos tal cal ao ConPTY co win32-input-mode, que os volta converter en eventos da consola: por iso o campo recibe no exemplo, dentro de meiga, as mesmas teclas que recibirá na xanela.
+- **As modificadoras.** `ControlKeys` usa os bits de `dwControlKeyState` ([`ControlKeys`](meiga-core.md#controlkeys)), pero fóra de `meiga-core` non se pode crear cun número: o exemplo mira no evento da consola cada unha das nove constantes, deixa as que están (`filter`) e xúntaas con `|` (`fold`). Só esas nove, as mesmas que dá o teclado da xanela ([`control_keys`](#for_windows-e-control_keys)).
+- **O carácter** vai nunha unión, `uChar`, coma unidade UTF-16 (`UnicodeChar`) ou coma carácter ANSI (`AsciiChar`): `ReadConsoleInputW`, a versión `W`, enche a de UTF-16, e calquera valor é unha unidade, coma di o `// SAFETY:`.
+- **`bKeyDown`** é un `BOOL` de Windows, un número: calquera valor que non sexa 0, se a tecla baixa. E **`wRepeatCount`** son as repeticións, e o campo fai o traballo da tecla tantas veces (ADR 0030, decisión 7).

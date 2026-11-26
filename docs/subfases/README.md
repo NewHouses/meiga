@@ -40,6 +40,7 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 2.9 | Tabs na barra de título | [PR #30](https://github.com/NewHouses/meiga/pull/30) | [2.9-titulo.md](2.9-titulo.md) |
 | 2.10 | Porta de tabs | [PR #31](https://github.com/NewHouses/meiga/pull/31) | [2.10-porta.md](2.10-porta.md) |
 | 3.1 | Títulos dinámicos | [PR #33](https://github.com/NewHouses/meiga/pull/33) | [3.1-titulos.md](3.1-titulos.md) |
+| 3.2 | Campo de texto | [PR #34](https://github.com/NewHouses/meiga/pull/34) | [3.2-campo.md](3.2-campo.md) |
 
 ## Mantemento
 
