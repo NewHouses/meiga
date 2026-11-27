@@ -199,6 +199,9 @@ public static extern uint GetDoubleClickTime();
 public static extern uint GetClipboardSequenceNumber();
 
 [DllImport("user32.dll")]
+public static extern IntPtr GetClipboardOwner();
+
+[DllImport("user32.dll")]
 [return: MarshalAs(UnmanagedType.Bool)]
 public static extern bool SystemParametersInfoW(uint action, uint parameter, out uint value, uint update);
 
@@ -883,6 +886,16 @@ function Get-Capture {
     $api::CaptureOf($thread)
 }
 
+# The process that wrote the clipboard last, as far as Windows knows: the one
+# of the window that emptied it, or zero.
+function Get-ClipboardProcess {
+    $owner = $api::GetClipboardOwner()
+    if ($owner -eq [IntPtr]::Zero) { return 0 }
+    $id = [uint32]0
+    $null = $api::GetWindowThreadProcessId($owner, [ref]$id)
+    $id
+}
+
 # Shares the input of this thread with the one of the window, whose key
 # state Send-Keys sets: SetKeyboardState sets the key state of the thread
 # that calls it. This thread needs a message queue, which PeekMessageW
@@ -1289,7 +1302,9 @@ try {
     Wait-For { (Get-Capture) -eq [IntPtr]::Zero } { 'The left button that went down on the terminal went up, and the window kept the mouse.' }
     Send-Press $VK_ESCAPE
     Assert-Title 'v' 'After a selection on the terminal, Ctrl+Shift+R and Esc'
-    if ($api::GetClipboardSequenceNumber() -ne $clipboard) {
+    # Another program may change the clipboard meanwhile, as Remote Desktop
+    # does with the one of its client: only meiga must not.
+    if ($api::GetClipboardSequenceNumber() -ne $clipboard -and (Get-ClipboardProcess) -eq $process.Id) {
         throw 'The selection on the first row of the terminal, which is blank, changed the clipboard.'
     }
     Send-Posted @(
