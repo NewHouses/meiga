@@ -1,6 +1,6 @@
 # ADR 0030 · O campo de texto
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0031](0031-o-nome-das-tabs.md)
 - **Data:** 2026-11-26
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0006](0006-licenzas-e-dependencias.md), [ADR 0010](0010-texto-con-directwrite.md), [ADR 0014](0014-o-teclado.md), [ADR 0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [ADR 0020](0020-a-barra-de-tabs.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0023](0023-os-atallos-de-teclado.md), [ADR 0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md)
 

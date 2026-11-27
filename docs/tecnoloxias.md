@@ -1833,3 +1833,37 @@ O código explícase en [Código › meiga-core › `term/title.rs`](codigo/meig
 Ctrl+→ vai ao principio da palabra seguinte, despois do resto da palabra onde está o cursor e dos espazos que a seguen; Ctrl+← volta ao principio da anterior, coma en Windows. Nun filtro, `main.rs` e Ctrl+Retroceso borran `rs`, e non o nome enteiro.
 
 O código explícase en [Código › meiga-core › `ui/field/segment.rs`](codigo/meiga-core.md#cratesmeiga-coresrcuifieldsegmentrs).
+
+## 67. Renomear unha tab noutros programas
+
+**O Windows Terminal** 1.25 abre a edición cun dobre clic na tab ([`Tab.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/Tab.cpp#L158-L163)) ou con *Rename tab* no seu menú ([`Tab.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/Tab.cpp#L1673-L1682)); as accións `renameTab`, cun título ou sen el, que quita o nome, e `openTabRenamer`, que abre a edición, non teñen atallo por defecto ([`AppActionHandlers.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/AppActionHandlers.cpp#L721-L753)). A edición é un `TextBox` de XAML no sitio do título, que empeza co título enteiro seleccionado ([`BeginRename`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TabHeaderControl.cpp#L70-L83)): Intro e perder o foco gardan o texto, e Esc cancela ([`TabHeaderControl.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TabHeaderControl.cpp#L18-L55)). Só atende un Intro que sobe se baixou na caixa: así, o Intro que escolleu *Rename tab* no menú non a pecha. O texto gardado é o nome da tab, que manda sobre o título do programa mentres non estea baleiro ([`Tab.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/Tab.cpp#L1008-L1028)): un nome de espazos é un nome, e Intro sen cambiar o texto garda o título dese momento coma nome, porque non o compara antes. A xanela leva o nome ([`TerminalPage.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TerminalPage.cpp#L2840-L2849)), e duplicar a tab cópiao ([`TabManagement.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TabManagement.cpp#L278-L301)). É distinto de `suppressApplicationTitle`, unha opción do perfil coa que o programa non cambia o título.
+
+**Os outros:**
+
+| Programa | Como se abre | Onde | Un nome baleiro | Intro, Esc e o foco |
+|---|---|---|---|---|
+| VS Code 1.148 | *Rename* no menú, ou F2 na lista dos terminais | Na lista dos terminais | Volta ao título do programa; un de espazos, segundo a mensaxe, tamén, pero no código é un nome | Intro garda e Esc cancela; un clic fóra garda; se a xanela perde o foco, segue ([`inlineEditInputBox.ts`](https://github.com/microsoft/vscode/blob/1.148.0/src/vs/workbench/browser/parts/views/inlineEditInputBox.ts#L81-L132)) |
+| Kitty 0.51 | Ctrl+Maiús+Alt+T | Nunha liña aparte, debaixo | Volta ao título da xanela ([`tabs.py`](https://github.com/kovidgoyal/kitty/blob/v0.51.1/kitty/tabs.py#L669-L688)) | — |
+| WezTerm | Sen atallo: unha receita con `PromptInputLine` | Nunha liña aparte | Volta ao título do panel ([`tabbar.rs`](https://github.com/wezterm/wezterm/blob/20240203-110809-5046fc22/wezterm-gui/src/tabbar.rs#L106-L124)) | — |
+| Chrome 145, o nome dun grupo de tabs ou dunha xanela | O menú do grupo, ou *Name window* | Nun globo, ou nunha caixa de diálogo | Un grupo sen nome, ou a xanela co título da súa páxina | No globo, cada cambio vese ao momento, e Esc non o desfai |
+
+En todos eles, un nome manda sobre os títulos que dá o programa, que seguen chegando: cando se quita o nome, vese o último.
+
+**A edición das etiquetas de Windows.** Nunha lista ou nunha árbore de Windows (`ListView` e `TreeView`), F2, ou un clic no elemento escollido, abren unha caixa no sitio do texto; Intro garda, Esc cancela, e Intro sen cambiar o texto é coma Esc: a xanela recibe `LVN_ENDLABELEDIT` sen texto ([`LVN_ENDLABELEDIT`](https://learn.microsoft.com/en-us/windows/win32/controls/lvn-endlabeledit)). Que facer cun texto baleiro decídeo cada programa.
+
+**O dobre clic e o cursor**, coma os de Windows, explícanse en [§44](#44-o-rato-en-windows) e en [§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor). Sen `CS_DBLCLKS`, a xanela recibe os dous clics coma `WM_LBUTTONDOWN`, e conta ela mesma o segundo, co tempo e o rectángulo do dobre clic de Windows. Para Windows, un dobre clic son catro mensaxes, baixar, subir, o dobre clic e subir ([Double-Click Messages](https://learn.microsoft.com/en-us/windows/win32/inputdev/about-mouse-input#double-click-messages)): o clic seguinte volta ser o primeiro dun par. E nas partes da xanela que non son área cliente, coma a barra de título, Windows manda os seus clics a `DefWindowProcW`, que move ou maximiza a xanela ([§62](#62-o-marco-da-xanela-e-a-barra-de-título)): un campo dentro da xanela non se entera, salvo que a xanela o avise antes.
+
+**En meiga**, desde a 3.3 ([ADR 0031](adr/0031-o-nome-das-tabs.md)):
+
+| Regra | Por que |
+|---|---|
+| Ábrese cun dobre clic na tab, con *Rename tab*, o primeiro do seu menú, e con Ctrl+Maiús+R (`rename_tab`) | O plan; o dobre clic e o menú, coma o Windows Terminal |
+| O campo, no sitio do título, co texto que mostra a tab todo seleccionado | Coma o Windows Terminal e VS Code |
+| Os espazos dos extremos van fóra, e un nome baleiro, ou só de espazos, volta ao título do programa | Coma os títulos ([§65](#65-os-títulos-da-tab)): un nome que non se ve deixaría a tab baleira |
+| Intro sen cambiar o texto non fai nada | Coma a edición das etiquetas de Windows: abrir e confirmar sen querer non fixa o título dese momento |
+| Un clic fóra garda o nome, e despois fai o seu, tamén onde manexa o rato Windows, que despois move, maximiza ou redimensiona a xanela; perder o foco da xanela non remata | Coma o Windows Terminal e VS Code, o clic; coma VS Code, o foco |
+| Todas as teclas son do campo, e as que estaban abaixo ao abrilo non fan nada mentres se repiten | Coma co menú aberto; e coma o Windows Terminal co Intro que escolleu *Rename tab* |
+| A xanela leva o nome, e duplicar a tab cópiao | Coma o Windows Terminal |
+| Arrastrar fóra do campo segue mostrando texto cada 100 ms | Coma Chrome |
+
+O código explícase en [Código › meiga › `rename.rs`](codigo/meiga.md#cratesmeigasrcrenamers).

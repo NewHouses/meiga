@@ -34,17 +34,18 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0017](0017-os-fotogramas-por-escritorio-remoto.md) | 30 fotogramas por segundo por Escritorio remoto e 60 en local | Aceptado |
 | [0018](0018-o-modelo-das-tabs.md) | O modelo das tabs | Aceptado; concretado polos [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md), [0021](0021-os-menus-e-o-menu-da-tab.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
 | [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) | Varias sesións e as tabs en segundo plano | Aceptado; concretado polos [0020](0020-a-barra-de-tabs.md), [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0025](0025-moitas-tabs-e-os-indicadores.md) |
-| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado; concretado polos [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
-| [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
+| [0020](0020-a-barra-de-tabs.md) | A barra de tabs | Aceptado; concretado polos [0021](0021-os-menus-e-o-menu-da-tab.md), [0022](0022-os-perfis-e-a-configuracion.md), [0025](0025-moitas-tabs-e-os-indicadores.md), [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) e [0031](0031-o-nome-das-tabs.md) |
+| [0021](0021-os-menus-e-o-menu-da-tab.md) | Os menús e o menú da tab | Aceptado; concretado polos [0022](0022-os-perfis-e-a-configuracion.md), [0023](0023-os-atallos-de-teclado.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0025](0025-moitas-tabs-e-os-indicadores.md), [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) e [0031](0031-o-nome-das-tabs.md) |
 | [0022](0022-os-perfis-e-a-configuracion.md) | Os perfís e a configuración | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
-| [0023](0023-os-atallos-de-teclado.md) | Os atallos de teclado | Aceptado; concretado polo [0024](0024-o-fin-do-programa-e-o-reinicio.md) |
+| [0023](0023-os-atallos-de-teclado.md) | Os atallos de teclado | Aceptado; concretado polos [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0031](0031-o-nome-das-tabs.md) |
 | [0024](0024-o-fin-do-programa-e-o-reinicio.md) | O fin do programa e o reinicio | Aceptado; concretado polos [0025](0025-moitas-tabs-e-os-indicadores.md), [0028](0028-as-sesions-fora-do-fio-da-xanela.md) e [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) |
 | [0025](0025-moitas-tabs-e-os-indicadores.md) | Moitas tabs: o ancho mínimo, o desprazamento da barra e os indicadores | Aceptado; concretado polo [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0026](0026-o-peche-das-sesions-ao-sair.md) | O peche das sesións ao saír | Aceptado; concretado polo [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
-| [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) | A barra de tabs coma barra de título | Aceptado |
+| [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) | A barra de tabs coma barra de título | Aceptado; concretado polo [0031](0031-o-nome-das-tabs.md) |
 | [0028](0028-as-sesions-fora-do-fio-da-xanela.md) | As sesións fóra do fío da xanela | Aceptado |
 | [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) | O título da tab e os títulos gardados | Aceptado |
-| [0030](0030-o-campo-de-texto.md) | O campo de texto | Aceptado |
+| [0030](0030-o-campo-de-texto.md) | O campo de texto | Aceptado; concretado polo [0031](0031-o-nome-das-tabs.md) |
+| [0031](0031-o-nome-das-tabs.md) | O nome das tabs | Aceptado |
 
 ## Como se relacionan
 
@@ -175,6 +176,15 @@ graph TD
     A21 --> A30
     A23 --> A30
     A29 --> A30
+    A14 --> A31["0031 O nome das tabs"]
+    A15 --> A31
+    A20 --> A31
+    A21 --> A31
+    A23 --> A31
+    A24 --> A31
+    A27 --> A31
+    A29 --> A31
+    A30 --> A31
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.
