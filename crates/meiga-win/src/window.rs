@@ -1706,7 +1706,7 @@ mod tests {
         )
     }
 
-    // Each test that creates a window registers the class, unless the other
+    // Each test that creates a window registers the class, unless another
     // one did.
     #[test]
     fn a_new_scale_reaches_the_handler_before_the_new_size() {

@@ -520,13 +520,14 @@ impl TabBar {
             return None;
         }
         self.closing = None;
-        let target = self.hover?;
-        if let (Button::Left, Target::Tab(id)) = (button, target) {
+        let target = self.hover;
+        if let (Button::Left, Some(Target::Tab(id))) = (button, target) {
             return Some(self.click_tab(id, now));
         }
-        // Another press between two clicks on a tab: as in Windows, they are
-        // not a double click.
+        // Another press between two clicks on a tab, also where the bar has
+        // nothing: as in Windows, they are not a double click.
         self.clicks.reset();
+        let target = target?;
         let press = match (button, target) {
             (Button::Left, Target::Close(id)) => Press::Close(id),
             (Button::Left, Target::New) => Press::New,
@@ -1486,6 +1487,18 @@ mod tests {
         bar.forget_clicks();
         assert_eq!(
             click(&mut bar, 300, 6100),
+            Some(TabAction::Activate(second))
+        );
+        // Nor with one on the bar where it has nothing, as the room to drag
+        // the window, between the button of the profiles and the buttons of
+        // the window.
+        assert_eq!(
+            click(&mut bar, 300, 6700),
+            Some(TabAction::Activate(second))
+        );
+        assert_eq!(click(&mut bar, 810, 6750), None);
+        assert_eq!(
+            click(&mut bar, 300, 6800),
             Some(TabAction::Activate(second))
         );
         // With the double-click time of Windows at 100 ms, two clicks 200 ms
