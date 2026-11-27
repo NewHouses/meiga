@@ -14,10 +14,13 @@
 //! round that is not counted, it shows the median of the rounds, 11 unless
 //! `--rounds` says otherwise, and the time of the scanner against the time of
 //! the terminal: the median of the rounds, and the lowest and the highest.
+//! A relative path of a recording is taken from the folder of the workspace,
+//! where cargo is run: cargo bench runs the benchmark in the folder of
+//! meiga-core.
 
 use std::fmt::Write as _;
 use std::hint::black_box;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
@@ -183,6 +186,18 @@ fn round(output: &Output) -> (Duration, Duration, usize) {
     (scan, feed, found)
 }
 
+/// `path`, from the folder of the workspace if it is relative.
+fn from_workspace(path: &str) -> PathBuf {
+    let path = Path::new(path);
+    if path.is_absolute() {
+        return path.to_owned();
+    }
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join(path)
+}
+
 fn milliseconds(time: Duration) -> f64 {
     time.as_secs_f64() * 1e3
 }
@@ -225,7 +240,7 @@ fn main() -> ExitCode {
                 eprintln!("Unknown option: {argument}\n{USAGE}");
                 return ExitCode::from(2);
             }
-            path => match Recording::read(Path::new(path)) {
+            path => match Recording::read(&from_workspace(path)) {
                 Ok(recording) => {
                     let name = Path::new(path).file_name().map_or_else(
                         || path.to_owned(),
