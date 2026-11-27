@@ -15,6 +15,12 @@
 //! And the title of the program, and the ones that it saves, go to the
 //! terminal, which keeps them ([`super::title`]), and not to
 //! `alacritty_terminal`, which empties them on a reset.
+//!
+//! win32-input-mode (`?9001`), which ConPTY turns on when it starts and
+//! again after each reset, so that meiga sends it whole key events
+//! ([`crate::input`]), is followed here too: `alacritty_terminal` ignores
+//! it. `vte` gives it here in its order, with the other modes and the reset
+//! (ADR 0032).
 
 use alacritty_terminal::grid::{Dimensions, Grid, Scroll};
 use alacritty_terminal::term::cell::Cell;
@@ -29,6 +35,9 @@ use alacritty_terminal::vte::ansi::{
 use super::title::Titles;
 use super::{Listener, resize};
 
+/// The private mode of win32-input-mode.
+const WIN32_INPUT_MODE: u16 = 9001;
+
 /// The terminal, and the primary screen that a resize set aside while the
 /// alternate one is shown, with what the terminal keeps of the program.
 pub(super) struct Hooked<'a> {
@@ -40,6 +49,8 @@ pub(super) struct Hooked<'a> {
     pub region_below_top: &'a mut bool,
     /// The title of the program, and the ones that it saved.
     pub titles: &'a mut Titles,
+    /// win32-input-mode is on.
+    pub win32_input: &'a mut bool,
 }
 
 impl Hooked<'_> {
@@ -245,20 +256,27 @@ impl Handler for Hooked<'_> {
         self.follow_region(top, bottom);
     }
 
-    /// `?3h` is DECCOLM, which also sets the scrolling region.
+    /// `?3h` is DECCOLM, which also sets the scrolling region. `?9001h`
+    /// turns win32-input-mode on.
     #[inline]
     fn set_private_mode(&mut self, mode: PrivateMode) {
         <Term<Listener> as Handler>::set_private_mode(self.term, mode);
         self.follow_column_mode(mode);
+        if mode == PrivateMode::Unknown(WIN32_INPUT_MODE) {
+            *self.win32_input = true;
+        }
     }
 
     /// `?3l` is DECCOLM, as `?3h`. `?1049l`: back to the primary screen,
     /// with the size of the terminal. A new size also resets the scrolling
-    /// region.
+    /// region. `?9001l` turns win32-input-mode off.
     #[inline]
     fn unset_private_mode(&mut self, mode: PrivateMode) {
         <Term<Listener> as Handler>::unset_private_mode(self.term, mode);
         self.follow_column_mode(mode);
+        if mode == PrivateMode::Unknown(WIN32_INPUT_MODE) {
+            *self.win32_input = false;
+        }
         if !self.term.mode().contains(TermMode::ALT_SCREEN)
             && let Some(primary) = self.primary.take()
             && resize::bring_back_primary(self.term, primary)
@@ -269,11 +287,13 @@ impl Handler for Hooked<'_> {
 
     /// `ESC c`: the reset also leaves the alternate screen, and empties the
     /// primary one, history included. The scrolling region is the whole
-    /// screen again. The title, and the ones that the program saved, stay.
+    /// screen again, and win32-input-mode is off, as every mode. The title,
+    /// and the ones that the program saved, stay.
     #[inline]
     fn reset_state(&mut self) {
         <Term<Listener> as Handler>::reset_state(self.term);
         *self.region_below_top = false;
+        *self.win32_input = false;
         if self.primary.take().is_some() {
             resize::new_primary(self.term);
         }

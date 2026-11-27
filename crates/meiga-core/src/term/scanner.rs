@@ -1,67 +1,81 @@
 //! The scanner that reads the output of the program before the parser, to
-//! find the sequences that `alacritty_terminal` ignores and meiga needs
-//! (ADR 0007). It only reads the bytes: the parser gets them unchanged.
+//! find what the shell says about itself, which `vte` ignores (ADR 0007 and
+//! ADR 0032): its folder, with OSC 7 or OSC 9;9, and where it is between its
+//! prompt and the output of a command, with OSC 133. It only reads the
+//! bytes: the parser gets them unchanged.
 //!
-//! For now it follows one: win32-input-mode (`CSI ? 9001 h` and `l`), which
-//! ConPTY turns on when it starts, so that meiga sends it whole key events
-//! ([`crate::input`]). It reads the control sequences as `vte` does, so that it
-//! sees a change of mode only when `vte` would see one, also when the
-//! sequence comes split between two reads. It only follows byte by byte the
-//! sequences that start with `ESC [ ?`, the private modes: it skips the
-//! text, and the rest of the sequences, looking for the next ESC with
-//! `memchr`, many bytes at a time.
+//! An OSC starts at `ESC ]`: `memchr::memmem` finds that pair many bytes at a
+//! time, so the scanner does not stop at the other sequences, as the colours,
+//! nor at the text. From there it reads the OSC as `vte` does, also when it
+//! comes split between reads, and it ends it where `vte` ends it: at BEL,
+//! CAN, SUB or any ESC. The only OSC that it misses is one with bytes that
+//! `vte` ignores between the ESC and the `]`, as `ESC \x80 ]`, which no
+//! program writes.
 
-/// The private mode of win32-input-mode.
-const WIN32_INPUT_MODE: u16 = 9001;
+use memchr::memmem::Finder;
 
-/// The most numbers that a control sequence can have, subparameters
-/// included. As in `vte`, a sequence with more is ignored.
-const MAX_VALUES: u8 = 32;
+use super::shell_state::{Folder, Mark};
 
-/// The most intermediate bytes, the `?` of a private mode included. As in
-/// `vte`, a sequence with more is ignored.
-const MAX_INTERMEDIATES: u8 = 2;
+/// The most bytes of text that the scanner keeps of an OSC that it reads:
+/// the longest path of Windows, 32 767 characters, fits in UTF-8 with its
+/// quotes. A longer OSC is ignored whole: the scanner never uses a piece of
+/// one.
+pub const MAX_TEXT: usize = 128 * 1024;
 
+/// The memory that the text keeps between two OSCs: after a longer one, it
+/// gives the rest back.
+const KEPT_CAPACITY: usize = 4 * 1024;
+
+const BEL: u8 = 0x07;
+const CAN: u8 = 0x18;
+const SUB: u8 = 0x1a;
 const ESC: u8 = 0x1b;
 
-/// Where the scanner is, as the states of `vte` that matter here.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-enum State {
-    /// Text, or a sequence that does not matter: until the next ESC.
-    #[default]
-    Ground,
-    /// After ESC.
-    Escape,
-    /// After `ESC [`.
-    CsiEntry,
-    /// Reading the numbers of a private sequence, after `ESC [ ?`.
-    CsiParam,
-    /// After another intermediate byte of a private sequence, such as `$`.
-    CsiIntermediate,
-    /// A private sequence that `vte` ignores, until its final byte.
-    CsiIgnore,
+/// What the shell said, in the order that it said it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Report {
+    /// Its folder: OSC 7 or OSC 9;9.
+    Folder(Folder),
+    /// Where it is: OSC 133.
+    Mark(Mark),
 }
 
-/// Finds the changes of the modes that `alacritty_terminal` ignores.
+/// The OSCs that the scanner reads.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Kind {
+    /// OSC 7: the folder as a URL.
+    Url,
+    /// OSC 9, of ConEmu, whose 9;9 is the folder as a path of Windows.
+    ConEmu,
+    /// OSC 133: the marks around the prompt and the commands.
+    Mark,
+}
+
+/// Where the scanner is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum State {
+    /// Looking for the next `ESC ]`. `escape`: the last read ended with an
+    /// ESC, which the next one can follow with `]`.
+    Ground { escape: bool },
+    /// After `ESC ]`: the number of the OSC, until its first `;`.
+    Number,
+    /// The text of an OSC that the scanner reads, until its end.
+    Text(Kind),
+}
+
+/// Finds what the shell says in the output of the program.
 #[derive(Clone, Debug)]
 pub struct Scanner {
+    finder: Finder<'static>,
     state: State,
-    /// How many intermediate bytes the private sequence has, its `?`
-    /// included.
-    intermediates: u8,
-    /// How many numbers it has, subparameters included.
-    values: u8,
-    /// The number that it is reading.
-    value: u16,
-    /// The next number starts a parameter: it is not a subparameter, after
-    /// `:`. Only the first number of each parameter is a mode.
-    parameter_start: bool,
-    /// `vte` will ignore the sequence: it has too many numbers or
-    /// intermediates.
-    ignoring: bool,
-    /// One of the parameters of the sequence is 9001.
-    has_win32_input_mode: bool,
-    win32_input_mode: bool,
+    /// The number of the OSC, while it can still be one of those that the
+    /// scanner reads: 7, 9 or 133.
+    number: [u8; 3],
+    number_len: usize,
+    /// The text of the OSC, without the bytes that `vte` ignores in it.
+    text: Vec<u8>,
+    /// The text is longer than [`MAX_TEXT`]: the OSC is ignored.
+    too_long: bool,
 }
 
 impl Default for Scanner {
@@ -71,396 +85,259 @@ impl Default for Scanner {
 }
 
 impl Scanner {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            state: State::Ground,
-            intermediates: 0,
-            values: 0,
-            value: 0,
-            parameter_start: true,
-            ignoring: false,
-            has_win32_input_mode: false,
-            win32_input_mode: false,
+            finder: Finder::new(b"\x1b]"),
+            state: State::Ground { escape: false },
+            number: [0; 3],
+            number_len: 0,
+            text: Vec::new(),
+            too_long: false,
         }
     }
 
-    /// Whether the program turned win32-input-mode on.
-    pub const fn win32_input_mode(&self) -> bool {
-        self.win32_input_mode
-    }
-
-    /// Reads the next bytes of the output.
-    pub fn scan(&mut self, bytes: &[u8]) {
+    /// Reads the next bytes of the output, and gives `report` what the shell
+    /// said in them, in order.
+    pub fn scan(&mut self, bytes: &[u8], mut report: impl FnMut(Report)) {
         let mut rest = bytes;
-        loop {
-            if self.state == State::Ground {
-                // Nothing matters until the next ESC: memchr finds it many
-                // bytes at a time.
-                let mut escapes = memchr::memchr_iter(ESC, rest);
-                let at = loop {
-                    let Some(at) = escapes.next() else {
-                        return;
-                    };
-                    // The usual case, as colours and cursor movements: `ESC
-                    // [` and a byte after which the sequence cannot change a
-                    // private mode. The same as reading them one by one.
-                    if let Some(&[b'[', next]) = rest.get(at + 1..at + 3)
-                        && Self::not_private(next)
-                    {
-                        continue;
-                    }
-                    break at;
-                };
-                self.state = State::Escape;
-                rest = rest.get(at + 1..).unwrap_or_default();
-                continue;
-            }
-            let Some((&byte, after)) = rest.split_first() else {
-                return;
+        while !rest.is_empty() {
+            rest = match self.state {
+                State::Ground { escape } => self.find_start(rest, escape),
+                State::Number => self.read_number(rest),
+                State::Text(kind) => self.read_text(rest, kind, &mut report),
             };
-            rest = after;
-            self.advance(byte);
         }
     }
 
-    /// Whether `byte`, right after `ESC [`, means that the sequence is not a
-    /// private one, and cannot change a private mode.
-    const fn not_private(byte: u8) -> bool {
-        // Only `?` marks a private mode. Control characters, DEL and bytes
-        // over 0x7f do not change the sequence: the next byte decides.
-        !matches!(byte, b'?' | 0x00..=0x1f | 0x7f..=0xff)
+    /// Looks for the next `ESC ]` of an OSC that can be one that the scanner
+    /// reads, and returns what comes after it.
+    #[inline]
+    fn find_start<'a>(&mut self, bytes: &'a [u8], escape: bool) -> &'a [u8] {
+        if escape && bytes[0] == b']' {
+            self.start();
+            return &bytes[1..];
+        }
+        let mut from = 0;
+        while let Some(at) = self.finder.find(&bytes[from..]) {
+            from += at + 2;
+            match bytes.get(from) {
+                // The number of an OSC that the scanner does not read, as the
+                // 8 of the links: it goes on as text, until the next ESC ].
+                // An ESC that ends it right away can start that one.
+                Some(&byte)
+                    if !matches!(
+                        byte,
+                        b'1' | b'7' | b'9' | 0x00..=0x06 | 0x08..=0x17 | 0x19 | 0x1c..=0x1f
+                    ) => {}
+                _ => {
+                    self.start();
+                    return &bytes[from..];
+                }
+            }
+        }
+        self.state = State::Ground {
+            escape: bytes.last() == Some(&ESC),
+        };
+        &[]
     }
 
-    /// One byte of a sequence, as `vte` reads it.
-    fn advance(&mut self, byte: u8) {
-        match byte {
-            // In any state, ESC starts a new sequence, and CAN and SUB
-            // cancel the current one.
-            ESC => self.state = State::Escape,
-            0x18 | 0x1a => self.state = State::Ground,
-            _ => match self.state {
-                State::Ground => {}
-                State::Escape => self.advance_escape(byte),
-                State::CsiEntry => self.advance_csi_entry(byte),
-                State::CsiParam => self.advance_csi_param(byte),
-                State::CsiIntermediate => self.advance_csi_intermediate(byte),
-                State::CsiIgnore => {
-                    if (0x40..=0x7e).contains(&byte) {
-                        self.state = State::Ground;
+    /// `ESC ]`: an OSC starts.
+    fn start(&mut self) {
+        self.state = State::Number;
+        self.number_len = 0;
+    }
+
+    /// Reads the number of the OSC, and returns what comes after the part of
+    /// `bytes` that it read.
+    fn read_number<'a>(&mut self, bytes: &'a [u8]) -> &'a [u8] {
+        for (at, &byte) in bytes.iter().enumerate() {
+            match byte {
+                // The controls that `vte` ignores in an OSC.
+                0x00..=0x06 | 0x08..=0x17 | 0x19 | 0x1c..=0x1f => {}
+                // An OSC with only a number: none that the scanner reads.
+                BEL | CAN | SUB => {
+                    self.state = State::Ground { escape: false };
+                    return &bytes[at + 1..];
+                }
+                // It ends, and a new sequence starts, maybe another OSC.
+                ESC => {
+                    self.state = State::Ground { escape: false };
+                    return &bytes[at..];
+                }
+                b';' => {
+                    self.state = match &self.number[..self.number_len] {
+                        b"7" => self.start_text(Kind::Url),
+                        b"9" => self.start_text(Kind::ConEmu),
+                        b"133" => self.start_text(Kind::Mark),
+                        _ => State::Ground { escape: false },
+                    };
+                    return &bytes[at + 1..];
+                }
+                _ => {
+                    if self.number_len == self.number.len() {
+                        self.state = State::Ground { escape: false };
+                        return &bytes[at + 1..];
+                    }
+                    self.number[self.number_len] = byte;
+                    self.number_len += 1;
+                    // Any other OSC goes on as text, until the next ESC ].
+                    if !matches!(
+                        &self.number[..self.number_len],
+                        b"7" | b"9" | b"1" | b"13" | b"133"
+                    ) {
+                        self.state = State::Ground { escape: false };
+                        return &bytes[at + 1..];
                     }
                 }
-            },
-        }
-    }
-
-    fn advance_escape(&mut self, byte: u8) {
-        match byte {
-            // The other control characters, DEL and the bytes over 0x7f do
-            // not end the escape: `vte` ignores them, and the next byte
-            // chooses the sequence.
-            0x00..=0x1f | 0x7f..=0xff => {}
-            b'[' => self.state = State::CsiEntry,
-            // RIS, the full reset, turns every mode off.
-            b'c' => {
-                self.win32_input_mode = false;
-                self.state = State::Ground;
             }
-            // Another escape, or a string (OSC, DCS…) that only an ESC or a
-            // control character can end.
-            _ => self.state = State::Ground,
         }
+        &[]
     }
 
-    fn advance_csi_entry(&mut self, byte: u8) {
-        if Self::not_private(byte) {
-            // Colours, cursor movements… The rest of the sequence has no ESC,
-            // so it can be read as text: the next ESC ends it, or starts
-            // another sequence.
-            self.state = State::Ground;
-        } else if byte == b'?' {
-            self.start_private();
-            self.state = State::CsiParam;
-        }
+    fn start_text(&mut self, kind: Kind) -> State {
+        self.text.clear();
+        self.too_long = false;
+        State::Text(kind)
     }
 
-    fn advance_csi_param(&mut self, byte: u8) {
-        match byte {
-            0x20..=0x2f => {
-                self.collect();
-                self.state = State::CsiIntermediate;
+    /// Reads the text of an OSC of `kind`, gives `report` what it says when it
+    /// ends, and returns what comes after the part of `bytes` that it read.
+    fn read_text<'a>(
+        &mut self,
+        bytes: &'a [u8],
+        kind: Kind,
+        report: &mut impl FnMut(Report),
+    ) -> &'a [u8] {
+        for (at, &byte) in bytes.iter().enumerate() {
+            match byte {
+                0x00..=0x06 | 0x08..=0x17 | 0x19 | 0x1c..=0x1f => {}
+                BEL | CAN | SUB => {
+                    self.end_text(kind, report);
+                    return &bytes[at + 1..];
+                }
+                ESC => {
+                    self.end_text(kind, report);
+                    return &bytes[at..];
+                }
+                _ => {
+                    if self.text.len() == MAX_TEXT {
+                        self.too_long = true;
+                    } else {
+                        self.text.push(byte);
+                    }
+                }
             }
-            b'0'..=b'9' => self.digit(byte),
-            b':' => self.subparameter(),
-            b';' => self.parameter(),
-            // A private marker after the numbers.
-            0x3c..=0x3f => self.state = State::CsiIgnore,
-            0x40..=0x7e => self.dispatch(byte),
-            _ => {}
         }
+        &[]
     }
 
-    fn advance_csi_intermediate(&mut self, byte: u8) {
-        match byte {
-            0x20..=0x2f => self.collect(),
-            0x30..=0x3f => self.state = State::CsiIgnore,
-            0x40..=0x7e => self.dispatch(byte),
-            _ => {}
+    /// The OSC ended: what it says goes to `report`, unless it was too long.
+    fn end_text(&mut self, kind: Kind, report: &mut impl FnMut(Report)) {
+        self.state = State::Ground { escape: false };
+        if !self.too_long
+            && let Some(said) = read(kind, &self.text)
+        {
+            report(said);
         }
+        self.text.clear();
+        self.text.shrink_to(KEPT_CAPACITY);
     }
+}
 
-    /// `ESC [ ?`: the start of a sequence that can set or reset a private
-    /// mode. The `?` is its first intermediate byte.
-    fn start_private(&mut self) {
-        self.intermediates = 1;
-        self.values = 0;
-        self.value = 0;
-        self.parameter_start = true;
-        self.ignoring = false;
-        self.has_win32_input_mode = false;
+/// What the text of an OSC of `kind` says, if it says something that the
+/// terminal keeps.
+fn read(kind: Kind, text: &[u8]) -> Option<Report> {
+    match kind {
+        Kind::Url => url_folder(text).map(Report::Folder),
+        Kind::ConEmu => conemu_folder(text).map(Report::Folder),
+        Kind::Mark => mark(text).map(Report::Mark),
     }
+}
 
-    fn collect(&mut self) {
-        if self.intermediates == MAX_INTERMEDIATES {
-            self.ignoring = true;
+/// OSC 7: `file://computer/path`, with the computer and the path
+/// percent-encoded. Any computer: what to do with another one is for whoever
+/// uses the folder.
+fn url_folder(text: &[u8]) -> Option<Folder> {
+    const SCHEME: &[u8] = b"file://";
+    let (scheme, rest) = text.split_at_checked(SCHEME.len())?;
+    if !scheme.eq_ignore_ascii_case(SCHEME) {
+        return None;
+    }
+    let slash = memchr::memchr(b'/', rest)?;
+    let (host, path) = rest.split_at(slash);
+    Some(Folder::Url {
+        host: decode(host)?,
+        path: decode(path)?,
+    })
+}
+
+/// The text of a URL, with each `%XX` as the byte XX: a `%` without two
+/// hexadecimal digits stays as it is. `None` if the result is not UTF-8.
+fn decode(text: &[u8]) -> Option<String> {
+    let mut bytes = Vec::with_capacity(text.len());
+    let mut rest = text;
+    while let Some((&byte, after)) = rest.split_first() {
+        if byte == b'%'
+            && let [high, low, ..] = after
+            && let (Some(high), Some(low)) = (hex(*high), hex(*low))
+        {
+            bytes.push(high << 4 | low);
+            rest = &after[2..];
         } else {
-            self.intermediates += 1;
+            bytes.push(byte);
+            rest = after;
         }
     }
+    String::from_utf8(bytes).ok()
+}
 
-    fn digit(&mut self, byte: u8) {
-        if self.values == MAX_VALUES {
-            self.ignoring = true;
-            return;
-        }
-        self.value = self
-            .value
-            .saturating_mul(10)
-            .saturating_add(u16::from(byte - b'0'));
+const fn hex(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
     }
+}
 
-    /// `:`: the number ends, and the next one is a subparameter.
-    fn subparameter(&mut self) {
-        if self.end_value() {
-            self.parameter_start = false;
-        }
+/// OSC 9;9, of ConEmu: the path of Windows, after `9;`, as it comes or
+/// between quotes. The other OSC 9, as the progress (9;4) or the
+/// notifications, are not folders.
+fn conemu_folder(text: &[u8]) -> Option<Folder> {
+    let path = text.strip_prefix(b"9;")?;
+    let path = match path {
+        [b'"', inside @ .., b'"'] => inside,
+        _ => path,
+    };
+    if path.is_empty() {
+        return None;
     }
+    String::from_utf8(path.to_vec()).ok().map(Folder::Windows)
+}
 
-    /// `;`: the number ends, and the next one starts a parameter.
-    fn parameter(&mut self) {
-        if self.end_value() {
-            self.parameter_start = true;
-        }
+/// OSC 133: a letter, and for D the exit code, if it is a number. The other
+/// letters, and the options after them, are ignored, as the proposal of the
+/// semantic prompts asks.
+fn mark(text: &[u8]) -> Option<Mark> {
+    let mut fields = text.split(|&byte| byte == b';');
+    match fields.next()? {
+        b"A" => Some(Mark::Prompt),
+        b"B" => Some(Mark::Command),
+        b"C" => Some(Mark::Output),
+        b"D" => Some(Mark::Done(fields.next().and_then(exit_code))),
+        _ => None,
     }
+}
 
-    /// Adds the number that it was reading. Returns false if there was no
-    /// room for it.
-    fn end_value(&mut self) -> bool {
-        if self.values == MAX_VALUES {
-            self.ignoring = true;
-            return false;
-        }
-        self.values += 1;
-        if self.parameter_start && self.value == WIN32_INPUT_MODE {
-            self.has_win32_input_mode = true;
-        }
-        self.value = 0;
-        true
-    }
-
-    /// The final byte of the sequence.
-    fn dispatch(&mut self, byte: u8) {
-        self.end_value();
-        self.state = State::Ground;
-        // `vte` only sets or resets private modes with `?` as the only
-        // intermediate byte, and when it does not ignore the sequence.
-        if self.ignoring || self.intermediates != 1 || !self.has_win32_input_mode {
-            return;
-        }
-        match byte {
-            b'h' => self.win32_input_mode = true,
-            b'l' => self.win32_input_mode = false,
-            _ => {}
-        }
-    }
+/// An exit code: a number that fits in an `i32`, or one of 32 bits without
+/// sign, as Windows gives them, which ends up as the `i32` that Windows
+/// keeps: 3221225477 is -1073741819.
+fn exit_code(field: &[u8]) -> Option<i32> {
+    let text = std::str::from_utf8(field).ok()?;
+    text.parse::<i32>()
+        .ok()
+        .or_else(|| text.parse::<u32>().ok().map(u32::cast_signed))
 }
 
 #[cfg(test)]
-mod tests {
-    use alacritty_terminal::vte::ansi::{Handler, PrivateMode, Processor};
-
-    use super::*;
-
-    /// Whether win32-input-mode is on after `parts`, read one after the
-    /// other.
-    fn scanned(parts: &[&[u8]]) -> bool {
-        let mut scanner = Scanner::new();
-        for part in parts {
-            scanner.scan(part);
-        }
-        scanner.win32_input_mode()
-    }
-
-    #[test]
-    fn it_follows_the_mode_on_and_off() {
-        assert!(scanned(&[b"\x1b[?9001h"]));
-        assert!(!scanned(&[b"\x1b[?9001h", b"text\x1b[?9001l"]));
-        assert!(!scanned(&[b"text without sequences"]));
-    }
-
-    #[test]
-    fn it_finds_the_mode_among_others() {
-        assert!(scanned(&[b"\x1b[?1004;9001h"]));
-        assert!(!scanned(&[b"\x1b[?1004;9001h\x1b[?9001;1004l"]));
-        assert!(!scanned(&[b"\x1b[?1004h"]));
-    }
-
-    #[test]
-    fn it_follows_the_mode_when_the_sequence_is_split() {
-        // What ConPTY writes when it starts.
-        let start = b"\x1b[1t\x1b[c\x1b[?1004h\x1b[?9001h\x1b[?25l";
-        for at in 0..=start.len() {
-            let (first, second) = start.split_at(at);
-            assert!(scanned(&[first, second]), "split at {at}");
-        }
-        let one_by_one: Vec<&[u8]> = start.chunks(1).collect();
-        assert!(scanned(&one_by_one));
-    }
-
-    #[test]
-    fn only_a_private_set_or_reset_changes_the_mode() {
-        // Without `?`, with another marker, with another intermediate, and
-        // with another final byte.
-        assert!(!scanned(&[b"\x1b[9001h"]));
-        assert!(!scanned(&[b"\x1b[>9001h"]));
-        assert!(!scanned(&[b"\x1b[?9001$h"]));
-        assert!(!scanned(&[b"\x1b[??9001h"]));
-        assert!(!scanned(&[b"\x1b[?9001p"]));
-    }
-
-    #[test]
-    fn only_the_first_number_of_a_parameter_is_a_mode() {
-        assert!(scanned(&[b"\x1b[?9001:1h"]));
-        assert!(!scanned(&[b"\x1b[?1:9001h"]));
-    }
-
-    #[test]
-    fn control_characters_cancel_or_restart_the_sequence() {
-        // CAN cancels it; ESC starts another one; a line feed is executed
-        // and the sequence goes on.
-        assert!(!scanned(&[b"\x1b[?90\x1801h"]));
-        assert!(scanned(&[b"\x1b[?90\x1b[?9001h"]));
-        assert!(scanned(&[b"\x1b[?90\n01h"]));
-        // An OSC string ends at ESC, which starts the sequence.
-        assert!(scanned(&[b"\x1b]0;title\x1b[?9001h"]));
-    }
-
-    #[test]
-    fn a_full_reset_turns_the_mode_off() {
-        assert!(!scanned(&[b"\x1b[?9001h", b"\x1bc"]));
-        // ESC ( c designates a character set: it is not a reset.
-        assert!(scanned(&[b"\x1b[?9001h", b"\x1b(c"]));
-    }
-
-    #[test]
-    fn bytes_over_0x7e_do_not_end_an_escape() {
-        // vte ignores them after ESC: the next byte still chooses the
-        // sequence.
-        assert!(scanned(&[b"\x1b\x80[?9001h"]));
-        assert!(!scanned(&[b"\x1b[?9001h", "\x1b\u{e1}c".as_bytes()]));
-        assert!(!scanned(&[b"\x1b[?9001h", b"\x1b\x7f", b"\xffc"]));
-    }
-
-    #[test]
-    fn a_sequence_with_too_many_numbers_is_ignored() {
-        // 32 numbers fit; with 33, vte ignores the sequence.
-        let fits = format!("\x1b[?{}9001h", "1;".repeat(31));
-        assert!(scanned(&[fits.as_bytes()]));
-        let too_many = format!("\x1b[?{}9001h", "1;".repeat(32));
-        assert!(!scanned(&[too_many.as_bytes()]));
-    }
-
-    /// Follows win32-input-mode as alacritty_terminal would, if it did not
-    /// ignore it: the reference for the scanner.
-    #[derive(Default)]
-    struct Reference {
-        win32_input_mode: bool,
-    }
-
-    impl Handler for Reference {
-        fn set_private_mode(&mut self, mode: PrivateMode) {
-            if mode == PrivateMode::Unknown(WIN32_INPUT_MODE) {
-                self.win32_input_mode = true;
-            }
-        }
-
-        fn unset_private_mode(&mut self, mode: PrivateMode) {
-            if mode == PrivateMode::Unknown(WIN32_INPUT_MODE) {
-                self.win32_input_mode = false;
-            }
-        }
-
-        fn reset_state(&mut self) {
-            self.win32_input_mode = false;
-        }
-    }
-
-    #[test]
-    fn it_agrees_with_vte_on_random_output() {
-        // The bytes that matter for the sequences, and a few others. There
-        // is no 2 or 6, so that no synchronized update (?2026) starts.
-        const BYTES: &[u8] =
-            b"\x1b\x1b[[??;;::0019hhlcp$> \n\x07\x18\x1a]\x7fa\xc3\xa1\x9b\x80\xff";
-        // Whole sequences, and their beginnings, so that the mode changes
-        // often.
-        const SEQUENCES: &[&[u8]] = &[
-            b"\x1b[?9001h",
-            b"\x1b[?9001l",
-            b"\x1b[?1004;9001h",
-            b"\x1bc",
-            b"\x1b[",
-            b"\x1b[?",
-            b"9001",
-            b"\x1b]0;title\x07",
-        ];
-        let mut seed: u64 = 0x9e37_79b9_7f4a_7c15;
-        let mut next = move |below: usize| {
-            // xorshift64: a fixed sequence, so that a failure repeats.
-            seed ^= seed << 13;
-            seed ^= seed >> 7;
-            seed ^= seed << 17;
-            (seed % below as u64) as usize
-        };
-        for case in 0..2_000 {
-            // Half of the cases start with the mode on, so that turning it
-            // off is checked too.
-            let mut output = if case % 2 == 0 {
-                b"\x1b[?9001h".to_vec()
-            } else {
-                Vec::new()
-            };
-            for _ in 0..=next(100) {
-                if next(4) == 0 {
-                    output.extend_from_slice(SEQUENCES[next(SEQUENCES.len())]);
-                } else {
-                    output.push(BYTES[next(BYTES.len())]);
-                }
-            }
-            let mut scanner = Scanner::new();
-            let mut parser: Processor = Processor::new();
-            let mut reference = Reference::default();
-            // In pieces of random length, comparing after each one.
-            let mut rest = output.as_slice();
-            while !rest.is_empty() {
-                let (piece, after) = rest.split_at((1 + next(16)).min(rest.len()));
-                rest = after;
-                scanner.scan(piece);
-                parser.advance(&mut reference, piece);
-                assert_eq!(
-                    scanner.win32_input_mode(),
-                    reference.win32_input_mode,
-                    "case {case}: {output:?}"
-                );
-            }
-        }
-    }
-}
+mod tests;

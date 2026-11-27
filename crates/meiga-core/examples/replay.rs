@@ -16,9 +16,10 @@
 //! time passes, counted with the moments of the recording, as meiga will do
 //! with a timer.
 //!
-//! With `--screen`, it also shows what is on the screen at the end, and the
+//! With `--screen`, it also shows what is on the screen at the end, the
 //! answers that meiga would send to the program, numbering rows and columns
-//! from 1, as the control sequences do.
+//! from 1, as the control sequences do, and what the shell said: its folder,
+//! its last mark and the exit code of its last command.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -26,7 +27,7 @@ use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
 use meiga_core::term::recording::Recording;
-use meiga_core::term::{Screen, Terminal};
+use meiga_core::term::{Folder, Mark, Screen, Terminal};
 
 const USAGE: &str = "Usage: replay <recording> [--rounds <n>] [--screen]";
 
@@ -144,8 +145,8 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// Shows the rows with text, the cursor, the title and the modes of
-/// `terminal`, and `answers`.
+/// Shows the rows with text, the cursor, the title, what the shell said and
+/// the modes of `terminal`, and `answers`.
 fn show_screen(terminal: &mut Terminal, answers: &mut Vec<u8>) {
     // A synchronized update that did not end is shown, as when its time
     // passes.
@@ -175,6 +176,24 @@ fn show_screen(terminal: &mut Terminal, answers: &mut Vec<u8>) {
         cursor.shape
     );
     println!("Title: {}", terminal.title().unwrap_or("(none)"));
+    let shell = terminal.shell();
+    match shell.folder() {
+        Some(Folder::Windows(path)) => println!("Folder: {path}"),
+        Some(Folder::Url { host, path }) => println!("Folder: {path}, of the computer {host:?}"),
+        None => println!("Folder: (none)"),
+    }
+    let mark = match shell.mark() {
+        Some(Mark::Prompt) => "A, the prompt",
+        Some(Mark::Command) => "B, the command",
+        Some(Mark::Output) => "C, the output",
+        Some(Mark::Done(_)) => "D, the end of the command",
+        None => "(none)",
+    };
+    println!("Mark: {mark}");
+    match shell.exit_code() {
+        Some(code) => println!("Exit code: {code}"),
+        None => println!("Exit code: (none)"),
+    }
     let modes = terminal.modes();
     let on: Vec<&str> = [
         ("win32_input", modes.win32_input),

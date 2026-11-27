@@ -4,19 +4,24 @@
 //! - `cmd-echo.mrec`: `cmd /c echo ola`.
 //! - `spinner.mrec`: `tools\perf\scenarios\spinner.ps1`, for 3 s.
 //! - `ai-stream.mrec`: `tools\perf\scenarios\ai-stream.ps1`, for 12 s.
+//! - `shell-marks.mrec`: `pwsh -NoLogo -NoProfile -NoExit -WorkingDirectory
+//!   C:\Windows`, with a prompt that writes OSC 133 and OSC 9;9, and Enter
+//!   writing OSC 133;C (without the predictions of PSReadLine); then `cd
+//!   System32`, `cmd /c exit 3` and `exit`.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use meiga_core::geometry::GridSize;
 use meiga_core::term::recording::Recording;
 use meiga_core::term::{
-    Cell, CellFlags, Color, Columns, Cursor, CursorShape, Modes, Screen, Terminal,
+    Cell, CellFlags, Color, Columns, Cursor, CursorShape, Folder, Mark, Modes, Screen, Terminal,
 };
 use meiga_core::text::CellChar;
 
 const CMD_ECHO: &[u8] = include_bytes!("data/cmd-echo.mrec");
 const SPINNER: &[u8] = include_bytes!("data/spinner.mrec");
 const AI_STREAM: &[u8] = include_bytes!("data/ai-stream.mrec");
+const SHELL_MARKS: &[u8] = include_bytes!("data/shell-marks.mrec");
 
 /// The size of the pseudoconsole of the conpty example.
 const SIZE: GridSize = GridSize::new(120, 30);
@@ -36,6 +41,8 @@ struct Shown {
     title: Option<String>,
     modes: Modes,
     answers: Vec<u8>,
+    /// What the shell said: its folder, its last mark and the exit code.
+    shell: (Option<Folder>, Option<Mark>, Option<i32>),
 }
 
 /// Gives `pieces` to a new terminal, one after another.
@@ -56,6 +63,11 @@ fn feed<'a>(pieces: impl IntoIterator<Item = &'a [u8]>) -> Shown {
         title: terminal.title().map(str::to_owned),
         modes: terminal.modes(),
         answers,
+        shell: (
+            terminal.shell().folder().cloned(),
+            terminal.shell().mark(),
+            terminal.shell().exit_code(),
+        ),
     }
 }
 
@@ -191,9 +203,58 @@ fn the_ai_answer_keeps_its_text_and_colours() {
 }
 
 #[test]
+fn the_shell_says_where_it_is_and_how_its_commands_end() {
+    let recording = read(SHELL_MARKS);
+    let mut terminal = Terminal::new(SIZE);
+    let mut folders = Vec::new();
+    let mut exit_codes = vec![None];
+    for block in blocks(&recording) {
+        if !terminal.feed(block).shell {
+            continue;
+        }
+        let shell = terminal.shell();
+        if let Some(folder) = shell.folder()
+            && folders.last() != Some(folder)
+        {
+            folders.push(folder.clone());
+        }
+        if exit_codes.last() != Some(&shell.exit_code()) {
+            exit_codes.push(shell.exit_code());
+        }
+    }
+    let windows = |path: &str| Folder::Windows(path.to_owned());
+    assert_eq!(
+        folders,
+        [windows("C:\\Windows"), windows("C:\\Windows\\System32")]
+    );
+    assert_eq!(exit_codes, [None, Some(0), Some(3)]);
+    // exit runs, and no prompt comes after it.
+    assert_eq!(terminal.shell().mark(), Some(Mark::Output));
+
+    let shown = feed(blocks(&recording));
+    assert_eq!(
+        &shown.text[..4],
+        [
+            "PS C:\\Windows> cd System32",
+            "PS C:\\Windows\\System32> cmd /c exit 3",
+            "PS C:\\Windows\\System32> exit",
+            "",
+        ]
+    );
+    assert_eq!(
+        shown.shell,
+        (
+            Some(windows("C:\\Windows\\System32")),
+            Some(Mark::Output),
+            Some(3)
+        )
+    );
+}
+
+#[test]
 fn how_the_output_is_split_does_not_change_what_is_shown() {
     let mut state = 0x853c_49e6_748f_ea9b_u64;
-    for data in [CMD_ECHO, SPINNER, AI_STREAM] {
+    for data in [CMD_ECHO, SPINNER, AI_STREAM, SHELL_MARKS] {
         let recording = read(data);
         let output: Vec<u8> = blocks(&recording).flatten().copied().collect();
         let expected = feed(blocks(&recording));
@@ -219,7 +280,7 @@ fn how_the_output_is_split_does_not_change_what_is_shown() {
 
 #[test]
 fn copying_only_what_changed_gives_the_same_screen() {
-    for data in [CMD_ECHO, SPINNER, AI_STREAM] {
+    for data in [CMD_ECHO, SPINNER, AI_STREAM, SHELL_MARKS] {
         let recording = read(data);
         let mut damaged = Terminal::new(SIZE);
         let mut whole = Terminal::new(SIZE);
