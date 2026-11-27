@@ -25,6 +25,11 @@ unicode-width.workspace = true
 [dev-dependencies]
 proptest.workspace = true
 
+# What the scanner costs against the terminal (ADR 0032): cargo bench -p
+# meiga-core --bench scanner. Without the test harness, which needs nightly.
+[[bench]]
+name = "scanner"
+harness = false
 
 [lints]
 workspace = true

@@ -133,6 +133,11 @@ jobs:
       - name: Check the frame measurement
         run: ./tools/perf/measure-frames.ps1 -Duration 3 -Warmup 1
 
+      # What the scanner of the shell costs against the terminal (ADR 0032):
+      # it shows the numbers, and judges nothing, as the measurements above.
+      - name: Check the scanner measurement
+        run: cargo bench -p meiga-core --bench scanner --locked
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: dist/*.zip
