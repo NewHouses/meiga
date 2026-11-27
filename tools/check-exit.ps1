@@ -43,17 +43,18 @@ It checks that:
   program gets neither the repeat of Enter nor Enter going up; and what the
   last program wrote goes to the history, where Ctrl+Shift+Home shows it;
 - while the program of a tab runs, Restart tab is disabled in the menu of
-  the tab: Shift+F10 opens it with Duplicate tab highlighted, and Down goes
-  to Close tab, which Enter chooses;
+  the tab: Shift+F10 opens it with Rename tab highlighted, and Down and Down
+  go to Close tab, past Duplicate tab, Restart tab and the separator, and
+  Enter chooses it;
 - when the program ends with exit code 1 at the start of a row, the line of
   the exit code goes in that row;
 - when the program of a hidden tab ends with exit code 4, also after it
   wrote a line and gave a title, which draw only its tab in the bar, its tab
   stays, and only its tab is drawn again, which tells it (ADR 0025); on the
-  menu that the right button opens on it, Down and Down highlight Restart
-  tab, which Enter chooses: the program starts again in the hidden tab,
-  with the lower priority of a hidden tab from the start, and the tab is
-  not shown;
+  menu that the right button opens on it, Down three times highlights
+  Restart tab, which Enter chooses: the program starts again in the hidden
+  tab, with the lower priority of a hidden tab from the start, and the tab
+  is not shown;
 - Ctrl+D closes the tab that is shown, whose program ended, and shows the
   next one, whose program gets neither D nor Ctrl going up;
 - Ctrl+Shift+2 opens Later, whose folder is not there, and its tab tells why
@@ -1720,18 +1721,20 @@ try {
     Write-Host 'OK: Enter starts the program again in its tab, with the same command line and folder, and shows it with one full frame, and the new program gets neither the repeat of Enter nor Enter going up; what the last program wrote goes to the history.'
 
     # 7. While the program of a tab runs, Restart tab is disabled in its
-    # menu: Shift+F10 opens it with Duplicate tab highlighted, and Down goes
-    # to Close tab, past Restart tab and the separator.
+    # menu: Shift+F10 opens it with Rename tab highlighted, Down goes to
+    # Duplicate tab, and Down again to Close tab, past Restart tab and the
+    # separator.
     $seventh = Open-Tab 'Ctrl+Shift+T' @($again)
     Wait-Quiet 400
     $start = @(Get-Log).Count
     Send-Chord 'Shift+F10'
     Wait-For { @(Get-Frames $start).Count -gt 0 } { 'Shift+F10 did not open the menu of the tab.' }
     Wait-Quiet 400
-    Send-Keys (@((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'Enter').Messages))
-    Wait-Gone $seventh 'After Shift+F10, Down and Enter, on the menu of a tab whose program runs, the program'
+    $down = @((Get-Chord 'DownArrow').Messages)
+    Send-Keys ($down + $down + @((Get-Chord 'Enter').Messages))
+    Wait-Gone $seventh 'After Shift+F10, Down, Down and Enter, on the menu of a tab whose program runs, the program'
     Wait-Shown $again @() 'After Close tab'
-    Write-Host 'OK: while the program of a tab runs, Restart tab is disabled in the menu of the tab: Shift+F10 and Down highlight Close tab, which Enter chooses.'
+    Write-Host 'OK: while the program of a tab runs, Restart tab is disabled in the menu of the tab: Shift+F10, Down and Down highlight Close tab, past Duplicate tab, which Enter chooses.'
 
     # 8. The program ends with exit code 1 at the start of a row, below the
     # line of its number: its line goes in that row.
@@ -1750,10 +1753,10 @@ try {
     # Then the program ends with exit code 4: its reader wakes the window up
     # all the same, and the tab stays, and only its tab is drawn again, with
     # the mark of the end before its title. On the menu that the right
-    # button opens on it, nothing is highlighted: Down goes to Duplicate tab,
-    # and Down again to Restart tab, which starts the program again in the
-    # tab, without showing it, and with the lower priority of a hidden tab
-    # from the start (see Assert-LowerReader).
+    # button opens on it, nothing is highlighted: Down goes to Rename tab,
+    # Down again to Duplicate tab, and once more to Restart tab, which starts
+    # the program again in the tab, without showing it, and with the lower
+    # priority of a hidden tab from the start (see Assert-LowerReader).
     $eighth = Open-Tab 'Ctrl+Shift+T' @()
     Wait-Quiet 400
     $start = @(Get-Log).Count
@@ -1769,8 +1772,9 @@ try {
     Assert-Inside $start (Get-Bar 2).Tabs[1].Rect 'When the program of a hidden tab ended with exit code 4'
     Open-TabMenu 2 1 'the tab'
     Wait-Quiet 400
-    Send-Keys (@((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'DownArrow').Messages) + @((Get-Chord 'Enter').Messages))
-    $what = 'Down, Down and Enter, on the menu of a hidden tab whose program ended,'
+    $down = @((Get-Chord 'DownArrow').Messages)
+    Send-Keys ($down + $down + $down + @((Get-Chord 'Enter').Messages))
+    $what = 'Down three times and Enter, on the menu of a hidden tab whose program ended,'
     Assert-LowerReader $what
     $behind = Wait-NewShell @() $what
     Wait-Shown 0 @($behind) 'After Restart tab, on a hidden tab'
@@ -1781,7 +1785,7 @@ try {
         Show-Lines (Get-Frames $start)
         throw "Restart tab, on a hidden tab, made $($full.Count) full frames: it showed the tab."
     }
-    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and only its tab is drawn again, which tells it; on the menu that the right button opens on it, Down and Down highlight Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.'
+    Write-Host 'OK: when the program of a hidden tab ends with exit code 4, also after it wrote a line and gave a title, which drew only its tab in the bar, its tab stays, and only its tab is drawn again, which tells it; on the menu that the right button opens on it, Down three times highlights Restart tab, which Enter chooses: the program starts again in the tab, in its folder, with the lower priority of a hidden tab from the start, and the tab is not shown.'
 
     # 10. Ctrl+D closes the tab that is shown, whose program ended, and
     # shows the next one, whose program gets neither D nor Ctrl going up:

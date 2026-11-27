@@ -38,15 +38,25 @@
 //! gets all the mouse, and the keys that go down; the ones that went down
 //! before go up for the program, which gets each key that it got go up too.
 //! What changes under it, all inside it, is not drawn until it closes. It
-//! closes when an item is chosen, and also when the window loses the focus,
-//! changes size or scale, starts moving, or is minimized; and the menu of a
-//! tab, when the tab closes.
+//! closes when an item is chosen, and also when a button goes down outside
+//! it, also on the frame of the window, where Windows handles the mouse,
+//! and when the window loses the focus, changes size or scale, starts
+//! moving, or is minimized; and the menu of a tab, when the tab closes.
 //!
 //! When the program of a tab ends with the exit code 0, the tab closes, as
 //! if the user had closed it, also while it is hidden: the last one closes
 //! the window. Otherwise, or if it could not start, the tab stays, and its
 //! terminal tells how the program ended; then, without a program, Enter
 //! starts it again in the same tab, and Ctrl+D closes the tab (ADR 0024).
+//!
+//! A double click on a tab, Ctrl+Shift+R or "Rename tab" in its menu edit
+//! the name of the tab, in a field in the place of its title, which gets
+//! the keys and its own clicks meanwhile (ADR 0031). Enter, or a button
+//! that goes down anywhere else, also where Windows drags or resizes the
+//! window, ends it with the name, which the tab and the window show instead
+//! of the titles of its program, also after it starts again and in its
+//! copies; Esc ends it without it. An empty name gives the tab back the
+//! titles of its program.
 //!
 //! A tab is shown as soon as it opens, at the start too: the writer thread
 //! of its session creates the pseudoconsole and the program, and the window
@@ -69,17 +79,22 @@ use meiga_core::ui::titlebar::TitleBar;
 use meiga_render::{Canvas, Font, FontSystem};
 use meiga_win::conpty::{Priority, Pty};
 use meiga_win::event::{Event, HandlerError};
-use meiga_win::window::{Pointer, Waker, Window};
+use meiga_win::window::{self, Pointer, Waker, Window};
 
 use crate::app::TITLE;
 use crate::frames::{self, Scene};
 use crate::menu::MenuView;
 use crate::mouse::Response;
+use crate::rename::{Done, Edit, Editor, Place, Settings};
 use crate::scrollbar::ScrollBar;
 use crate::session::{self, Exit, Shared, lock};
 use crate::shells::Shells;
 use crate::tabbar::{Frame, Indicator, Label, TabBar};
 use crate::view::{self, FONT_FAMILIES, FONT_POINTS, TabTerminal, TerminalView};
+
+/// Alt: when it goes up, it brings the character of the code typed with it
+/// on the numeric keypad.
+const VK_MENU: u16 = 0x12;
 
 /// What a shortcut, a click on the tab bar, or an item of a menu asks for
 /// the tabs.
@@ -119,6 +134,11 @@ pub enum TabAction {
     /// Open the menu of the tab that is shown, below its tab: the keyboard
     /// asked for it.
     ActiveMenu,
+    /// Edit the name of this tab, in its tab, after showing it: a double
+    /// click on it, or its menu (ADR 0031).
+    Rename(TabId),
+    /// The same with the tab that is shown: the keyboard asked for it.
+    RenameActive,
     /// Open a tab with the program of this one, right after it, and show
     /// it.
     Duplicate(TabId),
@@ -171,6 +191,9 @@ struct Tab {
     title_due: bool,
     /// The title that its program gave, as the window last took it.
     title: Option<String>,
+    /// The name that the user gave it, which the tab and the window show
+    /// instead of the titles of its program, while it has one (ADR 0031).
+    name: Option<String>,
     /// How its program ended, if the window learned it while the tab was
     /// hidden, and did not act on it yet: the wake-up of the end, which
     /// always comes after it, does.
@@ -205,6 +228,7 @@ impl Tab {
             sync_due: None,
             title_due: false,
             title: None,
+            name: None,
             exit: None,
             activity: false,
             bell: false,
@@ -232,8 +256,9 @@ impl Tab {
     /// how a new program expects it, with `grid` and cells of `cell`
     /// pixels: what the last program wrote goes to the history (ADR 0024).
     /// Until the new program gives a title, the tab shows the name of its
-    /// `launch` again. Only what the new program writes, and the bells that
-    /// it rings, count for the indicator of the tab.
+    /// `launch` again, or the name that the user gave it, which stays.
+    /// Only what the new program writes, and the bells that it rings, count
+    /// for the indicator of the tab.
     fn restart(
         &mut self,
         environment: &[u16],
@@ -346,11 +371,24 @@ impl Tab {
         self.set_priority(Priority::BelowNormal);
         retitled
     }
+
+    /// The title of the window while the tab is shown: its name, or the
+    /// title of its program, or that of meiga.
+    fn window_title(&self) -> &str {
+        self.name
+            .as_deref()
+            .or(self.title.as_deref())
+            .unwrap_or(TITLE)
+    }
 }
 
 impl Label for Tab {
+    /// Its name, or the title of its program, or the name of its profile.
     fn label(&self) -> &str {
-        self.title.as_deref().unwrap_or(&self.launch.name)
+        self.name
+            .as_deref()
+            .or(self.title.as_deref())
+            .unwrap_or(&self.launch.name)
     }
 
     fn indicator(&self) -> Option<Indicator> {
@@ -384,6 +422,10 @@ pub struct Tabs {
     /// The tab whose menu is open, if the menu that may be open is the menu
     /// of a tab: it closes with the tab.
     menu_tab: Option<TabId>,
+    /// The editing of the name of a tab, while it is open (ADR 0031).
+    editor: Option<Editor>,
+    /// Whether the window has the focus: the caret of a name blinks with it.
+    focused: bool,
     shells: Shells,
     /// The size of the client area of the window: the bar, and below it
     /// the terminal.
@@ -406,7 +448,8 @@ impl Tabs {
         let font = Font::new(&fonts, &FONT_FAMILIES, f32::from(FONT_POINTS), dpi)?;
         let cell = font.cell();
         let client = window.client_size()?;
-        let bar = TabBar::new(&fonts, dpi, client.width, 1, frame(window, dpi))?;
+        let mut bar = TabBar::new(&fonts, dpi, client.width, 1, frame(window, dpi))?;
+        bar.set_click_settings(window::mouse_settings().clicks);
         let area = below_bar(client, bar.height());
         let grid = view::grid_size(area, cell, ScrollBar::width_at(dpi));
         let waker = window.waker();
@@ -426,6 +469,8 @@ impl Tabs {
             bar,
             menu: MenuView::new(),
             menu_tab: None,
+            editor: None,
+            focused: false,
             shells,
             client,
             retitled_at: None,
@@ -483,16 +528,33 @@ impl Tabs {
         // And the band above the tabs, as thick as the frame at `dpi`.
         self.bar.set_frame(frame(window, dpi), &self.tabs);
         self.view.dpi_changed(dpi);
+        if let Some(editor) = &mut self.editor {
+            editor.set_dpi(dpi);
+        }
         // The bar can have another height: until the new size comes, the
         // terminal has the rest of the same window.
         self.view.resized(below_bar(self.client, self.bar.height()));
     }
 
     /// The window gained or lost the focus, at `now`. Without it, the menu
-    /// closes, and the buttons of the window on the bar look dimmer.
+    /// closes, and the buttons of the window on the bar look dimmer; the
+    /// editing of a name goes on, without its caret, until the window gets
+    /// the focus again (ADR 0031). With it, the bar and the editing read
+    /// again how fast two clicks are a double click, and the editing how its
+    /// caret blinks, which can change while meiga runs.
     pub fn focus(&mut self, window: &Window, focused: bool, now: Instant) {
         if !focused {
             self.close_menu(window);
+        } else if !self.focused {
+            let settings = Settings::read(window.dpi());
+            self.bar.set_click_settings(settings.clicks);
+            if let Some(editor) = &mut self.editor {
+                editor.set_settings(settings);
+            }
+        }
+        self.focused = focused;
+        if let Some(editor) = &mut self.editor {
+            editor.focus(focused, now);
         }
         self.bar.set_focused(focused);
         self.view.focus(focused, now);
@@ -513,8 +575,11 @@ impl Tabs {
     /// but one that was down before does nothing while it repeats: the
     /// program gets it when it goes up, if it went down for the program,
     /// and nobody does, if a shortcut took it, as the one that opened the
-    /// menu.
+    /// menu. While a name is edited, the keys are for it in the same way.
     pub fn key(&mut self, window: &Window, event: &KeyEvent) -> Response {
+        if self.editor.is_some() {
+            return self.edit_key(window, event);
+        }
         if !self.menu.is_open() || !event.down {
             return self.view.key(window, event);
         }
@@ -532,6 +597,141 @@ impl Tabs {
             redraw: self.menu.has_damage(),
             tab,
             ..Response::default()
+        }
+    }
+
+    /// A key of the window while a name is edited (ADR 0031): as with the
+    /// menu open, the keys that go down are for the editing, and the program
+    /// does not get them, nor when they go up; and the shortcuts do nothing.
+    /// A key that was down when the editing started does nothing while it
+    /// repeats. Alt, when it goes up, brings the character of the code typed
+    /// with it on the numeric keypad.
+    fn edit_key(&mut self, window: &Window, event: &KeyEvent) -> Response {
+        let now = Instant::now();
+        if !event.down {
+            let code =
+                event.key == VK_MENU && event.character != 0 && !self.view.holds_key(VK_MENU);
+            if let Some(editor) = &mut self.editor {
+                editor.key_up(event.key);
+            }
+            let mut response = self.view.key(window, event);
+            if code {
+                response.redraw |= self.edit(window, event, now);
+            }
+            return response;
+        }
+        if self.view.holds_key(event.key)
+            || self
+                .editor
+                .as_ref()
+                .is_some_and(|editor| editor.was_down(event.key))
+        {
+            return Response::default();
+        }
+        self.view.take_key(event);
+        Response {
+            redraw: self.edit(window, event, now),
+            ..Response::default()
+        }
+    }
+
+    /// Gives `event` to the editing of the name, at `now`: what its field
+    /// copies goes to the clipboard of `window`, and what it pastes comes from
+    /// it; if another program keeps the clipboard open, nothing happens.
+    /// Returns whether a frame has to draw it.
+    fn edit(&mut self, window: &Window, event: &KeyEvent, now: Instant) -> bool {
+        let Some(editor) = &mut self.editor else {
+            return false;
+        };
+        match editor.key(event, now) {
+            Edit::Ignored => false,
+            Edit::Taken => true,
+            Edit::Copy(text) => {
+                let _ = meiga_win::clipboard::write_text(window, &text);
+                true
+            }
+            Edit::Paste => {
+                if let Ok(Some(text)) = meiga_win::clipboard::read_text(window) {
+                    editor.paste(&text, now);
+                }
+                true
+            }
+            Edit::Done(done) => self.finish(window, done),
+        }
+    }
+
+    /// Opens the editing of the name of the tab `id`, at `now`, in its tab,
+    /// which is shown first, and comes into view, with the text that it
+    /// shows, all of it selected (ADR 0031). An editing that may be open ends
+    /// first with its name. Returns whether a frame has to show it.
+    fn rename(&mut self, window: &Window, id: TabId, now: Instant) -> bool {
+        self.commit(window);
+        if let Some(switch) = self.select(id) {
+            self.show(window, switch, now);
+        }
+        let Some(index) = self.tabs.index_of(id) else {
+            return false;
+        };
+        self.bar.scroll_to_tab(&self.tabs, index);
+        let Some(tab) = self.tabs.get(id) else {
+            return false;
+        };
+        let place = Place {
+            area: self.bar.text_area(index, tab.indicator()),
+            cell: self.bar.cell(),
+        };
+        let settings = Settings::read(window.dpi());
+        let mut editor = Editor::new(id, tab.label(), place, settings, self.focused, now);
+        editor.ignore(self.view.keys_down());
+        self.editor = Some(editor);
+        self.view.set_editing(true, now);
+        self.bar.label_changed(index);
+        true
+    }
+
+    /// Ends the editing of the name that may be open with the name in its
+    /// field, as Enter: a button went down outside it. The bar has the damage
+    /// that a frame draws.
+    fn commit(&mut self, window: &Window) {
+        if let Some(done) = self.editor.as_ref().map(Editor::commit) {
+            self.finish(window, done);
+        }
+    }
+
+    /// Ends the editing of the name as `done` says: its tab gets its new
+    /// name, which the window shows too while it is shown, or shows again
+    /// the titles of its program. Returns whether a frame has to draw it.
+    fn finish(&mut self, window: &Window, done: Done) -> bool {
+        let Some(editor) = self.editor.take() else {
+            return false;
+        };
+        if editor.is_pressed() {
+            window.release_mouse();
+        }
+        self.view.set_editing(false, Instant::now());
+        let id = editor.tab();
+        let shown = id == self.tabs.active().id();
+        let (Some(index), Some(tab)) = (self.tabs.index_of(id), self.tabs.get_mut(id)) else {
+            return true;
+        };
+        if let Done::Renamed(name) = done {
+            tab.name = name;
+            if shown {
+                window.set_title(tab.window_title());
+            }
+        }
+        self.bar.label_changed(index);
+        true
+    }
+
+    /// The editing of a name ends without it if its tab closed.
+    fn forget_closed_editor(&mut self, window: &Window) {
+        if self
+            .editor
+            .as_ref()
+            .is_some_and(|editor| self.tabs.index_of(editor.tab()).is_none())
+        {
+            self.finish(window, Done::Unchanged);
         }
     }
 
@@ -631,25 +831,27 @@ impl Tabs {
     }
 
     /// Takes the title of the active tab, if its program gave another one,
-    /// for the window and the bar.
+    /// for the window and the bar, unless the tab has a name, which they show
+    /// instead (ADR 0031).
     fn retitle_active(&mut self, window: &Window) {
         let index = self.tabs.active_index();
         let id = self.tabs.active().id();
         if let Some(tab) = self.tabs.get_mut(id)
             && self.view.take_title(&mut tab.title)
+            && tab.name.is_none()
         {
-            window.set_title(tab.title.as_deref().unwrap_or(TITLE));
+            window.set_title(tab.window_title());
             self.bar.label_changed(index);
         }
     }
 
     /// Takes the titles that the programs of the hidden tabs gave, for the
-    /// bar.
+    /// bar, which shows them in the tabs without a name.
     fn retitle_hidden(&mut self) {
         let active = self.tabs.active_index();
         let Self { tabs, bar, .. } = self;
         for (index, (_, tab)) in tabs.contents_mut().enumerate() {
-            if index != active && tab.retitle() {
+            if index != active && tab.retitle() && tab.name.is_none() {
                 bar.label_changed(index);
             }
         }
@@ -665,7 +867,8 @@ impl Tabs {
 
     /// Does what a shortcut, a click or the menu asked for the tabs, at
     /// `now`. Returns whether a frame has to show it: the window shows
-    /// another tab, the bar changed, or the menu opened.
+    /// another tab, the bar changed, the menu opened, or the editing of a
+    /// name.
     pub fn act(&mut self, window: &Window, action: TabAction, now: Instant) -> bool {
         let active = self.tabs.active().id();
         let switch = match action {
@@ -715,6 +918,8 @@ impl Tabs {
             }
             TabAction::Menu(id, at) => return self.open_menu(window, id, Some(at)),
             TabAction::ActiveMenu => return self.open_menu(window, active, None),
+            TabAction::Rename(id) => return self.rename(window, id, now),
+            TabAction::RenameActive => return self.rename(window, active, now),
             TabAction::Restart(id) => return self.restart(window, id, now),
             TabAction::RestartActive => return self.restart(window, active, now),
             // Windows does them: the window gets the events of the change
@@ -767,12 +972,17 @@ impl Tabs {
     }
 
     /// Opens a tab with the program of the tab `id`, right after it, and
-    /// activates it, as "Duplicate tab" in Chrome and in Windows Terminal.
-    /// Returns the change of the active tab.
+    /// activates it, as "Duplicate tab" in Chrome and in Windows Terminal,
+    /// with its name, if it has one (ADR 0031). Returns the change of the
+    /// active tab.
     fn duplicate(&mut self, window: &Window, id: TabId) -> Option<Switch> {
         let index = self.tabs.index_of(id)?;
-        let launch = self.tabs.get(id)?.launch.clone();
+        let tab = self.tabs.get(id)?;
+        let (launch, name) = (tab.launch.clone(), tab.name.clone());
         let copy = self.open_tab(window, launch);
+        if let Some(tab) = self.tabs.get_mut(copy) {
+            tab.name = name;
+        }
         // It cannot fail: the copy is the last tab, after the one at
         // `index`.
         let _ = self.tabs.move_tab(copy, index + 1);
@@ -820,7 +1030,7 @@ impl Tabs {
             // screen, and its keys go to the new program.
             let terminal = tab.terminal();
             self.view.show(window, terminal, now, &mut tab.title);
-            window.set_title(tab.title.as_deref().unwrap_or(TITLE));
+            window.set_title(tab.window_title());
         } else {
             tab.set_priority(Priority::BelowNormal);
         }
@@ -845,6 +1055,8 @@ impl Tabs {
                 if self.menu_tab == Some(id) {
                     self.close_menu(window);
                 }
+                // And the editing of its name, without it.
+                self.forget_closed_editor(window);
                 if let Some(to) = activated {
                     self.show(window, Switch { from: id, to }, now);
                 }
@@ -893,6 +1105,7 @@ impl Tabs {
         }
         // Their sessions close without waiting, as in `close`.
         drop(contents);
+        self.forget_closed_editor(window);
         self.bar.tabs_changed(&self.tabs);
         true
     }
@@ -918,6 +1131,7 @@ impl Tabs {
         let count = self.tabs.tab_count();
         let ended = self.tabs.get(id).is_some_and(|tab| tab.session.is_none());
         let entries = vec![
+            Entry::item("Rename tab", TabAction::Rename(id), true),
             Entry::item("Duplicate tab", TabAction::Duplicate(id), true),
             Entry::item("Restart tab", TabAction::Restart(id), ended),
             Entry::Separator,
@@ -1015,7 +1229,7 @@ impl Tabs {
         to.bell = false;
         let terminal = to.terminal();
         self.view.show(window, terminal, now, &mut to.title);
-        window.set_title(to.title.as_deref().unwrap_or(TITLE));
+        window.set_title(to.window_title());
         self.bar.shown();
         if let Some(from) = self.tabs.get_mut(switch.from) {
             // The view no longer ends the synchronized update that its
@@ -1051,6 +1265,9 @@ impl Tabs {
         if self.menu.is_open() {
             return self.menu_mouse(window, event);
         }
+        if let Some(response) = self.edit_mouse(window, event) {
+            return response;
+        }
         let at = match *event {
             Event::MouseDown { at, .. }
             | Event::MouseUp { at, .. }
@@ -1075,9 +1292,89 @@ impl Tabs {
             return self.bar_mouse(window, event, at);
         }
         self.bar.left(&self.tabs);
+        if let Event::MouseDown { .. } = event {
+            self.bar.forget_clicks();
+        }
         let mut response = self.view.mouse(window, &raised(event, top));
         response.redraw |= self.bar.has_damage();
         response
+    }
+
+    /// A button of the mouse went down on the frame of the window, where
+    /// Windows drags it, resizes it or maximizes it, or it opens its menu:
+    /// as any button that goes down outside them, it closes the menu that
+    /// may be open (ADR 0021), and ends the editing of a name that may be
+    /// open with the name (ADR 0031), first. Returns whether a frame has to
+    /// draw it.
+    pub fn frame_mouse_down(&mut self, window: &Window) -> bool {
+        self.bar.forget_clicks();
+        let closed = self.close_menu(window);
+        self.commit(window);
+        closed || self.bar.has_damage()
+    }
+
+    /// A mouse event while a name is edited (ADR 0031): in its field, and
+    /// while the left button that went down in it is down, it is for the
+    /// field, whose pointer is the bar of text, unless the bar or the
+    /// terminal already holds the mouse with another button: then it is
+    /// theirs. The wheel on the bar does nothing; and a button that goes
+    /// down elsewhere ends the editing with the name, and then does what it
+    /// does. Returns `None` for the events that go on to the bar or to the
+    /// terminal.
+    fn edit_mouse(&mut self, window: &Window, event: &Event) -> Option<Response> {
+        let now = Instant::now();
+        let held = self.bar.is_pressed() || self.view.holds_mouse();
+        let editor = self.editor.as_mut()?;
+        match *event {
+            Event::MouseDown { at, .. } if editor.contains(at) && held => None,
+            Event::MouseDown {
+                button,
+                at,
+                modifiers,
+            } if editor.contains(at) => {
+                self.bar.forget_clicks();
+                // Only the left button does something in the field.
+                let pressed = editor.down(button, at, modifiers, now);
+                if pressed {
+                    window.capture_mouse();
+                }
+                window.set_pointer(Pointer::Text);
+                Some(Response {
+                    redraw: pressed,
+                    ..Response::default()
+                })
+            }
+            Event::MouseDown { .. } => {
+                self.commit(window);
+                None
+            }
+            Event::MouseMoved { at, .. } if editor.is_pressed() => {
+                editor.moved(at, now);
+                Some(Response::REDRAW)
+            }
+            Event::MouseUp { button, .. } if editor.is_pressed() => {
+                editor.up(button);
+                if !editor.is_pressed() {
+                    window.release_mouse();
+                    // Holding the mouse may have ended the tracking of its
+                    // leave.
+                    window.track_mouse_leave();
+                }
+                Some(Response::default())
+            }
+            Event::MouseMoved { at, .. } if editor.contains(at) && !held => {
+                // As any move on the bar, but with the pointer of text.
+                let response = self.bar_mouse(window, event, at);
+                window.set_pointer(Pointer::Text);
+                Some(response)
+            }
+            Event::Wheel { at, .. } if self.bar.contains(at) => Some(Response::default()),
+            Event::CaptureLost => {
+                editor.capture_lost();
+                None
+            }
+            _ => None,
+        }
     }
 
     /// A mouse event of the bar, with the pointer at `at`.
@@ -1092,7 +1389,7 @@ impl Tabs {
         }
         match *event {
             Event::MouseDown { button, .. } => {
-                response.tab = self.bar.down(&self.tabs, button);
+                response.tab = self.bar.down(&self.tabs, button, Instant::now());
                 if self.bar.is_pressed() {
                     window.capture_mouse();
                 }
@@ -1134,7 +1431,10 @@ impl Tabs {
                     window.track_mouse_leave();
                 }
             }
-            Event::MouseDown { button, at, .. } => self.menu.down(button, at),
+            Event::MouseDown { button, at, .. } => {
+                self.bar.forget_clicks();
+                self.menu.down(button, at);
+            }
             Event::MouseUp { button, at, .. } => tab = self.menu.up(button, at),
             Event::MouseLeft => self.menu.left(),
             Event::CaptureLost => self.menu.capture_lost(),
@@ -1196,6 +1496,9 @@ impl Scene for Tabs {
         // while a button that scrolls them stays down.
         self.bar.settle(&self.tabs);
         let repeat = self.bar.tick(&self.tabs, now);
+        // Once the bar is settled: the field of a name that is edited follows
+        // the title of its tab.
+        let editing = self.update_editor(now);
         let menu = &self.menu;
         self.bar.take_damage(&mut |area| {
             if !menu.covers(area) {
@@ -1203,7 +1506,7 @@ impl Scene for Tabs {
             }
         });
         self.menu.take_damage(damage);
-        earliest(earliest(shown, hidden), repeat)
+        earliest(earliest(earliest(shown, hidden), repeat), editing)
     }
 
     fn update_hidden(&mut self, window: &Window, now: Instant) -> Option<Instant> {
@@ -1231,7 +1534,13 @@ impl Scene for Tabs {
     fn draw(&mut self, canvas: &mut Canvas<'_>) {
         // Under the menu there is only the menu, which covers all of it.
         if !self.menu.covers(canvas.clip()) {
-            self.bar.draw(canvas, &self.tabs, self.view.palette());
+            let Self {
+                editor, tabs, bar, ..
+            } = self;
+            let editing = editor
+                .as_mut()
+                .and_then(|editor| Some((tabs.index_of(editor.tab())?, editor.view())));
+            bar.draw(canvas, tabs, self.view.palette(), editing);
             let terminal = Rect {
                 top: coordinate(self.bar.height()),
                 ..Rect::from_size(canvas.size())
@@ -1242,6 +1551,29 @@ impl Scene for Tabs {
             }
         }
         self.menu.draw(canvas, self.bar.font_mut());
+    }
+}
+
+impl Tabs {
+    /// Brings the editing of a name up to date at `now`: its field follows
+    /// the place of the title of its tab, and its caret blinks. Returns when
+    /// to come back.
+    fn update_editor(&mut self, now: Instant) -> Option<Instant> {
+        let Self {
+            editor, tabs, bar, ..
+        } = self;
+        let editor = editor.as_mut()?;
+        let index = tabs.index_of(editor.tab())?;
+        let tab = tabs.get(editor.tab())?;
+        editor.place(Place {
+            area: bar.text_area(index, tab.indicator()),
+            cell: bar.cell(),
+        });
+        let (changed, next) = editor.update(now);
+        if changed {
+            bar.label_changed(index);
+        }
+        next
     }
 }
 

@@ -7,11 +7,13 @@
 
 mod app;
 mod bench;
+mod blink;
 mod clipboard;
 mod frames;
 mod menu;
 mod mouse;
 mod options;
+mod rename;
 mod scrollbar;
 mod session;
 mod shells;

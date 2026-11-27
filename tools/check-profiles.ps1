@@ -1802,8 +1802,10 @@ try {
     Wait-Shown $copy @($first) 'After a click on the button +'
     Wait-For { Test-Path -LiteralPath "$reports.$copy" } { 'After a click on the button +, the script of Probe did not start.' }
     Assert-OneFull $start 'A click on the button +'
+    # Duplicate tab is the second item, after Rename tab.
     Send-Press $VK_APPS
     Wait-Quiet 400
+    Send-Press $VK_DOWN
     Send-Press $VK_RETURN
     $shell = Wait-NewShell @($first, $copy) 'Duplicate tab, on the tab of Probe'
     Assert-Launch $shell $probeProfile 'Duplicate tab, on the tab of Probe'

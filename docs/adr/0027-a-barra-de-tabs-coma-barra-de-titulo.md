@@ -1,6 +1,6 @@
 # ADR 0027 · A barra de tabs coma barra de título
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0031](0031-o-nome-das-tabs.md)
 - **Data:** 2026-11-19
 - **Relacionados:** [ADR 0002](0002-windows-e-renderizado-cpu.md), [ADR 0005](0005-fios-e-fotogramas.md), [ADR 0008](0008-temporizador-dos-fotogramas.md), [ADR 0014](0014-o-teclado.md), [ADR 0020](0020-a-barra-de-tabs.md), [ADR 0021](0021-os-menus-e-o-menu-da-tab.md), [ADR 0023](0023-os-atallos-de-teclado.md), [ADR 0025](0025-moitas-tabs-e-os-indicadores.md)
 
