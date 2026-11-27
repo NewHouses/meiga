@@ -279,6 +279,30 @@ fn a_text_longer_than_the_maximum_is_ignored_whole() {
     assert!(scanner.text.capacity() <= KEPT_CAPACITY);
 }
 
+#[test]
+fn the_longest_path_of_windows_fits() {
+    // 32 767 characters of three bytes each in UTF-8, between quotes.
+    let path = "\u{4e2d}".repeat(32_767);
+    let osc = format!("\x1b]9;9;\"{path}\"\x07");
+    assert_eq!(scanned(&[osc.as_bytes()]), [windows(&path)]);
+}
+
+#[test]
+fn the_text_keeps_the_memory_of_a_usual_path_and_gives_back_the_rest() {
+    let mut scanner = Scanner::new();
+    let osc = |len: usize| format!("\x1b]9;9;C:\\{}\x07", "x".repeat(len));
+    // A long path, as a prompt gives it again and again: its memory stays,
+    // and the next one does not ask for more.
+    scanner.scan(osc(3000).as_bytes(), |_| {});
+    let kept = scanner.text.capacity();
+    assert!(kept >= 3000, "{kept}");
+    scanner.scan(osc(3000).as_bytes(), |_| {});
+    assert_eq!(scanner.text.capacity(), kept);
+    // A much longer one gives back what goes over 4 KiB.
+    scanner.scan(osc(100_000).as_bytes(), |_| {});
+    assert!(scanner.text.capacity() <= 4 * 1024);
+}
+
 /// What vte reads in an output: the OSCs that it ends, with their
 /// parameters, as the scanner has to see them.
 #[derive(Default)]
