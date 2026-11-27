@@ -558,6 +558,24 @@ fn the_conpty_passes_the_titles_of_the_program_unchanged() {
     assert!(text.contains(&expected), "{expected:?} is not in {text:?}");
 }
 
+/// What [`marker`] writes: what a shell says about itself, its folder and
+/// the marks around its prompt and its commands, which the scanner of meiga
+/// reads (ADR 0032).
+const SHELL: &str = concat!(
+    "\x1b]133;D;0\x07\x1b]133;A\x07\x1b]9;9;\"C:\\x y\"\x1b\\PS C:\\x y> \x1b]133;B\x07",
+    "\x1b]133;C\x07\x1b]7;file://ana-pc/C:/x%20y\x1b\\\x1b]133;D;3221225477\x07",
+);
+
+#[test]
+fn the_conpty_passes_what_the_shell_says_unchanged() {
+    let (_pty, mut transcript) = spawn_helper(&bundled(), "marker");
+    transcript.wait_for("marker-done");
+    let text = transcript.text();
+    // Whole, in order, and with nothing in between.
+    let expected = format!("{SHELL}marker-done");
+    assert!(text.contains(&expected), "{expected:?} is not in {text:?}");
+}
+
 /// Sends with each block of output the priority of the reader thread, which
 /// it reads on that thread, as it gives the block.
 struct Priorities(Sender<(i32, Vec<u8>)>);
@@ -852,6 +870,7 @@ fn helper() {
         Ok("slow") => slow(),
         Ok("exiter") => exiter(),
         Ok("titler") => titler(),
+        Ok("marker") => marker(),
         _ => {}
     }
 }
@@ -934,6 +953,19 @@ unsafe extern "system" fn wait_on_close(event: u32) -> BOOL {
 /// sequences do: with the processing of virtual terminal sequences turned
 /// on, which ConPTY needs to pass them to the terminal.
 fn titler() {
+    write_sequences(TITLES);
+    println!("titler-done");
+}
+
+/// A program that writes [`SHELL`], as [`titler`].
+fn marker() {
+    write_sequences(SHELL);
+    println!("marker-done");
+}
+
+/// Writes `text` with the processing of virtual terminal sequences turned
+/// on.
+fn write_sequences(text: &str) {
     // SAFETY: the handle of the output of this process, which is the
     // console of its session, and a mode that the call writes.
     unsafe {
@@ -943,8 +975,7 @@ fn titler() {
         let mode = mode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
         assert_ne!(SetConsoleMode(output, mode), 0);
     }
-    print!("{TITLES}");
-    println!("titler-done");
+    print!("{text}");
 }
 
 /// A process that closes two sessions that are starting, waits for them,
