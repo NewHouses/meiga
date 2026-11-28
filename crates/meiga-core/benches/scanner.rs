@@ -11,12 +11,16 @@
 //! marks of OSC 133 and OSC 9;9 every 20 rows, and rows with links (OSC 8);
 //! then the recordings of the tests of meiga-core, and the ones given. Each
 //! round reads each output with a new scanner and then with a new terminal,
-//! of the size of the output. After a round that is not counted, it shows the
-//! median of the rounds, 11 unless `--rounds` says otherwise, and the time of
-//! the scanner against the time of the terminal: the median of the rounds,
-//! and the lowest and the highest. A relative path of a recording is taken
-//! from the folder of the workspace, where cargo is run: cargo bench runs the
-//! benchmark in the folder of meiga-core.
+//! of the size of the output, block by block, as the reader of a tab does:
+//! each block is copied first into a buffer, as ReadFile writes it, and the
+//! scanner and the terminal are timed on it there, while it is in the cache.
+//! With small blocks, the clock that times each one weighs more than the
+//! scanner. After a round that is not counted, it shows the median of the
+//! rounds, 11 unless `--rounds` says otherwise, and the time of the scanner
+//! against the time of the terminal: the median of the rounds, and the lowest
+//! and the highest. A relative path of a recording is taken from the folder
+//! of the workspace, where cargo is run: cargo bench runs the benchmark in
+//! the folder of meiga-core.
 
 use std::fmt::Write as _;
 use std::hint::black_box;
@@ -161,28 +165,41 @@ fn median<T: Copy + PartialOrd>(values: &mut [T]) -> T {
 }
 
 /// What a round measures: the time of the scanner, the time of the
-/// terminal, and how many things the scanner found.
+/// terminal, and how many things the scanner found. Each block goes first
+/// into the buffer of the reader, untimed: in meiga, the scanner reads what
+/// ReadFile has just written, and the parser what the scanner has just read.
+/// Reading the blocks one after another from memory would make the scanner,
+/// the first to touch them, pay for bringing them to the cache.
 fn round(output: &Output) -> (Duration, Duration, usize) {
+    let mut buffer = vec![0; output.blocks.iter().map(Vec::len).max().unwrap_or(0)];
     let mut scanner = Scanner::new();
     let mut found = 0;
-    let start = Instant::now();
+    let mut scan = Duration::ZERO;
     for block in &output.blocks {
-        scanner.scan(black_box(block), |report| {
+        let read = &mut buffer[..block.len()];
+        read.copy_from_slice(block);
+        let start = Instant::now();
+        scanner.scan(black_box(&*read), |report| {
             black_box(report);
             found += 1;
         });
+        scan += start.elapsed();
     }
-    let scan = start.elapsed();
     let mut terminal = Terminal::new(output.size);
-    let start = Instant::now();
+    let mut feed = Duration::ZERO;
     for block in &output.blocks {
-        black_box(terminal.feed(black_box(block)));
+        let read = &mut buffer[..block.len()];
+        read.copy_from_slice(block);
+        let start = Instant::now();
+        black_box(terminal.feed(black_box(&*read)));
+        feed += start.elapsed();
     }
     // A synchronized update that is still open is read too.
+    let start = Instant::now();
     if terminal.sync_deadline().is_some() {
         black_box(terminal.end_sync());
     }
-    let feed = start.elapsed();
+    feed += start.elapsed();
     (scan, feed, found)
 }
 
