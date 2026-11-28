@@ -280,6 +280,35 @@ fn a_text_longer_than_the_maximum_is_ignored_whole() {
 }
 
 #[test]
+fn many_brackets_without_an_esc_do_not_hide_an_osc() {
+    // Before the scanner looks for the pair, and after.
+    for before in [
+        0,
+        1,
+        LONE_BRACKETS - 1,
+        LONE_BRACKETS,
+        LONE_BRACKETS + 1,
+        200,
+    ] {
+        let output = format!(
+            "{}\x1b]133;A\x07{}\x1b]9;9;C:\\x\x07]",
+            "[1]".repeat(before),
+            "]".repeat(before)
+        );
+        assert_eq!(
+            scanned(&[output.as_bytes()]),
+            [Report::Mark(Mark::Prompt), windows("C:\\x")],
+            "{before}"
+        );
+    }
+    // A ] at the start of a read, after one that did not end with ESC.
+    assert_eq!(
+        scanned(&[b"[1", b"]133;A\x07\x1b]133;B\x07"]),
+        [Report::Mark(Mark::Command)]
+    );
+}
+
+#[test]
 fn the_longest_path_of_windows_fits() {
     // 32 767 characters of three bytes each in UTF-8, between quotes.
     let path = "\u{4e2d}".repeat(32_767);
@@ -400,6 +429,8 @@ fn part() -> impl Strategy<Value = Vec<u8>> {
         3 => (prop::sample::select(texts), prop::sample::select(ends))
             .prop_map(|(text, end)| [b"\x1b]", text.as_bytes(), end].concat()),
         2 => "[ -~\u{e1}\u{4e2d}]{0,12}".prop_map(String::into_bytes),
+        // Lists, with more ] than the scanner looks for one by one.
+        1 => "[\\[\\]0-9,]{8,48}".prop_map(String::into_bytes),
         2 => any::<u8>().prop_map(|byte| vec![byte]),
     ]
 }
@@ -412,7 +443,8 @@ proptest! {
     #[test]
     fn it_agrees_with_vte(
         parts in prop::collection::vec(part(), 0..40),
-        sizes in prop::collection::vec(1usize..24, 1..16),
+        // Short pieces, and long ones, with many ] in a read.
+        sizes in prop::collection::vec(prop_oneof![3 => 1usize..24, 1 => 24usize..2048], 1..16),
     ) {
         let mut output = parts.concat();
         // Out of what the scanner misses.

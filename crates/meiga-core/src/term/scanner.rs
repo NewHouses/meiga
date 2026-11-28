@@ -4,12 +4,14 @@
 //! prompt and the output of a command, with OSC 133. It only reads the
 //! bytes: the parser gets them unchanged.
 //!
-//! An OSC starts at `ESC ]`: `memchr::memmem` finds that pair many bytes at a
-//! time, so the scanner does not stop at the other sequences, as the colours,
-//! nor at the text. From there it reads the OSC as `vte` does, also when it
-//! comes split between reads, and it ends it where `vte` ends it: at BEL,
-//! CAN, SUB or any ESC. The only OSC that it misses is one with bytes that
-//! `vte` ignores between the ESC and the `]`, as `ESC \x80 ]`, which no
+//! An OSC starts at `ESC ]`. The scanner looks for its `]` with `memchr`,
+//! many bytes at a time, and checks that an ESC comes right before it, so it
+//! does not stop at the other sequences, as the colours, nor at the text; in
+//! a read with many `]` without an ESC, as a list, it looks for the pair with
+//! `memchr::memmem` instead. From there it reads the OSC as `vte` does, also
+//! when it comes split between reads, and it ends it where `vte` ends it: at
+//! BEL, CAN, SUB or any ESC. The only OSC that it misses is one with bytes
+//! that `vte` ignores between the ESC and the `]`, as `ESC \x80 ]`, which no
 //! program writes.
 
 use memchr::memmem::Finder;
@@ -25,6 +27,10 @@ pub const MAX_TEXT: usize = 128 * 1024;
 /// The memory that the text keeps between two OSCs: after a longer one, it
 /// gives the rest back.
 const KEPT_CAPACITY: usize = 4 * 1024;
+
+/// How many `]` without an ESC before them a read can have before the scanner
+/// looks for the pair `ESC ]` instead ([`Scanner::next_start`]).
+const LONE_BRACKETS: usize = 16;
 
 const BEL: u8 = 0x07;
 const CAN: u8 = 0x18;
@@ -118,8 +124,9 @@ impl Scanner {
             return &bytes[1..];
         }
         let mut from = 0;
-        while let Some(at) = self.finder.find(&bytes[from..]) {
-            from += at + 2;
+        let mut lone = 0;
+        while let Some(at) = self.next_start(bytes, from, &mut lone) {
+            from = at + 2;
             match bytes.get(from) {
                 // The number of an OSC that the scanner does not read, as the
                 // 8 of the links: it goes on as text, until the next ESC ].
@@ -139,6 +146,26 @@ impl Scanner {
             escape: bytes.last() == Some(&ESC),
         };
         &[]
+    }
+
+    /// Where the next `ESC ]` of `bytes` is, from `from`. `memchr` finds a
+    /// `]` faster than `memmem` finds the pair, and `]` is rare in most
+    /// output, also in the one full of colours, where ESC is not; after
+    /// [`LONE_BRACKETS`] of them without an ESC before them, as in lists, the
+    /// rest goes to `memmem`. `lone` counts them.
+    #[inline]
+    fn next_start(&self, bytes: &[u8], mut from: usize, lone: &mut usize) -> Option<usize> {
+        while *lone < LONE_BRACKETS {
+            let at = from + memchr::memchr(b']', &bytes[from..])?;
+            // A `]` at the start goes with an ESC of the last read, which
+            // `escape` follows.
+            if at > 0 && bytes[at - 1] == ESC {
+                return Some(at - 1);
+            }
+            *lone += 1;
+            from = at + 1;
+        }
+        self.finder.find(&bytes[from..]).map(|at| from + at)
     }
 
     /// `ESC ]`: an OSC starts.
