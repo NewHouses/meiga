@@ -11,6 +11,7 @@ mod resize;
 mod scanner;
 mod screen;
 mod selection;
+mod shell_state;
 mod title;
 
 use std::io::Write;
@@ -28,14 +29,15 @@ use alacritty_terminal::term::{
 };
 use alacritty_terminal::vte::ansi::{self, CursorStyle, NamedColor, Processor};
 
+pub use scanner::{Report, Scanner};
 pub use screen::{Cell, CellFlags, Color, Columns, Cursor, CursorShape, Screen};
 pub use selection::{SelectionKind, Side};
+pub use shell_state::{Folder, Mark, ShellState};
 
 use crate::color::{Palette, Rgb};
 use crate::geometry::{GridSize, Size};
 use crate::text::CellChar;
 use handler::Hooked;
-use scanner::Scanner;
 use title::Titles;
 
 /// Lines of history kept above the screen, which the view can show.
@@ -91,6 +93,9 @@ pub struct Changes {
     /// The program copied text to the clipboard (OSC 52):
     /// [`Terminal::take_clipboard`].
     pub clipboard: bool,
+    /// The shell said another folder, mark or exit code:
+    /// [`Terminal::shell`]. Saying the same again is not a change.
+    pub shell: bool,
 }
 
 /// How far to move the view of the history.
@@ -245,11 +250,16 @@ pub struct Terminal {
     /// The scrolling region starts below the first row of the screen
     /// ([`Hooked`]).
     region_below_top: bool,
+    /// win32-input-mode is on ([`Hooked`]).
+    win32_input: bool,
     parser: Processor,
+    /// Finds what the shell says in the output, before the parser.
     scanner: Scanner,
     pending: Arc<Mutex<Pending>>,
     size: GridSize,
     titles: Titles,
+    /// What the shell said last.
+    shell: ShellState,
     /// The colours of the theme, which the program can change.
     theme: Palette,
     /// The size of a cell in pixels, or 0 × 0 while it is not known.
@@ -287,11 +297,13 @@ impl Terminal {
             term: Term::new(config, &TermSize(size), Listener(Arc::clone(&pending))),
             primary: None,
             region_below_top: false,
+            win32_input: false,
             parser: Processor::new(),
             scanner: Scanner::new(),
             pending,
             size,
             titles: Titles::default(),
+            shell: ShellState::default(),
             theme: Palette::MEIGA,
             cell: Size::new(0, 0),
             damaged: Vec::new(),
@@ -340,12 +352,14 @@ impl Terminal {
 
     /// Reads what the program wrote.
     pub fn feed(&mut self, bytes: &[u8]) -> Changes {
-        self.scanner.scan(bytes);
+        let shell = &mut self.shell;
+        self.scanner.scan(bytes, |report| shell.apply(report));
         let mut hooked = Hooked {
             term: &mut self.term,
             primary: &mut self.primary,
             region_below_top: &mut self.region_below_top,
             titles: &mut self.titles,
+            win32_input: &mut self.win32_input,
         };
         self.parser.advance(&mut hooked, bytes);
         self.take_changes()
@@ -367,10 +381,16 @@ impl Terminal {
         self.titles.current()
     }
 
+    /// What the shell said last: its folder, its last mark, and the exit
+    /// code of the last command.
+    pub const fn shell(&self) -> &ShellState {
+        &self.shell
+    }
+
     pub fn modes(&self) -> Modes {
         let mode = *self.term.mode();
         Modes {
-            win32_input: self.scanner.win32_input_mode(),
+            win32_input: self.win32_input,
             focus_events: mode.contains(TermMode::FOCUS_IN_OUT),
             bracketed_paste: mode.contains(TermMode::BRACKETED_PASTE),
             app_cursor: mode.contains(TermMode::APP_CURSOR),
@@ -460,6 +480,7 @@ impl Terminal {
             primary: &mut self.primary,
             region_below_top: &mut self.region_below_top,
             titles: &mut self.titles,
+            win32_input: &mut self.win32_input,
         };
         self.parser.stop_sync(&mut hooked);
         self.take_changes()
@@ -473,7 +494,8 @@ impl Terminal {
     /// of Windows Terminal that keeps the text. What the last program left
     /// on the alternate screen is dropped, as when a program leaves it. The
     /// history stays, and the view goes back to the screen. As in a new tab,
-    /// there is no title, nor titles saved (ADR 0029).
+    /// there is no title, nor titles saved (ADR 0029), nor anything that the
+    /// shell said (ADR 0032).
     ///
     /// ConPTY starts with a clean screen and its cursor at the top-left
     /// corner: the terminal is then like the one of ConPTY, as in a new tab.
@@ -497,6 +519,7 @@ impl Terminal {
         self.feed(&tabs);
         self.scroll(Scroll::Bottom);
         self.titles = Titles::default();
+        self.shell = ShellState::default();
         let mut pending = lock(&self.pending);
         pending.responses.clear();
         pending.clipboard = None;
@@ -658,6 +681,7 @@ impl Terminal {
         let changes = mem::take(&mut pending.changes);
         Changes {
             title: self.titles.take_changed(),
+            shell: self.shell.take_changed(),
             ..changes
         }
     }

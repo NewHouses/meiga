@@ -445,6 +445,182 @@ fn the_modes_follow_the_program() {
     assert_eq!(terminal.modes(), defaults);
 }
 
+/// Whether win32-input-mode is on after `parts`, read one after the other.
+fn win32_input_after(parts: &[&[u8]]) -> bool {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    for part in parts {
+        terminal.feed(part);
+    }
+    terminal.modes().win32_input
+}
+
+#[test]
+fn win32_input_mode_follows_its_sequences_also_split() {
+    // What ConPTY writes when it starts.
+    let start = b"\x1b[1t\x1b[c\x1b[?1004h\x1b[?9001h\x1b[?25l";
+    for at in 0..=start.len() {
+        let (first, second) = start.split_at(at);
+        assert!(win32_input_after(&[first, second]), "split at {at}");
+    }
+    let one_by_one: Vec<&[u8]> = start.chunks(1).collect();
+    assert!(win32_input_after(&one_by_one));
+    // Among other modes, on and off.
+    assert!(win32_input_after(&[b"\x1b[?1004;9001h"]));
+    assert!(!win32_input_after(&[b"\x1b[?1004;9001h\x1b[?9001;1004l"]));
+    assert!(!win32_input_after(&[b"\x1b[?1004h"]));
+}
+
+#[test]
+fn only_a_private_set_or_reset_changes_win32_input_mode() {
+    // Without ?, with another marker, with another intermediate, and with
+    // another final byte.
+    for output in [
+        &b"\x1b[9001h"[..],
+        b"\x1b[>9001h",
+        b"\x1b[?9001$h",
+        b"\x1b[??9001h",
+        b"\x1b[?9001p",
+    ] {
+        assert!(!win32_input_after(&[output]), "{output:?}");
+    }
+    // Only the first number of a parameter is a mode.
+    assert!(win32_input_after(&[b"\x1b[?9001:1h"]));
+    assert!(!win32_input_after(&[b"\x1b[?1:9001h"]));
+    // vte ignores a sequence with more than 32 numbers.
+    let fits = format!("\x1b[?{}9001h", "1;".repeat(31));
+    assert!(win32_input_after(&[fits.as_bytes()]));
+    let too_many = format!("\x1b[?{}9001h", "1;".repeat(32));
+    assert!(!win32_input_after(&[too_many.as_bytes()]));
+}
+
+#[test]
+fn controls_cancel_or_restart_the_sequence_of_win32_input_mode() {
+    // CAN cancels it; ESC starts another one; a line feed is executed, and
+    // the sequence goes on.
+    assert!(!win32_input_after(&[b"\x1b[?90\x1801h"]));
+    assert!(win32_input_after(&[b"\x1b[?90\x1b[?9001h"]));
+    assert!(win32_input_after(&[b"\x1b[?90\n01h"]));
+    // An OSC ends at an ESC, which starts the sequence.
+    assert!(win32_input_after(&[b"\x1b]0;title\x1b[?9001h"]));
+    // vte ignores the bytes over 0x7e after an ESC: the next one chooses
+    // the sequence.
+    assert!(win32_input_after(&[b"\x1b\x80[?9001h"]));
+}
+
+#[test]
+fn a_reset_turns_win32_input_mode_off_in_the_order_of_the_output() {
+    assert!(!win32_input_after(&[b"\x1b[?9001h", b"\x1bc"]));
+    assert!(!win32_input_after(&[b"\x1b[?9001h\x1bc"]));
+    // As ConPTY writes it after a reset.
+    assert!(win32_input_after(&[b"\x1bc\x1b[?1004h\x1b[?9001h"]));
+    // ESC ( c designates a character set: it is not a reset. After bytes
+    // that vte ignores, ESC c is one.
+    assert!(win32_input_after(&[b"\x1b[?9001h", b"\x1b(c"]));
+    assert!(!win32_input_after(&[
+        b"\x1b[?9001h",
+        "\x1b\u{e1}c".as_bytes()
+    ]));
+}
+
+#[test]
+fn in_a_synchronized_update_win32_input_mode_changes_when_the_update_is_shown() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"\x1b[?9001h\x1b[?2026h\x1b[?9001l");
+    assert!(terminal.modes().win32_input);
+    terminal.end_sync();
+    assert!(!terminal.modes().win32_input);
+    // Or when the program ends it.
+    terminal.feed(b"\x1b[?2026h\x1b[?9001h");
+    assert!(!terminal.modes().win32_input);
+    terminal.feed(b"\x1b[?2026l");
+    assert!(terminal.modes().win32_input);
+}
+
+fn shell_changed() -> Changes {
+    Changes {
+        shell: true,
+        ..Changes::default()
+    }
+}
+
+#[test]
+fn the_shell_says_its_folder_its_marks_and_the_exit_code() {
+    let mut terminal = Terminal::new(GridSize::new(20, 3));
+    assert_eq!(terminal.shell().folder(), None);
+    assert_eq!(terminal.shell().mark(), None);
+    assert_eq!(terminal.shell().exit_code(), None);
+
+    assert_eq!(terminal.feed(b"\x1b]9;9;\"C:\\x\"\x1b\\"), shell_changed());
+    let windows = Folder::Windows("C:\\x".to_owned());
+    assert_eq!(terminal.shell().folder(), Some(&windows));
+    // The same folder again is not a change, also without the quotes.
+    assert_eq!(terminal.feed(b"\x1b]9;9;C:\\x\x07"), Changes::default());
+    assert_eq!(
+        terminal.feed(b"\x1b]7;file://h/home/x\x07"),
+        shell_changed()
+    );
+    let url = Folder::Url {
+        host: "h".to_owned(),
+        path: "/home/x".to_owned(),
+    };
+    assert_eq!(terminal.shell().folder(), Some(&url));
+
+    // A prompt, a command, its output and its end, with its exit code.
+    assert_eq!(
+        terminal.feed(b"\x1b]133;A\x07PS> \x1b]133;B\x07"),
+        shell_changed()
+    );
+    assert_eq!(terminal.shell().mark(), Some(Mark::Command));
+    assert_eq!(
+        terminal.feed(b"dir\r\n\x1b]133;C\x07out\r\n"),
+        shell_changed()
+    );
+    assert_eq!(terminal.shell().mark(), Some(Mark::Output));
+    assert_eq!(terminal.feed(b"\x1b]133;D;3\x07"), shell_changed());
+    assert_eq!(terminal.shell().mark(), Some(Mark::Done(Some(3))));
+    assert_eq!(terminal.shell().exit_code(), Some(3));
+    // The next prompt keeps the exit code of the last command; the same mark
+    // again is not a change.
+    assert_eq!(terminal.feed(b"\x1b]133;A\x07"), shell_changed());
+    assert_eq!(terminal.shell().exit_code(), Some(3));
+    assert_eq!(terminal.feed(b"\x1b]133;A\x07"), Changes::default());
+    // An end without a code leaves no code.
+    assert_eq!(terminal.feed(b"\x1b]133;D\x07"), shell_changed());
+    assert_eq!(terminal.shell().exit_code(), None);
+
+    // The OSCs leave nothing on the screen.
+    assert_eq!(texts(&mut terminal), ["PS> dir", "out", ""]);
+}
+
+#[test]
+fn what_the_shell_says_counts_at_once_also_in_a_synchronized_update() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    assert_eq!(
+        terminal.feed(b"\x1b[?2026h\x1b]133;A\x07\x1b]9;9;C:\\x\x07"),
+        shell_changed()
+    );
+    assert_eq!(terminal.shell().mark(), Some(Mark::Prompt));
+    assert_eq!(terminal.end_sync(), Changes::default());
+}
+
+#[test]
+fn a_restart_forgets_what_the_shell_said_and_a_reset_does_not() {
+    let mut terminal = Terminal::new(GridSize::new(10, 3));
+    terminal.feed(b"\x1b]9;9;C:\\x\x07\x1b]133;D;1\x07");
+    assert_eq!(terminal.feed(b"\x1bc"), Changes::default());
+    let windows = Folder::Windows("C:\\x".to_owned());
+    assert_eq!(terminal.shell().folder(), Some(&windows));
+    assert_eq!(terminal.shell().exit_code(), Some(1));
+    // Also what the last program left half said.
+    terminal.feed(b"\x1b]9;9;C:\\half");
+    terminal.restart();
+    assert_eq!(terminal.shell().folder(), None);
+    assert_eq!(terminal.shell().mark(), None);
+    assert_eq!(terminal.shell().exit_code(), None);
+    // What the new shell says is a change, also if the last one said it.
+    assert_eq!(terminal.feed(b"\x1b]9;9;C:\\x\x07"), shell_changed());
+}
+
 #[test]
 fn colours_and_styles_reach_the_cells() {
     let mut terminal = Terminal::new(GridSize::new(10, 1));

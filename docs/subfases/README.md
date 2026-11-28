@@ -42,6 +42,7 @@ O diario do proxecto. meiga avanza en fases pequenas, e cada fase divídese en *
 | 3.1 | Títulos dinámicos | [PR #33](https://github.com/NewHouses/meiga/pull/33) | [3.1-titulos.md](3.1-titulos.md) |
 | 3.2 | Campo de texto | [PR #34](https://github.com/NewHouses/meiga/pull/34) | [3.2-campo.md](3.2-campo.md) |
 | 3.3 | Renomear | [PR #36](https://github.com/NewHouses/meiga/pull/36) | [3.3-renomear.md](3.3-renomear.md) |
+| 4.1 | Escáner OSC | [PR #37](https://github.com/NewHouses/meiga/pull/37) | [4.1-escaner.md](4.1-escaner.md) |
 
 ## Mantemento
 

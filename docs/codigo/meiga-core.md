@@ -1,12 +1,12 @@
 # Código › `meiga-core`
 
-> Estado: subfase 3.3. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, e o que é cada parte dela para Windows, coma barra de título da xanela, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o campo de texto (unha liña que se edita, co cursor entre os grafemas, as palabras, desfacer, o pegado, o límite, o rato e a parte do texto que se ve), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, o título do programa e os que este garda, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato. Na 2.9, para as tabs na barra de título, a disposición da barra leva, coa xanela restaurada, unha banda enriba das tabs, onde se redimensiona a xanela, e, á dereita da barra, os botóns da xanela, minimizar, maximizar ou restaurar e pechar, cun sitio para arrastrar a xanela sempre antes deles, e di o ancho da barra máis estreita; e chegou o módulo `ui::titlebar`, que di que é cada parte da barra para Windows, a barra de título, o bordo de arriba e a súa esquina, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto, e o tamaño mínimo da área cliente. Na 2.10 e no M3 non cambiou o código. Na 3.1, para os títulos dinámicos, chegou ao terminal o módulo `term::title`: o terminal leva el mesmo o título do programa e os que este garda, e non `alacritty_terminal`, que os baleiraba sen avisar nun reinicio da pantalla (`ESC c`); `ESC c` mantén os dous, e `restart`, coma nun terminal novo, quítaos; garda como moito 10 títulos, ignora os de máis de 1000 unidades de UTF-16, e o mesmo título outra vez xa non é un cambio. Chegaron sete probas en `term/title.rs` e sete en `term/tests.rs`. Na 3.2, para o campo de texto, chegou o módulo `ui::field`: unha liña de texto que se edita coma nos campos de texto de Chrome en Windows, sen xanela, e que usarán renomear as tabs e os grupos e o filtro do explorador. O cursor para entre os grafemas de Unicode, que dá unha dependencia nova, `unicode-segmentation`; Ctrl e as frechas van por palabras; desfai e refai ata 100 pasos; pega nunha liña; ten un límite en unidades de UTF-16; colle o rato en celas; e mostra a parte do texto onde está o cursor. `own_character`, de `input.rs`, pasou a ser `pub(crate)`, para que o campo saiba, coma o terminal, se o carácter dunha tecla é seu. Chegaron setenta e dúas probas, todas en `ui/field/`: 55 en `tests.rs`, once en `history.rs` e seis en `segment.rs`. Na 3.3, que renomea as tabs co campo, chegou unha acción, `rename_tab`, con Ctrl+Maiús+R por defecto ([ADR 0031](../adr/0031-o-nome-das-tabs.md)), e a proba dos atallos de meiga compróbaa.
+> Estado: subfase 4.1. Contén o modelo das xanelas e as súas tabs, a disposición da barra de tabs, que as despraza cando non caben, e o que é cada parte dela para Windows, coma barra de título da xanela, os menús (as súas entradas, o elemento resaltado e onde vai cada parte), o campo de texto (unha liña que se edita, co cursor entre os grafemas, as palabras, desfacer, o pegado, o límite, o rato e a parte do texto que se ve), o arquivo de configuración, os atallos de teclado (as combinacións, as accións e os atallos de meiga, cos do arquivo por riba), os perfís e o contorno dos programas das tabs, as cores e a paleta, coa cor da selección, a xeometría (puntos, tamaños e rectángulos, e o tamaño e as celas da grella), as zonas que cambiaron (*damage*), o ritmo dos fotogramas, as celas do texto, e como cortalo con «…», a liña de comandos dun programa e o seu nome, as teclas, coma eventos e coma o que le o programa, o rato (a cela debaixo do punteiro, os clics seguidos, a roda, en partes e en filas do historial, e os informes para os programas), o texto que se pega, e o terminal: a fachada sobre `alacritty_terminal`, coas súas respostas, a súa paleta, o título do programa e os que este garda, a selección e a vista do historial, o cambio de tamaño, que coloca a pantalla coma o ConPTY e garda á parte a principal mentres se ve a alternativa, o reinicio para un programa novo na mesma tab, o escáner previo, que le o que di a shell de si mesma, e as gravacións. Na 2.1 chegou o modelo, coas súas probas e un exemplo para probalo a man, e na 2.2, para as tabs de `meiga.exe`, `Window::contents_mut` e `Screen::forget`. Na 2.3, para a barra de tabs, chegaron o módulo `ui`, coa disposición da barra, `Rect::contains_point`, `text::fit`, que corta os títulos con «…», e `shell::program_name`, o nome que mostra unha tab sen título. Na 2.4, para o menú da tab, chegaron o módulo `ui::menu`, coas entradas dun menú, o resalte e onde vai cada parte, e `Window::close_others` e `Window::close_to_the_right`, que pechan varias tabs dunha vez. Na 2.5, para os perfís, chegaron os módulos `config`, que le o `config.toml` e di onde está cada erro, `profile`, que xunta as shells que atopa meiga co que di o arquivo e escolle o perfil por defecto, `environment`, o contorno dos programas das tabs, e `sort`, unha ordenación por inserción para as listas curtas; e, na barra, o botón que abre o menú dos perfís e, nos menús, os elementos en negra. Na 2.6, para os atallos de teclado, chegou o módulo `shortcut`, coas combinacións das teclas, as accións e os atallos de meiga, que o arquivo pode engadir, cambiar ou liberar; `config` le a táboa `[shortcuts]` do `config.toml`, e `ControlKeys::alt_gr`, que di se o Ctrl e o Alt son os de AltGr, pasou a ser pública, para que AltGr non dispare ningún atallo. Na 2.7, para o fin do programa dunha tab, chegaron ao terminal `restart`, que o deixa coma o espera un programa novo, co que escribiu o anterior no historial, e `at_empty_row_start`, que di se o cursor está ao principio dunha fila baleira que non continúa a de enriba, tamén cando a vista mostra o historial. Na 2.8, para as moitas tabs, chegaron á disposición da barra o ancho mínimo das tabs, 100 píxeles a escala 100 %, e, cando nin así caben, a franxa entre dous botóns onde van, co seu desprazamento: unha tab, uns píxeles ou o mínimo para que se vexa enteira a tab que se mostra; e as tabs que manteñen o seu ancho mentres se pechan co rato. Na 2.9, para as tabs na barra de título, a disposición da barra leva, coa xanela restaurada, unha banda enriba das tabs, onde se redimensiona a xanela, e, á dereita da barra, os botóns da xanela, minimizar, maximizar ou restaurar e pechar, cun sitio para arrastrar a xanela sempre antes deles, e di o ancho da barra máis estreita; e chegou o módulo `ui::titlebar`, que di que é cada parte da barra para Windows, a barra de título, o bordo de arriba e a súa esquina, un botón da xanela ou a área cliente, tamén cun menú de meiga aberto, e o tamaño mínimo da área cliente. Na 2.10 e no M3 non cambiou o código. Na 3.1, para os títulos dinámicos, chegou ao terminal o módulo `term::title`: o terminal leva el mesmo o título do programa e os que este garda, e non `alacritty_terminal`, que os baleiraba sen avisar nun reinicio da pantalla (`ESC c`); `ESC c` mantén os dous, e `restart`, coma nun terminal novo, quítaos; garda como moito 10 títulos, ignora os de máis de 1000 unidades de UTF-16, e o mesmo título outra vez xa non é un cambio. Chegaron sete probas en `term/title.rs` e sete en `term/tests.rs`. Na 3.2, para o campo de texto, chegou o módulo `ui::field`: unha liña de texto que se edita coma nos campos de texto de Chrome en Windows, sen xanela, e que usarán renomear as tabs e os grupos e o filtro do explorador. O cursor para entre os grafemas de Unicode, que dá unha dependencia nova, `unicode-segmentation`; Ctrl e as frechas van por palabras; desfai e refai ata 100 pasos; pega nunha liña; ten un límite en unidades de UTF-16; colle o rato en celas; e mostra a parte do texto onde está o cursor. `own_character`, de `input.rs`, pasou a ser `pub(crate)`, para que o campo saiba, coma o terminal, se o carácter dunha tecla é seu. Chegaron setenta e dúas probas, todas en `ui/field/`: 55 en `tests.rs`, once en `history.rs` e seis en `segment.rs`. Na 3.3, que renomea as tabs co campo, chegou unha acción, `rename_tab`, con Ctrl+Maiús+R por defecto ([ADR 0031](../adr/0031-o-nome-das-tabs.md)), e a proba dos atallos de meiga compróbaa. Na 4.1, para o que di a shell de si mesma, o escáner previo reescribiuse ([ADR 0032](../adr/0032-o-escaner-osc.md)): xa non segue o win32-input-mode (`?9001`) nin o reinicio da pantalla (`ESC c`), que agora os segue `Hooked`, o *handler* de `vte`, na orde da saída; busca onde empeza cada OSC, `ESC ]`, con `memchr`, e le OSC 7 e OSC 9;9, o cartafol, e OSC 133, as marcas arredor do *prompt* e das ordes, coma `vte`, tamén partidos entre lecturas, e garda como moito 128 KiB do texto de cada un. Chegaron o módulo `term::shell_state`, co cartafol, a última marca e o código de saída da última orde, que dan `Terminal::shell` e `Changes::shell`; `proptest`, unha dependencia só para as probas; unha gravación de pwsh cun *prompt* que escribe OSC 133 e 9;9; e un *benchmark*, `benches/scanner.rs`, que mide o escáner fronte ao terminal. `replay --screen` mostra tamén o que dixo a shell. Chegaron vinte e sete probas, e quitáronse as dez do escáner anterior: dezaoito en `term/scanner/tests.rs`, unha delas con `proptest`, que compara o escáner con `vte`; oito en `term/tests.rs`, cinco delas do win32-input-mode, cos casos das do escáner anterior; e unha en `tests/recordings.rs`.
 
 **Responsabilidade:** toda a lóxica que non depende de Windows: o modelo de xanelas, tabs e grupos; a fachada do terminal; a codificación do teclado e do rato, e, desde a subfase 2.6, os atallos de teclado; a busca difusa; e a configuración, que desde a subfase 2.5 son o `config.toml`, os perfís e o contorno dos programas. Sen `unsafe` e sen APIs de Windows: o rexistro, os arquivos e o contorno de meiga lenos `meiga-win` e o programa, e a este crate só lle chegan os seus datos. Ver [Arquitectura](../arquitectura.md#2-estrutura-do-código-un-workspace-con-catro-crates).
 
 | Arquivo | Contido |
 |---|---|
-| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr`, `toml`, `unicode-segmentation`, desde a 3.2, e `unicode-width`. |
+| [`Cargo.toml`](#cratesmeiga-corecargotoml) | O crate e as súas dependencias: `alacritty_terminal`, `memchr`, `toml`, `unicode-segmentation`, desde a 3.2, e `unicode-width`; e, desde a 4.1, `proptest`, só para as probas, e o *benchmark* do escáner. |
 | [`src/lib.rs`](#cratesmeiga-coresrclibrs) | A raíz do crate: os módulos. |
 | [`src/color.rs`](#cratesmeiga-coresrccolorrs) | `Rgb`, o tipo das cores, e `Palette`, as cores dun terminal: as 16 do esquema *Campbell*, as 256 do xterm e a da selección. |
 | [`src/geometry.rs`](#cratesmeiga-coresrcgeometryrs) | `Point`, `Size` e `Rect`: posicións, tamaños e rectángulos en píxeles; `GridSize`, o tamaño da grella en celas; e `GridPoint`, unha cela da grella. |
@@ -25,13 +25,15 @@
 | [`src/model/mod.rs`](#cratesmeiga-coresrcmodelmodrs) | O modelo das xanelas e as súas tabs: os identificadores, `TabId` e `WindowId`, que nunca se repiten, e os erros. |
 | [`src/model/window.rs`](#cratesmeiga-coresrcmodelwindowrs) | `Window`: as tabs dunha xanela, na orde da barra, e a activa, a enfocada e as visíbeis; abrir, pechar, tamén varias dunha vez, mover e activar. |
 | [`src/model/tests.rs`](#cratesmeiga-coresrcmodeltestsrs) | As probas do modelo, unha delas con 10 000 cambios ao chou. |
-| [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, o cambio de tamaño, a vista do historial e a copia do que cambia, coas celas seleccionadas; e, desde a 2.7, o reinicio para o programa que empeza outra vez na súa tab. |
+| [`src/term/mod.rs`](#cratesmeiga-coresrctermmodrs) | `Terminal`: a fachada sobre `alacritty_terminal`, cos seus eventos, modos e respostas, a paleta, o cambio de tamaño, a vista do historial e a copia do que cambia, coas celas seleccionadas; desde a 2.7, o reinicio para o programa que empeza outra vez na súa tab; e, desde a 4.1, o que di a shell de si mesma, `Terminal::shell`. |
 | [`src/term/resize.rs`](#cratesmeiga-coresrctermresizers) | O cambio de tamaño da pantalla principal, que reparte o texto e coloca a pantalla onde a pon o ConPTY, seguindo a primeira fila e o cursor cunhas marcas; e a pantalla principal á parte mentres se ve a alternativa. |
-| [`src/term/handler.rs`](#cratesmeiga-coresrctermhandlerrs) | `Hooked`: o `Handler` entre o parser e o `Term`, que lle pasa as ordes, devolve a pantalla principal cando o programa deixa a alternativa ou reinicia o terminal, e deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba; desde a 3.1, o título e os títulos gardados non llos pasa: lévaos ao terminal. |
+| [`src/term/handler.rs`](#cratesmeiga-coresrctermhandlerrs) | `Hooked`: o `Handler` entre o parser e o `Term`, que lle pasa as ordes, devolve a pantalla principal cando o programa deixa a alternativa ou reinicia o terminal, e deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba; desde a 3.1, o título e os títulos gardados non llos pasa: lévaos ao terminal; e, desde a 4.1, segue o win32-input-mode (`?9001`), que `alacritty_terminal` ignora. |
 | [`src/term/title.rs`](#cratesmeiga-coresrctermtitlers) | `Titles`, desde a 3.1: o título que lle dá o programa á súa tab e os que garda para dalos outra vez, como moito 10; un título baleiro é ningún, un de máis de 1000 unidades de UTF-16 ignórase, e o mesmo outra vez non é un cambio. |
 | [`src/term/screen.rs`](#cratesmeiga-coresrctermscreenrs) | `Screen`: o que mostra o terminal, en tipos de meiga, coa súa paleta, e as celas que cambiaron. |
 | [`src/term/selection.rs`](#cratesmeiga-coresrctermselectionrs) | A selección: creala, movela e quitala, o seu texto, e as súas celas, na grella de `alacritty_terminal`. |
-| [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser, polo de agora para `?9001`. |
+| [`src/term/scanner.rs`](#cratesmeiga-coresrctermscannerrs) | `Scanner`: o escáner que le a saída antes do parser. Desde a 4.1, busca nela onde empeza cada OSC, `ESC ]`, e le o que di a shell, o seu cartafol (OSC 7 e 9;9) e as marcas arredor do *prompt* (OSC 133), coma `vte`, tamén partido entre lecturas; ata entón, seguía `?9001`. |
+| [`src/term/scanner/tests.rs`](#cratesmeiga-coresrctermscannertestsrs) | Desde a 4.1, as probas do escáner, unha delas con `proptest`, que o compara con `vte` en saídas aleatorias partidas en anacos aleatorios. |
+| [`src/term/shell_state.rs`](#cratesmeiga-coresrctermshell_staters) | Desde a 4.1, `ShellState`: o que dixo a shell dunha tab, o seu cartafol (`Folder`), a súa última marca (`Mark`) e o código de saída da última orde. |
 | [`src/term/recording.rs`](#cratesmeiga-coresrctermrecordingrs) | `Recorder` e `Recording`: gravar a saída dun programa e lela. |
 | [`src/term/tests.rs`](#cratesmeiga-coresrctermtestsrs) | As probas do terminal. |
 | [`src/ui/mod.rs`](#cratesmeiga-coresrcuimodrs) | As partes da interface que debuxa meiga, sen Windows: as disposicións da barra de tabs e dos menús, e, desde a 2.9, o que é a barra de tabs para Windows, coma barra de título; `scale`, que leva as súas medidas ao DPI da xanela; e, desde a 3.2, o campo de texto, que edita unha liña de texto. |
@@ -44,7 +46,8 @@
 | [`src/ui/field/keys.rs`](#cratesmeiga-coresrcuifieldkeysrs) | `Field::key`: o que fai cada tecla nun campo de texto, coma nos de Chrome en Windows. |
 | [`src/ui/field/tests.rs`](#cratesmeiga-coresrcuifieldtestsrs) | As probas do campo de texto, unha delas con 300 series de 45 accións ao chou. |
 | [`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs) e `tests/data/` | Probas con gravacións reais do ConPTY. |
-| [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. |
+| [`benches/scanner.rs`](#cratesmeiga-corebenchesscannerrs) | Desde a 4.1, o *benchmark* do escáner: o que custa fronte ao tempo do terminal, coa mesma saída. |
+| [`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs) | Un exemplo de consola que lle dá unha gravación ao terminal e mide a velocidade. Con `--screen`, mostra o que quedou, desde a 4.1 tamén o que dixo a shell. |
 | [`examples/tabs.rs`](#cratesmeiga-coreexamplestabsrs) | Un exemplo de consola para probar o modelo das tabs a man. |
 
 ## `crates/meiga-core/Cargo.toml`
@@ -63,7 +66,8 @@ publish.workspace = true
 [dependencies]
 # The terminal core, behind the facade of the term module (ADR 0003).
 alacritty_terminal.workspace = true
-# Finds ESC fast in the scanner that reads the output before the parser.
+# Finds where each OSC starts (ESC ]) fast, in the scanner that reads the
+# output before the parser.
 memchr.workspace = true
 # Reads config.toml.
 toml.workspace = true
@@ -72,6 +76,15 @@ toml.workspace = true
 unicode-segmentation.workspace = true
 # The width of each character in cells, as alacritty_terminal measures it.
 unicode-width.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+# What the scanner costs against the terminal (ADR 0032): cargo bench -p
+# meiga-core --bench scanner. Without the test harness, which needs nightly.
+[[bench]]
+name = "scanner"
+harness = false
 
 [lints]
 workspace = true
@@ -82,12 +95,14 @@ workspace = true
 - As liñas `campo.workspace = true` herdan os valores de `[workspace.package]` do `Cargo.toml` raíz.
 - `[dependencies]`, coas versións e as opcións do `Cargo.toml` raíz ([Código › workspace](workspace.md#cargotoml-raíz)):
   - desde a subfase 1.5, **`alacritty_terminal`**, o núcleo do terminal, que trae o seu parser, `vte` ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Só o usa o módulo `term`;
-  - desde a 1.5, **`memchr`**, que busca un byte nun texto moitos bytes á vez, con instrucións SIMD: o escáner busca así o seguinte ESC. `vte` faino igual co mesmo crate, así que non engade ningún crate novo;
+  - desde a 1.5, **`memchr`**, que busca un byte nun texto moitos bytes á vez, con instrucións SIMD, e, con `memchr::memmem`, un anaco de texto. O escáner busca así onde empeza cada OSC, `ESC ]`, coma di o comentario: desde a 4.1, o seu `]` con `memchr` e, nunha lectura con moitos `]` sen ESC, a parella con `memmem` ([`next_start`](#buscar-o-comezo-find_start-next_start-e-start)); ata a 4.1, buscaba o seguinte ESC. `vte` busca o seguinte ESC co mesmo crate, así que non engade ningún crate novo, e `memmem` só engade o seu código a `meiga.exe`;
   - desde a 2.5, **`toml`**, o parser de TOML, sen serde: `default-features = false`, e só as *features* `parse` e `std` ([ADR 0022](../adr/0022-os-perfis-e-a-configuracion.md), decisión 1). Só o usa o módulo `config`, que le con el o `config.toml`: o parser dá cada chave e cada valor co seu sitio no arquivo, e meiga colle a man o que coñece ([Tecnoloxías › Os perfís e a configuración](../tecnoloxias.md#57-os-perfís-e-a-configuración-toml-o-contorno-e-as-shells-de-windows)). Compílanse catro crates máis: `toml_parser`, o parser; `winnow`, a biblioteca de parsers coa que está feito; `toml_datetime`, as datas de TOML; e `serde_spanned`, o `Spanned` que garda o sitio de cada valor, que sen as súas *features* non usa serde. En `meiga.exe`, o parser, con eles, ocupa uns 123 KB;
   - desde a 3.2, **`unicode-segmentation`**, os grafemas de Unicode, segundo UAX #29 e coas táboas de Unicode 17: o cursor dun campo de texto para entre eles ([ADR 0030](../adr/0030-o-campo-de-texto.md), decisión 2; [Tecnoloxías › Os grafemas e as palabras dun campo de texto](../tecnoloxias.md#66-os-grafemas-e-as-palabras-dun-campo-de-texto)). Só o usa o módulo `ui::field`: `GraphemeCursor`, en [`segment.rs`](#cratesmeiga-coresrcuifieldsegmentrs), e `grapheme_indices`, en [`mod.rs`](#cratesmeiga-coresrcuifieldmodrs). É dos mesmos autores ca `unicode-width`; non ten *features* por defecto que quitar, así que o `Cargo.toml` raíz pídeo sen `default-features = false`, nin depende de ningún outro crate; e a súa licenza, MIT ou Apache-2.0, coma a das outras, cumpre a política de licenzas ([ADR 0006](../adr/0006-licenzas-e-dependencias.md)). As súas táboas só chegan a `meiga.exe` cando o programa usa o campo, desde a 3.3: uns 29,7 KB, medidos cunha compilación de proba que o usaba;
   - desde a 1.3, **`unicode-width`**, que dá o ancho de cada carácter en celas, como o mide `alacritty_terminal` ([Tecnoloxías › O ancho dos caracteres](../tecnoloxias.md#29-o-ancho-dos-caracteres-unicode-width)).
 
   Os cinco son código Rust que non usa APIs de ningún sistema desde o que chama meiga, así que respectan as regras deste crate. `alacritty_terminal` ten tamén un PTY propio con código de Windows, que meiga non usa e que o ligador elimina.
+- `[dev-dependencies]`, desde a subfase 4.1: as dependencias que só usan as probas, e que non chegan a `meiga.exe`. **`proptest`** proba moitas entradas ao chou e, cando unha falla, redúcea á máis curta que segue fallando ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 6). Úsao a proba que compara o escáner con `vte` ([`scanner/tests.rs`](#cratesmeiga-coresrctermscannertestsrs)). O `Cargo.toml` raíz pídeo só coa *feature* `std`, sen as que van por defecto, coma `fork` e `timeout`, que executan os casos noutro proceso e cun tempo máximo, nin as súas dependencias, coma di o seu comentario ([Código › workspace](workspace.md#cargotoml-raíz)). Con el entran no `Cargo.lock` once crates máis, coma `rand`, `rand_xorshift` e `chacha20`, cos que fai os seus números aleatorios. A política de licenzas xa o permitía para as probas ([ADR 0006](../adr/0006-licenzas-e-dependencias.md)); na 2.1, para a proba ao chou do modelo, preferiuse unha secuencia *xorshift* fixa, sen dependencias ([ADR 0018](../adr/0018-o-modelo-das-tabs.md)), e as outras probas ao chou de meiga seguen así.
+- `[[bench]]`, desde a 4.1: o *benchmark* do escáner, [`benches/scanner.rs`](#cratesmeiga-corebenchesscannerrs), que se executa con `cargo bench -p meiga-core --bench scanner`, coma di o comentario. `harness = false` quítalle o arnés das probas, que nos *benchmarks* só funciona con Rust *nightly*: é un programa co seu `main`, que mide el mesmo.
 - `[lints] workspace = true`: aplica as regras de calidade comúns.
 
 ## `crates/meiga-core/src/lib.rs`
@@ -3869,13 +3884,13 @@ Vinte e tres probas comproban cada regra:
 - o teclado e a pantalla seguen a activa (`focused`, `focused_mut` e `is_visible`), e `get_mut` cambia o contido doutra tab;
 - e as mensaxes dos erros.
 
-**A proba ao chou** (`random_changes_keep_the_rules_and_match_a_plain_list`) fai 500 cambios en cada unha de 20 xanelas, 10 000 en total: abrir, con `open` ou con `try_open_with`, e ás veces despois dun intento cun contido que non se pode facer; pechar; mover (ás veces a unha posición despois da última); activar unha tab, a seguinte ou a anterior; pechar ou activar unha tab xa pechada; e, desde a 2.4, pechar todas as tabs menos unha, ou as da dereita dunha, cada un nun cambio de cada 64: poucas veces, para que a barra poida medrar. Os cambios saen dunha secuencia *xorshift* fixa, coma nas probas de `damage.rs` e do escáner: se falla, falla sempre igual. Fai os mesmos cambios nunha lista simple, cos contidos das tabs e o contido da activa, coas regras escritas da forma máis directa: ao pechar as outras, a lista queda só coa tab que se mantén, e ao pechar as da dereita, córtase despois dela (`split_off`). Os identificadores das tabs pechadas de varias en varias van tamén á lista das pechadas (`closed_ids`), coas que se proba despois pechar e activar unha tab xa pechada. Despois de cada cambio comproba as invariantes, que a xanela e a lista coinciden, e que as respostas son as que tocan. Ao final comproba que a barra pasou por unha tab, por dúas e por dez ou máis, para que os extremos se proben tamén.
+**A proba ao chou** (`random_changes_keep_the_rules_and_match_a_plain_list`) fai 500 cambios en cada unha de 20 xanelas, 10 000 en total: abrir, con `open` ou con `try_open_with`, e ás veces despois dun intento cun contido que non se pode facer; pechar; mover (ás veces a unha posición despois da última); activar unha tab, a seguinte ou a anterior; pechar ou activar unha tab xa pechada; e, desde a 2.4, pechar todas as tabs menos unha, ou as da dereita dunha, cada un nun cambio de cada 64: poucas veces, para que a barra poida medrar. Os cambios saen dunha secuencia *xorshift* fixa, coma nas probas de `damage.rs` e do terminal: se falla, falla sempre igual. Fai os mesmos cambios nunha lista simple, cos contidos das tabs e o contido da activa, coas regras escritas da forma máis directa: ao pechar as outras, a lista queda só coa tab que se mantén, e ao pechar as da dereita, córtase despois dela (`split_off`). Os identificadores das tabs pechadas de varias en varias van tamén á lista das pechadas (`closed_ids`), coas que se proba despois pechar e activar unha tab xa pechada. Despois de cada cambio comproba as invariantes, que a xanela e a lista coinciden, e que as respostas son as que tocan. Ao final comproba que a barra pasou por unha tab, por dúas e por dez ou máis, para que os extremos se proben tamén.
 
 Comprobouse tamén ao revés, con catro copias do modelo estragadas a propósito: unha activa a tab da esquerda ao pechar a activa, outra non corre a activa ao pechar unha tab á súa esquerda, outra axusta mal a activa ao mover, e a última non dá a volta coa seguinte. Despois da revisión, outras dúas: unha dálle ao contido outro identificador ca o da súa tab, e outra fai mal o identificador co seu número. As seis fallan as probas.
 
 ## `crates/meiga-core/src/term/mod.rs`
 
-O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a 1.8 ten a selección, que vive na grella de `alacritty_terminal` e que a copia do que cambia marca nas celas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Desde a 1.9, cando cambia o tamaño, coloca a pantalla onde a pon o ConPTY e garda á parte a pantalla principal mentres se ve a alternativa, e move a vista do historial ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a 2.7, para o programa que empeza outra vez na mesma tab, volta ao estado no que o espera un programa novo, co que escribiu o anterior no historial; e di se o cursor está ao principio da súa fila, para a liña do fin do programa ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md)). Desde a 3.1, leva el mesmo o título do programa e os que este garda, que xa non lle chegan a `alacritty_terminal` ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), [`term/title.rs`](#cratesmeiga-coresrctermtitlers)). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma), [› O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis), [› O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom) e [› O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio).
+O terminal: a fachada sobre `alacritty_terminal` ([ADR 0003](../adr/0003-nucleo-vt-alacritty-terminal.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). meiga dálle o que escribe o programa e le del o que hai que mostrar e o que hai que responder, en tipos propios. Desde a subfase 1.6 ten tamén a paleta coa que se debuxan as celas, e responde ás preguntas polas cores e polo tamaño en píxeles ([ADR 0013](../adr/0013-da-saida-a-pantalla.md)). Desde a 1.8 ten a selección, que vive na grella de `alacritty_terminal` e que a copia do que cambia marca nas celas ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md)). Desde a 1.9, cando cambia o tamaño, coloca a pantalla onde a pon o ConPTY e garda á parte a pantalla principal mentres se ve a alternativa, e move a vista do historial ([ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a 2.7, para o programa que empeza outra vez na mesma tab, volta ao estado no que o espera un programa novo, co que escribiu o anterior no historial; e di se o cursor está ao principio da súa fila, para a liña do fin do programa ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md)). Desde a 3.1, leva el mesmo o título do programa e os que este garda, que xa non lle chegan a `alacritty_terminal` ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), [`term/title.rs`](#cratesmeiga-coresrctermtitlers)). Desde a 4.1, garda o que di a shell de si mesma, que atopa o escáner ([ADR 0032](../adr/0032-o-escaner-osc.md), [`term/shell_state.rs`](#cratesmeiga-coresrctermshell_staters)), e segue el mesmo o win32-input-mode, no [`Hooked`](#cratesmeiga-coresrctermhandlerrs). Só este módulo usa os tipos de `alacritty_terminal`: cambialo por outro núcleo, ou actualizalo a unha versión cunha API distinta, só cambia este módulo. Como encaixa co resto, en [Arquitectura › O terminal](../arquitectura.md#o-terminal-da-saída-ao-que-se-mostra), [› Da saída á pantalla](../arquitectura.md#da-saída-á-pantalla-o-aviso-a-copia-e-o-fotograma), [› O rato, a selección e o portapapeis](../arquitectura.md#o-rato-a-selección-e-o-portapapeis), [› O historial, o tamaño e o zoom](../arquitectura.md#o-historial-o-tamaño-e-o-zoom) e [› O fin do programa e o reinicio](../arquitectura.md#o-fin-do-programa-e-o-reinicio).
 
 ```rust
 mod handler;
@@ -3884,15 +3899,18 @@ mod resize;
 mod scanner;
 mod screen;
 mod selection;
+mod shell_state;
 mod title;
 
+pub use scanner::{Report, Scanner};
 pub use screen::{Cell, CellFlags, Color, Columns, Cursor, CursorShape, Screen};
 pub use selection::{SelectionKind, Side};
+pub use shell_state::{Folder, Mark, ShellState};
 ```
 
 - Os outros arquivos do cartafol `src/term/` son os submódulos de `term`.
-- `recording` é público: o exemplo `replay` e as probas usan as gravacións como `meiga_core::term::recording`. `scanner`, `screen` e, desde a subfase 1.8, `selection` son privados, coma, desde a 1.9, `handler` e `resize`, e, desde a 3.1, `title`, pero os tipos de `screen` e de `selection` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen` ou `meiga_core::term::SelectionKind`, sen saber en que arquivo están. Os de `title`, non: fóra da fachada, o título é un `Option<&str>`.
-- Desde a 1.9, `use alacritty_terminal::grid::{self, Dimensions, Grid};` trae tamén o módulo `grid` (`self`): o `Scroll` de `alacritty_terminal` escríbese `grid::Scroll`, porque `Scroll` é o tipo de meiga ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E `use handler::Hooked;` trae o `Handler` que recibe a saída do programa ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)). Desde a 3.1, `use title::Titles;` trae os títulos do programa, que garda o terminal ([`term/title.rs`](#cratesmeiga-coresrctermtitlers)).
+- `recording` é público: o exemplo `replay`, as probas e, desde a 4.1, o *benchmark* usan as gravacións como `meiga_core::term::recording`. `scanner`, `screen` e, desde a subfase 1.8, `selection` son privados, coma, desde a 1.9, `handler` e `resize`, desde a 3.1, `title`, e, desde a 4.1, `shell_state`, pero os tipos de `screen` e de `selection` reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::Screen` ou `meiga_core::term::SelectionKind`, sen saber en que arquivo están. Desde a 4.1, tamén os de `shell_state`, `Folder`, `Mark` e `ShellState`, o que dá [`Terminal::shell`](#terminal); e os de `scanner`, `Scanner` e `Report`, para que o [*benchmark*](#cratesmeiga-corebenchesscannerrs) mida o escáner só, desde fóra do crate. Os de `title`, non: fóra da fachada, o título é un `Option<&str>`.
+- Desde a 1.9, `use alacritty_terminal::grid::{self, Dimensions, Grid};` trae tamén o módulo `grid` (`self`): o `Scroll` de `alacritty_terminal` escríbese `grid::Scroll`, porque `Scroll` é o tipo de meiga ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E `use handler::Hooked;` trae o `Handler` que recibe a saída do programa ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)). Desde a 3.1, `use title::Titles;` trae os títulos do programa, que garda o terminal ([`term/title.rs`](#cratesmeiga-coresrctermtitlers)). Ata a 4.1, `use scanner::Scanner;` traía o escáner, que agora trae o `pub use`.
 - Desde a 2.7, `use std::io::Write;` trae o trait `Write`, co que [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start) escribe con `write!` nun `Vec<u8>` as secuencias das tabulacións.
 
 ### Constantes
@@ -3922,11 +3940,12 @@ pub struct Changes {
     pub title: bool,
     pub bell: bool,
     pub clipboard: bool,
+    pub shell: bool,
 }
 ```
 
-- **`Changes`**: o que pasou ao ler a saída, ademais dos cambios na pantalla: hai respostas para o programa (`take_responses`), cambiou o título (`title`), soou a campá ou hai texto para o portapapeis (`take_clipboard`). Devólveno `feed` e `end_sync`, e quen chama só ten que facer algo máis cando un campo é `true`. Desde a subfase 3.1, `title` só é `true` se o título é outro: dar outra vez o mesmo non é un cambio, coma di o seu comentario ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 2). Ata entón, cada OSC 0 ou 2, e cada `CSI 23 t` cun título gardado, era un cambio, tamén co mesmo título. Un título distinto e outra vez o de antes, na mesma lectura, si son un cambio, aínda que o título remate igual ([`take_changed`](#o-cambio-take_changed-e-replace)).
-- **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). `win32_input` dío o escáner, porque `alacritty_terminal` non coñece ese modo; o resto, `alacritty_terminal`. Desde a subfase 1.8, os modos do rato deciden se os clics seleccionan texto ou van ao programa, e en que formato ([`mouse.rs`](#cratesmeiga-coresrcmousers)), e o *bracketed paste*, como se pega o texto ([`paste.rs`](#cratesmeiga-coresrcpasters)). Desde a 1.9, na pantalla alternativa (`alt_screen`), que non ten historial, as teclas do historial van ao programa ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
+- **`Changes`**: o que pasou ao ler a saída, ademais dos cambios na pantalla: hai respostas para o programa (`take_responses`), cambiou o título (`title`), soou a campá, hai texto para o portapapeis (`take_clipboard`) ou, desde a subfase 4.1, cambiou o que di a shell (`shell`). Devólveno `feed` e `end_sync`, e quen chama só ten que facer algo máis cando un campo é `true`. Desde a subfase 3.1, `title` só é `true` se o título é outro: dar outra vez o mesmo non é un cambio, coma di o seu comentario ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 2). Ata entón, cada OSC 0 ou 2, e cada `CSI 23 t` cun título gardado, era un cambio, tamén co mesmo título. Un título distinto e outra vez o de antes, na mesma lectura, si son un cambio, aínda que o título remate igual ([`take_changed`](#o-cambio-take_changed-e-replace)). Desde a 4.1, `shell`, coma o título: a shell dixo outro cartafol, outra marca ou outro código de saída, que dá [`Terminal::shell`](#terminal); dicir o mesmo outra vez non é un cambio, coma di o seu comentario ([`apply`](#o-que-dixo-a-shell-shellstate)). Cambia cando o escáner le a saída, en `feed`, tamén dentro dunha actualización sincronizada: `end_sync` nunca o trae.
+- **`Modes`**: os modos que activou o programa e que cambian o que meiga lle envía: como se codifican as teclas (win32-input-mode, as frechas e o teclado numérico en modo aplicación), os eventos de foco, o pegado entre marcas (*bracketed paste*), que eventos do rato quere e en que formato, se a roda envía frechas, se está na pantalla alternativa, se se ve o cursor, e se o salto de liña volta tamén á primeira columna. Os números de cada modo están en [Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control). O win32-input-mode (`win32_input`) ségueo o propio terminal, porque `alacritty_terminal` non o coñece: desde a subfase 4.1, no [`Hooked`](#os-métodos-de-handler), e ata entón, no escáner; o resto dáo `alacritty_terminal`. Desde a subfase 1.8, os modos do rato deciden se os clics seleccionan texto ou van ao programa, e en que formato ([`mouse.rs`](#cratesmeiga-coresrcmousers)), e o *bracketed paste*, como se pega o texto ([`paste.rs`](#cratesmeiga-coresrcpasters)). Desde a 1.9, na pantalla alternativa (`alt_screen`), que non ten historial, as teclas do historial van ao programa ([Código › meiga › `view.rs`](meiga.md#cratesmeigasrcviewrs)).
 
 ### Os eventos: `Pending` e `Listener`
 
@@ -3982,11 +4001,13 @@ pub struct Terminal {
     term: Term<Listener>,
     primary: Option<Grid<TermCell>>,
     region_below_top: bool,
+    win32_input: bool,
     parser: Processor,
     scanner: Scanner,
     pending: Arc<Mutex<Pending>>,
     size: GridSize,
     titles: Titles,
+    shell: ShellState,
     theme: Palette,
     cell: Size,
     damaged: Vec<LineDamageBounds>,
@@ -3999,11 +4020,13 @@ pub struct Terminal {
 | `term` | O terminal de `alacritty_terminal`: a grella, o historial, o cursor e os modos. |
 | `primary` | Desde a subfase 1.9: a pantalla principal, coa súa grella e o seu historial, mentres está á parte porque o tamaño cambiou cando se vía a alternativa; `None` o resto do tempo. Recibe o tamaño do terminal cando o programa volta a ela ([`term/resize.rs`](#cratesmeiga-coresrctermresizers)). `TermCell` é o `Cell` de `alacritty_terminal`, co nome cambiado, porque `Cell` é o de meiga. |
 | `region_below_top` | Desde a revisión do código da subfase 1.9: a rexión de desprazamento do programa empeza máis abaixo da primeira fila da pantalla. `alacritty_terminal` non di onde empeza a súa, e [`Hooked`](#hooked) séguea eiquí, para deixar a vista do historial onde está ([O historial e a súa vista](#o-historial-e-a-súa-vista)). |
+| `win32_input` | Desde a subfase 4.1: o win32-input-mode está activo. `alacritty_terminal` non coñece ese modo, e [`Hooked`](#os-métodos-de-handler) ségueo eiquí, na orde da saída. Ata a 4.1, sabíao o escáner. |
 | `parser` | O parser de `vte` (`Processor`), que le os bytes e chama aos métodos de `term`. Garda o estado entre lecturas: unha secuencia partida entre dous bloques, ou un carácter UTF-8 a medias. Tamén garda a saída dunha actualización sincronizada mentres non remata. |
-| `scanner` | O escáner propio ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). |
+| `scanner` | O escáner propio, que busca na saída, antes do parser, o que di a shell ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). Ata a 4.1, seguía o win32-input-mode. |
 | `pending` | A cola dos eventos, compartida co `Listener`. |
 | `size` | O tamaño da grella. |
 | `titles` | Desde a subfase 3.1: o título que deu o programa, os que gardou e se o título cambiou desde que o terminal colleu os seus cambios ([`Titles`](#titles)). Ata a 3.1 era `title`, o último título que deu o programa, que `take_changes` collía da cola dos eventos. |
+| `shell` | Desde a subfase 4.1: o último que dixo a shell, o seu cartafol, a súa última marca e o código de saída da última orde, e se cambiou desde que o terminal colleu os seus cambios ([`ShellState`](#o-que-dixo-a-shell-shellstate)). |
 | `theme` | Desde a subfase 1.6: as cores do tema, `Palette::MEIGA` ata que haxa temas. As que cambia o programa non van eiquí: gárdaas `alacritty_terminal` ([A paleta](#a-paleta-o-tema-e-os-cambios-do-programa)). |
 | `cell` | Desde a 1.6: o tamaño dunha cela en píxeles, para responder a `CSI 14 t`; 0 × 0 mentres non se sabe. |
 | `damaged` | As filas danadas, nun `Vec` que se reutiliza en cada copia para non reservar memoria. |
@@ -4034,9 +4057,11 @@ pub fn new(size: GridSize) -> Self {
         term: Term::new(config, &TermSize(size), Listener(Arc::clone(&pending))),
         primary: None,
         region_below_top: false,
+        win32_input: false,
         parser: Processor::new(),
         …
         titles: Titles::default(),
+        shell: ShellState::default(),
         theme: Palette::MEIGA,
         cell: Size::new(0, 0),
         damaged: Vec::new(),
@@ -4045,12 +4070,14 @@ pub fn new(size: GridSize) -> Self {
 }
 
 pub fn feed(&mut self, bytes: &[u8]) -> Changes {
-    self.scanner.scan(bytes);
+    let shell = &mut self.shell;
+    self.scanner.scan(bytes, |report| shell.apply(report));
     let mut hooked = Hooked {
         term: &mut self.term,
         primary: &mut self.primary,
         region_below_top: &mut self.region_below_top,
         titles: &mut self.titles,
+        win32_input: &mut self.win32_input,
     };
     self.parser.advance(&mut hooked, bytes);
     self.take_changes()
@@ -4065,9 +4092,10 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
   - desde a subfase 1.8, os caracteres que rematan unha palabra nun dobre clic (`semantic_escape_chars`), os de meiga, [`WORD_DELIMITERS`](#word_delimiters-selectionkind-e-side): `alacritty_terminal` úsaos para estender as seleccións de palabras. `to_owned` copia o texto nun `String`, que é o que garda a configuración;
   - o resto, cos valores por defecto (`..Config::default()`).
 
-  Ten as cores de meiga (`Palette::MEIGA`), ningunha selección e, desde a subfase 1.9, ningunha pantalla principal á parte (`primary: None`) e a rexión de desprazamento na pantalla enteira (`region_below_top: false`); desde a 3.1, ningún título nin ningún gardado (`Titles::default()`); e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
+  Ten as cores de meiga (`Palette::MEIGA`), ningunha selección e, desde a subfase 1.9, ningunha pantalla principal á parte (`primary: None`) e a rexión de desprazamento na pantalla enteira (`region_below_top: false`); desde a 3.1, ningún título nin ningún gardado (`Titles::default()`); desde a 4.1, o win32-input-mode apagado (`win32_input: false`) e nada do que di a shell (`ShellState::default()`); e aínda non sabe o tamaño da cela: 0 × 0 ata que llo dean con `set_cell_size`. `Processor::new()` reserva xa o búfer das actualizacións sincronizadas, de 2 MiB, que Windows conta como memoria privada aínda que non se use. Que facer con el decidirase na subfase 2.2, coa memoria por tab ([ADR 0012 › Consecuencias](../adr/0012-fachada-do-terminal.md#consecuencias)).
 - **`feed`** le o que escribiu o programa: primeiro o escáner e despois o parser, cos mesmos bytes, sen copialos nin cambialos. Devolve os `Changes`.
-  - Desde a subfase 1.9, o parser non lle dá a saída directamente ao `Term`, senón a un [`Hooked`](#hooked): pásalle as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve no momento a pantalla principal que deixou á parte un cambio de tamaño, antes da saída que vén despois. Tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E, desde a 3.1, o título e os gardados non llos pasa ao `Term`: lévaos aos `titles` do terminal ([`term/title.rs`](#cratesmeiga-coresrctermtitlers)). `Hooked` toma prestados catro campos do terminal, `term`, `primary`, `region_below_top` e, desde a 3.1, `titles`, mentres le o parser, que é outro: o compilador permite as cinco referencias mutábeis porque son campos distintos.
+  - Desde a subfase 4.1, o escáner dálle o que di a shell, `Report` a `Report`, a [`ShellState::apply`](#o-que-dixo-a-shell-shellstate), cunha *closure* que só toma prestado o campo `shell` (`let shell = &mut self.shell;`), mentres le o escáner, que é outro campo. Así, o que di a shell conta ao ler a saída, antes ca a pantalla, tamén dentro dunha actualización sincronizada, que `vte` garda sen ler ata que remata ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 5). Compróbao a proba `what_the_shell_says_counts_at_once_also_in_a_synchronized_update`.
+  - Desde a subfase 1.9, o parser non lle dá a saída directamente ao `Term`, senón a un [`Hooked`](#hooked): pásalle as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve no momento a pantalla principal que deixou á parte un cambio de tamaño, antes da saída que vén despois. Tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E, desde a 3.1, o título e os gardados non llos pasa ao `Term`: lévaos aos `titles` do terminal ([`term/title.rs`](#cratesmeiga-coresrctermtitlers)). Desde a 4.1, segue tamén o win32-input-mode, que `alacritty_terminal` ignora ([`term/handler.rs`](#cratesmeiga-coresrctermhandlerrs)). `Hooked` toma prestados cinco campos do terminal, `term`, `primary`, `region_below_top`, desde a 3.1, `titles` e, desde a 4.1, `win32_input`, mentres le o parser, que é outro: o compilador permite as seis referencias mutábeis porque son campos distintos.
 
 | Método | Que fai |
 |---|---|
@@ -4078,10 +4106,11 @@ pub fn feed(&mut self, bytes: &[u8]) -> Changes {
 | `take_responses(into)` | Move as respostas ao final de `into`, para envialas ao programa. `Vec::append` deixa a cola baleira pero coa súa memoria: a seguinte resposta non reserva nada. |
 | `take_clipboard` | O último texto que o programa copiou ao portapapeis; despois, ningún. Se copiou varios antes de recollelos, só queda o último, como no portapapeis. Desde a subfase 1.8, a xanela recólleo e pono no portapapeis de Windows, só se ten o foco e está en primeiro plano ([ADR 0015](../adr/0015-o-rato-a-seleccion-e-o-portapapeis.md), [Código › meiga › `app.rs`](meiga.md#cratesmeigasrcapprs)). |
 | `title` | O título que deu o programa, se deu algún: nunca un texto baleiro. Desde a subfase 3.1 dállo [`Titles::current`](#o-título-current-e-set); ata entón, o campo `title`. |
-| `modes` | Os modos, traducidos de `TermMode` (uns *bitflags*) aos campos de `Modes`. `win32_input` pregúntallo ao escáner. |
+| `shell` | Desde a subfase 4.1: o que dixo a shell, prestado: o seu último cartafol, a súa última marca e o código de saída da última orde ([`ShellState`](#o-que-dixo-a-shell-shellstate)). A xanela usarao desde a 4.5; ata entón, móstrao `replay --screen` ([`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs)). |
+| `modes` | Os modos, traducidos de `TermMode` (uns *bitflags*) aos campos de `Modes`. `win32_input` é o campo do terminal, que segue o `Hooked` desde a subfase 4.1; ata entón, preguntábaselle ao escáner. |
 | `resize(size)` | Cambia o tamaño da grella, con polo menos `MIN_SIZE`, e todo queda danado. Ata a subfase 1.8, `alacritty_terminal` repartía as liñas longas da pantalla principal (*reflow*) e colocaba a pantalla á súa maneira, e a selección só se ía se cambiaba o número de columnas. Desde a 1.9, a pantalla queda onde a pon o ConPTY, e a selección vaise sempre ([O tamaño](#o-tamaño-resize)). |
 | `sync_deadline` | Cando hai que mostrar a actualización sincronizada (`?2026`) que empezou o programa, aínda que non a remate: `vte` gárdaa como moito 150 ms desde o último `?2026h`, ou ata encher o búfer. Mentres tanto, a saída non chega á pantalla. |
-| `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador. Desde a subfase 1.6, remátaa a xanela: antes de cada fotograma consulta `sync_deadline`, e o temporizador dos fotogramas vence a esa hora, tamén coa xanela minimizada, que non debuxa ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Desde a 1.9, coma `feed`: a saída pasa polo `Hooked`, co mesmo préstamo dos campos do terminal, desde a 3.1 tamén os `titles`. Desde a 2.7, chámao tamén `restart`, antes de reiniciar o terminal. |
+| `end_sync` | Mostra a saída da actualización sincronizada que agarda, e devolve os `Changes`. É para cando vence: o terminal non ten temporizador. Desde a subfase 1.6, remátaa a xanela: antes de cada fotograma consulta `sync_deadline`, e o temporizador dos fotogramas vence a esa hora, tamén coa xanela minimizada, que non debuxa ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)). Desde a 1.9, coma `feed`: a saída pasa polo `Hooked`, co mesmo préstamo dos campos do terminal, desde a 3.1 tamén os `titles` e, desde a 4.1, `win32_input`: dentro dunha actualización sincronizada, o win32-input-mode cambia cando esta se mostra. O escáner, non: xa leu eses bytes no `feed` que os trouxo, e `end_sync` nunca trae `Changes::shell`. Desde a 2.7, chámao tamén `restart`, antes de reiniciar o terminal. |
 
 Desde a subfase 1.8, `Terminal` ten tamén os métodos da selección, noutro arquivo do módulo: `select`, `select_to`, `clear_selection`, `has_selection` e `selection_text` ([`term/selection.rs`](#cratesmeiga-coresrctermselectionrs)). Desde a 1.9, ten tamén os do historial: `scroll`, `scroll_to` e `history` ([O historial e a súa vista](#o-historial-e-a-súa-vista)). E desde a 2.7, `restart` e `at_empty_row_start`, para o fin do programa ([O fin do programa e o reinicio](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start)).
 
@@ -4325,7 +4354,7 @@ const RESTART: &[u8] = concat!(
 | `ESC [ r`, `?6l`, `?7h`, `ESC [ 4 l` e `ESC [ 20 l` | A pantalla enteira para o programa: a rexión de desprazamento, que [`follow_region`](#seguir-a-rexión-follow_region-e-follow_column_mode) segue; sen o modo de orixe (DECOM); co paso á fila seguinte despois da última columna (DECAWM); sen inserir (IRM); e sen que o salto de liña volte á primeira columna (*LNM*). |
 | `?1l` e `ESC >` | As frechas e o teclado numérico en modo normal, e non no de aplicación. |
 | `?1000;1002;1003;1005;1006l` | Sen informes do rato, nin os seus formatos UTF-8 e SGR: os clics seleccionan texto. |
-| `?1004l`, `?2004l` e `?9001l` | Sen os eventos de foco, o *bracketed paste* nin o win32-input-mode. Este último non o coñece `alacritty_terminal`: apágao o [escáner](#cratesmeiga-coresrctermscannerrs), que le os mesmos bytes, e o ConPTY novo actívao outra vez ao empezar. |
+| `?1004l`, `?2004l` e `?9001l` | Sen os eventos de foco, o *bracketed paste* nin o win32-input-mode. Este último non o coñece `alacritty_terminal`: apágao o [`Hooked`](#os-métodos-de-handler), coma os outros modos, desde a subfase 4.1, e ata entón, o escáner, que le os mesmos bytes; o ConPTY novo actívao outra vez ao empezar. |
 | `?1007h` | A roda envía frechas na pantalla alternativa, coma nun terminal novo. |
 | `ESC ( B`, `ESC ) B`, `ESC * B`, `ESC + B` e SI | Os catro xogos de caracteres, de G0 a G3, en ASCII, e G0 en uso (SI, `0x0F`): un programa que deixou en uso o das liñas (`ESC ( 0`, ou `ESC ) 0` e SO) non deixa ao seguinte cun `q` que se ve coma `─`. |
 | `ESC [ SP q` | O cursor por defecto, [`DEFAULT_CURSOR`](#constantes): DECSCUSR sen número é o 0, coma `ESC [ 0 SP q`. |
@@ -4359,26 +4388,28 @@ pub fn restart(&mut self) {
     self.feed(&tabs);
     self.scroll(Scroll::Bottom);
     self.titles = Titles::default();
+    self.shell = ShellState::default();
     let mut pending = lock(&self.pending);
     pending.responses.clear();
     pending.clipboard = None;
 }
 ```
 
-**`restart`** deixa o terminal coma o espera un programa novo, para a sesión que empeza outra vez na súa tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md), decisión 7): o que mostraba a pantalla principal pasa ao historial, por riba dunha pantalla limpa co cursor na esquina de arriba á esquerda, e os modos, as cores, o cursor e as tabulacións son os dun terminal novo, sen título e, desde a subfase 3.1, sen títulos gardados ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 4). O que mostraba a alternativa, se o programa rematou nela, pérdese, coma cando un programa sae dela. O historial queda, e a vista volta á pantalla. Así empeza tamén o ConPTY novo, cunha pantalla limpa e o seu cursor arriba á esquerda: o terminal queda coma o seu, coma nunha tab nova, e o que escribe o programa cae nas mesmas filas nos dous. Paso a paso:
+**`restart`** deixa o terminal coma o espera un programa novo, para a sesión que empeza outra vez na súa tab ([ADR 0024](../adr/0024-o-fin-do-programa-e-o-reinicio.md), decisión 7): o que mostraba a pantalla principal pasa ao historial, por riba dunha pantalla limpa co cursor na esquina de arriba á esquerda, e os modos, as cores, o cursor e as tabulacións son os dun terminal novo, sen título e, desde a subfase 3.1, sen títulos gardados ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 4), nin, desde a 4.1, nada do que dixo a shell ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 5). O que mostraba a alternativa, se o programa rematou nela, pérdese, coma cando un programa sae dela. O historial queda, e a vista volta á pantalla. Así empeza tamén o ConPTY novo, cunha pantalla limpa e o seu cursor arriba á esquerda: o terminal queda coma o seu, coma nunha tab nova, e o que escribe o programa cae nas mesmas filas nos dous. Paso a paso:
 
 1. **A actualización sincronizada.** Se o último programa deixou unha aberta (`?2026h`), `vte` aínda garda a súa saída. `end_sync` móstraa primeiro, para que vaia ao historial co resto, e para que `RESTART` chegue ao `Term` e non ao búfer da actualización. Despois, xa non queda ningunha aberta. A sesión xa a remata ao escribir a liña do fin ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)), pero `restart` non depende diso.
-2. **`RESTART`**, por `feed`, coma a saída dun programa: pasa polo escáner e polo [`Hooked`](#hooked).
+2. **`RESTART`**, por `feed`, coma a saída dun programa: pasa polo escáner e polo [`Hooked`](#hooked). O seu primeiro ESC remata tamén un OSC que o último programa deixase a medias, no escáner e en `vte`: o que dicía esquécese nos pasos 6 e 7.
 3. **As tabulacións**, unha cada 8 columnas desde a primeira, coma nun terminal novo, onde `alacritty_terminal` as pon así ([`TabStops::new`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L2323-L2327), en `term/mod.rs`). `ESC [ 3 g` (TBC) quítaas todas e, en cada columna 1, 9, 17…, `ESC [ columna G` (CHA) leva alí o cursor e `ESC H` (HTS) pon unha. Noutros terminais abondaría con `CSI ? 5 W` (DECST8C), pero `alacritty_terminal` ignórao: `vte` chama con el a [`set_tabs(8)`](https://github.com/alacritty/vte/blob/3b3da71c34cc1256c7e20981cf03f8eb95e08ffc/src/ansi.rs#L1580), que `Term` non implementa, e queda [o método do trait, que non fai nada](https://github.com/alacritty/vte/blob/3b3da71c34cc1256c7e20981cf03f8eb95e08ffc/src/ansi.rs#L616), os dous en `src/ansi.rs` de `vte` 0.15.0.
 4. **O cursor**, despois das tabulacións, que o moven, e no mesmo `feed`: `ESC [ H` (CUP) lévao á esquina de arriba á esquerda, e `ESC 7` (DECSC) gárdao alí, coas cores por defecto e os xogos de caracteres en ASCII, que `alacritty_terminal` garda con el. Un `ESC 8` (DECRC) do programa novo lévao alí, coma nun terminal novo, ata que garde outro.
 5. **A vista volta á pantalla** (`Scroll::Bottom`). Se mostraba o historial, `ESC [ 2 J` subiuna coas filas que entraron nel, e seguiría mostrándoas.
 6. **Sen títulos**, desde a subfase 3.1: uns [`Titles`](#titles) novos, sen título nin gardados, coma nun terminal novo. Van despois dos dous `feed`, para que tampouco quede un título que o último programa deixase nunha actualización sincronizada aberta, que mostra o paso 1. Tampouco queda ningún cambio do título por avisar: os `feed` xa colleron os seus, e os `Titles` novos non teñen ningún. Ata a 3.1, quitaba o título o `OSC 0 ;` de `RESTART`, e os gardados quedaban.
-7. **O que quedaba pendente vaise**: as respostas ás preguntas que o último programa deixou nunha actualización sincronizada, e o texto que copiou ao portapapeis. O programa que as fixo xa rematou, e o novo non as espera. `restart` tampouco devolve os `Changes`: a sesión esquece tamén os avisos que a xanela non colleu ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)).
+7. **Sen o que dixo a shell**, desde a subfase 4.1: un [`ShellState`](#o-que-dixo-a-shell-shellstate) novo, sen cartafol, marca nin código, coma nunha tab nova ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 5). Vai tamén despois dos dous `feed`, para que non quede o que dicía un OSC que o último programa deixou a medias, e que rematou o primeiro ESC de `RESTART`. Nin queda ningún cambio por avisar: o que diga a shell nova é un cambio, aínda que a vella dixese o mesmo. Compróbao a proba `a_restart_forgets_what_the_shell_said_and_a_reset_does_not`.
+8. **O que quedaba pendente vaise**: as respostas ás preguntas que o último programa deixou nunha actualización sincronizada, e o texto que copiou ao portapapeis. O programa que as fixo xa rematou, e o novo non as espera. `restart` tampouco devolve os `Changes`: a sesión esquece tamén os avisos que a xanela non colleu ([Código › meiga › `session.rs`](meiga.md#cratesmeigasrcsessionrs)).
 
 - **`write!` nun `Vec`.** O trait `std::io::Write` deixa escribir texto con formato nun `Vec<u8>`, sen un `String` no medio. Nun `Vec` nunca falla, e `let _ =` ignora o `Result`. Cada tabulación leva 5 bytes e as cifras da súa columna: a capacidade, 8 bytes por tabulación e 8 máis, abonda mentres as columnas teñen ata tres cifras, e nunha grella máis ancha o `Vec` medra.
 - **Cun tamaño novo.** As tabulacións son as das columnas que ten o terminal ao reiniciarse. A tab dálle despois o tamaño da xanela ([Código › meiga › `tabs.rs`](meiga.md#cratesmeigasrctabsrs)), e `alacritty_terminal` corta as que sobran ou engade as que faltan, tamén cada 8 columnas desde a primeira ([`TabStops::resize`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L2337-L2346)).
 
-**Por que o historial, e non `ESC c`.** O reinicio enteiro, RIS (`ESC c`), deixaría o terminal novo dunha vez, pero en `alacritty_terminal` borra tamén o historial: [`reset_state`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1833-L1858), en `term/mod.rs`, chama a [`Grid::reset`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L335-L352), en `grid/mod.rs`, que baleira o historial (`clear_history`) e as filas da pantalla. Perderíase o que escribiu o programa que rematou, e por que rematou, que é o que mostraba a tab (ADR 0024, alternativas). En cambio, `ESC [ 2 J` (ED 2) na pantalla principal [chama a `clear_viewport`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1788-L1803), que [despraza a pantalla cara arriba](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L309-L333) ata a última fila con algo escrito: esas filas entran no historial, e as baleiras de debaixo non. Na alternativa, ED 2 só a borraría, pero `?1049l` xa a deixou. Os modos voltan coma no reinicio do Windows Terminal que non borra o texto, pero o texto vai ao historial, e non queda na pantalla: o programa novo empeza nunha pantalla limpa, coma o ConPTY, sen o texto dun programa que non coñece, e o de antes queda a unha roda de distancia (ADR 0024, decisión 7). Ademais, `reset_state` non volta ás cores que cambiou o programa: farían falta igual as OSC de `RESTART`. Nin quitaría o título: desde a subfase 3.1, `ESC c` mantén o título e os gardados ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisións 1 e 3). Ata a 3.1, en cambio, baleirábaos en `alacritty_terminal` sen avisar, e facía falta igual o OSC 0.
+**Por que o historial, e non `ESC c`.** O reinicio enteiro, RIS (`ESC c`), deixaría o terminal novo dunha vez, pero en `alacritty_terminal` borra tamén o historial: [`reset_state`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1833-L1858), en `term/mod.rs`, chama a [`Grid::reset`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L335-L352), en `grid/mod.rs`, que baleira o historial (`clear_history`) e as filas da pantalla. Perderíase o que escribiu o programa que rematou, e por que rematou, que é o que mostraba a tab (ADR 0024, alternativas). En cambio, `ESC [ 2 J` (ED 2) na pantalla principal [chama a `clear_viewport`](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/term/mod.rs#L1788-L1803), que [despraza a pantalla cara arriba](https://github.com/alacritty/alacritty/blob/94e7c8874e526b1e67b349d9ba30ddf81669119e/alacritty_terminal/src/grid/mod.rs#L309-L333) ata a última fila con algo escrito: esas filas entran no historial, e as baleiras de debaixo non. Na alternativa, ED 2 só a borraría, pero `?1049l` xa a deixou. Os modos voltan coma no reinicio do Windows Terminal que non borra o texto, pero o texto vai ao historial, e non queda na pantalla: o programa novo empeza nunha pantalla limpa, coma o ConPTY, sen o texto dun programa que non coñece, e o de antes queda a unha roda de distancia (ADR 0024, decisión 7). Ademais, `reset_state` non volta ás cores que cambiou o programa: farían falta igual as OSC de `RESTART`. Nin quitaría o título: desde a subfase 3.1, `ESC c` mantén o título e os gardados ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisións 1 e 3). Ata a 3.1, en cambio, baleirábaos en `alacritty_terminal` sen avisar, e facía falta igual o OSC 0. Desde a 4.1, `ESC c` tampouco esquece o que dixo a shell ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 5).
 
 - **Se a pantalla principal está baleira e sen historial**, ED 2 mete igual unha fila en branco no historial: `clear_viewport` busca cara atrás a última cela con algo e, se chega ao principio da grella sen atopala, conta a primeira fila. Con historial, para nel, e non mete ningunha. O ConPTY de Windows fai iso en cada tab ao arrancar: borra a pantalla, que aínda está baleira, e o historial de cada tab empeza cunha fila en branco (atopado no mantemento M2, porque `check-exit.ps1` fallaba no seu paso 6 con ese ConPTY: [Ferramentas › `check-exit.ps1`](ferramentas.md#toolscheck-exitps1)). meiga deixará de metela na 8.6; o ConPTY que vai con meiga non borra a pantalla ao arrancar.
 
@@ -4479,17 +4510,18 @@ Copia na `Screen` o que cambiou desde a copia anterior ([ADR 0012](../adr/0012-f
   - `point_to_viewport` converte a posición na grella, que inclúe o historial, na fila que se ve: se queda fóra, porque desde a subfase 1.9 a vista pode mostrar o historial, o cursor non se debuxa.
 
   **Por que non `renderable_content()`**, que dá o cursor como o debuxa Alacritty: sobre unha metade dereita, pásao á columna anterior sen comprobar que exista. Borrar caracteres (`ESC [ P`) pode deixar unha metade dereita soa na primeira columna, co cursor enriba, e entón a resta baixa de cero: nas compilacións de depuración, que comproban os desbordamentos tamén nas dependencias, é un *panic*; en *release*, a columna dá a volta e o cursor desaparece. Atopouno a revisión do código, e compróbao a proba `the_cursor_on_a_lone_right_half_stays_in_its_cell`.
-- **`take_changes`**, desde a subfase 1.6, responde primeiro as preguntas pendentes ([As preguntas](#as-preguntas-polas-cores-e-polo-tamaño)). Despois colle os `Changes` da cola e déixaa baleira: `mem::take` devolve o valor e deixa no seu sitio o valor por defecto. Desde a 3.1, o aviso do título non vén da cola, senón dos `titles`:
+- **`take_changes`**, desde a subfase 1.6, responde primeiro as preguntas pendentes ([As preguntas](#as-preguntas-polas-cores-e-polo-tamaño)). Despois colle os `Changes` da cola e déixaa baleira: `mem::take` devolve o valor e deixa no seu sitio o valor por defecto. Desde a 3.1, o aviso do título non vén da cola, senón dos `titles`, e, desde a 4.1, o do que di a shell, do `shell`:
 
   ```rust
   let changes = mem::take(&mut pending.changes);
   Changes {
       title: self.titles.take_changed(),
+      shell: self.shell.take_changed(),
       ..changes
   }
   ```
 
-  [`take_changed`](#o-cambio-take_changed-e-replace) di se o título cambiou desde a última vez, e esquéceo; `..changes` dá aos outros campos os valores de `changes`. Ata a 3.1, o aviso do título viña na cola, coma os outros, e o título, en `Pending`: `take_changes` movíao ao campo `title` do terminal só se cambiara.
+  [`take_changed`](#o-cambio-take_changed-e-replace) di se o título cambiou desde a última vez, e esquéceo, e o [de `ShellState`](#o-que-dixo-a-shell-shellstate), se cambiou o que di a shell; `..changes` dá aos outros campos os valores de `changes`. Ata a 3.1, o aviso do título viña na cola, coma os outros, e o título, en `Pending`: `take_changes` movíao ao campo `title` do terminal só se cambiara.
 
 ### Os axudantes
 
@@ -4891,23 +4923,29 @@ As probas están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs), coas do termi
 
 ## `crates/meiga-core/src/term/handler.rs`
 
-Desde a subfase 1.9: o terminal de `alacritty_terminal` coma o ve o parser. O parser de `vte` chama a un `Handler` por cada orde da saída ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Ata a 1.8 era o propio `Term`; desde a 1.9 é `Hooked`, que lle pasa ao `Term` as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve a pantalla principal que un cambio de tamaño deixou á parte ([`term/resize.rs`](#cratesmeiga-coresrctermresizers), [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a revisión do código, tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([Manter a vista](#manter-a-vista-view_to_keep-e-keep_view)). E, desde a subfase 3.1, o título do programa e os que este garda non llos pasa ao `Term`, que os baleiraba nun reinicio (`ESC c`) sen avisar: lévaos ao terminal, que os garda ([`term/title.rs`](#cratesmeiga-coresrctermtitlers), [ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md)). Ata a 3.1, pasáballe todas as ordes.
+Desde a subfase 1.9: o terminal de `alacritty_terminal` coma o ve o parser. O parser de `vte` chama a un `Handler` por cada orde da saída ([Tecnoloxías › `alacritty_terminal` e `vte`](../tecnoloxias.md#34-alacritty_terminal-e-vte-o-núcleo-do-terminal)). Ata a 1.8 era o propio `Term`; desde a 1.9 é `Hooked`, que lle pasa ao `Term` as ordes e, cando o programa deixa a pantalla alternativa ou reinicia o terminal, devolve a pantalla principal que un cambio de tamaño deixou á parte ([`term/resize.rs`](#cratesmeiga-coresrctermresizers), [ADR 0016](../adr/0016-o-historial-o-tamano-e-o-zoom.md)). Desde a revisión do código, tamén deixa a vista do historial onde está cando se despraza unha rexión que non empeza arriba ([Manter a vista](#manter-a-vista-view_to_keep-e-keep_view)). E, desde a subfase 3.1, o título do programa e os que este garda non llos pasa ao `Term`, que os baleiraba nun reinicio (`ESC c`) sen avisar: lévaos ao terminal, que os garda ([`term/title.rs`](#cratesmeiga-coresrctermtitlers), [ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md)). Ata a 3.1, pasáballe todas as ordes. E, desde a 4.1, segue o win32-input-mode (`?9001`), que `alacritty_terminal` ignora e que ata entón seguía o escáner ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 1).
 
 **Por que dentro do parser.** A pantalla principal ten que voltar no momento en que o programa deixa a alternativa: a saída que vén despois de `?1049l`, na mesma lectura ou na mesma actualización sincronizada (`?2026`), xa é para ela, e ten que caer nas súas filas, co tamaño novo. `feed` só volta cando o parser leu o bloque enteiro; `vte` garda a saída dunha actualización sincronizada e dálla ao `Handler` dunha vez, cando remata ou cando vence (`end_sync`); e ningún evento de `alacritty_terminal` avisa do cambio de pantalla. Despois de ler, sería tarde. Compróbao a proba `the_output_after_leaving_the_alternate_screen_reaches_the_primary_one`, nos tres casos.
+
+**O win32-input-mode, eiquí.** O ConPTY actívao ao arrancar, e outra vez despois de cada `ESC c`, para que meiga lle envíe eventos de tecla enteiros ([`input.rs`](#cratesmeiga-coresrcinputrs)), coma di o comentario do módulo. `alacritty_terminal` non o coñece, e ata a 4.1 seguíao o escáner, que lía as secuencias coas regras de `vte` para velo só cando o vería `vte`: parábase en cada ESC, e con saída chea de cores custaba o 3,2 % do tempo do terminal. Pero `vte` xa le esas secuencias, e dálle ao `Handler` `?9001h` e `?9001l`, coma un modo privado que non coñece, e `ESC c`, coma `reset_state`, na orde da saída e sen custo ningún. Desde a 4.1, `Hooked` ségueo eiquí, e o escáner só busca os OSC ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). Dentro dunha actualización sincronizada, o modo cambia cando `vte` le a actualización, coma a pantalla, e non cando chega; o ConPTY só o cambia ao arrancar e despois de cada `ESC c` ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 1).
 
 ### `Hooked`
 
 ```rust
+const WIN32_INPUT_MODE: u16 = 9001;
+
 pub(super) struct Hooked<'a> {
     pub term: &'a mut Term<Listener>,
     pub primary: &'a mut Option<Grid<Cell>>,
     pub region_below_top: &'a mut bool,
     pub titles: &'a mut Titles,
+    pub win32_input: &'a mut bool,
 }
 ```
 
-- **`Hooked`**: o terminal, a pantalla principal que un cambio de tamaño deixou á parte, desde a revisión do código, se a rexión de desprazamento do programa empeza máis abaixo da primeira fila da pantalla e, desde a subfase 3.1, o que o terminal garda do programa: o seu título e os que gardou ([`Titles`](#titles)). Son os campos `term`, `primary`, `region_below_top` e `titles` do [`Terminal`](#terminal), prestados mentres le o parser. `feed` e `end_sync` crean un en cada lectura: son catro referencias, sen copiar nada.
-- `'a` é o tempo de vida dos catro préstamos: `Hooked` non pode durar máis ca eles. Os campos son públicos, pero o tipo só se ve no módulo `term` (`pub(super)`).
+- **`Hooked`**: o terminal, a pantalla principal que un cambio de tamaño deixou á parte, desde a revisión do código, se a rexión de desprazamento do programa empeza máis abaixo da primeira fila da pantalla, desde a subfase 3.1, o que o terminal garda do programa, o seu título e os que gardou ([`Titles`](#titles)), e, desde a 4.1, se o win32-input-mode está activo. Son os campos `term`, `primary`, `region_below_top`, `titles` e `win32_input` do [`Terminal`](#terminal), prestados mentres le o parser. `feed` e `end_sync` crean un en cada lectura: son cinco referencias, sen copiar nada.
+- `'a` é o tempo de vida dos cinco préstamos: `Hooked` non pode durar máis ca eles. Os campos son públicos, pero o tipo só se ve no módulo `term` (`pub(super)`).
+- **`WIN32_INPUT_MODE`**, desde a 4.1: o número do modo privado do win32-input-mode, 9001, que `vte` non coñece. Ata a 4.1, a mesma constante estaba no escáner.
 - `Cell`, neste arquivo, é a cela de `alacritty_terminal`. E `Titles` vén do módulo irmán, `title` (`use super::title::Titles;`).
 
 ### Manter a vista: `view_to_keep` e `keep_view`
@@ -5114,12 +5152,18 @@ impl Handler for Hooked<'_> {
     fn set_private_mode(&mut self, mode: PrivateMode) {
         <Term<Listener> as Handler>::set_private_mode(self.term, mode);
         self.follow_column_mode(mode);
+        if mode == PrivateMode::Unknown(WIN32_INPUT_MODE) {
+            *self.win32_input = true;
+        }
     }
 
     #[inline]
     fn unset_private_mode(&mut self, mode: PrivateMode) {
         <Term<Listener> as Handler>::unset_private_mode(self.term, mode);
         self.follow_column_mode(mode);
+        if mode == PrivateMode::Unknown(WIN32_INPUT_MODE) {
+            *self.win32_input = false;
+        }
         if !self.term.mode().contains(TermMode::ALT_SCREEN)
             && let Some(primary) = self.primary.take()
             && resize::bring_back_primary(self.term, primary)
@@ -5132,6 +5176,7 @@ impl Handler for Hooked<'_> {
     fn reset_state(&mut self) {
         <Term<Listener> as Handler>::reset_state(self.term);
         *self.region_below_top = false;
+        *self.win32_input = false;
         if self.primary.take().is_some() {
             resize::new_primary(self.term);
         }
@@ -5148,8 +5193,9 @@ impl Handler for Hooked<'_> {
 - **`delete_lines`** (`CSI n M`) borra `n` filas desde a do cursor e sobe as de debaixo, dentro da rexión: despraza desde a fila do cursor. Se non é a primeira da pantalla, non entra nada no historial, aínda que a rexión empece arriba, e a vista queda onde estaba. `cursor.point.line.0` é a fila do cursor na pantalla, desde 0.
 - **`set_scrolling_region`** (`ESC [ superior ; inferior r`) pásalle a orde ao `Term`, e [`follow_region`](#seguir-a-rexión-follow_region-e-follow_column_mode) segue a rexión nova.
 - **`set_private_mode`** e **`unset_private_mode`**, con DECCOLM (`?3h` e `?3l`), seguen tamén a rexión que pon o `Term` ([`follow_column_mode`](#seguir-a-rexión-follow_region-e-follow_column_mode)).
+- **O win32-input-mode**, desde a subfase 4.1: despois de pasarlle a orde ao `Term`, que ignora os modos que non coñece, `set_private_mode` actívao con `?9001h`, e `unset_private_mode` desactívao con `?9001l`. `vte` dálle `PrivateMode::Unknown(9001)`, porque non o coñece, e chama a estes métodos unha vez por cada parámetro dunha secuencia privada que remata en `h` ou en `l`, co seu primeiro número: `?1004;9001h` activa os dous modos, `?9001:1h` activa este, e `?1:9001h`, non. Unha secuencia sen `?`, con outra marca, con outro byte intermedio ou con máis de 32 números non chega eiquí. Compróbano as cinco probas do win32-input-mode de [`tests.rs`](#cratesmeiga-coresrctermtestsrs), tamén coa saída que escribe o ConPTY ao arrancar, partida en todas as posicións.
 - **`unset_private_mode`**: despois de que o `Term` desactive o modo, se xa non está na pantalla alternativa e hai unha principal á parte, devólvea con [`bring_back_primary`](#a-pantalla-principal-á-parte), que lle dá o tamaño do terminal. Só pasa con `?1049l`, o único modo co que `alacritty_terminal` deixa a pantalla alternativa. `take` colle a principal e deixa `None` no seu sitio. Se o tamaño da principal cambia, a rexión volta ser a pantalla enteira.
-- **`reset_state`**: o reinicio (`ESC c`) de `alacritty_terminal` deixa tamén a pantalla alternativa e baleira a principal, co seu historial, e a rexión volta ser a pantalla enteira. Se a principal estaba á parte, o reinicio baleirou a grella que ocupaba o seu sitio: entón a principal á parte vaise, e [`new_primary`](#a-pantalla-principal-á-parte) pon unha nova, con historial. Desde a subfase 3.1, o título e os gardados quedan, coma di o seu comentario: coma no Windows Terminal, en xterm e en Kitty, e coma o título da consola do ConPTY ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisións 1 e 3). `reset_state` non toca os `titles`, e `alacritty_terminal` só baleira os seus, que xa non usa ninguén. Compróbao a proba `a_reset_keeps_the_title_and_the_saved_ones`, tamén coa principal á parte e dentro dunha actualización sincronizada.
+- **`reset_state`**: o reinicio (`ESC c`) de `alacritty_terminal` deixa tamén a pantalla alternativa e baleira a principal, co seu historial, e a rexión volta ser a pantalla enteira. Se a principal estaba á parte, o reinicio baleirou a grella que ocupaba o seu sitio: entón a principal á parte vaise, e [`new_primary`](#a-pantalla-principal-á-parte) pon unha nova, con historial. Desde a subfase 3.1, o título e os gardados quedan, coma di o seu comentario: coma no Windows Terminal, en xterm e en Kitty, e coma o título da consola do ConPTY ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisións 1 e 3). `reset_state` non toca os `titles`, e `alacritty_terminal` só baleira os seus, que xa non usa ninguén. Compróbao a proba `a_reset_keeps_the_title_and_the_saved_ones`, tamén coa principal á parte e dentro dunha actualización sincronizada. Desde a 4.1, apaga tamén o win32-input-mode, coma todos os modos, na orde da saída: despois de `?9001h` e `ESC c`, na mesma lectura ou noutra, está apagado, e o ConPTY actívao outra vez despois do reinicio. `ESC ( c`, que escolle un xogo de caracteres, non é un reinicio, e non chega eiquí; `ESC`, os bytes dun `á`, que `vte` ignora despois dun ESC, e `c`, si.
 - `if … && let Some(primary) = self.primary.take() && resize::bring_back_primary(…)` encadea condicións e un `if let` (*let chains*, da edición 2024): cada unha só se avalía se se cumpre a anterior, así que `take` só se chama fóra da pantalla alternativa, e `bring_back_primary` só se hai unha principal á parte.
 - Un programa que activa a pantalla alternativa estando xa nela (`?1049h` dúas veces) non cambia nada en `alacritty_terminal`: a principal segue á parte ata que o programa volta a ela ([ADR 0016 › Consecuencias](../adr/0016-o-historial-o-tamano-e-o-zoom.md#consecuencias)).
 
@@ -5636,79 +5682,736 @@ As probas da selección están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs),
 
 ## `crates/meiga-core/src/term/scanner.rs`
 
-O escáner que le a saída do programa antes do parser, para atopar as secuencias que `alacritty_terminal` ignora e meiga necesita ([ADR 0007](../adr/0007-integracion-coa-shell.md) e [ADR 0012](../adr/0012-fachada-do-terminal.md)). Só le os bytes: o parser recibe exactamente os mesmos.
+O escáner que le a saída do programa antes do parser, para atopar o que di a shell de si mesma e `vte` ignora ([ADR 0007](../adr/0007-integracion-coa-shell.md) e [ADR 0032](../adr/0032-o-escaner-osc.md), [Tecnoloxías › O cartafol e o prompt que di a shell](../tecnoloxias.md#68-o-cartafol-e-o-prompt-que-di-a-shell)): o seu cartafol, con OSC 7 ou OSC 9;9, e onde está entre o seu *prompt* e a saída dunha orde, con OSC 133. Só le os bytes: o parser recibe exactamente os mesmos. O que atopa dállo, en orde, a quen o chama, e o terminal gárdao nun [`ShellState`](#cratesmeiga-coresrctermshell_staters) ([`feed`](#terminal)).
 
-Polo de agora segue unha: o **win32-input-mode** (`ESC [ ? 9001 h` e `l`), que o ConPTY activa ao arrancar para que meiga lle envíe eventos de tecla completos ([`input.rs`](#cratesmeiga-coresrcinputrs)). O plan falaba tamén de `?1004`, os eventos de foco, pero ese xa o segue `alacritty_terminal`. As secuencias da integración coa shell (OSC 7, 9;9 e 133) chegarán na subfase 4.1.
-
-**Ler como `vte`.** Para ver un cambio de modo só cando `vte` o vería, tamén cando a secuencia chega partida entre dúas lecturas, o escáner segue os mesmos estados ca el ([Tecnoloxías › As secuencias de control](../tecnoloxias.md#35-as-secuencias-de-control)):
-
-| Estado | Onde está |
-|---|---|
-| `Ground` | No texto, ou nunha secuencia que non importa: ata o seguinte ESC. |
-| `Escape` | Despois de ESC. |
-| `CsiEntry` | Despois de `ESC [`. |
-| `CsiParam` | Lendo os números dunha secuencia privada, despois de `ESC [ ?`. |
-| `CsiIntermediate` | Despois doutro byte intermedio dunha secuencia privada, como `$`. |
-| `CsiIgnore` | Unha secuencia privada que `vte` ignora, ata o seu byte final. |
+**Ata a subfase 4.1** seguía o win32-input-mode (`?9001`) e o reinicio que o apaga (`ESC c`): lía as secuencias de control coas regras de `vte`, e parábase en cada ESC. Con saída chea de cores, coma a de `bigfile`, con 4,4 ESC cada 100 bytes, custaba o 3,2 % do tempo do terminal, e só percorrer os ESC un a un xa levaba arredor do 3 %: lendo tamén os OSC, non podía quedar por baixo do 1 % que pide o plan. Desde a 4.1, `?9001` e `ESC c` ségueos o [`Hooked`](#os-métodos-de-handler), que os recibe de `vte` na súa orde e sen custo, e o escáner só busca os OSC (decisión 1).
 
 ```rust
-pub fn scan(&mut self, bytes: &[u8]) {
-    let mut rest = bytes;
-    loop {
-        if self.state == State::Ground {
-            let mut escapes = memchr::memchr_iter(ESC, rest);
-            let at = loop {
-                let Some(at) = escapes.next() else {
-                    return;
-                };
-                if let Some(&[b'[', next]) = rest.get(at + 1..at + 3)
-                    && Self::not_private(next)
-                {
-                    continue;
-                }
-                break at;
-            };
-            self.state = State::Escape;
-            rest = rest.get(at + 1..).unwrap_or_default();
-            continue;
+//! The scanner that reads the output of the program before the parser, to
+//! find what the shell says about itself, which `vte` ignores (ADR 0007 and
+//! ADR 0032): its folder, with OSC 7 or OSC 9;9, and where it is between its
+//! prompt and the output of a command, with OSC 133. It only reads the
+//! bytes: the parser gets them unchanged.
+//!
+//! An OSC starts at `ESC ]`. The scanner looks for its `]` with `memchr`,
+//! many bytes at a time, and checks that an ESC comes right before it, so it
+//! does not stop at the other sequences, as the colours, nor at the text; in
+//! a read with many `]` without an ESC, as a list, it looks for the pair with
+//! `memchr::memmem` instead. From there it reads the OSC as `vte` does, also
+//! when it comes split between reads, and it ends it where `vte` ends it: at
+//! BEL, CAN, SUB or any ESC. The only OSC that it misses is one with bytes
+//! between the ESC and the `]` that do not end the escape in `vte`: the
+//! controls, which it runs, and DEL and the bytes from 0x80, which it
+//! ignores, as `ESC \x80 ]`. No program writes them.
+
+use memchr::memmem::Finder;
+
+use super::shell_state::{Folder, Mark};
+```
+
+- O comentario do módulo (`//!`) di o mesmo ca os parágrafos de enriba, e como o fai: atopa onde empeza cada OSC sen pararse no resto da saída, e le o OSC coma `vte`.
+- `use` trae `Finder`, o buscador de `memmem`, e os tipos do que di a shell, `Folder` e `Mark`, do módulo irmán, [`shell_state`](#cratesmeiga-coresrctermshell_staters).
+- O módulo é privado (`mod scanner;`, en [`term/mod.rs`](#cratesmeiga-coresrctermmodrs)), pero `Scanner` e `Report` reexpórtanse con `pub use`: o [*benchmark*](#cratesmeiga-corebenchesscannerrs) mide o escáner só, desde fóra do crate.
+
+**Coma `vte`.** O escáner ten que ver un OSC só cando o ve `vte`, e co mesmo texto, tamén cando chega partido entre dúas lecturas. Por iso le cada un coas regras de `vte` 0.15.0 ([o OSC](https://github.com/alacritty/vte/blob/v0.15.0/src/lib.rs#L407-L434) e [o seu texto](https://github.com/alacritty/vte/blob/v0.15.0/src/lib.rs#L543-L559), en `src/lib.rs`):
+
+- un OSC empeza en `ESC ]`, tamén no medio doutra secuencia ou doutra cadea: en `vte`, un ESC sempre empeza unha secuencia nova;
+- dentro del, `vte` ignora os controis de 0x00 a 0x1f, menos BEL, CAN, SUB e ESC, e garda o resto, tamén DEL e os bytes desde 0x80;
+- o seu número son os bytes ata o primeiro `;`, e compárase coma texto: `07` non é `7`;
+- e remata en BEL, en CAN, en SUB ou en calquera ESC, sen esperar polo `\` de ST: nos catro casos, `vte` despacha o OSC, e o ESC empeza a secuencia seguinte, que pode ser outro OSC.
+
+### Os límites: `MAX_TEXT`, `KEPT_CAPACITY` e `LONE_BRACKETS`
+
+```rust
+const MAX_TEXT: usize = 128 * 1024;
+
+const KEPT_CAPACITY: usize = 4 * 1024;
+
+const LONE_BRACKETS: usize = 16;
+
+const BEL: u8 = 0x07;
+const CAN: u8 = 0x18;
+const SUB: u8 = 0x1a;
+const ESC: u8 = 0x1b;
+```
+
+- **`MAX_TEXT`**: o texto dun OSC que garda o escáner, como moito 128 KiB (decisión 3). Cabe a ruta máis longa de Windows, 32 767 caracteres de UTF-16: en UTF-8, cada un ocupa como moito 3 bytes, 98 301 en total, uns 96 KiB, tamén coas súas comiñas e o `9;`. Un OSC máis longo ignórase enteiro, coma en xterm, en GNOME VTE e en kitty: o escáner nunca usa un anaco del, que sería outro cartafol. `vte` non ten límite, e segue recibindo todos os bytes. Só a usan este arquivo e as súas probas.
+- **`KEPT_CAPACITY`**: a memoria que conserva o texto entre dous OSC, 4 KiB. Abonda para unha ruta habitual, que o *prompt* dá outra vez despois de cada orde sen reservar memoria; despois dun OSC máis longo, [`end_text`](#o-texto-read_text-e-end_text) devolve o resto. `vte`, en cambio, conserva a memoria do seu OSC máis longo ata que se pecha a tab ([ADR 0032 › Consecuencias](../adr/0032-o-escaner-osc.md#consecuencias)).
+- **`LONE_BRACKETS`**: cantos `]` sen un ESC xusto antes deixa pasar o escáner, un a un, antes de buscar a parella `ESC ]` enteira: 16 ([`next_start`](#buscar-o-comezo-find_start-next_start-e-start)).
+- `BEL`, `CAN`, `SUB` e `ESC`: os catro bytes que rematan un OSC en `vte`.
+
+### O que atopa: `Report`, `Kind` e `State`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Report {
+    Folder(Folder),
+    Mark(Mark),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Kind {
+    Url,
+    ConEmu,
+    Mark,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum State {
+    Ground { escape: bool },
+    Number,
+    Text(Kind),
+}
+```
+
+- **`Report`**: o que dixo a shell, na orde na que o dixo: un cartafol, de OSC 7 ou OSC 9;9, ou unha marca, de OSC 133. Os seus tipos, `Folder` e `Mark`, son os de [`shell_state.rs`](#cratesmeiga-coresrctermshell_staters), que os garda.
+- **`Kind`**: os OSC que le: `Url`, OSC 7, o cartafol coma URL; `ConEmu`, OSC 9, de ConEmu, que con 9;9 é o cartafol coma ruta de Windows; e `Mark`, OSC 133, as marcas arredor do *prompt* e das ordes.
+- **`State`**: onde está o escáner, tamén entre dúas lecturas. Dos estados de `vte`, só lle importan os do OSC: o resto da saída é `Ground` para el.
+
+  | Estado | Onde está |
+  |---|---|
+  | `Ground { escape }` | Buscando o seguinte `ESC ]`. `escape`: a última lectura rematou nun ESC, e a seguinte pode empezar co seu `]`. |
+  | `Number` | Despois de `ESC ]`: o número do OSC, ata o seu primeiro `;`. |
+  | `Text(kind)` | O texto dun OSC que le, ata o seu final. |
+
+### `Scanner`
+
+```rust
+#[derive(Clone, Debug)]
+pub struct Scanner {
+    finder: Finder<'static>,
+    state: State,
+    number: [u8; 3],
+    number_len: usize,
+    text: Vec<u8>,
+    too_long: bool,
+}
+
+impl Default for Scanner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Scanner {
+    pub fn new() -> Self {
+        Self {
+            finder: Finder::new(b"\x1b]"),
+            state: State::Ground { escape: false },
+            number: [0; 3],
+            number_len: 0,
+            text: Vec::new(),
+            too_long: false,
         }
-        let Some((&byte, after)) = rest.split_first() else {
-            return;
-        };
-        rest = after;
-        self.advance(byte);
     }
 }
 ```
 
-- **O camiño rápido.** No estado `Ground` nada importa ata o seguinte ESC, e `memchr_iter` atópao lendo moitos bytes á vez, con instrucións SIMD. Case todas as secuencias da saída son cores e movementos do cursor: `ESC [` e un díxito ou unha letra. Esas sáltaas sen saír do bucle (`continue`), porque non poden cambiar un modo privado. Só segue byte a byte (`advance`) as que empezan por `ESC [ ?`, e as que chegan partidas antes do byte despois do `[`.
-- **Por que dá o mesmo.** `vte` só le un `?` como a marca dun modo privado xusto despois de `ESC [`; os caracteres de control, DEL e os bytes desde 0x80 non contan, e decide o seguinte (`not_private`). Calquera outro byte nesa posición significa que a secuencia non pode cambiar un modo privado, e os bytes que lle quedan ata o seu final non teñen ningún ESC. Lelos como texto, ata o seguinte ESC, deixa o escáner no mesmo estado ca seguir a secuencia.
-- `if let Some(&[b'[', next]) = rest.get(at + 1..at + 3) && Self::not_private(next)` encadea un `if let` cunha condición (*let chains*, da edición 2024). `rest.get(at + 1..at + 3)` dá os dous bytes despois do ESC, se os hai, e o patrón `&[b'[', next]` comproba o primeiro e garda o segundo.
+| Campo | Que é |
+|---|---|
+| `finder` | O buscador de `memmem` para a parella `ESC ]`. `Finder::new` prepárao unha vez, ao crear o escáner, e non en cada lectura; `'static`, porque a parella é un texto do programa. |
+| `state` | Onde está ([`State`](#o-que-atopa-report-kind-e-state)). |
+| `number` e `number_len` | O número do OSC, mentres aínda pode ser un dos que le, 7, 9 ou 133: como moito tres cifras. |
+| `text` | O texto do OSC, sen os bytes que `vte` ignora nel, como moito `MAX_TEXT` bytes. Un `Vec` que se reutiliza dun OSC a outro. |
+| `too_long` | O texto pasou de `MAX_TEXT`: o OSC ignórase. |
 
-**Byte a byte** (`advance`), como `vte`:
+- `impl Default for Scanner` dá o mesmo ca `new`: Clippy pídeo a un tipo público con `new` sen argumentos (`new_without_default`).
+- Un escáner novo non reserva memoria para o texto: o `Vec` medra co primeiro OSC que le.
 
-- En calquera estado, ESC empeza unha secuencia nova, e CAN (0x18) e SUB (0x1a) cancelan a actual.
-- `advance_escape`: `[` pasa a `CsiEntry`, e `c` é un reinicio completo (RIS), que desactiva todos os modos. Os caracteres de control, DEL e os bytes desde 0x80 non rematan o escape: `vte` ignóraos, e o seguinte byte escolle a secuencia. Calquera outro byte volta a `Ground`: é outra secuencia de escape, ou o comezo dunha cadea (OSC, DCS…) que só remata cun ESC ou un carácter de control. Que os bytes desde 0x80 tamén se ignoran atopouno a revisión do código: antes, `ESC`, un byte desde 0x80 e `[ ? 9001 h` non activaban o modo, e `vte` si.
-- `advance_csi_entry`: se o byte non é `?`, volta a `Ground`, como no camiño rápido; con `?`, empeza unha secuencia privada (`start_private`).
-- `advance_csi_param`: os díxitos forman o número (`digit`), `;` separa parámetros e `:` subparámetros. Un byte intermedio (0x20–0x2f, como `$`) pasa a `CsiIntermediate`, e outra marca despois dos números (`<`, `=`, `>` ou `?`), a `CsiIgnore`. Un byte final (0x40–0x7e) remata a secuencia (`dispatch`).
-- `dispatch`: se a secuencia ten un parámetro 9001, o `?` é o seu único byte intermedio e `vte` non a ignora, `h` activa o modo e `l` desactívao.
-- **Os límites de `vte`.** Unha secuencia con máis de 32 números (`MAX_VALUES`, contando os subparámetros) ou con máis de 2 bytes intermedios (`MAX_INTERMEDIATES`, contando o `?`) ignórase, e o escáner tamén a ignora (`ignoring`). Só o primeiro número de cada parámetro é un modo: `?9001:1h` activa o modo, e `?1:9001h` non.
-- `digit` usa `saturating_mul` e `saturating_add`: un número enorme queda no máximo dun `u16`, en vez de desbordarse.
+### Ler a saída: `scan`
 
-**Probas.** Dez:
+```rust
+pub fn scan(&mut self, bytes: &[u8], mut report: impl FnMut(Report)) {
+    let mut rest = bytes;
+    while !rest.is_empty() {
+        rest = match self.state {
+            State::Ground { escape } => self.find_start(rest, escape),
+            State::Number => self.read_number(rest),
+            State::Text(kind) => self.read_text(rest, kind, &mut report),
+        };
+    }
+}
+```
+
+- **`scan`** le os seguintes bytes da saída, e dálle a `report`, en orde, o que dixo a shell neles. Cada estado le o que pode de `rest` e devolve o que queda despois: buscar o comezo dun OSC, ler o seu número ou ler o seu texto. Cada volta le polo menos un byte ou cambia de estado: o bucle sempre avanza, e remata cando non queda nada.
+- `impl FnMut(Report)`: `report` é calquera función ou *closure* que recibe un `Report` e pode cambiar o que captura. O terminal pásalle unha que o aplica ao seu `ShellState`, e o *benchmark*, unha que conta. `scan` é xenérica, así que o compilador fai unha copia dela para cada unha, sen chamadas indirectas.
+- Os bytes nunca se copian: `rest` é un anaco de `bytes`, cada vez máis curto.
+
+### Buscar o comezo: `find_start`, `next_start` e `start`
+
+```rust
+#[inline]
+fn find_start<'a>(&mut self, bytes: &'a [u8], escape: bool) -> &'a [u8] {
+    if escape && bytes[0] == b']' {
+        self.start();
+        return &bytes[1..];
+    }
+    let mut from = 0;
+    let mut lone = 0;
+    while let Some(at) = self.next_start(bytes, from, &mut lone) {
+        from = at + 2;
+        match bytes.get(from) {
+            // The number of an OSC that the scanner does not read, as the
+            // 8 of the links: it goes on as text, until the next ESC ].
+            // An ESC that ends it right away can start that one.
+            Some(&byte)
+                if !matches!(
+                    byte,
+                    b'1' | b'7' | b'9' | 0x00..=0x06 | 0x08..=0x17 | 0x19 | 0x1c..=0x1f
+                ) => {}
+            _ => {
+                self.start();
+                return &bytes[from..];
+            }
+        }
+    }
+    self.state = State::Ground {
+        escape: bytes.last() == Some(&ESC),
+    };
+    &[]
+}
+
+#[inline]
+fn next_start(&self, bytes: &[u8], mut from: usize, lone: &mut usize) -> Option<usize> {
+    while *lone < LONE_BRACKETS {
+        let at = from + memchr::memchr(b']', &bytes[from..])?;
+        // A `]` at the start goes with an ESC of the last read, which
+        // `escape` follows.
+        if at > 0 && bytes[at - 1] == ESC {
+            return Some(at - 1);
+        }
+        *lone += 1;
+        from = at + 1;
+    }
+    self.finder.find(&bytes[from..]).map(|at| from + at)
+}
+
+fn start(&mut self) {
+    self.state = State::Number;
+    self.number_len = 0;
+}
+```
+
+- **O camiño rápido.** Fóra dun OSC, nada importa ata o seguinte `ESC ]`, e `next_start` atópao lendo moitos bytes á vez, con instrucións SIMD: o escáner non se para nas cores, nos movementos do cursor nin no texto. Case toda a saída pasa só por eiquí.
+- **`next_start`** busca o `]` con `memchr::memchr`, e mira se o byte de antes é un ESC: entón devolve onde está o ESC. Buscar un byte é máis rápido ca buscar a parella con `memmem`, e `]` é raro na maior parte da saída, tamén na chea de cores, onde ESC non o é: cada cor leva un ESC, e ningún `]`. A primeira versión buscaba só a parella con `memmem`: atopaba o mesmo, pero coa saída de cores do *benchmark*, `colours`, levaba o 1,3 % do tempo do terminal, e esta, o 1,1 %, medidos os dous cos bloques fríos, coma os medía a primeira versión do *benchmark* ([ADR 0032 › Alternativas consideradas](../adr/0032-o-escaner-osc.md#alternativas-consideradas)).
+- **Moitos `]` sen ESC**, coma en listas ou en JSON, serían unha parada cada un. `lone` cóntaos e, despois de `LONE_BRACKETS`, o resto do anaco vai a `memmem`, que busca a parella enteira e non depende de cantos `]` haxa. `lone` empeza en 0 cada vez que `scan` chama a `find_start`: ao principio dunha lectura en `Ground`, e despois de cada OSC que empeza a ler. Un OSC que se salta non o pon a 0.
+- **As dúas buscas atopan os mesmos comezos.** `memmem` busca a parella desde `from`, e `memchr`, un `]` desde `from` cun ESC antes: só serían distintas se `from` quedase entre un ESC e o seu `]`, e nunca queda, porque é o principio do anaco, o byte despois dun `]` ou o despois dun `ESC ]`. Un `]` no principio do anaco non é un comezo (`at > 0`), coma di o comentario: vai cun ESC da lectura anterior, que xa mirou `escape`, ou con ningún. Compróbano a proba `many_brackets_without_an_esc_do_not_hide_an_osc`, con 0, 1, 15, 16, 17 e 200 `]` antes de cada OSC, e a de referencia, con listas e lecturas longas ([`scanner/tests.rs`](#cratesmeiga-coresrctermscannertestsrs)).
+- **Un OSC que non pode ser dos que le** sáltao alí mesmo: se o byte despois de `ESC ]` non é `1`, `7`, `9` nin un dos controis que `vte` ignora nun OSC, o número non pode ser 7, 9 nin 133, e a busca segue desde alí, sen ler o número. Así pasan o 8 das ligazóns, o 0 e o 2 dos títulos ou o 52 do portapapeis. O seu texto non importa: un OSC dos que le o escáner só pode empezar noutro `ESC ]`. A busca segue xusto despois do `]`, coma di o comentario: se o OSC saltado remata nun ESC que empeza outro, coma en `ESC ] ESC ] 133 ; A`, ese é o seguinte.
+- **O byte seguinte pode non chegar aínda**: se o anaco remata xusto despois de `ESC ]`, `bytes.get(from)` dá `None`, e o OSC empeza igual (`start`): o número chega na lectura seguinte.
+- **Un ESC ao final da lectura.** Se non hai máis comezos, o escáner queda en `Ground` e anota se o último byte é un ESC (`escape`). A lectura seguinte pode empezar co `]` do OSC, coma cando o ConPTY parte a saída entre os dous: entón o OSC empeza antes de buscar nada. Se empeza por outro byte, o ESC non empezaba ningún OSC. Unha lectura baleira non cambia nada: `scan` non chama a `find_start` sen bytes.
+- `bytes[0]` non falla, porque `find_start` sempre ten bytes; e en `next_start`, `from` nunca pasa do final: `&bytes[from..]` pode quedar baleiro, e entón non hai nada que atopar, e `?` volta con `None`.
+- `#[inline]` suxírelle ao compilador que meta `find_start` e `next_start` no sitio da chamada: son o camiño de case toda a saída.
+- **`start`**: `ESC ]`, empeza un OSC: o escáner pasa a ler o seu número, desde cero.
+
+**O que non ve.** `vte` tamén empeza un OSC se entre o ESC e o `]` hai bytes que non saen do escape: os controis, que executa, e DEL e os bytes desde 0x80, que ignora, coma en `ESC \x80 ]`. O escáner só mira o byte xusto antes do `]`, e non o ve. Ningún programa os escribe, e mirar cara atrás ata o ESC, pasando eses bytes, custaba o 8,0 % do tempo do terminal con texto cheo de `]` (decisión 1 e alternativas). Compróbao a proba `it_misses_an_osc_with_bytes_between_its_esc_and_its_bracket`.
+
+### O número: `read_number` e `start_text`
+
+```rust
+fn read_number<'a>(&mut self, bytes: &'a [u8]) -> &'a [u8] {
+    for (at, &byte) in bytes.iter().enumerate() {
+        match byte {
+            // The controls that `vte` ignores in an OSC.
+            0x00..=0x06 | 0x08..=0x17 | 0x19 | 0x1c..=0x1f => {}
+            // An OSC with only a number: none that the scanner reads.
+            BEL | CAN | SUB => {
+                self.state = State::Ground { escape: false };
+                return &bytes[at + 1..];
+            }
+            // It ends, and a new sequence starts, maybe another OSC.
+            ESC => {
+                self.state = State::Ground { escape: false };
+                return &bytes[at..];
+            }
+            b';' => {
+                self.state = match &self.number[..self.number_len] {
+                    b"7" => self.start_text(Kind::Url),
+                    b"9" => self.start_text(Kind::ConEmu),
+                    b"133" => self.start_text(Kind::Mark),
+                    _ => State::Ground { escape: false },
+                };
+                return &bytes[at + 1..];
+            }
+            _ => {
+                if self.number_len == self.number.len() {
+                    self.state = State::Ground { escape: false };
+                    return &bytes[at + 1..];
+                }
+                self.number[self.number_len] = byte;
+                self.number_len += 1;
+                // Any other OSC goes on as text, until the next ESC ].
+                if !matches!(
+                    &self.number[..self.number_len],
+                    b"7" | b"9" | b"1" | b"13" | b"133"
+                ) {
+                    self.state = State::Ground { escape: false };
+                    return &bytes[at + 1..];
+                }
+            }
+        }
+    }
+    &[]
+}
+
+fn start_text(&mut self, kind: Kind) -> State {
+    self.too_long = false;
+    State::Text(kind)
+}
+```
+
+- **O número, coma o le `vte`**: os bytes ata o primeiro `;`, sen os controis que ignora nun OSC. Ten que ser exactamente `7`, `9` ou `133`: `vte` compara o número coma texto, e `07`, `9` cun espazo detrás ou `1337` son outros números.
+- **Mentres pode ser un deles.** Cada cifra vai a `number` e, se o que leva xa non é o principio de 7, 9 ou 133 (`7`, `9`, `1`, `13` ou `133`), o OSC é outro, e o escáner volta a buscar o seguinte `ESC ]`: o resto do OSC é texto para el. Tampouco garda máis de tres cifras: unha cuarta, coma o 7 de `1337`, xa non cabe (`number_len == number.len()`).
+- **O final.** BEL, CAN ou SUB rematan un OSC que só tiña número, coma `ESC ] 7 BEL`: sen texto, non di nada. Un ESC remátao tamén, pero non se le: `return &bytes[at..]` devolve o anaco desde el, e `find_start` mírao coma o posíbel comezo doutro OSC.
+- **`;`** remata o número: se é 7, 9 ou 133, `start_text` esquece se o OSC anterior era longo de máis, e o escáner pasa a ler o texto deste (`Text(kind)`), que empeza baleiro: [`end_text`](#o-texto-read_text-e-end_text) baleirou o do anterior ao rematalo. Se non, volta a `Ground`.
+- **Partido entre lecturas**, `number` e `number_len` gardan as cifras, e o estado segue en `Number`.
+
+### O texto: `read_text` e `end_text`
+
+```rust
+fn read_text<'a>(
+    &mut self,
+    bytes: &'a [u8],
+    kind: Kind,
+    report: &mut impl FnMut(Report),
+) -> &'a [u8] {
+    for (at, &byte) in bytes.iter().enumerate() {
+        match byte {
+            0x00..=0x06 | 0x08..=0x17 | 0x19 | 0x1c..=0x1f => {}
+            BEL | CAN | SUB => {
+                self.end_text(kind, report);
+                return &bytes[at + 1..];
+            }
+            ESC => {
+                self.end_text(kind, report);
+                return &bytes[at..];
+            }
+            _ => {
+                if self.text.len() == MAX_TEXT {
+                    self.too_long = true;
+                } else {
+                    self.text.push(byte);
+                }
+            }
+        }
+    }
+    &[]
+}
+
+fn end_text(&mut self, kind: Kind, report: &mut impl FnMut(Report)) {
+    self.state = State::Ground { escape: false };
+    if !self.too_long
+        && let Some(said) = read(kind, &self.text)
+    {
+        report(said);
+    }
+    self.text.clear();
+    self.text.shrink_to(KEPT_CAPACITY);
+}
+```
+
+- **`read_text`** garda o texto do OSC despois do `;` do número, sen os controis que `vte` ignora nel; o resto vai ao texto, tamén `;`, DEL e os bytes desde 0x80. Ata o final do OSC, o mesmo ca en `vte`: BEL, CAN, SUB ou calquera ESC, tamén o de `ESC \` (ST) e o dun ESC que empeza outra secuencia, coma `ESC [ 0 m`. `vte` despacha o OSC nos catro casos, e o escáner tamén o le. Cun ESC, `read_text` volta sen lelo, coma `read_number`.
+- **Máis de `MAX_TEXT` bytes**: o texto deixa de medrar, e `too_long` marca o OSC, que se ignora cando remata. O escáner segue lendo ata o final, sen gardar nada máis, porque só alí sabe onde empeza o seguinte.
+- **`end_text`**: o OSC rematou. Se non era longo, [`read`](#ler-o-texto-read-url_folder-decode-e-hex) di o que di o texto, se di algo que garda o terminal, e vai a `report`. Despois, o texto baléirase, e `shrink_to(KEPT_CAPACITY)` devolve a memoria que pase de 4 KiB: unha ruta habitual, que o *prompt* dá outra vez despois de cada orde, non reserva memoria outra vez, e despois dun OSC longo só quedan 4 KiB. Se a capacidade xa é menor, `shrink_to` non fai nada.
+- `if !self.too_long && let Some(said) = read(kind, &self.text)` encadea unha condición e un `if let` (*let chains*, da edición 2024): `read` só se chama se o OSC non era longo.
+
+### Ler o texto: `read`, `url_folder`, `decode` e `hex`
+
+```rust
+fn read(kind: Kind, text: &[u8]) -> Option<Report> {
+    match kind {
+        Kind::Url => url_folder(text).map(Report::Folder),
+        Kind::ConEmu => conemu_folder(text).map(Report::Folder),
+        Kind::Mark => mark(text).map(Report::Mark),
+    }
+}
+
+fn url_folder(text: &[u8]) -> Option<Folder> {
+    const SCHEME: &[u8] = b"file://";
+    let (scheme, rest) = text.split_at_checked(SCHEME.len())?;
+    if !scheme.eq_ignore_ascii_case(SCHEME) {
+        return None;
+    }
+    let slash = memchr::memchr(b'/', rest)?;
+    let (host, path) = rest.split_at(slash);
+    Some(Folder::Url {
+        host: decode(host)?,
+        path: decode(path)?,
+    })
+}
+
+fn decode(text: &[u8]) -> Option<String> {
+    let mut bytes = Vec::with_capacity(text.len());
+    let mut rest = text;
+    while let Some((&byte, after)) = rest.split_first() {
+        if byte == b'%'
+            && let [high, low, ..] = after
+            && let (Some(high), Some(low)) = (hex(*high), hex(*low))
+        {
+            bytes.push(high << 4 | low);
+            rest = &after[2..];
+        } else {
+            bytes.push(byte);
+            rest = after;
+        }
+    }
+    String::from_utf8(bytes).ok()
+}
+
+const fn hex(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+```
+
+- **`read`** le o texto segundo o OSC, e o que di, un `Folder` ou unha `Mark`, vai nun `Report`; `None` se non di nada que garde o terminal. Non usa o `Scanner`: a proba de referencia le con ela o texto que lle dá `vte`, e así só compara onde empeza e onde remata cada OSC ([`scanner/tests.rs`](#cratesmeiga-coresrctermscannertestsrs)).
+- **`url_folder`**, OSC 7: `file://equipo/ruta` (decisión 4). O esquema, `file://`, vale tamén en maiúsculas (`eq_ignore_ascii_case`), coma nas URL; outro, coma `http://`, non é un cartafol. A primeira `/` despois del separa o equipo da ruta, que empeza nela: `file:///home/ana` é a ruta `/home/ana`, sen equipo, e `file://ana-pc/C:/x` é `/C:/x`, de `ana-pc`. Sen `/`, coma en `file://ana-pc`, non hai ruta. Vale calquera equipo, coma en kitty, WezTerm e GNOME VTE, porque WSL e SSH dan o seu: que facer cun que non é este decídese na 4.5 e na 5.6.
+- `split_at_checked` parte o texto despois do esquema, ou dá `None` se é máis curto, e `?` volta con ese `None` desde a función.
+- **`decode`**: cada `%XX`, con dúas cifras hexadecimais, é o byte XX, coma nas URL: `%20` é un espazo. Un `%` sen dúas cifras detrás queda coma está, coma en `%4` ou `%zz`. O resultado ten que ser UTF-8 (`String::from_utf8`): se non, `None`, e o OSC non di nada, coma cun `%ff` só. `let [high, low, ..] = after` comproba, sen índices que poidan fallar, que quedan polo menos dous bytes.
+- **`hex`**: o valor dunha cifra hexadecimal, en minúsculas ou en maiúsculas. É `const fn`, coma as funcións que se poden avaliar ao compilar.
+
+### O cartafol de ConEmu e as marcas: `conemu_folder`, `mark` e `exit_code`
+
+```rust
+fn conemu_folder(text: &[u8]) -> Option<Folder> {
+    let path = text.strip_prefix(b"9;")?;
+    let path = match path {
+        [b'"', inside @ .., b'"'] => inside,
+        _ => path,
+    };
+    if path.is_empty() {
+        return None;
+    }
+    String::from_utf8(path.to_vec()).ok().map(Folder::Windows)
+}
+
+fn mark(text: &[u8]) -> Option<Mark> {
+    let mut fields = text.split(|&byte| byte == b';');
+    match fields.next()? {
+        b"A" => Some(Mark::Prompt),
+        b"B" => Some(Mark::Command),
+        b"C" => Some(Mark::Output),
+        b"D" => Some(Mark::Done(fields.next().and_then(exit_code))),
+        _ => None,
+    }
+}
+
+fn exit_code(field: &[u8]) -> Option<i32> {
+    let text = std::str::from_utf8(field).ok()?;
+    text.parse::<i32>()
+        .ok()
+        .or_else(|| text.parse::<u32>().ok().map(u32::cast_signed))
+}
+```
+
+- **`conemu_folder`**, OSC 9;9: o texto dun OSC 9 empeza por `9;`, e o resto é a ruta de Windows, tal cal ou entre comiñas, coma a escriben os *prompts* de PowerShell e cmd: `ESC ] 9 ; 9 ; "C:\Users" ESC \`. Os outros OSC 9, coma o progreso (`9;4`) ou as notificacións, non son cartafoles. As comiñas quítanse só se están nos dous extremos, coma no Windows Terminal e en kitty; e a ruta é todo o que vén despois, tamén con `;`, que unha ruta de Windows pode levar: o Windows Terminal córtaa no primeiro (decisión 4). Unha ruta baleira, tamén `""`, ou que non é UTF-8, non é un cartafol.
+- O patrón `[b'"', inside @ .., b'"']` casa cun anaco de polo menos dous bytes que empeza e remata en `"`, e garda en `inside` os do medio: unha `"` soa non casa, e é a ruta.
+- **`mark`**, OSC 133: a primeira parte, ata o primeiro `;`, é a letra. A, o *prompt* empeza; B, o *prompt* remata, e empeza a orde que se escribe; C, a orde corre, e empeza a súa saída; e D, a orde rematou. As outras letras da proposta dos *semantic prompts* (P, N, L e I), e as opcións despois da letra (`aid=`, `k=`, `err=`…), ignóranse, coma pide a proposta. A letra vai soa: `Ax` ou `a` non son marcas.
+- De D, a segunda parte é o código de saída, se é un número (`exit_code`); se non o é, ou se non hai, a orde rematou sen código: `Done(None)`.
+- **`exit_code`**: un número que cabe nun `i32`, con signo ou sen el, ou un de 32 bits sen signo, coma os dá Windows, que queda no `i32` que garda Windows: `3221225477`, `0xC0000005`, é −1073741819. `u32::cast_signed` toma os mesmos 32 bits coma un número con signo. `+7` é 7, porque `parse` admite o signo; `1` cun espazo diante non é un número; e `4294967296` non cabe en 32 bits.
+
+**O que custa.** Medido co [*benchmark*](#cratesmeiga-corebenchesscannerrs), coma o le meiga, cada bloque aínda na caché despois de ReadFile, o escáner leva do tempo do terminal o 0,1 % con texto e cunha gravación de `bigfile`, o 0,25 % con listas e coa saída máis densa en cores, unha cor para cada carácter, e o 0,9 % coa resposta dunha IA gravada, `ai-stream.mrec`, de bloques pequenos, nos que pesa o reloxo que mide cada un. O escáner de antes, medido igual, levaba o 3,2 % con `bigfile`, e o 5,0 % coa saída máis densa en cores. Cada OSC custa máis ca o texto: cun *prompt* cada 20 filas, que le enteiro, arredor do 2,9 %, e con dúas ligazóns en cada fila, que salta, arredor do 1,7 % (co escáner de antes, o 3,3 %), a ritmos que ninguén escribe.
+
+**Probas.** Dezaoito, nun arquivo aparte: [`scanner/tests.rs`](#cratesmeiga-coresrctermscannertestsrs). Ata a 4.1, as dez do escáner anterior ían ao final deste arquivo; as súas regras, as do win32-input-mode, compróbanas agora cinco probas do terminal, a través de `feed` ([`tests.rs`](#cratesmeiga-coresrctermtestsrs)).
+
+**Como se comproba.** A proba de referencia compara o escáner con `vte` en saídas aleatorias partidas en anacos aleatorios, e `proptest` reduce un fallo á saída máis curta que o mostra. Unha gravación de pwsh, cun *prompt* que escribe OSC 133 e 9;9, próbao con saída de verdade ([`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs)); e, en `meiga-win`, a proba `the_conpty_passes_what_the_shell_says_unchanged` comproba que o ConPTY empaquetado lle pasa ao terminal OSC 133, OSC 9;9 e OSC 7 tal cal, enteiros, en orde e sen nada entre eles ([Código › meiga-win › `tests/conpty.rs`](meiga-win.md#cratesmeiga-wintestsconptyrs)). `cargo mutants` atopou que cambiar calquera dos dous límites, `MAX_TEXT` ou `KEPT_CAPACITY`, pasaba sen que ningunha proba o vise, porque as probas usaban as mesmas constantes: desde `c23211c`, dúas probas compróbanos con números escritos a man, a ruta máis longa de Windows e a memoria dunha ruta habitual ([Tecnoloxías › A cobertura e os mutantes](../tecnoloxias.md#64-a-cobertura-e-os-mutantes)).
+
+## `crates/meiga-core/src/term/scanner/tests.rs`
+
+Desde a subfase 4.1: as dezaoito probas do escáner, nun arquivo aparte para que `scanner.rs` sexa máis curto. É un submódulo de `scanner` (`#[cfg(test)] mod tests;`, ao final de `scanner.rs`), así que ve tamén o seu privado, coma `Kind`, `read`, `LONE_BRACKETS` ou o campo `text`. Rust busca o arquivo dun submódulo de `scanner.rs` no cartafol `scanner/`, ao seu lado.
+
+```rust
+use alacritty_terminal::vte::{Parser, Perform};
+use proptest::prelude::*;
+
+use super::*;
+```
+
+- `use super::*;` trae todo o de `scanner.rs`, tamén o privado e o que este importa, coma `Folder` e `Mark`.
+- `Parser` é o parser de `vte`, o mesmo que hai dentro de `alacritty_terminal`, e `Perform`, o trait que recibe o que le: son a referencia da última proba. E `proptest::prelude::*` trae o que usa `proptest`: a macro `proptest!`, `Strategy`, `prop_oneof!`, `any`…
+
+### Os axudantes: `scanned`, `windows`, `url` e `done`
+
+```rust
+fn scanned(parts: &[&[u8]]) -> Vec<Report> {
+    let mut scanner = Scanner::new();
+    let mut found = Vec::new();
+    for part in parts {
+        scanner.scan(part, |report| found.push(report));
+    }
+    found
+}
+```
+
+- **`scanned`**: o que atopa un escáner novo en `parts`, lidas unha despois doutra, coma lecturas: así se proba unha saída partida.
+- **`windows`**, **`url`** e **`done`** escriben os `Report` que se esperan: un cartafol de Windows, un de URL co seu equipo e a súa ruta, e o fin dunha orde co seu código.
+
+### As probas de cada regra
 
 | Proba | Que comproba |
 |---|---|
-| `it_follows_the_mode_on_and_off` | `?9001h` activa o modo e `?9001l` desactívao; un texto sen secuencias non o cambia. |
-| `it_finds_the_mode_among_others` | O modo atópase entre outros parámetros (`?1004;9001h`). |
-| `it_follows_the_mode_when_the_sequence_is_split` | O que escribe o ConPTY ao arrancar, partido en dous en todas as posicións posíbeis, e byte a byte. |
-| `only_a_private_set_or_reset_changes_the_mode` | Sen `?`, con outra marca, con outro byte intermedio, con dous `?` ou con outro byte final, nada. |
-| `only_the_first_number_of_a_parameter_is_a_mode` | `?9001:1h` si; `?1:9001h` non. |
-| `control_characters_cancel_or_restart_the_sequence` | CAN cancela a secuencia; ESC empeza outra; un salto de liña execútase e a secuencia segue; e unha cadea OSC remata no ESC seguinte. |
-| `a_full_reset_turns_the_mode_off` | `ESC c` desactiva o modo, e `ESC ( c`, que escolle un xogo de caracteres, non. |
-| `bytes_over_0x7e_do_not_end_an_escape` | Despois dun ESC, DEL e os bytes desde 0x80 ignóranse, tamén partidos entre dúas lecturas: `ESC`, 0x80 e `[ ? 9001 h` activan o modo, e `ESC`, `á` e `c` son un reinicio. |
-| `a_sequence_with_too_many_numbers_is_ignored` | Con 32 números, o modo cambia; con 33, `vte` ignora a secuencia, e o escáner tamén. |
-| `it_agrees_with_vte_on_random_output` | **A referencia.** 2 000 saídas aleatorias, de 1 a 100 anacos: bytes soltos dos que importan nas secuencias (ESC, `[`, `?`, `;`, `:`, díxitos, `h`, `l`, `c`, `p`, `$` e `>`), caracteres de control, DEL e bytes desde 0x80; e, un de cada catro, unha secuencia enteira ou o seu comezo (`ESC [ ? 9001 h`, `ESC [ ? 9001 l`, `ESC c`, `ESC [ ?`, unha cadea OSC…), para que o modo cambie a miúdo. A metade empezan co modo activo, para comprobar tamén que se desactiva cando toca. Cada saída lese en anacos aleatorios co escáner e co parser de `vte`, cun `Handler` que segue o modo como o faría `alacritty_terminal` se non o ignorase, e despois de cada anaco os dous teñen que coincidir. Non hai os díxitos 2 nin 6, para que non empece ningunha actualización sincronizada (`?2026`), que `vte` gardaría sen chamar ao `Handler`. Como nas outras probas aleatorias, a secuencia é fixa: un fallo pódese repetir. |
+| `it_finds_the_folder_of_osc_7_and_osc_9_9` | OSC 7 de `ana-pc`, cun `%20`, dá o equipo e a ruta `/C:/x y`; un sen equipo, rematado en `ESC \`, `/home/ana`; e OSC 9;9, entre comiñas e sen elas, a ruta de Windows. |
+| `it_finds_the_marks_of_osc_133` | A, B, C, D co código 0 e D sen código, seguidos, dan as cinco marcas, en orde. |
+| `the_exit_code_is_a_number_of_32_bits` | `1`, `-1`, `+7` e os dous extremos dun `i32` son eses números; sen signo, coma os dá Windows, `3221225477` é −1073741819, e `4294967295`, −1. `4294967296`, `-2147483649`, `x`, nada e `1` cun espazo diante non son códigos: a orde remata sen el. As opcións despois do código ignóranse, e unha opción no sitio do código (`aid=7`) non é un código. |
+| `other_letters_and_options_of_osc_133_are_ignored` | A e B coas súas opcións son marcas; P, N, L, I, `a`, `Ax`, `AB`, nada e `;A`, non. |
+| `what_is_not_a_folder_is_ignored` | Non son cartafoles: OSC 7 con `http://`, con `file:/`, sen ruta, baleiro ou só co número; os outros OSC 9, o progreso, unha notificación ou `9;99`; unha ruta baleira, tamén entre comiñas; un texto que non é UTF-8, tamén despois de descodificar os `%XX`; e os OSC doutros números, coma os le `vte`: `07`, `9` cun espazo detrás, `1337` e `0`. |
+| `the_url_is_percent_decoded` | `%41%62%2f` é `Ab/`; un `%` sen dúas cifras queda, en `%4`, en `%zz%` e no primeiro de `%%41`, que dá `%A`; o equipo descodifícase tamén, e o esquema vale en maiúsculas; e os caracteres de varios bytes, en `%XX` ou tal cal, chegan enteiros. |
+| `only_the_quotes_around_the_path_go` | As comiñas só se quitan se están nos dous extremos; unha `"` soa é a ruta; e a ruta é todo o que vén despois de `9;9;`, tamén con `;`, con comiñas ou sen elas. |
+| `an_osc_ends_as_in_vte` | BEL, ST, o ESC doutra secuencia (`ESC [ 0 m`), un ESC só ao final, CAN e SUB rematan un OSC, e o OSC conta. E o ESC que remata un pode empezar o seguinte: de tres OSC seguidos, os dous primeiros rematan no ESC do seguinte. |
+| `the_controls_that_vte_ignores_in_an_osc_are_not_part_of_it` | Un LF no medio do número e un CR antes da letra non están: `1`, LF, `33;`, CR e `A` é a marca A. Na ruta, NUL non está, e DEL si, coma en `vte`. |
+| `other_oscs_and_sequences_do_not_hide_the_next_one` | Despois dun título, unha ligazón cos seus dous OSC 8, unha copia ao portapapeis, OSC 1, OSC 21, OSC 1337, unha cor *truecolor*, texto con `]` e `[1]`, unha DCS e unha APC, atópase o OSC 7 do final; e un `]` sen ESC xusto antes non empeza ningún OSC. |
+| `it_finds_them_when_they_come_split` | Unha saída coma a dun *prompt* de pwsh, con cores, as marcas, os dous cartafoles, unha ligazón e un título, dá os seus sete `Report` en orde: nunha lectura, partida en dúas en todas as posicións posíbeis, e byte a byte. |
+| `an_esc_at_the_end_of_a_read_can_start_one_in_the_next` | Un ESC ao final dunha lectura e un `]` ao principio da seguinte empezan un OSC, tamén despois doutro ESC só, e cunha lectura baleira no medio; pero non se a seguinte empeza por outro byte, coma `x` ou `[`. |
+| `it_misses_an_osc_with_bytes_between_its_esc_and_its_bracket` | O que non ve, adrede: `ESC`, 0x80 e `]`, e `ESC`, LF e `]`, bytes que non saen do escape en `vte`, que os le coma OSC. Outro ESC non é un deses bytes: o OSC empeza no último. |
+| `a_text_longer_than_the_maximum_is_ignored_whole` | Unha ruta que, co seu `9;`, ocupa `MAX_TEXT` bytes cabe; cun byte máis, lida en anacos de 1000 bytes, ignórase enteira, e o OSC 133 que vén despois conta. Ao final, o texto devolveu a súa memoria, ata `KEPT_CAPACITY`. |
+| `many_brackets_without_an_esc_do_not_hide_an_osc` | Con 0, 1, 15, 16, 17 e 200 `[1]` antes dun OSC 133, e outros tantos `]` antes dun OSC 9;9, atópanse os dous: antes de que o escáner pase a buscar a parella, e despois. E un `]` ao principio dunha lectura, despois doutra que non rematou nun ESC, non empeza ningún OSC. |
+| `the_longest_path_of_windows_fits` | 32 767 caracteres de tres bytes en UTF-8, `中`, entre comiñas, son un cartafol. |
+| `the_text_keeps_the_memory_of_a_usual_path_and_gives_back_the_rest` | Despois dunha ruta de 3000 caracteres, o texto conserva a súa memoria, e outra igual non pide máis; despois dunha de 100 000, quédanlle como moito 4 KiB. |
+| `it_agrees_with_vte` | **A referencia**: 2 000 saídas aleatorias, partidas en anacos aleatorios, co escáner e con `vte` ([máis abaixo](#a-proba-de-referencia-it_agrees_with_vte)). |
+
+### A proba de referencia: `it_agrees_with_vte`
+
+```rust
+#[derive(Default)]
+struct Reference {
+    found: Vec<Report>,
+    cut: bool,
+}
+
+impl Perform for Reference {
+    fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
+        if params.len() == 16 {
+            self.cut = true;
+        }
+        let kind = match params.first().copied() {
+            Some(b"7") => Kind::Url,
+            Some(b"9") => Kind::ConEmu,
+            Some(b"133") => Kind::Mark,
+            _ => return,
+        };
+        // An OSC with only its number has no text.
+        if params.len() < 2 {
+            return;
+        }
+        if let Some(report) = read(kind, &params[1..].join(&b';')) {
+            self.found.push(report);
+        }
+    }
+}
+
+const fn stays_in_the_escape(byte: u8) -> bool {
+    matches!(byte, 0x00..=0x17 | 0x19 | 0x1c..=0x1f | 0x7f..=0xff)
+}
+```
+
+- **`Reference`**: o que le `vte` nunha saída, coma ten que velo o escáner. Implementa `Perform`, o trait co que o parser de `vte` dá o que le, e del só `osc_dispatch`: os outros métodos teñen unha implementación por defecto que non fai nada. `vte` chámao con cada OSC que remata, cos seus parámetros, partidos nos `;`. Se o primeiro é `7`, `9` ou `133` e hai máis, `join` xúntaos outra vez con `;`, que é o texto que garda o escáner, e a mesma [`read`](#ler-o-texto-read-url_folder-decode-e-hex) le ese texto. Así, a proba compara onde empeza e onde remata cada OSC, e que bytes leva; o que di cada texto compróbano as outras probas.
+- **`cut`**: `vte` garda como moito 16 parámetros dun OSC, e o texto despois deles pérdese. Un OSC con 16 marca a saída, que non se pode comparar.
+- **`stays_in_the_escape`**: os bytes que non saen do escape en `vte` despois dun ESC: os controis, menos CAN, SUB e ESC, que executa, e DEL e os bytes desde 0x80, que ignora. O escáner non ve un OSC despois deles.
+
+```rust
+fn part() -> impl Strategy<Value = Vec<u8>> {
+    let pieces: &[&[u8]] = &[
+        b"\x1b",
+        b"\x1b]",
+        b"\x1b]1",
+        …
+        b"\r\n",
+    ];
+    let texts: &[&str] = &[
+        "7;file://ana-pc/C:/x%20y",
+        …
+        "07;file://h/x",
+    ];
+    let ends: &[&[u8]] = &[
+        b"\x07", b"\x1b\\", b"\x1b", b"\x18", b"\x1a", b"\x1b[0m", b"",
+    ];
+    prop_oneof![
+        3 => prop::sample::select(pieces).prop_map(<[u8]>::to_vec),
+        3 => (prop::sample::select(texts), prop::sample::select(ends))
+            .prop_map(|(text, end)| [b"\x1b]", text.as_bytes(), end].concat()),
+        2 => "[ -~\u{e1}\u{4e2d}]{0,12}".prop_map(String::into_bytes),
+        // Lists, with more ] than the scanner looks for one by one.
+        1 => "[\\[\\]0-9,]{8,48}".prop_map(String::into_bytes),
+        2 => any::<u8>().prop_map(|byte| vec![byte]),
+    ]
+}
+```
+
+**`part`**: os anacos cos que se fan as saídas, unha `Strategy` de `proptest`, que di como facer un valor ao chou. `prop_oneof!` escolle unha das cinco maneiras, co seu peso:
+
+| Peso | Anaco |
+|---|---|
+| 3 de 11 | Un de 27 anacos que importan (`select`): ESC, `ESC ]` e `ESC ]` cos comezos dos números (`1`, `13`, `133`, `133;`, `7`, `7;`, `9;` e `9;9;`), outros OSC (un título, unha ligazón, o portapapeis e OSC 1337), unha DCS e unha APC, `ESC [`, dúas cores, ST, `ESC c`, `]`, `;`, BEL, CAN, SUB e CRLF. |
+| 3 de 11 | Un OSC enteiro: `ESC ]`, un de 18 textos, uns que le o escáner e outros que ignora, coma `07;file://h/x`, e un de sete finais, BEL, ST, ESC, CAN, SUB, `ESC [ 0 m` ou ningún. |
+| 2 de 11 | Texto: de 0 a 12 caracteres, ASCII imprimíbeis, `á` ou `中`, cunha expresión regular. |
+| 1 de 11 | Unha lista: de 8 a 48 caracteres de `[`, `]`, cifras e comas, con moitos `]` sen ESC, coma di o comentario. |
+| 2 de 11 | Un byte calquera. |
+
+```rust
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(2_000))]
+
+    #[test]
+    fn it_agrees_with_vte(
+        parts in prop::collection::vec(part(), 0..40),
+        // Short pieces, and long ones, with many ] in a read.
+        sizes in prop::collection::vec(prop_oneof![3 => 1usize..24, 1 => 24usize..2048], 1..16),
+    ) {
+        let mut output = parts.concat();
+        // Out of what the scanner misses.
+        for at in 1..output.len() {
+            if output[at - 1] == ESC && stays_in_the_escape(output[at]) {
+                output[at] = b'x';
+            }
+        }
+        let mut reference = Reference::default();
+        Parser::new().advance(&mut reference, &output);
+        prop_assume!(!reference.cut);
+        let mut scanner = Scanner::new();
+        let mut found = Vec::new();
+        let mut rest = output.as_slice();
+        for &size in sizes.iter().cycle() {
+            if rest.is_empty() {
+                break;
+            }
+            let (piece, after) = rest.split_at(size.min(rest.len()));
+            scanner.scan(piece, |report| found.push(report));
+            rest = after;
+        }
+        prop_assert_eq!(found, reference.found, "{:?}", output);
+    }
+}
+```
+
+- **`it_agrees_with_vte`**: 2 000 casos (`with_cases`). Cada un xunta ata 39 anacos nunha saída, e cada byte que segue a un ESC e deixaría `vte` no escape pasa a ser un `x`, coma di o comentario: así a saída queda fóra do único que o escáner non ve, adrede. `vte` le a saída enteira, nunha lectura; e o escáner, en anacos de ata 15 tamaños aleatorios, un detrás doutro e outra vez desde o primeiro (`cycle`): tres de cada catro curtos, de 1 a 23 bytes, e un longo, de 24 a 2047 bytes, con moitos `]` nunha lectura. O escáner ten que atopar exactamente o mesmo ca `vte`, na mesma orde (`prop_assert_eq!`), e a mensaxe dun fallo leva a saída (`{:?}`). `prop_assume!` descarta os casos con `cut`.
+- **`proptest`** fai os casos ao chou e, se un falla, redúceo (*shrinking*): quita anacos e simplifica os que quedan mentres o caso siga fallando, e mostra o máis pequeno que falla. Ao contrario das outras probas ao chou de meiga, que repiten sempre a mesma secuencia *xorshift*, cada execución proba casos novos.
+
+## `crates/meiga-core/src/term/shell_state.rs`
+
+Desde a subfase 4.1: o que di de si mesma a shell dunha tab ([ADR 0007](../adr/0007-integracion-coa-shell.md) e [ADR 0032](../adr/0032-o-escaner-osc.md), decisión 5): o seu cartafol, e onde está entre o seu *prompt* e a saída dunha orde, co código de saída da última. O [escáner](#cratesmeiga-coresrctermscannerrs) atópao na saída, e o terminal gárdao eiquí, ata que empeza outro programa na tab. Dáo [`Terminal::shell`](#terminal), e [`Changes::shell`](#changes-e-modes) avisa cando cambia. A xanela usarao desde a 4.5, coa integración coa shell; ata entón, móstrao `replay --screen` ([`examples/replay.rs`](#cratesmeiga-coreexamplesreplayrs)).
+
+```rust
+//! What the shell of a tab says about itself (ADR 0007 and ADR 0032): its
+//! folder, and where it is between its prompt and the output of a command,
+//! with the exit code of the last one. The scanner finds it in the output
+//! ([`super::scanner`]), and the terminal keeps it here, until a new program
+//! starts in the tab.
+
+use std::mem;
+
+use super::scanner::Report;
+```
+
+- O comentario do módulo (`//!`) di o mesmo ca o parágrafo de enriba.
+- `use` trae `mem`, para `mem::take`, e `Report`, o que atopa o escáner.
+- O módulo é privado (`mod shell_state;`, en [`term/mod.rs`](#cratesmeiga-coresrctermmodrs)), pero os seus tipos reexpórtanse con `pub use`: fóra úsanse como `meiga_core::term::ShellState`, `meiga_core::term::Folder` e `meiga_core::term::Mark`.
+
+### O cartafol e as marcas: `Folder` e `Mark`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Folder {
+    Windows(String),
+    Url { host: String, path: String },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mark {
+    Prompt,
+    Command,
+    Output,
+    Done(Option<i32>),
+}
+```
+
+- **`Folder`**: o cartafol da shell, de dúas maneiras:
+  - `Windows`: unha ruta de Windows, de OSC 9;9, coma a dan PowerShell e cmd;
+  - `Url`: o equipo e a ruta dunha URL, de OSC 7, coma a dan as shells de Linux. En WSL, a ruta é de Linux; e o equipo pode ser outro, coma nunha sesión de SSH, ou ningún, coma en `file:///home/ana`.
+
+  Os dous van en UTF-8, coma os escribiu a shell: meiga non mira se o cartafol existe. Que facer cun cartafol doutro equipo, ou cunha ruta de Linux, decídese cando se use, na 4.5 e na 5.6 ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 4). Non é o `Folder` dos perfís, onde empeza un perfil ([`profile.rs`](#folder-profile-e-launch)): este é onde está a shell.
+- **`Mark`**: as marcas de OSC 133, que a shell escribe arredor do seu *prompt* e das ordes:
+
+  | Variante | Letra | Que di |
+  |---|---|---|
+  | `Prompt` | A | Empeza o *prompt*. |
+  | `Command` | B | Remata o *prompt*, e empeza a orde que se escribe. |
+  | `Output` | C | A orde corre, e empeza a súa saída. |
+  | `Done(code)` | D | A orde rematou, co seu código de saída, se a shell o deu. |
+
+- `Mark` é `Copy`, porque é pequena: `mark` dáa sen prestala. `Folder` non, porque leva texto: `folder` présta o cartafol, sen copialo.
+
+### O que dixo a shell: `ShellState`
+
+```rust
+#[derive(Clone, Debug, Default)]
+pub struct ShellState {
+    folder: Option<Folder>,
+    mark: Option<Mark>,
+    exit_code: Option<i32>,
+    changed: bool,
+}
+
+impl ShellState {
+    pub const fn folder(&self) -> Option<&Folder> {
+        self.folder.as_ref()
+    }
+
+    pub const fn mark(&self) -> Option<Mark> {
+        self.mark
+    }
+
+    pub const fn exit_code(&self) -> Option<i32> {
+        self.exit_code
+    }
+
+    pub(super) fn apply(&mut self, report: Report) {
+        match report {
+            Report::Folder(folder) => {
+                if self.folder.as_ref() != Some(&folder) {
+                    self.folder = Some(folder);
+                    self.changed = true;
+                }
+            }
+            Report::Mark(mark) => {
+                if self.mark != Some(mark) {
+                    self.mark = Some(mark);
+                    self.changed = true;
+                }
+                if let Mark::Done(code) = mark
+                    && self.exit_code != code
+                {
+                    self.exit_code = code;
+                    self.changed = true;
+                }
+            }
+        }
+    }
+
+    pub(super) fn take_changed(&mut self) -> bool {
+        mem::take(&mut self.changed)
+    }
+}
+```
+
+| Campo | Que é |
+|---|---|
+| `folder` | O último cartafol que deu a shell, se deu algún. |
+| `mark` | A última marca que escribiu. |
+| `exit_code` | O código de saída da última orde que rematou (D), se a shell o deu. |
+| `changed` | Algo cambiou desde que o terminal colleu os seus cambios por última vez. |
+
+- **`#[derive(Default)]`**: un estado sen nada e sen cambios, o dunha tab nova. Fano [`Terminal::new`](#terminal) e, para o programa que empeza outra vez na tab, [`restart`](#o-fin-do-programa-e-o-reinicio-restart-e-at_empty_row_start).
+- **`folder`**, **`mark`** e **`exit_code`** len o estado; son `const fn`, coma [`Terminal::shell`](#terminal), que o presta.
+- **`apply`** colle un `Report` do escáner. Un cartafol ou unha marca só se gardan, e só son un cambio, se son outros: dicir o mesmo outra vez non o é, coma co título ([`replace`](#o-cambio-take_changed-e-replace)). Así, un *prompt* que dá o seu cartafol despois de cada orde non avisa de nada se o cartafol non cambiou. `self.folder.as_ref() != Some(&folder)` compara sen copiar.
+- **O código de saída** só o cambia D, e queda mentres se mostra o seguinte *prompt* e corre a seguinte orde, ata o D seguinte. Un D sen código deixa a orde sen el, coma no Windows Terminal: o código de antes era doutra orde. O mesmo D outra vez, co mesmo código, non é un cambio.
+- **`take_changed`** di se algo cambiou desde a última vez que se lle preguntou, e esquéceo: `mem::take` devolve o valor e deixa `false`. Pregúntao [`take_changes`](#cursor-e-take_changes) ao final de cada `feed` e de cada `end_sync`, para `Changes::shell`.
+- `apply` e `take_changed` son `pub(super)`: só os chama o módulo `term`. Fóra, o estado só se le.
+- **As marcas non levan fila**: o terminal sabe en que punto está a shell, pero non en que fila da pantalla escribiu cada marca. Para levala, habería que aplicar cada marca na orde de `vte`, tamén despois dunha actualización sincronizada; e o plan só pide o cartafol, o estado e o código ([ADR 0032 › Alternativas consideradas](../adr/0032-o-escaner-osc.md#alternativas-consideradas)).
+
+**Probas.** Non ten probas propias: compróbano tres probas do terminal a través de `feed`, coa saída dun programa ([`tests.rs`](#cratesmeiga-coresrctermtestsrs)), e a gravación de pwsh, coa saída de verdade ([`tests/recordings.rs`](#cratesmeiga-coretestsrecordingsrs)).
 
 ## `crates/meiga-core/src/term/recording.rs`
 
@@ -5752,7 +6455,7 @@ E despois, para cada bloque:
 
 ## `crates/meiga-core/src/term/tests.rs`
 
-As corenta e seis probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Nove axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras; desde a 1.9, `texts` dá o texto de cada fila que se ve, `cursor_at`, a fila e a columna do cursor, e `ten_lines`, un terminal de 10 × 3 coas liñas do 1 ao 10, 7 delas no historial; desde a revisión do código da 1.9, `assert_the_rows_go_into_the_history`, que, coa vista dúas filas arriba, comproba que dúas liñas novas ao final da pantalla meten dúas filas no historial e que a vista segue mostrando as mesmas; e, desde a 3.1, `title_changed`, os `Changes` só cun título que cambiou. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén. Desde a 1.9, trece comproban o cambio de tamaño, a pantalla principal á parte e a vista do historial, e a proba aleatoria move tamén a vista. Desde a 2.7, dúas comproban o reinicio e se o cursor está ao principio dunha fila baleira. E desde a 3.1, sete comproban o título e os títulos gardados a través de `feed`, coa saída dun programa ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md); as dos `Titles` sós están en [`term/title.rs`](#cratesmeiga-coresrctermtitlers)): co código do M3, cinco delas fallan, e as outras dúas, `saving_no_title_gives_back_no_title` e `osc_1_and_21_do_not_change_the_title`, describen o que xa pasaba.
+As cincuenta e catro probas do terminal, nun arquivo aparte para que `mod.rs` sexa máis curto. É un submódulo de `term` (`#[cfg(test)] mod tests;`, ao final de `mod.rs`), así que ve tamén os seus tipos privados. Once axudantes: `copy` copia o terminal enteiro nunha `Screen` nova; `responses` recolle as respostas; `narrow` crea unha cela cun carácter, sen cores nin estilos; desde a subfase 1.8, `marks` mostra as celas seleccionadas dunha fila, `#` as que levan `CellFlags::SELECTED` e `.` as outras; desde a 1.9, `texts` dá o texto de cada fila que se ve, `cursor_at`, a fila e a columna do cursor, e `ten_lines`, un terminal de 10 × 3 coas liñas do 1 ao 10, 7 delas no historial; desde a revisión do código da 1.9, `assert_the_rows_go_into_the_history`, que, coa vista dúas filas arriba, comproba que dúas liñas novas ao final da pantalla meten dúas filas no historial e que a vista segue mostrando as mesmas; desde a 3.1, `title_changed`, os `Changes` só cun título que cambiou; e, desde a 4.1, `win32_input_after`, se o win32-input-mode está activo nun terminal novo despois dunhas lecturas, e `shell_changed`, os `Changes` só cun cambio do que di a shell. Desde a 1.8, cinco probas comproban a selección, e a proba aleatoria cámbiaa tamén. Desde a 1.9, trece comproban o cambio de tamaño, a pantalla principal á parte e a vista do historial, e a proba aleatoria move tamén a vista. Desde a 2.7, dúas comproban o reinicio e se o cursor está ao principio dunha fila baleira. Desde a 3.1, sete comproban o título e os títulos gardados a través de `feed`, coa saída dun programa ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md); as dos `Titles` sós están en [`term/title.rs`](#cratesmeiga-coresrctermtitlers)): co código do M3, cinco delas fallan, e as outras dúas, `saving_no_title_gives_back_no_title` e `osc_1_and_21_do_not_change_the_title`, describen o que xa pasaba. E desde a 4.1 ([ADR 0032](../adr/0032-o-escaner-osc.md)), cinco comproban o win32-input-mode, que desde entón segue o [`Hooked`](#os-métodos-de-handler): cos casos das dez probas do escáner anterior, agora a través de `feed`, e co que trae o cambio, o reinicio na orde da saída e a actualización sincronizada. Outras tres comproban o que di a shell.
 
 | Proba | Que comproba |
 |---|---|
@@ -5771,6 +6474,14 @@ As corenta e seis probas do terminal, nun arquivo aparte para que `mod.rs` sexa 
 | `osc_1_and_21_do_not_change_the_title` | Desde a 3.1. Con `pwsh` de título, OSC 1, o título da icona, e OSC 21, o de DECSWT, non cambian nada: `vte` non os pasa ([ADR 0029](../adr/0029-o-titulo-da-tab-e-os-titulos-gardados.md), decisión 7). Co código do M3, tamén pasaba. |
 | `osc_52_only_copies` | O texto en base64 de OSC 52 chega ao portapapeis; ler o portapapeis, a selección primaria e un texto que non é base64 non fan nada nin responden. |
 | `the_modes_follow_the_program` | Os modos por defecto; activar e desactivar cada un; os modos do rato, e os seus formatos, exclúense entre si; e un reinicio (RIS) déixaos como ao principio. |
+| `win32_input_mode_follows_its_sequences_also_split` | Desde a subfase 4.1. O que escribe o ConPTY ao arrancar, `CSI 1 t`, DA1, `?1004h`, `?9001h` e `?25l`, activa o win32-input-mode, partido en dúas lecturas en todas as posicións posíbeis, e byte a byte. Entre outros modos, `?1004;9001h` actívao, e `?9001;1004l` desactívao; `?1004h` só, non. |
+| `only_a_private_set_or_reset_changes_win32_input_mode` | Desde a 4.1. Sen `?`, con outra marca (`>`), con outro byte intermedio (`$`), con dous `?` ou con outro byte final (`p`), nada. Só o primeiro número de cada parámetro é un modo: `?9001:1h` actívao, e `?1:9001h`, non. E con 32 números, o último 9001, actívase; con 33, `vte` ignora a secuencia. |
+| `controls_cancel_or_restart_the_sequence_of_win32_input_mode` | Desde a 4.1. CAN no medio cancela a secuencia; un ESC empeza outra, que o activa; e un salto de liña no medio execútase, e a secuencia segue ata activalo. Un OSC remata nun ESC, que empeza a secuencia; e `ESC`, 0x80 e `[ ? 9001 h` activan o modo, porque `vte` ignora o 0x80 despois do ESC. |
+| `a_reset_turns_win32_input_mode_off_in_the_order_of_the_output` | Desde a 4.1. `ESC c` desactiva o modo, na lectura seguinte ou na mesma; e `ESC c`, `?1004h` e `?9001h`, coma o escribe o ConPTY despois dun reinicio, déixao activo. `ESC ( c`, que escolle un xogo de caracteres, non é un reinicio; `ESC`, `á` e `c` si, porque `vte` ignora os bytes de `á` despois do ESC. |
+| `in_a_synchronized_update_win32_input_mode_changes_when_the_update_is_shown` | Desde a 4.1. Co modo activo, `?9001l` dentro dunha actualización sincronizada non o desactiva ata que `end_sync` a mostra; e `?9001h` noutra non o activa ata que o programa a remata, con `?2026l`. |
+| `the_shell_says_its_folder_its_marks_and_the_exit_code` | Desde a 4.1. Nun terminal novo, nin cartafol, nin marca, nin código. OSC 9;9 entre comiñas é un cambio, co cartafol de Windows; o mesmo sen as comiñas, non. OSC 7 é outro cartafol, co equipo e a ruta. A, o *prompt* e B, nunha lectura, son un cambio, e a marca é B; a orde, C e a súa saída, outro, coa marca C; e D co código 3, outro, coa marca e o código. O A seguinte é un cambio, e o código segue sendo 3; o mesmo A outra vez, non. Un D sen código deixa a orde sen el. E os OSC non deixan nada na pantalla: `PS> dir`, `out` e unha fila baleira. |
+| `what_the_shell_says_counts_at_once_also_in_a_synchronized_update` | Desde a 4.1. Dentro dunha actualización sincronizada, A e OSC 9;9 son un cambio no mesmo `feed`, e a marca xa é A; `end_sync` xa non trae ningún. |
+| `a_restart_forgets_what_the_shell_said_and_a_reset_does_not` | Desde a 4.1. Despois de OSC 9;9 e D co código 1, `ESC c` non cambia nada, e o cartafol e o código quedan. Con outro OSC 9;9 a medias, `restart` deixa o terminal sen cartafol, sen marca e sen código: tampouco queda o cartafol a medias, que remata o primeiro ESC de `RESTART`. E o cartafol da shell nova é un cambio, aínda que a vella dese o mesmo. |
 | `colours_and_styles_reach_the_cells` | As cores de 16, de 256 e *truecolor*, do texto e do fondo, e todos os estilos, tamén os cinco subliñados. |
 | `a_wide_character_takes_two_cells` | Un carácter ancho ocupa as súas dúas metades; se non cabe ao final da fila, vai á seguinte. |
 | `a_tab_leaves_blank_cells` | O tabulador deixa celas en branco. |
@@ -9388,7 +10099,7 @@ const KEYS: [u16; 16] = [
 ];
 ```
 
-- **`Random`**: un xerador de números pseudoaleatorios *xorshift64*, coma nas probas do modelo, de `damage.rs` e do escáner: cada semente dá sempre a mesma secuencia, así que, se a proba falla, falla sempre igual. `below(n)` dá un número de 0 a `n − 1`.
+- **`Random`**: un xerador de números pseudoaleatorios *xorshift64*, coma nas probas do modelo, de `damage.rs` e do terminal: cada semente dá sempre a mesma secuencia, así que, se a proba falla, falla sempre igual. `below(n)` dá un número de 0 a `n − 1`.
 - **`PIECES`**: o que escriben as edicións ao chou: dúas letras, un número, `_`, un espazo, dous signos, `é` composto e escrito coma `e` e un acento, un acento só, un ideograma, dous emoji, un deles cun ton de pel, dous indicadores rexionais, o ZWJ, o espazo de ancho cero e `ñ`. Así se xuntan e se parten grafemas en todos os sitios.
 - **`KEYS`**: as teclas que preme: as frechas, Inicio, Fin, Retroceso, Supr, Insert, as letras das ordes e Intro.
 
@@ -9529,17 +10240,76 @@ Probas de integración: usan o crate desde fóra, como os outros crates, con gra
 | `cmd-echo.mrec` | `cmd /c echo ola`. | 140 bytes |
 | `spinner.mrec` | O escenario `tools\perf\scenarios\spinner.ps1`, durante 3 s. | 2 243 bytes |
 | `ai-stream.mrec` | O escenario `tools\perf\scenarios\ai-stream.ps1`, durante 12 s: texto con cores, un emoji, `❯` e unha táboa con liñas de caixa. | 45 838 bytes |
+| `shell-marks.mrec` | Desde a subfase 4.1: `pwsh -NoLogo -NoProfile -NoExit -WorkingDirectory C:\Windows`, cun *prompt* que escribe OSC 133 e OSC 9;9, e Intro, que escribe OSC 133;C, sen as predicións de PSReadLine; despois, `cd System32`, `cmd /c exit 3` e `exit`. | 4 718 bytes |
 
-- As tres son dunha pseudoconsola de 120 × 30, a do exemplo, e só levan a saída destes comandos, sen datos de ningunha máquina. Están marcadas como binarias no `.gitattributes` ([Código › workspace](workspace.md#gitattributes-e-gitignore)).
-- `feed` dálle uns anacos a un terminal novo, e devolve o que mostra (`Shown`): o texto e as celas de cada fila, o cursor, o título, os modos e as respostas.
+- As catro son dunha pseudoconsola de 120 × 30, a do exemplo, e só levan a saída destes comandos, sen datos de ningunha máquina. Están marcadas como binarias no `.gitattributes` ([Código › workspace](workspace.md#gitattributes-e-gitignore)).
+- **A de pwsh.** O seu *prompt* escribe D co código de saída da última orde, A, o cartafol entre comiñas con OSC 9;9, o texto do *prompt*, coma `PS C:\Windows>`, e B; o primeiro, sen D. Intro escribe C antes da saída da orde. Despois de `exit` non vén ningún *prompt*.
+- `feed` dálle uns anacos a un terminal novo, e devolve o que mostra (`Shown`): o texto e as celas de cada fila, o cursor, o título, os modos, as respostas e, desde a 4.1, o que dixo a shell, o cartafol, a última marca e o código de saída.
 
 | Proba | Que comproba |
 |---|---|
 | `cmd_writes_ola` | A primeira fila é `ola`, e o resto están baleiras; o cursor, na seguinte. O win32-input-mode está activo mentres corre o programa, e ao final o ConPTY desactívao. A única resposta é a de DA1, que o ConPTY pide ao arrancar. |
 | `the_spinner_only_changes_what_it_draws_again` | O primeiro fotograma do *spinner* cambia a liña enteira (16 celas); os seguintes, co cursor oculto, só o símbolo, e o número dos segundos cando cambia: 1 ou 13 celas. Ao final, o símbolo nunha cor do cubo da paleta, `Thinking` en negra e os segundos atenuados, e o cursor visíbel outra vez, na fila seguinte: unha barra que pestanexa, porque o programa non escolleu outro cursor. |
 | `the_ai_answer_keeps_its_text_and_colours` | O emoji 💡 nas súas dúas metades, `❯` en cian e en negra (`Indexed(6)`), un título na cor 141 da paleta, a táboa con liñas de caixa e o cursor ao final. |
-| `how_the_output_is_split_does_not_change_what_is_shown` | Cada gravación nun só anaco, byte a byte (cada secuencia e cada carácter de varios bytes partidos) e en 20 particións aleatorias mostra exactamente o mesmo. |
-| `copying_only_what_changed_gives_the_same_screen` | A mesma invariante ca en `tests.rs`, coa saída real: despois de cada bloque, a copia só do dano é igual á copia enteira. |
+| `the_shell_says_where_it_is_and_how_its_commands_end` | Desde a subfase 4.1, coa gravación de pwsh. Bloque a bloque, cada vez que o terminal avisa dun cambio do que di a shell: o cartafol pasa de `C:\Windows` a `C:\Windows\System32`, e o código de saída, de ningún a 0, despois de `cd`, e a 3, despois de `cmd /c exit 3`; ao final, a marca é C, porque `exit` corre e despois non vén ningún *prompt*. As catro primeiras filas son as tres ordes, cos seus *prompts* e sen nada dos OSC, e unha baleira; e `Shown` leva o que dixo a shell: `C:\Windows\System32`, C e 3. |
+| `how_the_output_is_split_does_not_change_what_is_shown` | Cada gravación nun só anaco, byte a byte (cada secuencia e cada carácter de varios bytes partidos) e en 20 particións aleatorias mostra exactamente o mesmo, desde a 4.1 tamén o que dixo a shell. |
+| `copying_only_what_changed_gives_the_same_screen` | A mesma invariante ca en `tests.rs`, coa saída real: despois de cada bloque, a copia só do dano é igual á copia enteira. Desde a 4.1, tamén coa gravación de pwsh. |
+
+## `crates/meiga-core/benches/scanner.rs`
+
+Desde a subfase 4.1: o *benchmark* do escáner, que mide o que custa fronte ao tempo que leva o terminal en ler a mesma saída, que o inclúe ([ADR 0032](../adr/0032-o-escaner-osc.md), decisións 1 e 6). O plan pide que custe menos do 1 % ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)).
+
+```text
+cargo bench -p meiga-core --bench scanner -- [--rounds <n>] [<recording>...]
+```
+
+- **Sen o arnés das probas** (`harness = false`, no [`Cargo.toml`](#cratesmeiga-corecargotoml)): os *benchmarks* do arnés, con `#[bench]`, só compilan con Rust *nightly*. Este é un programa co seu `main`, que mide el mesmo con `Instant`. Tampouco ten dependencias: `criterion` ou `divan` traerían moitas máis, para dúas medidas emparelladas que caben nun arquivo (ADR 0032, alternativas). `cargo bench` compílao co perfil `bench`, que herda o de *release*.
+- **As saídas.** Cinco que fai el, de 4 MiB cada unha, en bloques de 64 KiB, coma os que le meiga do ConPTY, para un terminal de 120 × 30 (`Output::made`):
+
+  | Saída | Que é |
+  |---|---|
+  | `colours` | Un rexistro cunha cor *truecolor* para cada carácter: a saída con máis secuencias, unhas 5 ESC cada 100 bytes. |
+  | `brackets` | Listas dentro de listas: un `]` cada 4 bytes, e ningún ESC. |
+  | `text` | Palabras, sen secuencias. |
+  | `marks` | Unha shell coas súas marcas e o seu cartafol, OSC 133 e 9;9, en cada *prompt*, cada 20 filas: moito máis a miúdo do que ninguén escribe ordes. |
+  | `links` | Arquivos con ligazóns, dous OSC 8 en cada fila, coma os escribe `ls --hyperlink`. |
+
+  Despois, as catro gravacións das probas de `meiga-core`, que entran no programa con `include_bytes!`, e as que se lle dean, cos seus bloques e o seu tamaño (`Output::recorded`).
+- **Cada rolda** le cada saída cun escáner novo e despois cun terminal novo, do tamaño da saída, bloque a bloque, coma o fío lector dunha tab (`round`): cada bloque cópiase primeiro, sen medilo, nun búfer do tamaño do maior, coma o escribe ReadFile, e despois mídense nel o escáner, contando o que atopa, ou o terminal, con `feed`, que inclúe o escáner; e, ao final, `end_sync`, se queda aberta unha actualización sincronizada. Así, coma en meiga, o escáner le o que acaba de escribir ReadFile, e o parser, o que acaba de ler o escáner: se lese os bloques uns detrás doutros desde a memoria, o escáner, o primeiro en tocalos, pagaría traelos á caché, e coa saída máis densa en cores levaría o 1,1 % e non o 0,25 % (a primeira versión, [ADR 0032 › Alternativas consideradas](../adr/0032-o-escaner-osc.md#alternativas-consideradas)). O reloxo que mide cada bloque, `Instant`, pesa máis ca o escáner nos bloques de poucos bytes, coma os das gravacións pequenas. `black_box` impide que o compilador quite un traballo cuxo resultado non se usa, ou que adiante algo porque coñece os bytes. Primeiro fai unha rolda que non conta, para ter todo na memoria; despois, 11, salvo que `--rounds` diga outra cousa.
+- **O que mostra**, unha fila por saída: os bytes, os bloques, o que atopou o escáner, a mediana dos tempos do escáner e do terminal, e o tempo do escáner fronte ao do terminal, en %: a mediana das roldas, e a máis baixa e a máis alta. Cada porcentaxe compara as dúas medidas dunha rolda, coa mesma saída. `median` ordena os valores e dá o do medio; despois, as porcentaxes quedan ordenadas, e a primeira e a última son a máis baixa e a máis alta. `max(1e-9)` evita dividir por cero.
+- **Unha ruta relativa** dunha gravación tómase desde o cartafol do *workspace*, onde se executa cargo (`from_workspace`): `cargo bench` executa o *benchmark* no cartafol de `meiga-core`, e unha ruta coma `.perf\bigfile.mrec` non se atoparía (`e7be009`). `env!("CARGO_MANIFEST_DIR")` é o cartafol de `meiga-core` ao compilar, e os dous `..` levan ao do *workspace*.
+- `--bench`, o argumento que `cargo bench` lle dá a todos os *benchmarks*, ignórase. Unha opción que non existe, ou `--rounds` sen un número maior ca 0, mostra o uso e remata co código 2; unha gravación que non se pode ler, co 1.
+
+Por exemplo, coas gravacións das probas e unha de `bigfile`, feita co exemplo `conpty` e a súa opción `--record` coma na [subfase 1.5](../subfases/1.5-fachada.md):
+
+```text
+cargo bench -p meiga-core --bench scanner -- .perf\bigfile.mrec
+```
+
+```text
+Output                   Bytes  Blocks  Found   Scanner ms  Terminal ms  Scanner/terminal, in % (lowest–highest)
+colours                4194304      64      0            …            …  … (…–…)
+…
+shell-marks.mrec          2292     201     14            …            …  … (…–…)
+…
+```
+
+**O que mediu na 4.1**, o escáner fronte ao terminal, e o escáner de antes, que se paraba en cada ESC, medido igual:
+
+| Saída | O escáner | O de antes |
+|---|---|---|
+| `text` | 0,1 % | 0,1 % |
+| `brackets` | 0,25 % | 0,1 % |
+| `colours` | 0,25 % | 5,0 % |
+| `marks` | Arredor do 2,9 % | 0,7 % |
+| `links` | Arredor do 1,7 % | 3,3 % |
+| `ai-stream.mrec` | 0,9 % | 2,8 % |
+| `bigfile` | 0,12 % | 3,2 % |
+| `cmd-echo.mrec`, `spinner.mrec` e `shell-marks.mrec` | Do 8 ao 26 % | Do 14 ao 39 % |
+
+O escáner de antes non miraba os `]` nin lía os OSC, e por iso custaba menos con listas e cun *prompt* cada 20 filas; pero parábase en cada ESC, e coas cores custaba moito máis. Os OSC moi seguidos custan máis, pero a ritmos que ninguén escribe; e nas gravacións pequenas, de poucos bytes por bloque, pesa máis o reloxo ca o escáner.
+
+**Na CI**, o paso *Check the scanner measurement* do job `windows` execútao con `--locked`, despois da medida dos fotogramas, e mostra os números sen xulgalos, coma as medidas do arranque e dos fotogramas ([Código › GitHub › Job `windows`](github.md#job-windows)).
 
 ## `crates/meiga-core/examples/replay.rs`
 
@@ -9552,7 +10322,7 @@ cargo run --release -p meiga-core --example replay -- <recording> [--rounds <n>]
 - Cada rolda dálle todos os bloques, en orde e tal como chegaron, a un terminal novo do tamaño da gravación, e mide o tempo, en MB de saída por segundo (1 MB = 1 000 000 bytes). Hai 5 roldas, salvo que `--rounds` diga outra cousa, e ao final mostra a mediana, a mínima e a máxima. A velocidade só di algo cunha gravación grande: as pequenas len en microsegundos.
 - **As actualizacións sincronizadas** que o programa non remata móstranse cando vence o seu tempo, contado cos momentos da gravación, como fai meiga desde a subfase 1.6 co temporizador dos fotogramas: `sync_end` é o momento da gravación en que vence a que está pendente, e o primeiro bloque que chega despois remátaa con `end_sync`.
 - As respostas recóllense despois de cada bloque, como fai o fío lector, que llas envía ao programa.
-- **`--screen`** mostra ao final o que hai na pantalla: as filas con texto, numeradas desde 1 como nas secuencias de control; o cursor; o título; os modos activos; e as respostas, cos caracteres de control á vista (␛ é ESC, ␍ é CR…), como o exemplo `conpty`. Se queda unha actualización sincronizada pendente, móstraa antes.
+- **`--screen`** mostra ao final o que hai na pantalla: as filas con texto, numeradas desde 1 como nas secuencias de control; o cursor; o título; desde a subfase 4.1, o que dixo a shell, o seu cartafol, de Windows ou dunha URL co seu equipo, a súa última marca, coa súa letra, e o código de saída da última orde; os modos activos; e as respostas, cos caracteres de control á vista (␛ é ESC, ␍ é CR…), como o exemplo `conpty`. Se queda unha actualización sincronizada pendente, móstraa antes.
 - Os erros de uso (sen gravación, unha opción que non existe, `--rounds` sen un número maior ca 0 ou dúas gravacións) mostran o uso e rematan co código 2; unha gravación que non se pode ler, co 1.
 
 Por exemplo, coa gravación de `cmd /c echo ola`:
@@ -9566,8 +10336,19 @@ Screen of 120 × 30, the rows with text:
    1 │ola
 Cursor: row 2, column 1, Beam, blinking.
 Title: (none)
+Folder: (none)
+Mark: (none)
+Exit code: (none)
 Modes: alternate_scroll, show_cursor
 Answers: ␛[?6c
+```
+
+Coa gravación de pwsh, `shell-marks.mrec`, as liñas do que dixo a shell son:
+
+```text
+Folder: C:\Windows\System32
+Mark: C, the output
+Exit code: 3
 ```
 
 ## `crates/meiga-core/examples/tabs.rs`

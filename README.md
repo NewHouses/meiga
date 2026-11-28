@@ -76,7 +76,7 @@ cargo run -p meiga-win --example conpty -- --system         # cmd, in the ConPTY
 cargo run -p meiga-win --example conpty -- pwsh -NoLogo     # any command line
 ```
 
-With `--record <file>`, it also records the output, block by block, and with `--quiet` it only prints the end of the session. The console example of `meiga-core` gives a recording to the terminal of meiga as fast as it can, and prints how fast the terminal read it and, with `--screen`, what it shows at the end:
+With `--record <file>`, it also records the output, block by block, and with `--quiet` it only prints the end of the session. The console example of `meiga-core` gives a recording to the terminal of meiga as fast as it can, and prints how fast the terminal read it and, with `--screen`, what it shows at the end, and what the shell said: its folder, the last mark of its prompt and the exit code of its last command (OSC 7, 9;9 and 133):
 
 ```powershell
 cargo run --release -p meiga-win --example conpty -- --record ola.mrec cmd /c echo ola
@@ -180,6 +180,13 @@ With `-Start`, it starts a terminal that runs the program of its command line, s
 
 ```powershell
 .\tools\perf\measure-frames.ps1
+```
+
+The benchmark of the scanner, which finds in the output what the shell says before the parser reads it, measures what the scanner costs against the terminal with the same output, round after round: five outputs that it makes, the recordings of the tests and, if given, other recordings, whose relative paths are taken from the folder of the repository:
+
+```powershell
+cargo bench -p meiga-core --bench scanner
+cargo bench -p meiga-core --bench scanner -- --rounds 21 .perf\bigfile.mrec
 ```
 
 Run `Get-Help` with `-Detailed` on each script for all the options, for example `Get-Help .\tools\perf\run-scenario.ps1 -Detailed`.
