@@ -1,6 +1,6 @@
 # ADR 0007 · Integración coa shell
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0032](0032-o-escaner-osc.md)
 - **Data:** 2026-11-06
 - **Relacionados:** [ADR 0003](0003-nucleo-vt-alacritty-terminal.md)
 

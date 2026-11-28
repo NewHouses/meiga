@@ -1,6 +1,6 @@
 # ADR 0029 · O título da tab e os títulos gardados
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado; concretado polo [ADR 0032](0032-o-escaner-osc.md)
 - **Data:** 2026-11-25
 - **Relacionados:** [ADR 0003](0003-nucleo-vt-alacritty-terminal.md), [ADR 0004](0004-conpty-empaquetado.md), [ADR 0012](0012-fachada-do-terminal.md), [ADR 0013](0013-da-saida-a-pantalla.md), [ADR 0020](0020-a-barra-de-tabs.md), [ADR 0022](0022-os-perfis-e-a-configuracion.md), [ADR 0024](0024-o-fin-do-programa-e-o-reinicio.md)
 

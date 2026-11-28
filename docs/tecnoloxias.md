@@ -1,6 +1,6 @@
 # Tecnoloxías
 
-> Estado: subfase 3.2. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar. No M3 chegaron [§63](#63-crear-os-procesos-fóra-do-fío-da-interface), crear os procesos fóra do fío da interface, e [§64](#64-a-cobertura-e-os-mutantes), a cobertura e os mutantes; na 3.1, [§65](#65-os-títulos-da-tab), os títulos da tab; e na 3.2, [§66](#66-os-grafemas-e-as-palabras-dun-campo-de-texto), os grafemas e as palabras dun campo de texto.
+> Estado: subfase 4.1. Este documento crece con cada PR: cada tecnoloxía nova engádese cando se empeza a usar. No M3 chegaron [§63](#63-crear-os-procesos-fóra-do-fío-da-interface), crear os procesos fóra do fío da interface, e [§64](#64-a-cobertura-e-os-mutantes), a cobertura e os mutantes; na 3.1, [§65](#65-os-títulos-da-tab), os títulos da tab; na 3.2, [§66](#66-os-grafemas-e-as-palabras-dun-campo-de-texto), os grafemas e as palabras dun campo de texto; na 3.3, [§67](#67-renomear-unha-tab-noutros-programas), renomear unha tab noutros programas; e na 4.1, [§68](#68-o-cartafol-e-o-prompt-que-di-a-shell), o cartafol e o *prompt* que di a shell.
 
 Para cada tecnoloxía explícase que é, por que a usamos e como está configurada en meiga. A explicación liña a liña de cada arquivo está en [Código](codigo/README.md).
 
@@ -853,7 +853,7 @@ CAN (`0x18`) e SUB (`0x1A`) cancelan a secuencia que se estaba a ler, e un ESC n
 | `1049` | A pantalla alternativa, a dos programas a pantalla completa, como vim, htop ou less. |
 | `2004` | *Bracketed paste*: marcar o principio e o fin do texto pegado. |
 | `2026` | As actualizacións sincronizadas, máis abaixo. |
-| `9001` | *win32-input-mode*: as teclas como eventos completos de Windows ([§31](#31-conpty-a-pseudoconsola-de-windows)). `alacritty_terminal` ignórao, e sígueo o escáner de meiga. |
+| `9001` | *win32-input-mode*: as teclas como eventos completos de Windows ([§31](#31-conpty-a-pseudoconsola-de-windows)). `alacritty_terminal` ignórao, e sígueo meiga no *handler* de `vte`, que lle dá os modos na súa orde ([ADR 0032](adr/0032-o-escaner-osc.md)). |
 
 Ademais, `ESC =` e `ESC >` activan e desactivan o modo aplicación do teclado numérico; `ESC [ 20 h`, que un salto de liña leve tamén o cursor ao principio da liña (*LNM*); e `ESC [ n SP q` (*DECSCUSR*) cambia a forma do cursor: bloque (1 e 2), subliñado (3 e 4) ou barra (5 e 6), pestanexando (os impares) ou fixo (os pares). O 0 volta á forma por defecto, que en meiga é a barra que pestanexa ([§38](#38-o-cursor-de-windows-pestanexo-tempo-e-grosor)).
 
@@ -878,7 +878,7 @@ Ademais, `ESC =` e `ESC >` activan e desactivan o modo aplicación do teclado nu
 
 **As actualizacións sincronizadas.** Un programa que redebuxa moito, como un editor ou unha IA que reescribe a súa zona de estado, pode escribir `ESC [ ? 2026 h` antes e `ESC [ ? 2026 l` despois: o terminal garda o que hai entre as dúas e móstrao de vez, sen fotogramas a medio debuxar. Se o fin non chega, móstrao igual aos 150 ms, ou cando xa garda 2 MiB. Cada `ESC [ ? 2026 h` que chega mentres está aberta pon a hora límite outros 150 ms despois: un programa que a abre unha e outra vez mantena aberta ata eses 2 MiB. `vte` garda a saída e coñece a hora límite, pero non ten temporizador: antes de cada fotograma, meiga consúltaa (`sync_deadline`) e, se xa pasou, remata a actualización (`end_sync`); se non, programa o temporizador dos fotogramas para esa hora ([ADR 0012](adr/0012-fachada-do-terminal.md), [ADR 0013](adr/0013-da-saida-a-pantalla.md)). Faino tamén coa xanela minimizada, que non debuxa fotogramas: mentres a actualización está aberta, `vte` garda tamén as preguntas do programa, e este esperaría a resposta ata que se restaurase a xanela. Desde a subfase 2.3, ao mostrar unha tab, meiga remata no momento a que deixase aberta o seu programa: o que escribiu nela mentres a tab estaba oculta conta coma escrito oculta ([ADR 0020](adr/0020-a-barra-de-tabs.md), decisión 10).
 
-**O escáner de meiga.** Antes do parser, un escáner le os mesmos bytes para seguir os modos que `alacritty_terminal` ignora, polo de agora só `?9001` ([ADR 0007](adr/0007-integracion-coa-shell.md)). Segue as mesmas regras ca `vte` (un ESC empeza outra secuencia, CAN e SUB cancelan, despois dun ESC os caracteres de control e os bytes desde 0x7f non contan, os mesmos límites, e `?` só conta xusto despois de `ESC [`), así que ve un cambio de modo só cando `vte` o vería. Só le byte a byte as secuencias `ESC [ ?`: para chegar á seguinte, busca o ESC con `memchr`, un crate que compara 16 ou 32 bytes á vez con instrucións SIMD ([Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrctermscannerrs)).
+**O escáner de meiga.** Antes do parser, un escáner le os mesmos bytes para atopar o que di a shell e `vte` ignora: o cartafol e as marcas do *prompt*, OSC 7, 9;9 e 133 ([ADR 0007](adr/0007-integracion-coa-shell.md) e [ADR 0032](adr/0032-o-escaner-osc.md)). Busca o `]` con `memchr`, un crate que compara 16 ou 32 bytes á vez con instrucións SIMD, e mira se ten un ESC xusto diante, ou, nunha lectura con moitos `]` sen ESC, busca a parella `ESC ]` con `memmem`, do mesmo crate; así non se para nas outras secuencias; desde alí le cada OSC coas mesmas regras ca `vte`, así que ve un OSC só cando `vte` o vería ([§68](#68-o-cartafol-e-o-prompt-que-di-a-shell) e [Código › meiga-core](codigo/meiga-core.md#cratesmeiga-coresrctermscannerrs)). Ata a 4.1 seguía `?9001`, e parábase en cada ESC: con saída chea de cores, iso custaba arredor do 3 % do tempo do terminal.
 
 ## 36. Avisar á xanela desde outro fío: `PostMessage`
 
@@ -1802,7 +1802,7 @@ No Windows Terminal, OSC 1 e OSC 21 cambian o título coma OSC 0 e OSC 2 ([`Acti
 | Un título de máis de 1000 unidades de UTF-16 ignórase | Coma o Windows Terminal, xterm e o ConPTY, que conta coma Windows: a tab e a consola seguen co mesmo título, e un programa non pode encher a memoria con títulos |
 | Un título baleiro, ou só de espazos, é «sen título»: a tab mostra o nome do seu perfil | Coma o Windows Terminal |
 | Dar outra vez o mesmo título non é un cambio | O terminal non avisa del, e nunha tab oculta un programa que o dá unha e outra vez xa non esperta a xanela |
-| OSC 1 e OSC 21 non fan nada | `vte` non os pasa; collelos co escáner de meiga é traballo da 4.1 |
+| OSC 1 e OSC 21 non fan nada | `vte` non os pasa, e na 4.1 decidiuse que seguen así ([ADR 0032](adr/0032-o-escaner-osc.md)): en kitty e Ghostty, OSC 21 son as cores |
 
 O código explícase en [Código › meiga-core › `term/title.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermtitlers).
 
@@ -1867,3 +1867,67 @@ En todos eles, un nome manda sobre os títulos que dá o programa, que seguen ch
 | Arrastrar fóra do campo segue mostrando texto cada 100 ms | Coma Chrome |
 
 O código explícase en [Código › meiga › `rename.rs`](codigo/meiga.md#cratesmeigasrcrenamers).
+
+## 68. O cartafol e o prompt que di a shell
+
+**As secuencias.** Unha shell pode dicirlle ao terminal onde está e que fai, con secuencias OSC que escribe no seu *prompt* ([ADR 0007](adr/0007-integracion-coa-shell.md)):
+
+- **OSC 7**: o cartafol coma URL, `file://equipo/ruta`, co que non pode ir nunha URL coma `%XX`. É o costume dos terminais de Linux e de macOS: para iTerm2, «a file URL with a hostname and a path» ([iTerm2](https://iterm2.com/documentation-escape-codes.html#shell-integrationfinalterm)).
+- **OSC 9;9**: o cartafol coma ruta de Windows, a convención de ConEmu ([«Inform ConEmu about shell current working directory»](https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC)) que usa o Windows Terminal, normalmente entre comiñas: `ESC ] 9 ; 9 ; "C:\Users" ESC \`. A receita de Microsoft para cmd é `set PROMPT=$e]9;9;$P$e\%PROMPT%`, e para WSL, a ruta de `wslpath -w` ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/terminal/tutorials/new-tab-same-directory)).
+- **OSC 133**: as marcas de FinalTerm arredor do *prompt* e das ordes: A, o *prompt* empeza; B, remata, e empeza a orde que se escribe; C, a orde corre, e empeza a súa saída; e D, a orde rematou, co seu código de saída se a shell o dá. A [proposta dos *semantic prompts*](https://gitlab.freedesktop.org/Per_Bothner/specifications/-/raw/4d2e1d75d4861a1d924895e106f8f016880e12a7/proposals/semantic-prompts.md) engade outras letras (L, N, P e I) e opcións (`aid=`, `cl=`, `k=`, `err=`), e pide que un terminal ignore as opcións que non coñece.
+
+**O Windows Terminal** 1.25 le OSC 9;9 e ignora OSC 7 adrede, «bad idea due to WSL compat» ([`OutputStateMachineEngine.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/parser/OutputStateMachineEngine.cpp#L867-L870)). Da ruta de 9;9 colle ata o primeiro `;`, quítalle as comiñas de arredor se dentro hai algo, e rexeita os caracteres que non pode levar unha ruta, sen mirar se existe ([`adaptDispatch.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/adapter/adaptDispatch.cpp#L3553-L3616)); con ela, duplica e reinicia a tab ou o panel nese cartafol ([`TerminalPage.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/cascadia/TerminalApp/TerminalPage.cpp#L3673-L3689)). Coas marcas de 133 pon marcas na barra de desprazamento, salta dunha orde a outra e selecciona unha orde ou a súa saída; un D sen código deixa a orde sen el ([`adaptDispatch.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/adapter/adaptDispatch.cpp#L3679-L3746)). E trata OSC 0, 1, 2 e 21 coma o título ([`OutputStateMachineEngine.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/parser/OutputStateMachineEngine.cpp#L763-L774)). O seu analizador só remata un OSC con BEL ou con `ESC \`: un ESC seguido doutra cousa, CAN ou SUB descártano ([`stateMachine.cpp`](https://github.com/microsoft/terminal/blob/v1.25.3131.0/src/terminal/parser/stateMachine.cpp#L1488-L1533)).
+
+**O ConPTY** pásalle ao terminal o texto do programa tal cal ([§65](#65-os-títulos-da-tab)): co que leva meiga, o 1.25.261109001, os OSC 7, 9;9, 133, 1 e 21 dun programa chegan enteiros, en orde e nun só bloque. O ConPTY de Windows tamén os pasa, agás OSC 1, que traga.
+
+**`vte` 0.15.0** non trata ningunha delas: o seu `osc_dispatch` só recoñece 0, 2, 4, 8, 10–12, 22, 50, 52, 104 e 110–112 ([`ansi.rs`](https://github.com/alacritty/vte/blob/v0.15.0/src/ansi.rs#L1329-L1524)). Un OSC empeza en `ESC ]` e remata en BEL, en CAN, en SUB ou en calquera ESC, sen esperar polo `\` de ST, e nos catro casos chega ao `osc_dispatch`; dentro, ignora os outros controis, e garda o texto enteiro, sen límite, nun `Vec` que conserva a súa memoria ([`lib.rs`](https://github.com/alacritty/vte/blob/v0.15.0/src/lib.rs#L407-L434)).
+
+**Noutros terminais**, cos seus códigos:
+
+| | OSC 7 | OSC 9 | OSC 133 |
+|---|---|---|---|
+| WezTerm 20240203 | Garda a URL; para usala, compara o dominio, non o equipo, e quita a `/` de `/C:/…` ([`mux/src/lib.rs`](https://github.com/wez/wezterm/blob/20240203-110809-5046fc22/mux/src/lib.rs#L1129-L1157)) | Unha notificación cun só texto: 9;9 non vale para nada ([`osc.rs`](https://github.com/wez/wezterm/blob/20240203-110809-5046fc22/termwiz/src/escape/osc.rs#L276-L315)) | L, A, N, P, B, I, C e D; un D sen código vale 0 ([`osc.rs`](https://github.com/wez/wezterm/blob/20240203-110809-5046fc22/termwiz/src/escape/osc.rs#L670-L745)) |
+| kitty 0.51 | Descodifica a ruta, e non mira o equipo ([`utils.py`](https://github.com/kovidgoyal/kitty/blob/v0.51.1/kitty/utils.py#L1048-L1059)) | 9;9, o cartafol, sen as comiñas e só se é unha ruta absoluta de POSIX; 9;4, o progreso ([`vt-parser.c`](https://github.com/kovidgoyal/kitty/blob/v0.51.1/kitty/vt-parser.c#L603-L621)) | A, C e D; un A pode rematar unha orde ([`screen.c`](https://github.com/kovidgoyal/kitty/blob/v0.51.1/kitty/screen.c#L3883-L3943)) |
+| GNOME VTE 0.84 | Só `file`, sen mirar o equipo ([`vteseq.cc`](https://github.com/GNOME/vte/blob/0.84.2/src/vteseq.cc#L7637-L7647)) | | |
+| foot 1.15 | Só sen equipo, con `localhost` ou co nome deste ([`osc.c`](https://github.com/neonkore/foot/blob/1.15.0/osc.c#L418-L438)) | | |
+| Ghostty 1.4 | Só `file` ou `kitty-shell-cwd`, deste equipo; en Windows, sen facer ([`stream_handler.zig`](https://github.com/ghostty-org/ghostty/blob/v1.4.0/src/termio/stream_handler.zig#L1534-L1594)) | Primeiro as de ConEmu, e o resto, notificacións ([`osc9.zig`](https://github.com/ghostty-org/ghostty/blob/v1.4.0/src/terminal/osc/parsers/osc9.zig#L253-L286)) | Todas as letras e opcións, e ignora as que non entende ([`semantic_prompt.zig`](https://github.com/ghostty-org/ghostty/blob/v1.4.0/src/terminal/osc/parsers/semantic_prompt.zig#L326-L400)) |
+| iTerm2 3.6 | O equipo, o usuario e a ruta, se se lle permite ([`VT100ScreenMutableState.m`](https://github.com/gnachman/iTerm2/blob/v3.6.11/sources/VT100ScreenMutableState.m#L3544-L3566)) | Unha notificación; 9;4, o progreso ([`+TerminalDelegate.m`](https://github.com/gnachman/iTerm2/blob/v3.6.11/sources/VT100ScreenMutableState%2BTerminalDelegate.m#L1259-L1299)) | C, só durante unha orde; D sen orde, unha orde cancelada ([`VT100Terminal.m`](https://github.com/gnachman/iTerm2/blob/v3.6.11/sources/VT100Terminal.m#L4462-L4514)) |
+
+VS Code 1.148 le as marcas de 133 e as súas, as de 633, e de D só colle o código se é o único que leva ([`shellIntegrationAddon.ts`](https://github.com/microsoft/vscode/blob/1.148.0/src/vs/platform/terminal/common/xterm/shellIntegrationAddon.ts#L406-L436)).
+
+**OSC 1 e OSC 21.** Para xterm, OSC 1 é o nome da icona, e OSC 21 é DECSWT, o título do VT520, que só cambia o título se emula un VT520 ou máis ([`misc.c`](https://github.com/ThomasDickey/xterm-snapshots/blob/xterm-412/misc.c#L4162-L4179)):
+
+| | OSC 1 | OSC 21 |
+|---|---|---|
+| Windows Terminal | O título | O título |
+| iTerm2 | O título da tab, coma nome da icona | Nada |
+| WezTerm | Un título da icona, aparte | Nada |
+| kitty e Ghostty | Nada | As cores, co protocolo de kitty ([kitty](https://sw.kovidgoyal.net/kitty/color-stack/#setting-and-querying-colors)) |
+| Alacritty | Nada | Nada |
+
+Cun terminal que tome OSC 21 coma título, unha pregunta de cores de kitty, `OSC 21 ; foreground=? ST`, pasaría a ser o título.
+
+**O texto máis longo dun OSC:**
+
+| | Límite | Un máis longo |
+|---|---|---|
+| xterm 412 | 20 000 bytes, ou 600 000 con ReGIS ou Sixel | Ignórase enteiro ([`charproc.c`](https://github.com/ThomasDickey/xterm-snapshots/blob/xterm-412/charproc.c#L5288-L5319)) |
+| GNOME VTE 0.84 | 4096 caracteres | Ignórase enteiro ([`parser.hh`](https://github.com/GNOME/vte/blob/0.84.2/src/parser.hh#L1086-L1092)) |
+| kitty 0.51 | 256 KiB mentres non remata | Ignórase, salvo OSC 52, que le a anacos ([`vt-parser.c`](https://github.com/kovidgoyal/kitty/blob/v0.51.1/kitty/vt-parser.c#L470-L497)) |
+| Ghostty 1.4 | 2048 bytes, ou 8 MiB nos que o precisan | Ignórase o resto ([`osc.zig`](https://github.com/ghostty-org/ghostty/blob/v1.4.0/src/terminal/osc.zig#L780-L800)) |
+| mintty 3.8 | Uns 4,4 MB | Úsase o anaco ([`termout.c`](https://github.com/mintty/mintty/blob/3.8.3/src/termout.c#L70-L95)) |
+| Windows Terminal, WezTerm e `vte` | Ningún | — |
+
+**En meiga**, desde a 4.1 ([ADR 0032](adr/0032-o-escaner-osc.md)):
+
+| Regra | Por que |
+|---|---|
+| Un escáner busca `ESC ]` antes ca `vte`, co `]` e `memchr`, ou coa parella e `memmem` se hai moitos `]`, e le cada OSC coma el, tamén partido entre lecturas | Só se para nos OSC, e ve o mesmo ca `vte`: custa o 0,5–0,75 % do tempo do terminal con texto, con listas e cunha saída real chea de cores, e o 1,1 % coa máis densa, unha cor para cada carácter |
+| `?9001` e `ESC c` chegan desde o *handler* de `vte` | Na súa orde e sen custo: o escáner xa non se para en cada ESC |
+| OSC 7: só `file://`, co equipo e a ruta descodificados, de calquera equipo | Coma kitty, WezTerm e VTE: WSL e SSH dan o seu |
+| OSC 9;9: a ruta sen as comiñas de arredor, enteira, tamén con `;` | Coma o Windows Terminal e kitty, as comiñas; unha ruta de Windows pode levar `;` |
+| OSC 133: A, B, C e D, co código de D se é un número de 32 bits | Coma pide a proposta; os códigos de Windows, coma o `i32` que garda |
+| OSC 1 e OSC 21 non cambian o título | Coma Alacritty, kitty e Ghostty; en kitty e Ghostty, OSC 21 son as cores |
+| Garda como moito 128 KiB do texto dun OSC, e ignora un máis longo enteiro | Cabe a ruta máis longa de Windows, e nunca usa un anaco |
+
+O código explícase en [Código › meiga-core › `scanner.rs`](codigo/meiga-core.md#cratesmeiga-coresrctermscannerrs).

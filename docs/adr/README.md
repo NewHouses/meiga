@@ -21,12 +21,12 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0004](0004-conpty-empaquetado.md) | ConPTY empaquetado con meiga | Aceptado; concretado polos [0011](0011-fin-e-peche-das-sesions.md) e [0014](0014-o-teclado.md) |
 | [0005](0005-fios-e-fotogramas.md) | Modelo de fíos e fotogramas | Aceptado; concretado polos [0008](0008-temporizador-dos-fotogramas.md), [0011](0011-fin-e-peche-das-sesions.md), [0013](0013-da-saida-a-pantalla.md), [0017](0017-os-fotogramas-por-escritorio-remoto.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0020](0020-a-barra-de-tabs.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0025](0025-moitas-tabs-e-os-indicadores.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0006](0006-licenzas-e-dependencias.md) | Licenzas e dependencias | Aceptado |
-| [0007](0007-integracion-coa-shell.md) | Integración coa shell | Aceptado |
+| [0007](0007-integracion-coa-shell.md) | Integración coa shell | Aceptado; concretado polo [0032](0032-o-escaner-osc.md) |
 | [0008](0008-temporizador-dos-fotogramas.md) | Temporizador dos fotogramas | Aceptado |
 | [0009](0009-xanela-que-non-se-ve.md) | Que se debuxa cando a xanela non se ve | Aceptado |
 | [0010](0010-texto-con-directwrite.md) | Texto con DirectWrite e unha caché de glifos | Aceptado; concretado polo [0016](0016-o-historial-o-tamano-e-o-zoom.md) |
 | [0011](0011-fin-e-peche-das-sesions.md) | Fin e peche das sesións de ConPTY | Aceptado; concretado polos [0024](0024-o-fin-do-programa-e-o-reinicio.md), [0026](0026-o-peche-das-sesions-ao-sair.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
-| [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [0016](0016-o-historial-o-tamano-e-o-zoom.md) e [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) |
+| [0012](0012-fachada-do-terminal.md) | A fachada do terminal | Aceptado; concretado polos [0013](0013-da-saida-a-pantalla.md), [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md), [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) e [0032](0032-o-escaner-osc.md) |
 | [0013](0013-da-saida-a-pantalla.md) | Da saída á pantalla | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md), [0024](0024-o-fin-do-programa-e-o-reinicio.md) e [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0014](0014-o-teclado.md) | O teclado | Aceptado; concretado polos [0023](0023-os-atallos-de-teclado.md) e [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) |
 | [0015](0015-o-rato-a-seleccion-e-o-portapapeis.md) | O rato, a selección e o portapapeis | Aceptado; concretado polos [0016](0016-o-historial-o-tamano-e-o-zoom.md), [0019](0019-varias-sesions-e-tabs-en-segundo-plano.md) e [0023](0023-os-atallos-de-teclado.md) |
@@ -43,9 +43,10 @@ Un **ADR** (*Architecture Decision Record*) é un documento curto que garda unha
 | [0026](0026-o-peche-das-sesions-ao-sair.md) | O peche das sesións ao saír | Aceptado; concretado polo [0028](0028-as-sesions-fora-do-fio-da-xanela.md) |
 | [0027](0027-a-barra-de-tabs-coma-barra-de-titulo.md) | A barra de tabs coma barra de título | Aceptado; concretado polo [0031](0031-o-nome-das-tabs.md) |
 | [0028](0028-as-sesions-fora-do-fio-da-xanela.md) | As sesións fóra do fío da xanela | Aceptado |
-| [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) | O título da tab e os títulos gardados | Aceptado |
+| [0029](0029-o-titulo-da-tab-e-os-titulos-gardados.md) | O título da tab e os títulos gardados | Aceptado; concretado polo [0032](0032-o-escaner-osc.md) |
 | [0030](0030-o-campo-de-texto.md) | O campo de texto | Aceptado; concretado polo [0031](0031-o-nome-das-tabs.md) |
 | [0031](0031-o-nome-das-tabs.md) | O nome das tabs | Aceptado |
+| [0032](0032-o-escaner-osc.md) | O escáner OSC | Aceptado |
 
 ## Como se relacionan
 
@@ -185,6 +186,9 @@ graph TD
     A27 --> A31
     A29 --> A31
     A30 --> A31
+    A7 --> A32["0032 O escáner OSC"]
+    A12 --> A32
+    A29 --> A32
 ```
 
 Cada frecha significa «condiciona»: por exemplo, a política de licenzas (0006) limita que núcleo de terminal (0003) e que ConPTY (0004) se poden usar.
