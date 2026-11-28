@@ -11,8 +11,9 @@
 //! `memchr::memmem` instead. From there it reads the OSC as `vte` does, also
 //! when it comes split between reads, and it ends it where `vte` ends it: at
 //! BEL, CAN, SUB or any ESC. The only OSC that it misses is one with bytes
-//! that `vte` ignores between the ESC and the `]`, as `ESC \x80 ]`, which no
-//! program writes.
+//! between the ESC and the `]` that do not end the escape in `vte`: the
+//! controls, which it runs, and DEL and the bytes from 0x80, which it
+//! ignores, as `ESC \x80 ]`. No program writes them.
 
 use memchr::memmem::Finder;
 
@@ -22,7 +23,7 @@ use super::shell_state::{Folder, Mark};
 /// the longest path of Windows, 32 767 characters, fits in UTF-8 with its
 /// quotes. A longer OSC is ignored whole: the scanner never uses a piece of
 /// one.
-pub const MAX_TEXT: usize = 128 * 1024;
+const MAX_TEXT: usize = 128 * 1024;
 
 /// The memory that the text keeps between two OSCs: after a longer one, it
 /// gives the rest back.
@@ -221,8 +222,9 @@ impl Scanner {
         &[]
     }
 
+    /// Starts the text of an OSC of `kind`: [`Scanner::end_text`] left the
+    /// text of the last one empty.
     fn start_text(&mut self, kind: Kind) -> State {
-        self.text.clear();
         self.too_long = false;
         State::Text(kind)
     }

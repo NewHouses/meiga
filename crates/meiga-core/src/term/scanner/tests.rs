@@ -248,8 +248,10 @@ fn an_esc_at_the_end_of_a_read_can_start_one_in_the_next() {
 }
 
 #[test]
-fn it_misses_an_osc_with_bytes_that_vte_ignores_after_the_esc() {
-    // vte reads them as an OSC; no program writes them.
+fn it_misses_an_osc_with_bytes_between_its_esc_and_its_bracket() {
+    // Bytes that do not end the escape in vte, which reads them as an OSC:
+    // the bytes from 0x80, which it ignores, and the controls, which it
+    // runs. No program writes them.
     assert_eq!(scanned(&[b"\x1b\x80]133;A\x07"]), []);
     assert_eq!(scanned(&[b"\x1b\n]133;A\x07"]), []);
     // Another ESC is not one of them: the OSC starts at the last one.
@@ -363,9 +365,10 @@ impl Perform for Reference {
     }
 }
 
-/// The bytes after an ESC that vte ignores, staying after the ESC: the
-/// scanner misses an OSC after them.
-const fn ignored_after_esc(byte: u8) -> bool {
+/// The bytes after an ESC that do not end the escape in vte: the controls,
+/// which it runs, except CAN, SUB and ESC, and DEL and the bytes from 0x80,
+/// which it ignores. The scanner misses an OSC after them.
+const fn stays_in_the_escape(byte: u8) -> bool {
     matches!(byte, 0x00..=0x17 | 0x19 | 0x1c..=0x1f | 0x7f..=0xff)
 }
 
@@ -439,7 +442,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(2_000))]
 
     /// The scanner finds what vte reads, in any output and however it is
-    /// split, except an OSC with bytes that vte ignores after its ESC.
+    /// split, except an OSC with bytes between its ESC and its `]`.
     #[test]
     fn it_agrees_with_vte(
         parts in prop::collection::vec(part(), 0..40),
@@ -449,7 +452,7 @@ proptest! {
         let mut output = parts.concat();
         // Out of what the scanner misses.
         for at in 1..output.len() {
-            if output[at - 1] == ESC && ignored_after_esc(output[at]) {
+            if output[at - 1] == ESC && stays_in_the_escape(output[at]) {
                 output[at] = b'x';
             }
         }

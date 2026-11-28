@@ -9,14 +9,14 @@
 //! 64 KiB, as meiga reads them from ConPTY: text with a colour for each
 //! character, text full of `]`, text without sequences, a prompt with the
 //! marks of OSC 133 and OSC 9;9 every 20 rows, and rows with links (OSC 8);
-//! then the recordings of the tests of meiga-core, and the ones given. Each round reads each output with a new
-//! scanner and then with a new terminal, of the size of the output. After a
-//! round that is not counted, it shows the median of the rounds, 11 unless
-//! `--rounds` says otherwise, and the time of the scanner against the time of
-//! the terminal: the median of the rounds, and the lowest and the highest.
-//! A relative path of a recording is taken from the folder of the workspace,
-//! where cargo is run: cargo bench runs the benchmark in the folder of
-//! meiga-core.
+//! then the recordings of the tests of meiga-core, and the ones given. Each
+//! round reads each output with a new scanner and then with a new terminal,
+//! of the size of the output. After a round that is not counted, it shows the
+//! median of the rounds, 11 unless `--rounds` says otherwise, and the time of
+//! the scanner against the time of the terminal: the median of the rounds,
+//! and the lowest and the highest. A relative path of a recording is taken
+//! from the folder of the workspace, where cargo is run: cargo bench runs the
+//! benchmark in the folder of meiga-core.
 
 use std::fmt::Write as _;
 use std::hint::black_box;
