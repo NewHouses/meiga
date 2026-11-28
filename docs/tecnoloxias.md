@@ -1922,7 +1922,7 @@ Cun terminal que tome OSC 21 coma título, unha pregunta de cores de kitty, `OSC
 
 | Regra | Por que |
 |---|---|
-| Un escáner busca `ESC ]` antes ca `vte`, co `]` e `memchr`, ou coa parella e `memmem` se hai moitos `]`, e le cada OSC coma el, tamén partido entre lecturas | Só se para nos OSC, e ve o mesmo ca `vte`: custa o 0,5–0,75 % do tempo do terminal con texto, con listas e cunha saída real chea de cores, e o 1,1 % coa máis densa, unha cor para cada carácter |
+| Un escáner busca `ESC ]` antes ca `vte`, co `]` e `memchr`, ou coa parella e `memmem` se hai moitos `]`, e le cada OSC coma el, tamén partido entre lecturas | Só se para nos OSC, e ve o mesmo ca `vte`: custa o 0,1–0,25 % do tempo do terminal con texto, con listas, cunha saída real chea de cores e coa máis densa, unha cor para cada carácter |
 | `?9001` e `ESC c` chegan desde o *handler* de `vte` | Na súa orde e sen custo: o escáner xa non se para en cada ESC |
 | OSC 7: só `file://`, co equipo e a ruta descodificados, de calquera equipo | Coma kitty, WezTerm e VTE: WSL e SSH dan o seu |
 | OSC 9;9: a ruta sen as comiñas de arredor, enteira, tamén con `;` | Coma o Windows Terminal e kitty, as comiñas; unha ruta de Windows pode levar `;` |

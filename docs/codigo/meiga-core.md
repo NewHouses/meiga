@@ -4927,7 +4927,7 @@ Desde a subfase 1.9: o terminal de `alacritty_terminal` coma o ve o parser. O pa
 
 **Por que dentro do parser.** A pantalla principal ten que voltar no momento en que o programa deixa a alternativa: a saída que vén despois de `?1049l`, na mesma lectura ou na mesma actualización sincronizada (`?2026`), xa é para ela, e ten que caer nas súas filas, co tamaño novo. `feed` só volta cando o parser leu o bloque enteiro; `vte` garda a saída dunha actualización sincronizada e dálla ao `Handler` dunha vez, cando remata ou cando vence (`end_sync`); e ningún evento de `alacritty_terminal` avisa do cambio de pantalla. Despois de ler, sería tarde. Compróbao a proba `the_output_after_leaving_the_alternate_screen_reaches_the_primary_one`, nos tres casos.
 
-**O win32-input-mode, eiquí.** O ConPTY actívao ao arrancar, e outra vez despois de cada `ESC c`, para que meiga lle envíe eventos de tecla enteiros ([`input.rs`](#cratesmeiga-coresrcinputrs)), coma di o comentario do módulo. `alacritty_terminal` non o coñece, e ata a 4.1 seguíao o escáner, que lía as secuencias coas regras de `vte` para velo só cando o vería `vte`: parábase en cada ESC, e con saída chea de cores custaba o 3,1–3,4 % do tempo do terminal. Pero `vte` xa le esas secuencias, e dálle ao `Handler` `?9001h` e `?9001l`, coma un modo privado que non coñece, e `ESC c`, coma `reset_state`, na orde da saída e sen custo ningún. Desde a 4.1, `Hooked` ségueo eiquí, e o escáner só busca os OSC ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). Dentro dunha actualización sincronizada, o modo cambia cando `vte` le a actualización, coma a pantalla, e non cando chega; o ConPTY só o cambia ao arrancar e despois de cada `ESC c` ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 1).
+**O win32-input-mode, eiquí.** O ConPTY actívao ao arrancar, e outra vez despois de cada `ESC c`, para que meiga lle envíe eventos de tecla enteiros ([`input.rs`](#cratesmeiga-coresrcinputrs)), coma di o comentario do módulo. `alacritty_terminal` non o coñece, e ata a 4.1 seguíao o escáner, que lía as secuencias coas regras de `vte` para velo só cando o vería `vte`: parábase en cada ESC, e con saída chea de cores custaba o 3,2 % do tempo do terminal. Pero `vte` xa le esas secuencias, e dálle ao `Handler` `?9001h` e `?9001l`, coma un modo privado que non coñece, e `ESC c`, coma `reset_state`, na orde da saída e sen custo ningún. Desde a 4.1, `Hooked` ségueo eiquí, e o escáner só busca os OSC ([`scanner.rs`](#cratesmeiga-coresrctermscannerrs)). Dentro dunha actualización sincronizada, o modo cambia cando `vte` le a actualización, coma a pantalla, e non cando chega; o ConPTY só o cambia ao arrancar e despois de cada `ESC c` ([ADR 0032](../adr/0032-o-escaner-osc.md), decisión 1).
 
 ### `Hooked`
 
@@ -5684,7 +5684,7 @@ As probas da selección están en [`tests.rs`](#cratesmeiga-coresrctermtestsrs),
 
 O escáner que le a saída do programa antes do parser, para atopar o que di a shell de si mesma e `vte` ignora ([ADR 0007](../adr/0007-integracion-coa-shell.md) e [ADR 0032](../adr/0032-o-escaner-osc.md), [Tecnoloxías › O cartafol e o prompt que di a shell](../tecnoloxias.md#68-o-cartafol-e-o-prompt-que-di-a-shell)): o seu cartafol, con OSC 7 ou OSC 9;9, e onde está entre o seu *prompt* e a saída dunha orde, con OSC 133. Só le os bytes: o parser recibe exactamente os mesmos. O que atopa dállo, en orde, a quen o chama, e o terminal gárdao nun [`ShellState`](#cratesmeiga-coresrctermshell_staters) ([`feed`](#terminal)).
 
-**Ata a subfase 4.1** seguía o win32-input-mode (`?9001`) e o reinicio que o apaga (`ESC c`): lía as secuencias de control coas regras de `vte`, e parábase en cada ESC. Con saída chea de cores, coma a de `bigfile`, con 4,4 ESC cada 100 bytes, custaba o 3,1–3,4 % do tempo do terminal, e só percorrer os ESC un a un xa levaba o 3,2 %: lendo tamén os OSC, non podía quedar por baixo do 1 % que pide o plan. Desde a 4.1, `?9001` e `ESC c` ségueos o [`Hooked`](#os-métodos-de-handler), que os recibe de `vte` na súa orde e sen custo, e o escáner só busca os OSC (decisión 1).
+**Ata a subfase 4.1** seguía o win32-input-mode (`?9001`) e o reinicio que o apaga (`ESC c`): lía as secuencias de control coas regras de `vte`, e parábase en cada ESC. Con saída chea de cores, coma a de `bigfile`, con 4,4 ESC cada 100 bytes, custaba o 3,2 % do tempo do terminal, e só percorrer os ESC un a un xa levaba arredor do 3 %: lendo tamén os OSC, non podía quedar por baixo do 1 % que pide o plan. Desde a 4.1, `?9001` e `ESC c` ségueos o [`Hooked`](#os-métodos-de-handler), que os recibe de `vte` na súa orde e sen custo, e o escáner só busca os OSC (decisión 1).
 
 ```rust
 //! The scanner that reads the output of the program before the parser, to
@@ -5893,7 +5893,7 @@ fn start(&mut self) {
 ```
 
 - **O camiño rápido.** Fóra dun OSC, nada importa ata o seguinte `ESC ]`, e `next_start` atópao lendo moitos bytes á vez, con instrucións SIMD: o escáner non se para nas cores, nos movementos do cursor nin no texto. Case toda a saída pasa só por eiquí.
-- **`next_start`** busca o `]` con `memchr::memchr`, e mira se o byte de antes é un ESC: entón devolve onde está o ESC. Buscar un byte é máis rápido ca buscar a parella con `memmem`, e `]` é raro na maior parte da saída, tamén na chea de cores, onde ESC non o é: cada cor leva un ESC, e ningún `]`. A primeira versión buscaba só a parella con `memmem`: atopaba o mesmo, pero coa saída de cores do *benchmark*, `colours`, levaba o 1,3 % do tempo do terminal, e agora o 1,1 % ([ADR 0032 › Alternativas consideradas](../adr/0032-o-escaner-osc.md#alternativas-consideradas)).
+- **`next_start`** busca o `]` con `memchr::memchr`, e mira se o byte de antes é un ESC: entón devolve onde está o ESC. Buscar un byte é máis rápido ca buscar a parella con `memmem`, e `]` é raro na maior parte da saída, tamén na chea de cores, onde ESC non o é: cada cor leva un ESC, e ningún `]`. A primeira versión buscaba só a parella con `memmem`: atopaba o mesmo, pero coa saída de cores do *benchmark*, `colours`, levaba o 1,3 % do tempo do terminal, e esta, o 1,1 %, medidos os dous cos bloques fríos, coma os medía a primeira versión do *benchmark* ([ADR 0032 › Alternativas consideradas](../adr/0032-o-escaner-osc.md#alternativas-consideradas)).
 - **Moitos `]` sen ESC**, coma en listas ou en JSON, serían unha parada cada un. `lone` cóntaos e, despois de `LONE_BRACKETS`, o resto do anaco vai a `memmem`, que busca a parella enteira e non depende de cantos `]` haxa. `lone` empeza en 0 cada vez que `scan` chama a `find_start`: ao principio dunha lectura en `Ground`, e despois de cada OSC que empeza a ler. Un OSC que se salta non o pon a 0.
 - **As dúas buscas atopan os mesmos comezos.** `memmem` busca a parella desde `from`, e `memchr`, un `]` desde `from` cun ESC antes: só serían distintas se `from` quedase entre un ESC e o seu `]`, e nunca queda, porque é o principio do anaco, o byte despois dun `]` ou o despois dun `ESC ]`. Un `]` no principio do anaco non é un comezo (`at > 0`), coma di o comentario: vai cun ESC da lectura anterior, que xa mirou `escape`, ou con ningún. Compróbano a proba `many_brackets_without_an_esc_do_not_hide_an_osc`, con 0, 1, 15, 16, 17 e 200 `]` antes de cada OSC, e a de referencia, con listas e lecturas longas ([`scanner/tests.rs`](#cratesmeiga-coresrctermscannertestsrs)).
 - **Un OSC que non pode ser dos que le** sáltao alí mesmo: se o byte despois de `ESC ]` non é `1`, `7`, `9` nin un dos controis que `vte` ignora nun OSC, o número non pode ser 7, 9 nin 133, e a busca segue desde alí, sen ler o número. Así pasan o 8 das ligazóns, o 0 e o 2 dos títulos ou o 52 do portapapeis. O seu texto non importa: un OSC dos que le o escáner só pode empezar noutro `ESC ]`. A busca segue xusto despois do `]`, coma di o comentario: se o OSC saltado remata nun ESC que empeza outro, coma en `ESC ] ESC ] 133 ; A`, ese é o seguinte.
@@ -5903,7 +5903,7 @@ fn start(&mut self) {
 - `#[inline]` suxírelle ao compilador que meta `find_start` e `next_start` no sitio da chamada: son o camiño de case toda a saída.
 - **`start`**: `ESC ]`, empeza un OSC: o escáner pasa a ler o seu número, desde cero.
 
-**O que non ve.** `vte` tamén empeza un OSC se entre o ESC e o `]` hai bytes que non saen do escape: os controis, que executa, e DEL e os bytes desde 0x80, que ignora, coma en `ESC \x80 ]`. O escáner só mira o byte xusto antes do `]`, e non o ve. Ningún programa os escribe, e mirar cara atrás ata o ESC, pasando eses bytes, custaba o 8,0 % do tempo do terminal con texto cheo de `]` (decisión 1 e alternativas). Compróbao a proba `it_misses_an_osc_with_bytes_that_vte_ignores_after_the_esc`.
+**O que non ve.** `vte` tamén empeza un OSC se entre o ESC e o `]` hai bytes que non saen do escape: os controis, que executa, e DEL e os bytes desde 0x80, que ignora, coma en `ESC \x80 ]`. O escáner só mira o byte xusto antes do `]`, e non o ve. Ningún programa os escribe, e mirar cara atrás ata o ESC, pasando eses bytes, custaba o 8,0 % do tempo do terminal con texto cheo de `]` (decisión 1 e alternativas). Compróbao a proba `it_misses_an_osc_with_bytes_between_its_esc_and_its_bracket`.
 
 ### O número: `read_number` e `start_text`
 
@@ -6113,7 +6113,7 @@ fn exit_code(field: &[u8]) -> Option<i32> {
 - De D, a segunda parte é o código de saída, se é un número (`exit_code`); se non o é, ou se non hai, a orde rematou sen código: `Done(None)`.
 - **`exit_code`**: un número que cabe nun `i32`, con signo ou sen el, ou un de 32 bits sen signo, coma os dá Windows, que queda no `i32` que garda Windows: `3221225477`, `0xC0000005`, é −1073741819. `u32::cast_signed` toma os mesmos 32 bits coma un número con signo. `+7` é 7, porque `parse` admite o signo; `1` cun espazo diante non é un número; e `4294967296` non cabe en 32 bits.
 
-**O que custa.** Medido co [*benchmark*](#cratesmeiga-corebenchesscannerrs), o escáner leva do tempo do terminal o 0,5 % con texto, o 0,6–0,7 % con listas, o 0,75 % cunha gravación de `bigfile` e o 0,45 % coa resposta dunha IA gravada, `ai-stream.mrec`; e coa saída máis densa en cores, unha cor para cada carácter, o 1,1 %. O escáner de antes levaba o 3,3 % con `bigfile`. Cada OSC custa máis ca o texto: cun *prompt* cada 20 filas, que le enteiro, arredor do 2,8 %, e con dúas ligazóns en cada fila, que salta, arredor do 1,7 %, a ritmos que ninguén escribe.
+**O que custa.** Medido co [*benchmark*](#cratesmeiga-corebenchesscannerrs), coma o le meiga, cada bloque aínda na caché despois de ReadFile, o escáner leva do tempo do terminal o 0,1 % con texto e cunha gravación de `bigfile`, o 0,25 % con listas e coa saída máis densa en cores, unha cor para cada carácter, e o 0,9 % coa resposta dunha IA gravada, `ai-stream.mrec`, de bloques pequenos, nos que pesa o reloxo que mide cada un. O escáner de antes, medido igual, levaba o 3,2 % con `bigfile`, e o 5,0 % coa saída máis densa en cores. Cada OSC custa máis ca o texto: cun *prompt* cada 20 filas, que le enteiro, arredor do 2,9 %, e con dúas ligazóns en cada fila, que salta, arredor do 1,7 % (co escáner de antes, o 3,3 %), a ritmos que ninguén escribe.
 
 **Probas.** Dezaoito, nun arquivo aparte: [`scanner/tests.rs`](#cratesmeiga-coresrctermscannertestsrs). Ata a 4.1, as dez do escáner anterior ían ao final deste arquivo; as súas regras, as do win32-input-mode, compróbanas agora cinco probas do terminal, a través de `feed` ([`tests.rs`](#cratesmeiga-coresrctermtestsrs)).
 
@@ -10275,7 +10275,7 @@ cargo bench -p meiga-core --bench scanner -- [--rounds <n>] [<recording>...]
   | `links` | Arquivos con ligazóns, dous OSC 8 en cada fila, coma os escribe `ls --hyperlink`. |
 
   Despois, as catro gravacións das probas de `meiga-core`, que entran no programa con `include_bytes!`, e as que se lle dean, cos seus bloques e o seu tamaño (`Output::recorded`).
-- **Cada rolda** le cada saída cun escáner novo e despois cun terminal novo, do tamaño da saída: o escáner, bloque a bloque, contando o que atopa; e o terminal, con `feed`, que inclúe o escáner, e con `end_sync` se queda aberta unha actualización sincronizada (`round`). `black_box` impide que o compilador quite un traballo cuxo resultado non se usa, ou que adiante algo porque coñece os bytes. Primeiro fai unha rolda que non conta, para ter todo na memoria; despois, 11, salvo que `--rounds` diga outra cousa.
+- **Cada rolda** le cada saída cun escáner novo e despois cun terminal novo, do tamaño da saída, bloque a bloque, coma o fío lector dunha tab (`round`): cada bloque cópiase primeiro, sen medilo, nun búfer do tamaño do maior, coma o escribe ReadFile, e despois mídense nel o escáner, contando o que atopa, ou o terminal, con `feed`, que inclúe o escáner; e, ao final, `end_sync`, se queda aberta unha actualización sincronizada. Así, coma en meiga, o escáner le o que acaba de escribir ReadFile, e o parser, o que acaba de ler o escáner: se lese os bloques uns detrás doutros desde a memoria, o escáner, o primeiro en tocalos, pagaría traelos á caché, e coa saída máis densa en cores levaría o 1,1 % e non o 0,25 % (a primeira versión, [ADR 0032 › Alternativas consideradas](../adr/0032-o-escaner-osc.md#alternativas-consideradas)). O reloxo que mide cada bloque, `Instant`, pesa máis ca o escáner nos bloques de poucos bytes, coma os das gravacións pequenas. `black_box` impide que o compilador quite un traballo cuxo resultado non se usa, ou que adiante algo porque coñece os bytes. Primeiro fai unha rolda que non conta, para ter todo na memoria; despois, 11, salvo que `--rounds` diga outra cousa.
 - **O que mostra**, unha fila por saída: os bytes, os bloques, o que atopou o escáner, a mediana dos tempos do escáner e do terminal, e o tempo do escáner fronte ao do terminal, en %: a mediana das roldas, e a máis baixa e a máis alta. Cada porcentaxe compara as dúas medidas dunha rolda, coa mesma saída. `median` ordena os valores e dá o do medio; despois, as porcentaxes quedan ordenadas, e a primeira e a última son a máis baixa e a máis alta. `max(1e-9)` evita dividir por cero.
 - **Unha ruta relativa** dunha gravación tómase desde o cartafol do *workspace*, onde se executa cargo (`from_workspace`): `cargo bench` executa o *benchmark* no cartafol de `meiga-core`, e unha ruta coma `.perf\bigfile.mrec` non se atoparía (`e7be009`). `env!("CARGO_MANIFEST_DIR")` é o cartafol de `meiga-core` ao compilar, e os dous `..` levan ao do *workspace*.
 - `--bench`, o argumento que `cargo bench` lle dá a todos os *benchmarks*, ignórase. Unha opción que non existe, ou `--rounds` sen un número maior ca 0, mostra o uso e remata co código 2; unha gravación que non se pode ler, co 1.
@@ -10294,19 +10294,20 @@ shell-marks.mrec          2292     201     14            …            …  …
 …
 ```
 
-**O que mediu na 4.1**, o escáner fronte ao terminal:
+**O que mediu na 4.1**, o escáner fronte ao terminal, e o escáner de antes, que se paraba en cada ESC, medido igual:
 
-| Saída | Do tempo do terminal |
-|---|---|
-| `text` | 0,5 % |
-| `brackets` | 0,6–0,7 % |
-| `colours` | 1,1 % |
-| `marks` | Arredor do 2,8 % |
-| `links` | Arredor do 1,7 % |
-| `ai-stream.mrec` | 0,45 % |
-| `bigfile` | 0,75 % |
+| Saída | O escáner | O de antes |
+|---|---|---|
+| `text` | 0,1 % | 0,1 % |
+| `brackets` | 0,25 % | 0,1 % |
+| `colours` | 0,25 % | 5,0 % |
+| `marks` | Arredor do 2,9 % | 0,7 % |
+| `links` | Arredor do 1,7 % | 3,3 % |
+| `ai-stream.mrec` | 0,9 % | 2,8 % |
+| `bigfile` | 0,12 % | 3,2 % |
+| `cmd-echo.mrec`, `spinner.mrec` e `shell-marks.mrec` | Do 8 ao 26 % | Do 14 ao 39 % |
 
-Co escáner de antes, que se paraba en cada ESC, `bigfile` levaba o 3,3 %; e buscando só a parella `ESC ]` con `memmem`, `colours`, o 1,3 % ([ADR 0032](../adr/0032-o-escaner-osc.md)). Os OSC moi seguidos custan máis, pero a ritmos que ninguén escribe.
+O escáner de antes non miraba os `]` nin lía os OSC, e por iso custaba menos con listas e cun *prompt* cada 20 filas; pero parábase en cada ESC, e coas cores custaba moito máis. Os OSC moi seguidos custan máis, pero a ritmos que ninguén escribe; e nas gravacións pequenas, de poucos bytes por bloque, pesa máis o reloxo ca o escáner.
 
 **Na CI**, o paso *Check the scanner measurement* do job `windows` execútao con `--locked`, despois da medida dos fotogramas, e mostra os números sen xulgalos, coma as medidas do arranque e dos fotogramas ([Código › GitHub › Job `windows`](github.md#job-windows)).
 
